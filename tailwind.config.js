@@ -1,7 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-    darkMode: ["class"],
-    // THE MAGIC FIX: We added js and jsx so it can actually see your React components!
+    // THE UPDATE: Changed to string "class" to enable the dark mode toggle
+    darkMode: "class",
+
     content: [
         "./index.html",
         "./pages/**/*.{js,ts,jsx,tsx}",

@@ -1,151 +1,198 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    MapPin, Clock, Bell, LogOut, CheckCircle, XCircle,
-    Upload, FileText, Camera
+    MapPin, Bell, LogOut, CheckCircle,
+    Upload, FileText, Camera, Moon, Sun
 } from "lucide-react";
 
-const assignments = [
-    { id: 1, name: "Lincoln Elementary", address: "123 Oak Street", date: "Mar 16", type: "visit", status: "pending" },
-    { id: 2, name: "Washington Middle School", address: "456 Elm Ave", date: "Mar 17", type: "visit", status: "accepted" },
-    { id: 3, name: "Jefferson High School", address: "789 Pine Blvd", date: "Mar 18", type: "regular", status: "pending" },
-];
+// Import your new component
+import AssignmentsManager from "../../components/employee/AssignmentsManager";
 
 const EmployeeDashboard = () => {
     const navigate = useNavigate();
+
+    // Global Day Attendance State
     const [inRadius] = useState(true);
-    const [attendanceMarked, setAttendanceMarked] = useState(false);
+    const [dayStarted, setDayStarted] = useState(false);
     const [notifCount] = useState(3);
 
+    // Dark mode state
+    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+
+    useEffect(() => {
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+
     return (
-        <div className="min-h-screen bg-background">
-            <header className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
-                <h1 className="font-display font-bold text-lg">WorkForce Pro</h1>
-                <div className="flex items-center gap-3">
-                    <button className="relative p-2">
-                        <Bell className="w-5 h-5 text-muted-foreground" />
+        <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+            {/* Header */}
+            <header className="sticky top-0 z-20 bg-card/80 backdrop-blur-md border-b border-border px-4 md:px-8 py-3 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
+                        <span className="text-primary-foreground font-bold text-sm">W</span>
+                    </div>
+                    <h1 className="font-display font-bold text-lg hidden sm:block">WorkForce Pro</h1>
+                </div>
+
+                <div className="flex items-center gap-1 sm:gap-2">
+                    <button
+                        onClick={toggleTheme}
+                        className="p-2.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                        {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                    </button>
+
+                    <button className="relative p-2.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                        <Bell className="w-5 h-5" />
                         {notifCount > 0 && (
-                            <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                            <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center ring-2 ring-card">
                                 {notifCount}
                             </span>
                         )}
                     </button>
-                    <button onClick={() => navigate("/")} className="p-2">
-                        <LogOut className="w-5 h-5 text-muted-foreground" />
+
+                    <div className="w-px h-6 bg-border mx-1"></div>
+
+                    <button
+                        onClick={() => navigate("/")}
+                        className="p-2.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                        <LogOut className="w-5 h-5" />
                     </button>
                 </div>
             </header>
 
-            <div className="p-4 space-y-5 max-w-lg mx-auto">
-                <div className={`rounded-2xl p-5 shadow-elevated ${attendanceMarked ? "bg-card" : "gradient-primary"}`}>
-                    <div className="flex items-center gap-2 mb-3">
-                        <MapPin className={`w-5 h-5 ${attendanceMarked ? "text-success" : "text-primary-foreground"} ${!attendanceMarked && inRadius ? "animate-pulse-glow" : ""}`} />
-                        <h2 className={`font-display font-bold text-lg ${attendanceMarked ? "text-foreground" : "text-primary-foreground"}`}>
-                            Mark Attendance
-                        </h2>
-                    </div>
+            <main className="max-w-7xl mx-auto p-4 md:p-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
 
-                    {attendanceMarked ? (
-                        <div className="flex items-center gap-3 py-2">
-                            <CheckCircle className="w-8 h-8 text-success" />
-                            <div>
-                                <p className="font-semibold text-success">Attendance Marked</p>
-                                <p className="text-xs text-muted-foreground">Today at 8:02 AM · Zone A</p>
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="flex items-center gap-2 mb-4">
-                                <div className={`w-2 h-2 rounded-full ${inRadius ? "bg-success" : "bg-destructive"}`} />
-                                <p className={`text-sm ${inRadius ? "text-primary-foreground/90" : "text-primary-foreground/60"}`}>
-                                    {inRadius ? "Within geo-fence (45m away)" : "Outside 100m radius"}
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-3 mb-4">
-                                <Clock className="w-4 h-4 text-primary-foreground/70" />
-                                <span className="text-sm text-primary-foreground/80 font-mono">Window closes in 00:42:15</span>
-                            </div>
-                            <Button
-                                onClick={() => setAttendanceMarked(true)}
-                                disabled={!inRadius}
-                                className="w-full h-12 rounded-xl text-base font-semibold bg-card/20 text-primary-foreground border border-primary-foreground/30 hover:bg-card/30 transition-all duration-150 disabled:opacity-40"
-                            >
-                                {inRadius ? "Mark Attendance Now" : "Move Closer to Mark"}
-                            </Button>
-                        </>
-                    )}
-                </div>
+                    {/* LEFT COLUMN: Attendance & Assignments */}
+                    <div className="lg:col-span-7 space-y-6 md:space-y-8">
 
-                <div>
-                    <h2 className="font-display font-semibold text-base mb-3">School Assignments</h2>
-                    <div className="space-y-3">
-                        {assignments.map((a) => (
-                            <div key={a.id} className="bg-card rounded-xl shadow-card p-4">
-                                <div className="flex items-start justify-between mb-2">
-                                    <div>
-                                        <p className="font-semibold text-sm">{a.name}</p>
-                                        <p className="text-xs text-muted-foreground">{a.address}</p>
+                        {/* Global Day Attendance Card */}
+                        <div className={`rounded-2xl p-6 md:p-8 shadow-elevated transition-all duration-500 ${dayStarted ? "bg-card border border-border" : "gradient-primary border-none text-primary-foreground"}`}>
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-xl ${dayStarted ? "bg-success/10" : "bg-white/20 backdrop-blur-sm"}`}>
+                                        <MapPin className={`w-6 h-6 ${dayStarted ? "text-success" : "text-white"} ${!dayStarted && inRadius ? "animate-pulse-glow" : ""}`} />
                                     </div>
-                                    <span className="text-xs text-muted-foreground">{a.date}</span>
+                                    <h2 className={`font-display font-bold text-xl md:text-2xl ${dayStarted ? "text-foreground" : "text-white"}`}>
+                                        Start Your Day
+                                    </h2>
                                 </div>
-                                {a.type === "visit" && a.status === "pending" ? (
-                                    <div className="flex gap-2 mt-3">
-                                        <Button size="sm" variant="success" className="flex-1 rounded-full gap-1.5">
-                                            <CheckCircle className="w-3.5 h-3.5" /> Accept
-                                        </Button>
-                                        <Button size="sm" variant="destructive" className="flex-1 rounded-full gap-1.5">
-                                            <XCircle className="w-3.5 h-3.5" /> Reject
-                                        </Button>
-                                    </div>
-                                ) : a.status === "accepted" ? (
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-success/10 text-success mt-2">
-                                        <CheckCircle className="w-3 h-3" /> Accepted
-                                    </span>
-                                ) : null}
                             </div>
-                        ))}
-                    </div>
-                </div>
 
-                <div className="bg-card rounded-xl shadow-card p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                        <FileText className="w-5 h-5 text-primary" />
-                        <h2 className="font-display font-semibold text-base">Daily Meeting Report</h2>
-                    </div>
-                    <div className="space-y-3">
-                        <div>
-                            <Label className="text-xs">Meeting Summary</Label>
-                            <textarea
-                                placeholder="Describe today's meetings and outcomes..."
-                                className="w-full mt-1 min-h-20 rounded-lg border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-                            />
+                            {dayStarted ? (
+                                <div className="flex items-center gap-4 py-4 px-5 rounded-xl bg-success/5 border border-success/20">
+                                    <CheckCircle className="w-10 h-10 text-success flex-shrink-0" />
+                                    <div>
+                                        <p className="font-semibold text-success text-lg">Day Started Successfully</p>
+                                        <p className="text-sm text-success/80 mt-0.5">Logged in at 8:02 AM · Zone A Territory</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-black/10 backdrop-blur-sm rounded-xl p-5 border border-white/10">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className={`w-3 h-3 rounded-full shadow-sm ${inRadius ? "bg-green-400" : "bg-red-400"}`} />
+                                            <p className="text-sm font-medium text-white/90">
+                                                {inRadius ? "Location verified (Within Territory)" : "Outside required radius"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        onClick={() => setDayStarted(true)}
+                                        disabled={!inRadius}
+                                        className="w-full h-14 rounded-xl text-lg font-bold bg-white text-primary hover:bg-white/90 transition-all duration-200 shadow-lg"
+                                    >
+                                        Log In For The Day
+                                    </Button>
+                                </div>
+                            )}
                         </div>
-                        <div>
-                            <Label className="text-xs">Follow-up Actions</Label>
-                            <Input placeholder="List action items" className="h-9 mt-1" />
-                        </div>
-                        <Button size="sm" className="w-full">Submit Report</Button>
-                    </div>
-                </div>
 
-                <div className="bg-card rounded-xl shadow-card p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Camera className="w-5 h-5 text-primary" />
-                        <h2 className="font-display font-semibold text-base">Weekly Media Upload</h2>
-                        <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-medium bg-success/10 text-success">
-                            Active — Weekend
-                        </span>
+                        {/* Assignments Component Integration */}
+                        <div className="bg-card rounded-2xl shadow-card border border-border overflow-hidden">
+                            <AssignmentsManager />
+                        </div>
+
                     </div>
-                    <div className="border-2 border-dashed border-primary/30 rounded-xl p-8 text-center bg-primary/5 hover:bg-primary/10 transition-colors duration-150 cursor-pointer">
-                        <Upload className="w-8 h-8 text-primary mx-auto mb-2" />
-                        <p className="text-sm font-medium text-primary">Drop files or tap to upload</p>
-                        <p className="text-xs text-muted-foreground mt-1">Images, videos up to 50MB</p>
+
+                    {/* RIGHT COLUMN: Reports & Uploads */}
+                    <div className="lg:col-span-5 space-y-6 md:space-y-8">
+
+                        {/* Daily Report Form */}
+                        <div className="bg-card rounded-2xl shadow-card border border-border p-6 md:p-8">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                                    <FileText className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h2 className="font-display font-semibold text-lg">Meeting Report</h2>
+                                    <p className="text-xs text-muted-foreground">Submit your end-of-day summary</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-5">
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium text-foreground">Summary</Label>
+                                    <textarea
+                                        placeholder="Describe today's meetings, challenges, and outcomes..."
+                                        className="w-full min-h-[120px] rounded-xl border border-input bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium text-foreground">Action Items</Label>
+                                    <Input placeholder="List follow-ups (e.g. Email John Doe)" className="h-11 rounded-xl bg-background border-input" />
+                                </div>
+                                <Button className="w-full h-11 rounded-xl font-semibold shadow-sm mt-2">
+                                    Submit Report
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Media Upload */}
+                        <div className="bg-card rounded-2xl shadow-card border border-border p-6 md:p-8 relative overflow-hidden">
+                            <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/5 rounded-full blur-3xl"></div>
+
+                            <div className="flex items-center justify-between mb-6 relative z-10">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                                        <Camera className="w-6 h-6" />
+                                    </div>
+                                    <h2 className="font-display font-semibold text-lg">Site Media</h2>
+                                </div>
+                                <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-success/10 text-success border border-success/20 uppercase tracking-wider">
+                                    Required
+                                </span>
+                            </div>
+
+                            <div className="border-2 border-dashed border-border hover:border-primary/50 rounded-xl p-8 text-center bg-muted/30 hover:bg-muted/50 transition-all duration-200 cursor-pointer group relative z-10">
+                                <div className="w-14 h-14 bg-background rounded-full shadow-sm flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
+                                    <Upload className="w-6 h-6 text-primary" />
+                                </div>
+                                <p className="text-base font-semibold text-foreground mb-1">Click to upload media</p>
+                                <p className="text-sm text-muted-foreground">or drag and drop files here</p>
+                                <div className="flex items-center justify-center gap-2 mt-4 text-xs text-muted-foreground/80 font-medium">
+                                    <span>JPEG, PNG, MP4</span>
+                                    <span>•</span>
+                                    <span>Max 50MB</span>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     );
 };
