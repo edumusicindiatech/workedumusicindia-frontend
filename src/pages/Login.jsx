@@ -1,16 +1,22 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setCredentials } from "../store/slices/authSlice";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Shield, Loader2, AlertCircle } from "lucide-react";
-import api from "../api/axios";
+
+// Combine the default api import and the named setAxiosToken import
+import api, { setAxiosToken } from "../api/axios";
 
 // Securely grab the base URL
 const BASE_URL = import.meta.env?.VITE_BASE_URL || 'http://localhost:5000';
 
 const Login = () => {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
 
     // UI States
     const [showPassword, setShowPassword] = useState(false);
@@ -28,24 +34,25 @@ const Login = () => {
 
         try {
             const response = await api.post('/auth/login', { employeeId, password });
-
             const data = response.data;
 
             if (data.access_token) {
-                // 1. Save the token
-                localStorage.setItem("access_token", data.access_token);
+                // 1. Immediately inject token into Axios for subsequent requests
+                setAxiosToken(data.access_token);
 
-                if (data.user) {
-                    localStorage.setItem("user", JSON.stringify(data.user));
-                }
+                // 2. Save directly to Redux memory ONLY (Zero localStorage involved!)
+                dispatch(setCredentials({
+                    user: data.user || null,
+                    access_token: data.access_token
+                }));
 
-                // 2. Handle First Login Password Reset
+                // 3. Handle First Login Password Reset Routing
                 if (data.isFirstLogin) {
                     navigate("/employee");
                     return;
                 }
 
-                // 3. Route based on Role
+                // 4. Standard Role-Based Routing
                 const adminRoles = ['Admin1', 'Admin2', 'Admin3', 'admin'];
                 if (adminRoles.includes(data.role)) {
                     navigate("/admin");
@@ -55,7 +62,6 @@ const Login = () => {
             }
         } catch (error) {
             console.error("Login Error:", error);
-            // Axios attaches backend error messages to error.response.data
             setErrorMsg(error.response?.data?.message || "Invalid credentials. Please try again.");
         } finally {
             setIsLoading(false);
@@ -135,7 +141,7 @@ const Login = () => {
                                 value={employeeId}
                                 onChange={(e) => setEmployeeId(e.target.value)}
                                 className="h-11 rounded-lg"
-                                autoComplete="username" // <-- Added to fix the warning
+                                autoComplete="username"
                                 required
                             />
                         </div>
@@ -150,7 +156,7 @@ const Login = () => {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="h-11 rounded-lg pr-10"
-                                    autoComplete="current-password" // <-- Added to fix the warning
+                                    autoComplete="current-password"
                                     required
                                 />
                                 <button

@@ -1,5 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { toggleTheme } from "@/store/slices/themeSlice";
+import { logout } from "@/store/slices/authSlice"; // <-- 1. Import logout action
+import api, { setAxiosToken } from "@/api/axios"; // <-- 2. Import API & Axios Token setter
+
 import {
     User, Calendar, BellRing, Camera, FileText,
     Menu, X, Moon, Sun, LogOut
@@ -7,22 +12,32 @@ import {
 
 const EmployeeNavbar = () => {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
+
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [notifCount] = useState(2); // Mock notification count for optional tasks
 
-    // Dark mode state
-    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+    // Read the theme directly from Redux
+    const themeMode = useSelector((state) => state.theme.mode);
 
-    useEffect(() => {
-        if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
+    // --- NEW SECURE LOGOUT FLOW ---
+    const handleLogout = async () => {
+        try {
+            // 1. Tell the backend to destroy the HttpOnly refresh cookie
+            await api.post('/auth/logout');
+        } catch (error) {
+            console.error("Backend logout failed, forcing local logout:", error);
+        } finally {
+            // 2. Clear the in-memory Axios token
+            setAxiosToken(null);
+
+            // 3. Wipe the Redux store
+            dispatch(logout());
+
+            // 4. Redirect to login screen
+            navigate("/");
         }
-        localStorage.setItem('theme', theme);
-    }, [theme]);
-
-    const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+    };
 
     // Helper for active link styling
     const navLinkClasses = ({ isActive }) =>
@@ -75,15 +90,16 @@ const EmployeeNavbar = () => {
                     {/* Right Side Actions (Theme & Logout) */}
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={toggleTheme}
+                            onClick={() => dispatch(toggleTheme())}
                             className="p-2.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                         >
-                            {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                            {themeMode === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                         </button>
 
                         <button
-                            onClick={() => navigate("/")}
-                            className="hidden sm:flex p-2.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                            onClick={handleLogout} // Triggers the secure logout
+                            className="hidden lg:flex p-2.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                            title="Log Out"
                         >
                             <LogOut className="w-5 h-5" />
                         </button>
@@ -121,8 +137,8 @@ const EmployeeNavbar = () => {
                         ))}
                         <div className="w-full h-px bg-border my-2"></div>
                         <button
-                            onClick={() => navigate("/")}
-                            className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                            onClick={handleLogout} // Triggers the secure logout on mobile
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-destructive hover:bg-destructive/10 transition-colors w-full text-left"
                         >
                             <LogOut className="w-5 h-5" />
                             Log Out

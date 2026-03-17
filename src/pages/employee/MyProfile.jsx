@@ -1,60 +1,64 @@
 import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { setCredentials } from "../../store/slices/authSlice"; // Adjust path to your authSlice
+import { updateLocation } from "../../store/slices/locationSlice"; // Adjust path to your locationSlice
+import api from "../../api/axios";
+
 import {
     User, Mail, Phone, MapPin,
     CheckCircle, Clock, ShieldCheck, LogOut, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import api from "../../api/axios";
-
-// Handle Environment Variables securely
-const BASE_URL = import.meta.env?.VITE_BASE_URL || 'http://localhost:5000';
 
 const MyProfile = () => {
-    // --- UI States ---
-    const [isLoading, setIsLoading] = useState(true);
+    // --- 1. REDUX STATE & DISPATCH ---
+    const dispatch = useDispatch();
+    // Grab user and token from Redux. (Token is needed to keep it intact when updating user)
+    const { user, token } = useSelector((state) => state.auth);
+
+    // --- 2. LOCAL UI STATES ---
+    // If we have the user in Redux, no need to show the initial loading spinner!
+    const [isLoading, setIsLoading] = useState(!user);
     const [actionLoading, setActionLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
 
-    // --- Data States ---
-    const [employeeData, setEmployeeData] = useState(null);
+    // --- 3. FLOW STATES ---
     const [shiftData, setShiftData] = useState(null);
-
-    // --- Flow States ---
     const [inRadius, setInRadius] = useState(true);
     const [dayStarted, setDayStarted] = useState(false);
     const [dayEnded, setDayEnded] = useState(false);
 
-    // --- 1. FETCH PROFILE ON MOUNT ---
+    // --- 4. BACKGROUND SYNC (Stale-While-Revalidate) ---
     useEffect(() => {
-        const fetchProfile = async () => {
+        const fetchLatestProfile = async () => {
             try {
-                // Cleaned up fetch -> api.get
                 const response = await api.get('/employee/me/profile');
-                const data = response.data;
-
-                if (data.success) {
-                    setEmployeeData(data.user);
-                } else {
-                    setErrorMsg("Failed to load profile data.");
+                if (response.data.success) {
+                    // Update Redux with the freshest data from the server
+                    dispatch(setCredentials({
+                        user: response.data.user,
+                        access_token: token // Keep the existing token
+                    }));
                 }
             } catch (error) {
-                console.error("Error fetching profile:", error);
-                setErrorMsg("Server error while loading profile.");
+                console.error("Background sync failed:", error);
+                // Only show an error if we have NO user data at all to display
+                if (!user) setErrorMsg("Failed to load profile data.");
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchProfile();
-    }, []);
+        fetchLatestProfile();
+    }, [dispatch, token, user]); // Added dependencies safely
 
-    // --- 2. 5-SECOND RESET TIMER ---
+    // --- 5. 5-SECOND RESET TIMER ---
     useEffect(() => {
         let timer;
         if (dayEnded) {
             timer = setTimeout(() => {
                 setDayEnded(false);
-                setShiftData(null); // Clear shift data for the reset
+                setShiftData(null);
             }, 5000);
         }
         return () => {
@@ -62,7 +66,7 @@ const MyProfile = () => {
         };
     }, [dayEnded]);
 
-    // --- HELPER: GET GPS COORDINATES ---
+    // --- 6. HELPER: GET GPS & DISPATCH TO REDUX ---
     const getUserLocation = () => {
         return new Promise((resolve, reject) => {
             if (!navigator.geolocation) {
@@ -70,10 +74,14 @@ const MyProfile = () => {
             } else {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
-                        resolve({
+                        const coords = {
                             latitude: position.coords.latitude,
                             longitude: position.coords.longitude
-                        });
+                        };
+
+                        // 🔥 Save location to Redux so other components (like Attendance) can use it!
+                        dispatch(updateLocation(coords));
+                        resolve(coords);
                     },
                     (error) => {
                         reject(new Error("Please enable location services to check in."));
@@ -83,7 +91,7 @@ const MyProfile = () => {
         });
     };
 
-    // --- 3. START DAY API CALL ---
+    // --- 7. START DAY API CALL ---
     const handleStartDay = async () => {
         setActionLoading(true);
         setErrorMsg("");
@@ -91,29 +99,25 @@ const MyProfile = () => {
         try {
             const coords = await getUserLocation();
 
-            // Cleaned up fetch -> api.post
             const response = await api.post('/employee/shift/start', {
                 latitude: coords.latitude,
                 longitude: coords.longitude,
-                territory: employeeData?.territory || "Assigned Zone"
+                territory: user?.territory || "Assigned Zone" // Now using Redux user
             });
 
-            const data = response.data;
-
-            if (data.success) {
-                setShiftData(data.shift);
+            if (response.data.success) {
+                setShiftData(response.data.shift);
                 setDayEnded(false);
                 setDayStarted(true);
             }
         } catch (error) {
-            // Axios backend errors
             setErrorMsg(error.response?.data?.message || error.message || "Network error.");
         } finally {
             setActionLoading(false);
         }
     };
 
-    // --- 4. END DAY API CALL ---
+    // --- 8. END DAY API CALL ---
     const handleEndDay = async () => {
         setActionLoading(true);
         setErrorMsg("");
@@ -121,16 +125,13 @@ const MyProfile = () => {
         try {
             const coords = await getUserLocation();
 
-            // Cleaned up fetch -> api.post
             const response = await api.post('/employee/shift/end', {
                 latitude: coords.latitude,
                 longitude: coords.longitude
             });
 
-            const data = response.data;
-
-            if (data.success) {
-                setShiftData(data.shift);
+            if (response.data.success) {
+                setShiftData(response.data.shift);
                 setDayStarted(false);
                 setDayEnded(true);
             }
@@ -141,13 +142,13 @@ const MyProfile = () => {
         }
     };
 
-    // Format times for display
     const formatTime = (dateString) => {
         if (!dateString) return "";
         return new Date(dateString).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
     };
 
-    if (isLoading) {
+    // Render loading state ONLY if we have absolutely no user data in Redux
+    if (isLoading && !user) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <Loader2 className="w-10 h-10 animate-spin text-primary" />
@@ -155,14 +156,15 @@ const MyProfile = () => {
         );
     }
 
-    if (!employeeData) return <div className="p-8 text-center text-destructive">Failed to load profile.</div>;
+    // Failsafe
+    if (!user) return <div className="p-8 text-center text-destructive">Failed to load profile.</div>;
 
     return (
         <div className="space-y-6 md:space-y-8 animate-fade-in">
             {/* Page Header */}
             <div>
                 <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">
-                    Welcome back, {employeeData.name.split(' ')[0]} 👋
+                    Welcome back, {user.name?.split(' ')[0]} 👋
                 </h1>
                 <p className="text-muted-foreground mt-1">Here is your daily overview and profile information.</p>
             </div>
@@ -178,7 +180,6 @@ const MyProfile = () => {
                 {/* LEFT COLUMN: Global Attendance Action */}
                 <div className="lg:col-span-7 space-y-6 md:space-y-8">
                     <div className={`rounded-2xl p-6 md:p-8 shadow-elevated transition-all duration-500 ${dayStarted || dayEnded ? "bg-card border border-border" : "gradient-primary border-none text-primary-foreground"}`}>
-
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-3">
                                 <div className={`p-2 rounded-xl ${dayStarted ? "bg-emerald-500/10" : dayEnded ? "bg-muted" : "bg-white/20 backdrop-blur-sm"}`}>
@@ -263,12 +264,12 @@ const MyProfile = () => {
 
                         <div className="flex items-center gap-4 mb-6 relative z-10">
                             <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl font-bold shadow-md">
-                                {employeeData.name.charAt(0).toUpperCase()}
+                                {user.name?.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                                <h2 className="font-display font-bold text-xl text-foreground">{employeeData.name}</h2>
+                                <h2 className="font-display font-bold text-xl text-foreground">{user.name}</h2>
                                 <p className="text-sm font-medium text-primary bg-primary/10 px-2.5 py-0.5 rounded-md w-fit mt-1">
-                                    {employeeData.role}
+                                    {user.role}
                                 </p>
                             </div>
                         </div>
@@ -278,22 +279,22 @@ const MyProfile = () => {
                                 <ShieldCheck className="w-5 h-5 text-muted-foreground" />
                                 <div>
                                     <p className="text-xs text-muted-foreground font-medium">Employee ID</p>
-                                    <p className="text-sm font-semibold text-foreground">{employeeData.employeeId}</p>
+                                    <p className="text-sm font-semibold text-foreground">{user.employeeId}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 border border-border/50">
                                 <Mail className="w-5 h-5 text-muted-foreground" />
                                 <div>
                                     <p className="text-xs text-muted-foreground font-medium">Email Address</p>
-                                    <p className="text-sm font-semibold text-foreground">{employeeData.email}</p>
+                                    <p className="text-sm font-semibold text-foreground">{user.email}</p>
                                 </div>
                             </div>
-                            {employeeData.mobile && (
+                            {user.mobile && (
                                 <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 border border-border/50">
                                     <Phone className="w-5 h-5 text-muted-foreground" />
                                     <div>
                                         <p className="text-xs text-muted-foreground font-medium">Phone Number</p>
-                                        <p className="text-sm font-semibold text-foreground">{employeeData.mobile}</p>
+                                        <p className="text-sm font-semibold text-foreground">{user.mobile}</p>
                                     </div>
                                 </div>
                             )}
