@@ -107,7 +107,7 @@ const AssignedSchools = () => {
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="pl-11 sm:pl-0 pt-2 sm:pt-0 min-w-[160px]">
+                                <div className="pl-11 sm:pl-0 pt-2 sm:pt-0 min-w-40">
 
                                     {school.status === "pending" && (
                                         <div className="space-y-2">

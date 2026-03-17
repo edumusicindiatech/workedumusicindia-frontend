@@ -3,25 +3,68 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Shield } from "lucide-react";
+import { Eye, EyeOff, Shield, Loader2, AlertCircle } from "lucide-react";
+import api from "../api/axios";
+
+// Securely grab the base URL
+const BASE_URL = import.meta.env?.VITE_BASE_URL || 'http://localhost:5000';
 
 const Login = () => {
     const navigate = useNavigate();
+
+    // UI States
     const [showPassword, setShowPassword] = useState(false);
-    const [email, setEmail] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [errorMsg, setErrorMsg] = useState("");
+
+    // Form States
+    const [employeeId, setEmployeeId] = useState("");
     const [password, setPassword] = useState("");
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
-        if (email.includes("admin")) {
-            navigate("/admin");
-        } else {
-            navigate("/employee");
+        setIsLoading(true);
+        setErrorMsg("");
+
+        try {
+            const response = await api.post('/auth/login', { employeeId, password });
+
+            const data = response.data;
+
+            if (data.access_token) {
+                // 1. Save the token
+                localStorage.setItem("access_token", data.access_token);
+
+                if (data.user) {
+                    localStorage.setItem("user", JSON.stringify(data.user));
+                }
+
+                // 2. Handle First Login Password Reset
+                if (data.isFirstLogin) {
+                    navigate("/employee");
+                    return;
+                }
+
+                // 3. Route based on Role
+                const adminRoles = ['Admin1', 'Admin2', 'Admin3', 'admin'];
+                if (adminRoles.includes(data.role)) {
+                    navigate("/admin");
+                } else {
+                    navigate("/employee");
+                }
+            }
+        } catch (error) {
+            console.error("Login Error:", error);
+            // Axios attaches backend error messages to error.response.data
+            setErrorMsg(error.response?.data?.message || "Invalid credentials. Please try again.");
+        } finally {
+            setIsLoading(false);
         }
-    };
+    }
 
     return (
         <div className="flex min-h-screen">
+            {/* Left Side: Hero / Branding */}
             <div className="hidden lg:flex lg:w-1/2 gradient-hero relative items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 opacity-20">
                     {[...Array(5)].map((_, i) => (
@@ -59,8 +102,11 @@ const Login = () => {
                 </div>
             </div>
 
-            <div className="flex-1 flex items-center justify-center p-8 bg-card">
+            {/* Right Side: Login Form */}
+            <div className="flex-1 flex items-center justify-center p-8 bg-card relative">
                 <div className="w-full max-w-sm animate-fade-in">
+
+                    {/* Mobile Branding */}
                     <div className="lg:hidden mb-8 text-center">
                         <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center mx-auto mb-4">
                             <Shield className="w-6 h-6 text-primary-foreground" />
@@ -69,18 +115,27 @@ const Login = () => {
                     </div>
 
                     <h2 className="text-2xl font-bold mb-1">Welcome back</h2>
-                    <p className="text-muted-foreground mb-8">Sign in to your account</p>
+                    <p className="text-muted-foreground mb-6">Sign in to your account to continue</p>
+
+                    {/* Error Display */}
+                    {errorMsg && (
+                        <div className="mb-6 bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl flex items-center gap-3 animate-in fade-in">
+                            <AlertCircle className="w-5 h-5 shrink-0" />
+                            <p className="font-semibold text-sm">{errorMsg}</p>
+                        </div>
+                    )}
 
                     <form onSubmit={handleLogin} className="space-y-5">
                         <div className="space-y-2">
-                            <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                            <Label htmlFor="employeeId" className="text-sm font-medium">Employee ID</Label>
                             <Input
-                                id="email"
-                                type="email"
-                                placeholder="you@company.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                id="employeeId"
+                                type="text"
+                                placeholder="e.g., EMP-2026"
+                                value={employeeId}
+                                onChange={(e) => setEmployeeId(e.target.value)}
                                 className="h-11 rounded-lg"
+                                autoComplete="username" // <-- Added to fix the warning
                                 required
                             />
                         </div>
@@ -95,6 +150,7 @@ const Login = () => {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="h-11 rounded-lg pr-10"
+                                    autoComplete="current-password" // <-- Added to fix the warning
                                     required
                                 />
                                 <button
@@ -107,13 +163,18 @@ const Login = () => {
                             </div>
                         </div>
 
-                        <Button type="submit" className="w-full h-11 rounded-lg text-base font-semibold shadow-glow">
-                            Login
+                        <Button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full h-11 rounded-lg text-base font-semibold shadow-glow flex items-center justify-center gap-2"
+                        >
+                            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+                            {isLoading ? "Authenticating..." : "Login"}
                         </Button>
                     </form>
 
                     <p className="text-xs text-muted-foreground text-center mt-8">
-                        Hint: Use "admin@" for admin view, anything else for employee view
+                        Having trouble logging in? Contact your administrator.
                     </p>
                 </div>
             </div>
