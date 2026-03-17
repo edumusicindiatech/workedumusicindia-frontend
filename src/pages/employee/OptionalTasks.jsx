@@ -183,7 +183,7 @@ const OptionalTasks = () => {
                             value={rejectReason}
                             onChange={(e) => setRejectReason(e.target.value)}
                             placeholder="I am rejecting this because..."
-                            className="w-full min-h-[120px] rounded-xl border border-input bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-destructive/50 transition-shadow mb-6"
+                            className="w-full min-h-30 rounded-xl border border-input bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-destructive/50 transition-shadow mb-6"
                         />
 
                         <div className="flex items-center gap-3">

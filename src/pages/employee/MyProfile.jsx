@@ -80,7 +80,7 @@ const MyProfile = () => {
                             // STATE 2: ACTIVE SHIFT
                             <div className="space-y-5 animate-fade-in">
                                 <div className="flex items-start gap-3.5 py-4 px-5 rounded-xl bg-[#06281e]/40 border border-emerald-900/50">
-                                    <CheckCircle className="w-6 h-6 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                    <CheckCircle className="w-6 h-6 text-emerald-500 shrink-0 mt-0.5" />
                                     <div className="flex flex-col">
                                         <p className="font-semibold text-emerald-500 text-base">Day Started Successfully</p>
                                         <div className="text-sm text-emerald-500/80 mt-1.5 flex flex-col gap-1.5">
@@ -107,7 +107,7 @@ const MyProfile = () => {
                             // STATE 3: SHIFT ENDED (Stays here for 5 seconds)
                             <div className="space-y-4 animate-fade-in">
                                 <div className="flex items-start gap-3.5 py-4 px-5 rounded-xl bg-muted/50 border border-border">
-                                    <CheckCircle className="w-6 h-6 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                    <CheckCircle className="w-6 h-6 text-muted-foreground shrink-0 mt-0.5" />
                                     <div className="flex flex-col">
                                         <p className="font-semibold text-foreground text-base">Shift Ended Successfully</p>
                                         <div className="text-sm text-muted-foreground mt-1.5 flex flex-col gap-1.5">

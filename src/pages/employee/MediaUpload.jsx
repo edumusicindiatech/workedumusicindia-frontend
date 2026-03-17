@@ -152,7 +152,7 @@ const MediaUpload = () => {
                     </div>
 
                     {/* Media Cards List */}
-                    <div className="space-y-3 mb-6 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="space-y-3 mb-6 max-h-75 overflow-y-auto pr-2 custom-scrollbar">
                         {selectedFiles.map((file, index) => (
                             <div key={index} className="bg-muted/30 border border-border/50 rounded-xl p-3 flex items-center justify-between">
                                 <div className="flex items-center gap-4 overflow-hidden">
@@ -164,7 +164,7 @@ const MediaUpload = () => {
                                         )}
                                     </div>
                                     <div className="truncate">
-                                        <p className="font-semibold text-sm text-foreground truncate max-w-[180px] sm:max-w-xs">
+                                        <p className="font-semibold text-sm text-foreground truncate max-w-45 sm:max-w-xs">
                                             {file.name}
                                         </p>
                                         <p className="text-[11px] text-muted-foreground mt-0.5">

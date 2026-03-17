@@ -88,7 +88,7 @@ const DailyReport = () => {
                             <option value="Administrative">Administrative</option>
                         </select>
                         {/* Custom Dropdown Arrow */}
-                        <div className="absolute right-4 top-[38px] pointer-events-none text-muted-foreground text-xs">
+                        <div className="absolute right-4 top-9.5 pointer-events-none text-muted-foreground text-xs">
                             ▼
                         </div>
                     </div>
@@ -104,7 +104,7 @@ const DailyReport = () => {
                             value={summary}
                             onChange={(e) => setSummary(e.target.value)}
                             placeholder="Describe the schools visited, overall progress, and any immediate challenges faced today..."
-                            className="w-full min-h-[150px] rounded-xl border border-input bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow custom-scrollbar"
+                            className="w-full min-h-37.5 rounded-xl border border-input bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow custom-scrollbar"
                         />
                     </div>
 
@@ -118,7 +118,7 @@ const DailyReport = () => {
                             value={actionItems}
                             onChange={(e) => setActionItems(e.target.value)}
                             placeholder="List any follow-ups required for tomorrow (e.g., Check attendance logs at Washington Middle School)..."
-                            className="w-full min-h-[100px] rounded-xl border border-input bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow custom-scrollbar"
+                            className="w-full min-h-25 rounded-xl border border-input bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow custom-scrollbar"
                         />
                     </div>
 
