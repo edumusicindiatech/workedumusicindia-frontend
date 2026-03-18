@@ -78,41 +78,41 @@ const EmployeeProfile = () => {
                 <ArrowLeft className="w-4 h-4" /> Back to Roster
             </button>
 
-            {/* Header Card (Restored original code) */}
+            {/* Header Card */}
             <div className="flex items-center gap-4 mb-8 bg-card p-6 rounded-2xl shadow-sm border border-border">
-                <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center text-2xl font-bold text-primary-foreground shadow-md">
+                <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center text-2xl font-bold text-primary-foreground shadow-md shrink-0">
                     {employeeData.name.charAt(0)}
                 </div>
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground">{employeeData.name}</h1>
-                    <div className="flex items-center gap-2 mt-1 text-muted-foreground">
-                        <span className="font-medium text-primary bg-primary/10 px-2 py-0.5 rounded text-sm">{employeeData.role}</span>
-                        <span>·</span>
+                <div className="min-w-0">
+                    <h1 className="text-base sm:text-2xl font-bold text-foreground truncate">{employeeData.name}</h1>
+                    <div className="flex items-center gap-2 mt-1 text-muted-foreground flex-wrap">
+                        <span className="hidden sm:inline font-medium text-primary bg-primary/10 px-2 py-0.5 rounded text-sm">{employeeData.role}</span>
+                        <span className="hidden sm:inline">·</span>
                         <span className="flex items-center gap-1 text-sm"><MapPin className="w-3.5 h-3.5" /> {employeeData.zone}</span>
                     </div>
                 </div>
-                <span className="ml-auto px-4 py-1.5 rounded-full text-sm font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                <span className="hidden sm:inline-block ml-auto px-4 py-1.5 rounded-full text-sm font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                     {employeeData.status.toUpperCase()}
                 </span>
             </div>
 
-            {/* Main Tabs (Restored original code) */}
+            {/* Main Tabs (Modified text visibility and flex-wrap for mobile) */}
             <Tabs defaultValue="schools" className="space-y-6">
-                <TabsList className="bg-card w-full justify-start overflow-x-auto border border-border p-1 h-auto rounded-xl flex-wrap">
+                <TabsList className="bg-card w-full justify-center overflow-x-auto border border-border p-1 h-auto rounded-xl flex-nowrap sm:flex-wrap">
                     <TabsTrigger value="schools" className="gap-2 py-2.5 px-4 rounded-lg data-[state=active]:shadow-sm">
-                        <School className="w-4 h-4" /> School Assignments
+                        <School className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">School Assignments</span>
                     </TabsTrigger>
                     <TabsTrigger value="tasks" className="gap-2 py-2.5 px-4 rounded-lg data-[state=active]:shadow-sm">
-                        <ClipboardList className="w-4 h-4" /> Optional Tasks
+                        <ClipboardList className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Optional Tasks</span>
                     </TabsTrigger>
                     <TabsTrigger value="payroll" className="gap-2 py-2.5 px-4 rounded-lg data-[state=active]:shadow-sm">
-                        <DollarSign className="w-4 h-4" /> Deductions
+                        <DollarSign className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Deductions</span>
                     </TabsTrigger>
                     <TabsTrigger value="warnings" className="gap-2 py-2.5 px-4 rounded-lg data-[state=active]:shadow-sm">
-                        <AlertTriangle className="w-4 h-4" /> Warnings
+                        <AlertTriangle className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Warnings</span>
                     </TabsTrigger>
                     <TabsTrigger value="attendance" className="gap-2 py-2.5 px-4 rounded-lg data-[state=active]:shadow-sm">
-                        <CalendarDays className="w-4 h-4" /> Attendance Record
+                        <CalendarDays className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Attendance Record</span>
                     </TabsTrigger>
                 </TabsList>
 
@@ -149,7 +149,7 @@ const EmployeeProfile = () => {
                         <div className="p-6 border-b border-border flex justify-between items-center bg-muted/20">
                             <div>
                                 <h3 className="text-lg font-semibold flex items-center gap-2"><ClipboardList className="w-5 h-5 text-primary" /> Task Requests</h3>
-                                <p className="text-sm text-muted-foreground mt-1">Review the status of optional assignments sent to this employee.</p>
+                                <p className="text-sm text-muted-foreground mt-1 hidden md:block">Review the status of optional assignments sent to this employee.</p>
                             </div>
                             <Button size="sm" className="gap-2" onClick={() => setIsTaskModalOpen(true)}>
                                 <Plus className="w-4 h-4" /> Send Request
