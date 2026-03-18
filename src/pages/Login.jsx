@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+// Removed useNavigate import since we don't need it here anymore
 import { useDispatch } from "react-redux";
 import { setCredentials } from "../store/slices/authSlice";
 
@@ -8,11 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Shield, Loader2, AlertCircle } from "lucide-react";
 
-// Combine the default api import and the named setAxiosToken import
 import api, { setAxiosToken } from "../api/axios";
 
 const Login = () => {
-    const navigate = useNavigate();
     const dispatch = useDispatch();
 
     // UI States
@@ -38,24 +36,11 @@ const Login = () => {
                 setAxiosToken(data.access_token);
 
                 // 2. Save directly to Redux memory ONLY (Zero localStorage involved!)
+                // PublicRoute will catch this state change and automatically route the user
                 dispatch(setCredentials({
                     user: data.user || null,
                     access_token: data.access_token
                 }));
-
-                // 3. Handle First Login Password Reset Routing
-                if (data.isFirstLogin) {
-                    navigate("/employee");
-                    return;
-                }
-
-                // 4. Standard Role-Based Routing
-                const adminRoles = ['Admin1', 'Admin2', 'Admin3', 'admin'];
-                if (adminRoles.includes(data.role)) {
-                    navigate("/admin");
-                } else {
-                    navigate("/employee");
-                }
             }
         } catch (error) {
             console.error("Login Error:", error);
