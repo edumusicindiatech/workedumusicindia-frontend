@@ -11,9 +11,6 @@ import { Eye, EyeOff, Shield, Loader2, AlertCircle } from "lucide-react";
 // Combine the default api import and the named setAxiosToken import
 import api, { setAxiosToken } from "../api/axios";
 
-// Securely grab the base URL
-const BASE_URL = import.meta.env?.VITE_BASE_URL || 'http://localhost:5000';
-
 const Login = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
