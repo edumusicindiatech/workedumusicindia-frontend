@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     ArrowLeft, Plus, AlertTriangle, DollarSign,
     School, ClipboardList, MapPin, Calendar,
-    CheckCircle2, XCircle, Clock, CalendarDays, Eye
+    CheckCircle2, XCircle, Clock, CalendarDays, Eye, ChevronRight
 } from "lucide-react";
 
 import AssignSchoolModal from "../../modals/AssignSchoolModals";
@@ -16,14 +16,8 @@ import AttendanceDetailsModal from "../../modals/AttendanceDetailsModal";
 
 // --- MOCK DATA ---
 const employeeData = {
-    id: 1,
-    name: "Sarah Johnson",
-    role: "Field Officer",
-    zone: "Zone A",
-    email: "sarah.j@workforce.com",
-    phone: "+1 (555) 123-4567",
-    joinDate: "Jan 15, 2023",
-    status: "active",
+    id: 1, name: "Sarah Johnson", role: "Field Officer", zone: "Zone A",
+    email: "sarah.j@workforce.com", phone: "+1 (555) 123-4567", joinDate: "Jan 15, 2023", status: "active",
 };
 
 const assignedSchools = [
@@ -84,7 +78,7 @@ const EmployeeProfile = () => {
                 <ArrowLeft className="w-4 h-4" /> Back to Roster
             </button>
 
-            {/* Header Card */}
+            {/* Header Card (Restored original code) */}
             <div className="flex items-center gap-4 mb-8 bg-card p-6 rounded-2xl shadow-sm border border-border">
                 <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center text-2xl font-bold text-primary-foreground shadow-md">
                     {employeeData.name.charAt(0)}
@@ -102,7 +96,7 @@ const EmployeeProfile = () => {
                 </span>
             </div>
 
-            {/* Main Tabs (Notifications Removed) */}
+            {/* Main Tabs (Restored original code) */}
             <Tabs defaultValue="schools" className="space-y-6">
                 <TabsList className="bg-card w-full justify-start overflow-x-auto border border-border p-1 h-auto rounded-xl flex-wrap">
                     <TabsTrigger value="schools" className="gap-2 py-2.5 px-4 rounded-lg data-[state=active]:shadow-sm">
@@ -122,7 +116,7 @@ const EmployeeProfile = () => {
                     </TabsTrigger>
                 </TabsList>
 
-                {/* --- SCHOOL ASSIGNMENTS TAB --- */}
+                {/* --- SCHOOL ASSIGNMENTS TAB (Restored original code) --- */}
                 <TabsContent value="schools" className="space-y-6 animate-in fade-in-50">
                     <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
                         <div className="p-6 border-b border-border flex justify-between items-center">
@@ -149,7 +143,7 @@ const EmployeeProfile = () => {
                     </div>
                 </TabsContent>
 
-                {/* --- OPTIONAL TASKS TAB --- */}
+                {/* --- OPTIONAL TASKS TAB (Restored original code) --- */}
                 <TabsContent value="tasks" className="space-y-6 animate-in fade-in-50">
                     <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
                         <div className="p-6 border-b border-border flex justify-between items-center bg-muted/20">
@@ -161,7 +155,6 @@ const EmployeeProfile = () => {
                                 <Plus className="w-4 h-4" /> Send Request
                             </Button>
                         </div>
-
                         <div className="p-0">
                             {optionalTasks.map((task) => (
                                 <div key={task.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 border-b border-border last:border-0 hover:bg-muted/30 gap-4">
@@ -176,16 +169,11 @@ const EmployeeProfile = () => {
                                             </p>
                                         )}
                                     </div>
-
                                     <div className="flex items-center gap-2 shrink-0">
                                         {task.status === 'Accepted' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
                                         {task.status === 'Rejected' && <XCircle className="w-4 h-4 text-destructive" />}
                                         {task.status === 'Pending' && <Clock className="w-4 h-4 text-slate-500" />}
-
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${task.status === 'Accepted' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                            task.status === 'Rejected' ? 'bg-destructive/10 text-destructive border-destructive/20' :
-                                                'bg-slate-500/10 text-slate-500 border-slate-500/20'
-                                            }`}>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${task.status === 'Accepted' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : task.status === 'Rejected' ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
                                             {task.status.toUpperCase()}
                                         </span>
                                     </div>
@@ -195,7 +183,7 @@ const EmployeeProfile = () => {
                     </div>
                 </TabsContent>
 
-                {/* --- PAYROLL & DEDUCTIONS TAB --- */}
+                {/* --- PAYROLL & DEDUCTIONS TAB (Restored original code) --- */}
                 <TabsContent value="payroll" className="space-y-6">
                     <div className="bg-card rounded-xl shadow-card p-6 border border-border">
                         <h3 className="text-lg font-semibold mb-4">Deduction History</h3>
@@ -224,20 +212,11 @@ const EmployeeProfile = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <Label>Amount ($)</Label>
-                                <Input
-                                    type="number"
-                                    placeholder="0.00"
-                                    value={newDeduction.amount}
-                                    onChange={(e) => setNewDeduction({ ...newDeduction, amount: e.target.value })}
-                                />
+                                <Input type="number" placeholder="0.00" value={newDeduction.amount} onChange={(e) => setNewDeduction({ ...newDeduction, amount: e.target.value })} />
                             </div>
                             <div>
                                 <Label>Reason</Label>
-                                <Input
-                                    placeholder="Reason for deduction"
-                                    value={newDeduction.reason}
-                                    onChange={(e) => setNewDeduction({ ...newDeduction, reason: e.target.value })}
-                                />
+                                <Input placeholder="Reason for deduction" value={newDeduction.reason} onChange={(e) => setNewDeduction({ ...newDeduction, reason: e.target.value })} />
                             </div>
                         </div>
                         <Button className="mt-4 gap-2">
@@ -246,7 +225,7 @@ const EmployeeProfile = () => {
                     </div>
                 </TabsContent>
 
-                {/* --- WARNINGS TAB --- */}
+                {/* --- WARNINGS TAB (Restored original code) --- */}
                 <TabsContent value="warnings" className="space-y-6">
                     <div className="bg-card rounded-xl shadow-card p-6 border border-border">
                         <h3 className="text-lg font-semibold mb-4">Warning History</h3>
@@ -274,11 +253,7 @@ const EmployeeProfile = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <Label>Type</Label>
-                                <select
-                                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                                    value={newWarning.type}
-                                    onChange={(e) => setNewWarning({ ...newWarning, type: e.target.value })}
-                                >
+                                <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={newWarning.type} onChange={(e) => setNewWarning({ ...newWarning, type: e.target.value })}>
                                     <option>Verbal</option>
                                     <option>Written</option>
                                     <option>Final</option>
@@ -286,11 +261,7 @@ const EmployeeProfile = () => {
                             </div>
                             <div>
                                 <Label>Reason</Label>
-                                <Input
-                                    placeholder="Reason for warning"
-                                    value={newWarning.reason}
-                                    onChange={(e) => setNewWarning({ ...newWarning, reason: e.target.value })}
-                                />
+                                <Input placeholder="Reason for warning" value={newWarning.reason} onChange={(e) => setNewWarning({ ...newWarning, reason: e.target.value })} />
                             </div>
                         </div>
                         <Button className="mt-4 gap-2">
@@ -299,7 +270,7 @@ const EmployeeProfile = () => {
                     </div>
                 </TabsContent>
 
-                {/* --- ATTENDANCE RECORD TAB --- */}
+                {/* --- ATTENDANCE RECORD TAB (UPDATED: Hidden on mobile, cards shown instead. No stats in table) --- */}
                 <TabsContent value="attendance" className="space-y-6 animate-in fade-in-50">
                     <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
                         <div className="p-6 border-b border-border bg-muted/20">
@@ -308,60 +279,65 @@ const EmployeeProfile = () => {
                         </div>
 
                         <div className="p-0">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-muted/50 text-muted-foreground font-medium border-b border-border">
-                                    <tr>
-                                        <th className="px-6 py-3">Month</th>
-                                        <th className="px-6 py-3">Present</th>
-                                        <th className="px-6 py-3">Late</th>
-                                        <th className="px-6 py-3">Absent</th>
-                                        <th className="px-6 py-3">Holidays</th>
-                                        <th className="px-6 py-3 text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {monthlyAttendanceSummaries.map((record) => (
-                                        <tr key={record.id} className="border-b border-border hover:bg-muted/30">
-                                            <td className="px-6 py-4 font-medium">{record.month}</td>
-                                            <td className="px-6 py-4 text-emerald-600 font-semibold">{record.present}</td>
-                                            <td className="px-6 py-4 text-warning font-semibold">{record.late}</td>
-                                            <td className="px-6 py-4 text-destructive font-semibold">{record.absent}</td>
-                                            <td className="px-6 py-4 text-muted-foreground">{record.holidays}</td>
-                                            <td className="px-6 py-4 text-right">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="gap-2 h-8"
-                                                    onClick={() => setSelectedMonth(record)}
-                                                >
-                                                    <Eye className="w-3.5 h-3.5" /> View Details
-                                                </Button>
-                                            </td>
+                            {/* Desktop Table: Shows only Month and Action */}
+                            <div className="hidden md:block overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-muted/50 text-muted-foreground font-medium border-b border-border">
+                                        <tr>
+                                            <th className="px-6 py-3">Month</th>
+                                            <th className="px-6 py-3 text-right">Action</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {monthlyAttendanceSummaries.map((record) => (
+                                            <tr key={record.id} className="border-b border-border hover:bg-muted/30">
+                                                <td className="px-6 py-4 font-medium">{record.month}</td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="gap-2 h-8"
+                                                        onClick={() => setSelectedMonth(record)}
+                                                    >
+                                                        <Eye className="w-3.5 h-3.5" /> View Details
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Mobile Cards: Tap to view details */}
+                            <div className="grid grid-cols-1 gap-3 md:hidden p-4">
+                                {monthlyAttendanceSummaries.map((record) => (
+                                    <div
+                                        key={record.id}
+                                        onClick={() => setSelectedMonth(record)}
+                                        className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between active:scale-[0.98] transition-transform cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                                                <CalendarDays className="w-6 h-6" />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-base text-foreground">{record.month}</span>
+                                                <span className="text-[11px] font-medium text-muted-foreground mt-0.5">Tap to view details</span>
+                                            </div>
+                                        </div>
+                                        <ChevronRight className="w-5 h-5 text-muted-foreground/50" />
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </TabsContent>
             </Tabs>
 
             {/* --- Modals --- */}
-            <AssignSchoolModal
-                isOpen={isAssignModalOpen}
-                onClose={() => setIsAssignModalOpen(false)}
-            />
-
-            <AssignTaskModal
-                isOpen={isTaskModalOpen}
-                onClose={() => setIsTaskModalOpen(false)}
-            />
-
-            <AttendanceDetailsModal
-                selectedMonth={selectedMonth}
-                detailedRecords={detailedMonthlyRecords}
-                onClose={() => setSelectedMonth(null)}
-            />
+            <AssignSchoolModal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} />
+            <AssignTaskModal isOpen={isTaskModalOpen} onClose={() => setIsTaskModalOpen(false)} />
+            <AttendanceDetailsModal selectedMonth={selectedMonth} detailedRecords={detailedMonthlyRecords} onClose={() => setSelectedMonth(null)} />
         </div>
     );
 };
