@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { setCredentials, setHydrationComplete } from "./store/slices/authSlice";
+// ADDED: Imported 'logout' from the auth slice
+import { setCredentials, logout } from "./store/slices/authSlice";
 import api, { setAxiosToken } from "./api/axios";
 import { Loader2 } from "lucide-react";
 
@@ -49,10 +50,12 @@ function App() {
             access_token: newAccessToken
           }));
         } else {
-          dispatch(setHydrationComplete());
+          // UPDATED: Wipe state clean if profile fetch fails
+          dispatch(logout());
         }
       } catch (error) {
-        dispatch(setHydrationComplete());
+        // UPDATED: Wipe state clean if there is no valid refresh cookie
+        dispatch(logout());
       }
     };
 
