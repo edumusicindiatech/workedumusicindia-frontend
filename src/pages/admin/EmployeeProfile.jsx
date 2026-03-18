@@ -40,21 +40,59 @@ const warnings = [
     { id: 1, date: "Feb 10, 2024", type: "Verbal", reason: "Tardiness", issuedBy: "Manager A" },
 ];
 
-const monthlyAttendanceSummaries = [
-    { id: 'm1', month: "March 2024", present: 18, late: 2, absent: 1, holidays: 4, totalDays: 25 },
-    { id: 'm2', month: "February 2024", present: 19, late: 1, absent: 0, holidays: 8, totalDays: 28 },
-    { id: 'm3', month: "January 2024", present: 20, late: 0, absent: 2, holidays: 5, totalDays: 27 },
+// --- NEW HIERARCHICAL MOCK DATA (Month -> Schools -> Stats & Records) ---
+const monthlyAttendanceData = [
+    {
+        id: 'm1',
+        month: "March 2024",
+        schools: [
+            {
+                id: 101, name: "Lincoln High School", address: "123 Main St",
+                stats: { present: 12, late: 2, absent: 1, holidays: 2 },
+                records: [
+                    { date: 'Mar 15, 2024 (Fri)', status: 'Present', timeIn: '08:00 AM' },
+                    { date: 'Mar 12, 2024 (Tue)', status: 'Late', timeIn: '08:45 AM' },
+                    { date: 'Mar 10, 2024 (Sun)', status: 'Holiday', timeIn: '-' },
+                ]
+            },
+            {
+                id: 102, name: "Washington Elementary", address: "456 Oak Ave",
+                stats: { present: 6, late: 0, absent: 0, holidays: 2 },
+                records: [
+                    { date: 'Mar 14, 2024 (Thu)', status: 'Present', timeIn: '07:55 AM' },
+                ]
+            }
+        ]
+    },
+    {
+        id: 'm2',
+        month: "February 2024",
+        schools: [
+            {
+                id: 101, name: "Lincoln High School", address: "123 Main St",
+                stats: { present: 19, late: 1, absent: 0, holidays: 8 },
+                records: [
+                    { date: 'Feb 20, 2024 (Tue)', status: 'Present', timeIn: '07:50 AM' },
+                    { date: 'Feb 15, 2024 (Thu)', status: 'Late', timeIn: '08:30 AM' },
+                ]
+            }
+        ]
+    },
+    {
+        id: 'm3',
+        month: "January 2024",
+        schools: [
+            {
+                id: 103, name: "Roosevelt Middle", address: "789 Pine Ln",
+                stats: { present: 20, late: 0, absent: 2, holidays: 5 },
+                records: [
+                    { date: 'Jan 10, 2024 (Wed)', status: 'Absent', timeIn: '-' },
+                    { date: 'Jan 05, 2024 (Fri)', status: 'Present', timeIn: '08:00 AM' },
+                ]
+            }
+        ]
+    }
 ];
-
-const detailedMonthlyRecords = {
-    'm1': [
-        { date: 'Mar 1, 2024 (Fri)', status: 'Present', timeIn: '08:00 AM' },
-        { date: 'Mar 2, 2024 (Sat)', status: 'Present', timeIn: '08:05 AM' },
-        { date: 'Mar 3, 2024 (Sun)', status: 'Holiday', timeIn: '-' },
-        { date: 'Mar 4, 2024 (Mon)', status: 'Late', timeIn: '08:45 AM' },
-        { date: 'Mar 5, 2024 (Tue)', status: 'Absent', timeIn: '-' },
-    ]
-};
 
 const EmployeeProfile = () => {
     const { id } = useParams();
@@ -96,27 +134,27 @@ const EmployeeProfile = () => {
                 </span>
             </div>
 
-            {/* Main Tabs (Modified text visibility and flex-wrap for mobile) */}
+            {/* Main Tabs */}
             <Tabs defaultValue="schools" className="space-y-6">
-                <TabsList className="bg-card w-full justify-center overflow-x-auto border border-border p-1 h-auto rounded-xl flex-nowrap sm:flex-wrap">
-                    <TabsTrigger value="schools" className="gap-2 py-2.5 px-4 rounded-lg data-[state=active]:shadow-sm">
+                <TabsList className="bg-card w-full flex justify-between sm:justify-center border border-border p-1 h-auto rounded-xl">
+                    <TabsTrigger value="schools" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-0 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
                         <School className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">School Assignments</span>
                     </TabsTrigger>
-                    <TabsTrigger value="tasks" className="gap-2 py-2.5 px-4 rounded-lg data-[state=active]:shadow-sm">
+                    <TabsTrigger value="tasks" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-0 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
                         <ClipboardList className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Optional Tasks</span>
                     </TabsTrigger>
-                    <TabsTrigger value="payroll" className="gap-2 py-2.5 px-4 rounded-lg data-[state=active]:shadow-sm">
+                    <TabsTrigger value="payroll" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-0 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
                         <DollarSign className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Deductions</span>
                     </TabsTrigger>
-                    <TabsTrigger value="warnings" className="gap-2 py-2.5 px-4 rounded-lg data-[state=active]:shadow-sm">
+                    <TabsTrigger value="warnings" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-0 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
                         <AlertTriangle className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Warnings</span>
                     </TabsTrigger>
-                    <TabsTrigger value="attendance" className="gap-2 py-2.5 px-4 rounded-lg data-[state=active]:shadow-sm">
+                    <TabsTrigger value="attendance" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-0 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
                         <CalendarDays className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Attendance Record</span>
                     </TabsTrigger>
                 </TabsList>
 
-                {/* --- SCHOOL ASSIGNMENTS TAB (Restored original code) --- */}
+                {/* --- SCHOOL ASSIGNMENTS TAB --- */}
                 <TabsContent value="schools" className="space-y-6 animate-in fade-in-50">
                     <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
                         <div className="p-6 border-b border-border flex justify-between items-center">
@@ -143,7 +181,7 @@ const EmployeeProfile = () => {
                     </div>
                 </TabsContent>
 
-                {/* --- OPTIONAL TASKS TAB (Restored original code) --- */}
+                {/* --- OPTIONAL TASKS TAB --- */}
                 <TabsContent value="tasks" className="space-y-6 animate-in fade-in-50">
                     <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
                         <div className="p-6 border-b border-border flex justify-between items-center bg-muted/20">
@@ -183,7 +221,7 @@ const EmployeeProfile = () => {
                     </div>
                 </TabsContent>
 
-                {/* --- PAYROLL & DEDUCTIONS TAB (Restored original code) --- */}
+                {/* --- PAYROLL & DEDUCTIONS TAB --- */}
                 <TabsContent value="payroll" className="space-y-6">
                     <div className="bg-card rounded-xl shadow-card p-6 border border-border">
                         <h3 className="text-lg font-semibold mb-4">Deduction History</h3>
@@ -225,7 +263,7 @@ const EmployeeProfile = () => {
                     </div>
                 </TabsContent>
 
-                {/* --- WARNINGS TAB (Restored original code) --- */}
+                {/* --- WARNINGS TAB --- */}
                 <TabsContent value="warnings" className="space-y-6">
                     <div className="bg-card rounded-xl shadow-card p-6 border border-border">
                         <h3 className="text-lg font-semibold mb-4">Warning History</h3>
@@ -270,7 +308,7 @@ const EmployeeProfile = () => {
                     </div>
                 </TabsContent>
 
-                {/* --- ATTENDANCE RECORD TAB (UPDATED: Hidden on mobile, cards shown instead. No stats in table) --- */}
+                {/* --- ATTENDANCE RECORD TAB --- */}
                 <TabsContent value="attendance" className="space-y-6 animate-in fade-in-50">
                     <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
                         <div className="p-6 border-b border-border bg-muted/20">
@@ -289,7 +327,7 @@ const EmployeeProfile = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {monthlyAttendanceSummaries.map((record) => (
+                                        {monthlyAttendanceData.map((record) => (
                                             <tr key={record.id} className="border-b border-border hover:bg-muted/30">
                                                 <td className="px-6 py-4 font-medium">{record.month}</td>
                                                 <td className="px-6 py-4 text-right">
@@ -310,7 +348,7 @@ const EmployeeProfile = () => {
 
                             {/* Mobile Cards: Tap to view details */}
                             <div className="grid grid-cols-1 gap-3 md:hidden p-4">
-                                {monthlyAttendanceSummaries.map((record) => (
+                                {monthlyAttendanceData.map((record) => (
                                     <div
                                         key={record.id}
                                         onClick={() => setSelectedMonth(record)}
@@ -337,7 +375,7 @@ const EmployeeProfile = () => {
             {/* --- Modals --- */}
             <AssignSchoolModal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} />
             <AssignTaskModal isOpen={isTaskModalOpen} onClose={() => setIsTaskModalOpen(false)} />
-            <AttendanceDetailsModal selectedMonth={selectedMonth} detailedRecords={detailedMonthlyRecords} onClose={() => setSelectedMonth(null)} />
+            <AttendanceDetailsModal selectedMonth={selectedMonth} onClose={() => setSelectedMonth(null)} />
         </div>
     );
 };

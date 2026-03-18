@@ -144,7 +144,7 @@ const Communication = () => {
                             <div>
                                 <Label className="text-base">Message Context</Label>
                                 <textarea
-                                    className="w-full mt-3 min-h-[120px] rounded-xl border border-input bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
+                                    className="w-full mt-3 min-h-30 rounded-xl border border-input bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
                                     placeholder="Type your official announcement here..."
                                     value={message}
                                     onChange={(e) => setMessage(e.target.value)}
