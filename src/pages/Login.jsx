@@ -35,10 +35,11 @@ const Login = () => {
                 // 1. Immediately inject token into Axios for subsequent requests
                 setAxiosToken(data.access_token);
 
+                const completeUser = data.user ? { ...data.user, role: data.role } : null;
                 // 2. Save directly to Redux memory ONLY (Zero localStorage involved!)
                 // PublicRoute will catch this state change and automatically route the user
                 dispatch(setCredentials({
-                    user: data.user || null,
+                    user: completeUser,
                     access_token: data.access_token
                 }));
             }
