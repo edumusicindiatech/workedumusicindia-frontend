@@ -6,7 +6,7 @@ import { ClipboardList, X, Map, MapPin, ExternalLink } from "lucide-react";
 
 const AssignTaskModal = ({ isOpen, onClose }) => {
     const [taskForm, setTaskForm] = useState({
-        schoolName: "", location: "", latitude: "", longitude: "", timeFrom: "08:00", timeTo: "14:00", days: [], task: "", startDate: "", endDate: ""
+        task: "", schoolName: "", location: "", startDate: "", endDate: "", timeFrom: "08:00", timeTo: "14:00", days: [], latitude: "", longitude: ""
     });
 
     if (!isOpen) return null;
@@ -19,7 +19,7 @@ const AssignTaskModal = ({ isOpen, onClose }) => {
 
     const openGoogleMaps = () => {
         const query = taskForm.location ? encodeURIComponent(taskForm.location) : "";
-        const url = query ? `http://maps.google.com/?q=${query}` : "http://maps.google.com/";
+        const url = query ? `https://www.google.com/maps/search/?api=1&query=${query}` : "https://www.google.com/maps";
         window.open(url, "_blank");
     };
 
@@ -62,29 +62,14 @@ const AssignTaskModal = ({ isOpen, onClose }) => {
                         <Input placeholder="e.g. 123 Education Blvd, Sultanpur" value={taskForm.location} onChange={(e) => setTaskForm({ ...taskForm, location: e.target.value })} className="h-11 rounded-xl" />
                     </div>
 
-                    <div className="p-4 bg-muted/20 rounded-xl border border-border space-y-4">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                            <div>
-                                <Label className="flex items-center gap-2"><Map className="w-4 h-4 text-primary" /> Geofence Coordinates</Label>
-                                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                                    Required to enable GPS check-ins. Search maps to get coordinates.
-                                </p>
-                            </div>
-                            <Button type="button" variant="outline" size="sm" onClick={openGoogleMaps} className="gap-2 text-xs h-9 bg-background shrink-0 shadow-sm rounded-lg w-full md:w-auto">
-                                <MapPin className="w-3 h-3 text-primary" />
-                                Search Maps
-                                <ExternalLink className="w-3 h-3 text-muted-foreground ml-1" />
-                            </Button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Start Date</Label>
+                            <Input type="date" value={taskForm.startDate} onChange={(e) => setTaskForm({ ...taskForm, startDate: e.target.value })} className="h-11 rounded-xl" />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label className="text-xs">Latitude</Label>
-                                <Input placeholder="e.g. 26.2589" value={taskForm.latitude} onChange={(e) => setTaskForm({ ...taskForm, latitude: e.target.value })} className="h-10 rounded-lg" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-xs">Longitude</Label>
-                                <Input placeholder="e.g. 82.0730" value={taskForm.longitude} onChange={(e) => setTaskForm({ ...taskForm, longitude: e.target.value })} className="h-10 rounded-lg" />
-                            </div>
+                        <div className="space-y-2">
+                            <Label>End Date <span className="text-muted-foreground font-normal">(Optional)</span></Label>
+                            <Input type="date" value={taskForm.endDate} onChange={(e) => setTaskForm({ ...taskForm, endDate: e.target.value })} className="h-11 rounded-xl" />
                         </div>
                     </div>
 
@@ -110,14 +95,29 @@ const AssignTaskModal = ({ isOpen, onClose }) => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Start Date</Label>
-                            <Input type="date" value={taskForm.startDate} onChange={(e) => setTaskForm({ ...taskForm, startDate: e.target.value })} className="h-11 rounded-xl" />
+                    <div className="p-4 bg-muted/20 rounded-xl border border-border space-y-4">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                            <div>
+                                <Label className="flex items-center gap-2"><Map className="w-4 h-4 text-primary" /> Geofence Coordinates</Label>
+                                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                    Required to enable GPS check-ins. Search maps to get coordinates.
+                                </p>
+                            </div>
+                            <Button type="button" variant="outline" size="sm" onClick={openGoogleMaps} className="gap-2 text-xs h-9 bg-background shrink-0 shadow-sm rounded-lg w-full md:w-auto">
+                                <MapPin className="w-3 h-3 text-primary" />
+                                Search Maps
+                                <ExternalLink className="w-3 h-3 text-muted-foreground ml-1" />
+                            </Button>
                         </div>
-                        <div className="space-y-2">
-                            <Label>End Date <span className="text-muted-foreground font-normal">(Optional)</span></Label>
-                            <Input type="date" value={taskForm.endDate} onChange={(e) => setTaskForm({ ...taskForm, endDate: e.target.value })} className="h-11 rounded-xl" />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-xs">Latitude</Label>
+                                <Input placeholder="e.g. 26.2589" value={taskForm.latitude} onChange={(e) => setTaskForm({ ...taskForm, latitude: e.target.value })} className="h-10 rounded-lg" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs">Longitude</Label>
+                                <Input placeholder="e.g. 82.0730" value={taskForm.longitude} onChange={(e) => setTaskForm({ ...taskForm, longitude: e.target.value })} className="h-10 rounded-lg" />
+                            </div>
                         </div>
                     </div>
                 </div>
