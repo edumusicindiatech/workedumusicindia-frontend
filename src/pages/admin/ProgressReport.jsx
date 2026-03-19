@@ -79,7 +79,7 @@ const ProgressReport = () => {
     const [selectedTeacher, setSelectedTeacher] = useState(null);
     const [selectedMonth, setSelectedMonth] = useState(null);
     const [selectedSchool, setSelectedSchool] = useState(null);
-    const [selectedCategory, setSelectedCategory] = useState(null); // Added Category Level
+    const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedDay, setSelectedDay] = useState(null);
 
     // Filter teachers based on search and sort by rank
@@ -121,6 +121,7 @@ const ProgressReport = () => {
     const handleExportExcel = () => {
         if (!selectedMonth || !selectedMonth.schools || !selectedTeacher) return;
 
+        // Added "Daily Report" to the headers array
         const headers = ["Teacher", "Month", "School Name", "Category", "Address", "Date", "Time In", "Time Out", "Status", "Teacher Note", "Daily Report"];
         let rowsHtml = "";
 
@@ -168,6 +169,7 @@ const ProgressReport = () => {
             <head>
                 <meta charset="utf-8" />
                 <style>
+                    /* MAKE HEADERS BOLD AND ADD A LIGHT BACKGROUND */
                     th { font-weight: bold; background-color: #f3f4f6; border: 1px solid #000000; text-align: left; padding: 5px; }
                     td { border: 1px solid #cccccc; padding: 5px; }
                 </style>
@@ -185,6 +187,7 @@ const ProgressReport = () => {
             </html>
         `;
 
+        // Export as an .xls file
         const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
         const url = URL.createObjectURL(blob);
 
@@ -242,7 +245,7 @@ const ProgressReport = () => {
             )}
 
             {/* --- MAIN CONTENT AREA --- */}
-            <div className="bg-card rounded-xl sm:rounded-2xl shadow-card border border-border min-h-125 overflow-hidden flex flex-col">
+            <div className="bg-card rounded-xl sm:rounded-2xl shadow-card border border-border min-h-[500px] overflow-hidden flex flex-col">
 
                 {/* Dynamic Header */}
                 <div className="p-4 sm:p-6 border-b border-border bg-muted/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
@@ -541,7 +544,7 @@ const ProgressReport = () => {
 
                                                 {/* Status & Time Card */}
                                                 <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-5 sm:p-6 md:p-8 flex flex-col items-center justify-center text-center shadow-sm relative overflow-hidden">
-                                                    <div className="absolute top-0 w-full h-1 bg-linear-to-r from-transparent via-border to-transparent opacity-50"></div>
+                                                    <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-transparent via-border to-transparent opacity-50"></div>
                                                     <div className="mb-3 sm:mb-4">
                                                         <span className={getStatusBadge(selectedDay.status)}>{selectedDay.status}</span>
                                                     </div>
@@ -567,7 +570,7 @@ const ProgressReport = () => {
                                                             <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Teacher's Note
                                                         </h3>
 
-                                                        <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col justify-center min-h-25 sm:min-h-35">
+                                                        <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col justify-center min-h-[100px] sm:min-h-[140px]">
                                                             {selectedDay.reason ? (
                                                                 <p className="text-sm sm:text-base text-foreground/90 italic leading-relaxed text-center font-medium">
                                                                     "{selectedDay.reason}"
