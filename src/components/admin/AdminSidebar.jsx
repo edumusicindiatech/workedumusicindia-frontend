@@ -12,7 +12,9 @@ import {
     Settings,
     LogOut,
     ChevronUp,
-    UserCircle
+    UserCircle,
+    TrendingUp,
+    Bell
 } from "lucide-react";
 
 import api from "../../api/axios";
@@ -119,6 +121,13 @@ const AdminSidebar = () => {
                         <NavLink to="/admin/attendance" className={desktopNavClasses}>
                             <Radio className="w-5 h-5" /> Attendance Feed
                         </NavLink>
+                        <NavLink to="/admin/progress" className={desktopNavClasses}>
+                            <TrendingUp className="w-5 h-5" /> Progress Report
+                        </NavLink>
+                        {/* --- NOTIFICATIONS MOVED ABOVE COMMUNICATION --- */}
+                        <NavLink to="/admin/notifications" className={desktopNavClasses}>
+                            <Bell className="w-5 h-5" /> Notifications
+                        </NavLink>
                         <NavLink to="/admin/communication" className={desktopNavClasses}>
                             <MessageSquare className="w-5 h-5" /> Communication
                         </NavLink>
@@ -211,22 +220,31 @@ const AdminSidebar = () => {
             {/* =========================================
                 3. MOBILE VIEW (Bottom Navigation)
                 ========================================= */}
-            <nav className="md:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe">
+            <nav className="md:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-1 pb-safe">
                 <NavLink to="/admin/dashboard" className={mobileNavClasses}>
-                    <LayoutDashboard className="w-6 h-6" />
-                    <span className="text-[10px] font-medium">Home</span>
+                    <LayoutDashboard className="w-5.5 h-5.5" />
+                    <span className="text-[9px] font-medium hidden sm:block">Home</span>
                 </NavLink>
                 <NavLink to="/admin/employees" className={mobileNavClasses}>
-                    <Users className="w-6 h-6" />
-                    <span className="text-[10px] font-medium">Roster</span>
+                    <Users className="w-5.5 h-5.5" />
+                    <span className="text-[9px] font-medium hidden sm:block">Roster</span>
                 </NavLink>
                 <NavLink to="/admin/attendance" className={mobileNavClasses}>
-                    <Radio className="w-6 h-6" />
-                    <span className="text-[10px] font-medium">Feed</span>
+                    <Radio className="w-5.5 h-5.5" />
+                    <span className="text-[9px] font-medium hidden sm:block">Feed</span>
+                </NavLink>
+                <NavLink to="/admin/progress" className={mobileNavClasses}>
+                    <TrendingUp className="w-5.5 h-5.5" />
+                    <span className="text-[9px] font-medium hidden sm:block">Progress</span>
+                </NavLink>
+                {/* --- NOTIFICATIONS MOVED ABOVE COMMUNICATION --- */}
+                <NavLink to="/admin/notifications" className={mobileNavClasses}>
+                    <Bell className="w-5.5 h-5.5" />
+                    <span className="text-[9px] font-medium hidden sm:block">Alerts</span>
                 </NavLink>
                 <NavLink to="/admin/communication" className={mobileNavClasses}>
-                    <MessageSquare className="w-6 h-6" />
-                    <span className="text-[10px] font-medium">Chat</span>
+                    <MessageSquare className="w-5.5 h-5.5" />
+                    <span className="text-[9px] font-medium hidden sm:block">Chat</span>
                 </NavLink>
             </nav>
 

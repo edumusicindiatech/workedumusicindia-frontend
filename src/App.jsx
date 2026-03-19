@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-// ADDED: Imported 'logout' from the auth slice
 import { setCredentials, logout } from "./store/slices/authSlice";
 import api, { setAxiosToken } from "./api/axios";
 import { Loader2 } from "lucide-react";
@@ -21,6 +20,8 @@ import EmployeeRoster from "./pages/admin/EmployeeRoster";
 import EmployeeProfile from "./pages/admin/EmployeeProfile";
 import Communication from "./pages/admin/Communication";
 import AttendanceFeed from "./pages/admin/AttendenceFeed";
+import ProgressReport from "./pages/admin/ProgressReport";
+import Notifications from "./pages/admin/Notifications"; // <-- ADDED: Notifications Import
 
 // Employee Imports
 import EmployeeLayout from "./components/employee/EmployeeLayout";
@@ -50,11 +51,9 @@ function App() {
             access_token: newAccessToken
           }));
         } else {
-          // UPDATED: Wipe state clean if profile fetch fails
           dispatch(logout());
         }
       } catch (error) {
-        // UPDATED: Wipe state clean if there is no valid refresh cookie
         dispatch(logout());
       }
     };
@@ -62,7 +61,6 @@ function App() {
     hydrateApp();
   }, [dispatch]);
 
-  // Show a spinner ONLY while initially checking the cookie on a hard refresh
   if (isHydrating) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
@@ -94,7 +92,10 @@ function App() {
           <Route path="employees" element={<EmployeeRoster />} />
           <Route path="employees/:id" element={<EmployeeProfile />} />
           <Route path="attendance" element={<AttendanceFeed />} />
+          <Route path="progress" element={<ProgressReport />} />
           <Route path="communication" element={<Communication />} />
+          {/* <-- ADDED: Notifications Route --> */}
+          <Route path="notifications" element={<Notifications />} />
         </Route>
 
         {/* 404 Fallback */}
