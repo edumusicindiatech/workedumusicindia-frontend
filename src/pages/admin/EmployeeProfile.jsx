@@ -1,14 +1,18 @@
+import { useState } from "react"; // <-- ADDED useState
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, School, ClipboardList, Film, AlertTriangle, CalendarDays, MapPin } from "lucide-react";
+import { ArrowLeft, School, ClipboardList, Film, AlertTriangle, CalendarDays, MapPin, Pencil, Trash2 } from "lucide-react"; // <-- ADDED Pencil, Trash2
 
 // --- Import your new Tab Components ---
-// Adjust the paths below based on where you saved them!
 import AssignmentsTab from "./tabs/AssignmentsTab";
 import TasksTab from "./tabs/TasksTab";
 import MediaTab from "./tabs/MediaTab";
 import WarningsTab from "./tabs/WarningsTab";
 import AttendanceTab from "./tabs/AttendanceTab";
+
+// --- Import Modals ---
+import EditEmployeeModal from "../../modals/EditEmployeeModal"; // <-- Make sure path is correct
+import DeleteEmployeeModal from "../../modals/DeleteEmployeeModal"; // <-- Make sure path is correct
 
 // --- MOCK DATA ---
 const employeeData = {
@@ -57,6 +61,20 @@ const EmployeeProfile = () => {
     const { id } = useParams();
     const navigate = useNavigate();
 
+    // --- Modal States ---
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+    // --- Handlers ---
+    const handleSaveEdit = (updatedData) => {
+        console.log("Saving...", updatedData);
+    };
+
+    const handleConfirmDelete = () => {
+        console.log("Deleting...");
+        navigate("/admin/employees");
+    };
+
     return (
         <div className="animate-fade-in pb-10 relative">
             <button
@@ -71,8 +89,30 @@ const EmployeeProfile = () => {
                 <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center text-2xl font-bold text-primary-foreground shadow-md shrink-0">
                     {employeeData.name.charAt(0)}
                 </div>
-                <div className="min-w-0">
-                    <h1 className="text-base sm:text-2xl font-bold text-foreground truncate">{employeeData.name}</h1>
+                {/* UPDATED: Added flex-1 to min-w-0 to allow proper flexbox spacing */}
+                <div className="min-w-0 flex-1">
+
+                    {/* UPDATED: Name and Action Icons Container */}
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-base sm:text-2xl font-bold text-foreground truncate">{employeeData.name}</h1>
+                        <div className="flex items-center shrink-0">
+                            <button
+                                onClick={() => setIsEditModalOpen(true)}
+                                className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+                                title="Edit Employee"
+                            >
+                                <Pencil className="w-4 h-4 sm:w-4 sm:h-4" />
+                            </button>
+                            <button
+                                onClick={() => setIsDeleteModalOpen(true)}
+                                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                                title="Delete Employee"
+                            >
+                                <Trash2 className="w-4 h-4 sm:w-4 sm:h-4" />
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="flex items-center gap-2 mt-1 text-muted-foreground flex-wrap">
                         <span className="hidden sm:inline font-medium text-primary bg-primary/10 px-2 py-0.5 rounded text-sm">{employeeData.role}</span>
                         <span className="hidden sm:inline">·</span>
@@ -87,19 +127,19 @@ const EmployeeProfile = () => {
             {/* Main Tabs Navigation */}
             <Tabs defaultValue="schools" className="space-y-6">
                 <TabsList className="bg-card w-full flex justify-between sm:justify-center border border-border p-1 h-auto rounded-xl flex-wrap">
-                    <TabsTrigger value="schools" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
+                    <TabsTrigger value="schools" className="flex-1 sm:flex-initial md:cursor-pointer justify-center gap-2 py-2.5 px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
                         <School className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Assignments</span>
                     </TabsTrigger>
-                    <TabsTrigger value="tasks" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
+                    <TabsTrigger value="tasks" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 md:cursor-pointer px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
                         <ClipboardList className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Tasks</span>
                     </TabsTrigger>
-                    <TabsTrigger value="media" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
+                    <TabsTrigger value="media" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm md:cursor-pointer">
                         <Film className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Media</span>
                     </TabsTrigger>
-                    <TabsTrigger value="warnings" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
+                    <TabsTrigger value="warnings" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm md:cursor-pointer">
                         <AlertTriangle className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Warnings</span>
                     </TabsTrigger>
-                    <TabsTrigger value="attendance" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
+                    <TabsTrigger value="attendance" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm md:cursor-pointer">
                         <CalendarDays className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Attendance</span>
                     </TabsTrigger>
                 </TabsList>
@@ -125,6 +165,21 @@ const EmployeeProfile = () => {
                     <AttendanceTab attendanceData={monthlyAttendanceData} />
                 </TabsContent>
             </Tabs>
+
+            {/* --- Modals Added at the Bottom --- */}
+            <EditEmployeeModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                employee={employeeData}
+                onSave={handleSaveEdit}
+            />
+
+            <DeleteEmployeeModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                employeeName={employeeData.name}
+                onConfirm={handleConfirmDelete}
+            />
         </div>
     );
 };
