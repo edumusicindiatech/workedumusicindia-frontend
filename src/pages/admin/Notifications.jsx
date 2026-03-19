@@ -97,7 +97,7 @@ const Notifications = () => {
             </div>
 
             {/* --- NOTIFICATIONS LIST --- */}
-            <div className="bg-card rounded-xl sm:rounded-2xl shadow-card border border-border min-h-[400px] sm:min-h-[500px] overflow-hidden flex flex-col">
+            <div className="bg-card rounded-xl sm:rounded-2xl shadow-card border border-border min-h-100 sm:min-h-125 overflow-hidden flex flex-col">
                 <div className="p-3 sm:p-4 md:p-6 flex-1 bg-muted/5 flex flex-col gap-2.5 sm:gap-3">
 
                     {notifications.length === 0 ? (
