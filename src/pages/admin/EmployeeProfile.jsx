@@ -1,18 +1,14 @@
-import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-    ArrowLeft, Plus, AlertTriangle, DollarSign,
-    School, ClipboardList, MapPin, Calendar,
-    CheckCircle2, XCircle, Clock, CalendarDays, Eye, ChevronRight
-} from "lucide-react";
+import { ArrowLeft, School, ClipboardList, Film, AlertTriangle, CalendarDays, MapPin } from "lucide-react";
 
-import AssignSchoolModal from "../../modals/AssignSchoolModals";
-import AssignTaskModal from "../../modals/AssignTaskModal";
-import AttendanceDetailsModal from "../../modals/AttendanceDetailsModal";
+// --- Import your new Tab Components ---
+// Adjust the paths below based on where you saved them!
+import AssignmentsTab from "./tabs/AssignmentsTab";
+import TasksTab from "./tabs/TasksTab";
+import MediaTab from "./tabs/MediaTab";
+import WarningsTab from "./tabs/WarningsTab";
+import AttendanceTab from "./tabs/AttendanceTab";
 
 // --- MOCK DATA ---
 const employeeData = {
@@ -31,81 +27,35 @@ const optionalTasks = [
     { id: 203, title: "Facility Inspection", school: "Washington Elementary", status: "Rejected", reason: "Schedule conflict." },
 ];
 
-const deductions = [
-    { id: 1, date: "Mar 1, 2024", amount: 150, reason: "Late arrivals (3x)", status: "applied" },
-    { id: 2, date: "Feb 15, 2024", amount: 75, reason: "Uniform violation", status: "applied" },
-];
-
 const warnings = [
     { id: 1, date: "Feb 10, 2024", type: "Verbal", reason: "Tardiness", issuedBy: "Manager A" },
 ];
 
-// --- NEW HIERARCHICAL MOCK DATA (Month -> Schools -> Stats & Records) ---
 const monthlyAttendanceData = [
     {
-        id: 'm1',
-        month: "March 2024",
+        id: 'm1', month: "March 2024",
         schools: [
-            {
-                id: 101, name: "Lincoln High School", address: "123 Main St",
-                stats: { present: 12, late: 2, absent: 1, holidays: 2 },
-                records: [
-                    { date: 'Mar 15, 2024 (Fri)', status: 'Present', timeIn: '08:00 AM' },
-                    { date: 'Mar 12, 2024 (Tue)', status: 'Late', timeIn: '08:45 AM' },
-                    { date: 'Mar 10, 2024 (Sun)', status: 'Holiday', timeIn: '-' },
-                ]
-            },
-            {
-                id: 102, name: "Washington Elementary", address: "456 Oak Ave",
-                stats: { present: 6, late: 0, absent: 0, holidays: 2 },
-                records: [
-                    { date: 'Mar 14, 2024 (Thu)', status: 'Present', timeIn: '07:55 AM' },
-                ]
-            }
-        ]
-    },
-    {
-        id: 'm2',
-        month: "February 2024",
-        schools: [
-            {
-                id: 101, name: "Lincoln High School", address: "123 Main St",
-                stats: { present: 19, late: 1, absent: 0, holidays: 8 },
-                records: [
-                    { date: 'Feb 20, 2024 (Tue)', status: 'Present', timeIn: '07:50 AM' },
-                    { date: 'Feb 15, 2024 (Thu)', status: 'Late', timeIn: '08:30 AM' },
-                ]
-            }
-        ]
-    },
-    {
-        id: 'm3',
-        month: "January 2024",
-        schools: [
-            {
-                id: 103, name: "Roosevelt Middle", address: "789 Pine Ln",
-                stats: { present: 20, late: 0, absent: 2, holidays: 5 },
-                records: [
-                    { date: 'Jan 10, 2024 (Wed)', status: 'Absent', timeIn: '-' },
-                    { date: 'Jan 05, 2024 (Fri)', status: 'Present', timeIn: '08:00 AM' },
-                ]
-            }
+            { id: 101, name: "Lincoln High School", address: "123 Main St", stats: { present: 12, late: 2, absent: 1, holidays: 2 }, records: [{ date: 'Mar 15, 2024 (Fri)', status: 'Present', timeIn: '08:00 AM' }, { date: 'Mar 12, 2024 (Tue)', status: 'Late', timeIn: '08:45 AM' }, { date: 'Mar 10, 2024 (Sun)', status: 'Holiday', timeIn: '-' }] },
+            { id: 102, name: "Washington Elementary", address: "456 Oak Ave", stats: { present: 6, late: 0, absent: 0, holidays: 2 }, records: [{ date: 'Mar 14, 2024 (Thu)', status: 'Present', timeIn: '07:55 AM' }] }
         ]
     }
 ];
 
+const mediaCollections = [
+    {
+        id: 'mm1', month: "March 2024",
+        dates: [
+            { id: 'md1', date: "Mar 15, 2024", files: [{ id: 'v1', type: 'video', title: 'Classroom Activity Video', url: 'https://www.w3schools.com/html/mov_bbb.mp4', size: '12 MB' }, { id: 'v2', type: 'video', title: 'Morning Assembly', url: 'https://www.w3schools.com/html/mov_bbb.mp4', size: '25 MB' }, { id: 'i1', type: 'image', title: 'Whiteboard Notes', url: 'https://picsum.photos/800/450', size: '2 MB' }] },
+            { id: 'md2', date: "Mar 10, 2024", files: [{ id: 'v3', type: 'video', title: 'Sports Day Practice', url: 'https://www.w3schools.com/html/mov_bbb.mp4', size: '40 MB' }] }
+        ]
+    },
+    { id: 'mm2', month: "February 2024", dates: [{ id: 'md3', date: "Feb 20, 2024", files: [{ id: 'i2', type: 'image', title: 'Student Projects', url: 'https://picsum.photos/800/451', size: '3 MB' }] }] }
+];
+
+
 const EmployeeProfile = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-
-    // Form states
-    const [newDeduction, setNewDeduction] = useState({ amount: "", reason: "" });
-    const [newWarning, setNewWarning] = useState({ type: "Verbal", reason: "" });
-
-    // Modal States
-    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-    const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-    const [selectedMonth, setSelectedMonth] = useState(null);
 
     return (
         <div className="animate-fade-in pb-10 relative">
@@ -134,248 +84,47 @@ const EmployeeProfile = () => {
                 </span>
             </div>
 
-            {/* Main Tabs */}
+            {/* Main Tabs Navigation */}
             <Tabs defaultValue="schools" className="space-y-6">
-                <TabsList className="bg-card w-full flex justify-between sm:justify-center border border-border p-1 h-auto rounded-xl">
-                    <TabsTrigger value="schools" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-0 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
-                        <School className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">School Assignments</span>
+                <TabsList className="bg-card w-full flex justify-between sm:justify-center border border-border p-1 h-auto rounded-xl flex-wrap">
+                    <TabsTrigger value="schools" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
+                        <School className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Assignments</span>
                     </TabsTrigger>
-                    <TabsTrigger value="tasks" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-0 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
-                        <ClipboardList className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Optional Tasks</span>
+                    <TabsTrigger value="tasks" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
+                        <ClipboardList className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Tasks</span>
                     </TabsTrigger>
-                    <TabsTrigger value="payroll" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-0 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
-                        <DollarSign className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Deductions</span>
+                    <TabsTrigger value="media" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
+                        <Film className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Media</span>
                     </TabsTrigger>
-                    <TabsTrigger value="warnings" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-0 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
+                    <TabsTrigger value="warnings" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
                         <AlertTriangle className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Warnings</span>
                     </TabsTrigger>
-                    <TabsTrigger value="attendance" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-0 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
-                        <CalendarDays className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Attendance Record</span>
+                    <TabsTrigger value="attendance" className="flex-1 sm:flex-initial justify-center gap-2 py-2.5 px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
+                        <CalendarDays className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Attendance</span>
                     </TabsTrigger>
                 </TabsList>
 
-                {/* --- SCHOOL ASSIGNMENTS TAB --- */}
-                <TabsContent value="schools" className="space-y-6 animate-in fade-in-50">
-                    <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
-                        <div className="p-6 border-b border-border flex justify-between items-center">
-                            <h3 className="text-lg font-semibold flex items-center gap-2"><School className="w-5 h-5 text-primary" /> Assigned Schools</h3>
-                            <Button size="sm" className="gap-2" onClick={() => setIsAssignModalOpen(true)}>
-                                <Plus className="w-4 h-4" /> Assign School
-                            </Button>
-                        </div>
-                        <div className="p-0">
-                            {assignedSchools.map((school) => (
-                                <div key={school.id} className="flex items-center justify-between p-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                                    <div>
-                                        <p className="font-semibold text-foreground">{school.name}</p>
-                                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
-                                            <MapPin className="w-3.5 h-3.5" /> {school.address}
-                                        </p>
-                                    </div>
-                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${school.status === 'Visited Today' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-600'}`}>
-                                        {school.status}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                {/* Render Separated Tab Components */}
+                <TabsContent value="schools" className="animate-in fade-in-50">
+                    <AssignmentsTab schools={assignedSchools} />
                 </TabsContent>
 
-                {/* --- OPTIONAL TASKS TAB --- */}
-                <TabsContent value="tasks" className="space-y-6 animate-in fade-in-50">
-                    <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
-                        <div className="p-6 border-b border-border flex justify-between items-center bg-muted/20">
-                            <div>
-                                <h3 className="text-lg font-semibold flex items-center gap-2"><ClipboardList className="w-5 h-5 text-primary" /> Task Requests</h3>
-                                <p className="text-sm text-muted-foreground mt-1 hidden md:block">Review the status of optional assignments sent to this employee.</p>
-                            </div>
-                            <Button size="sm" className="gap-2" onClick={() => setIsTaskModalOpen(true)}>
-                                <Plus className="w-4 h-4" /> Send Request
-                            </Button>
-                        </div>
-                        <div className="p-0">
-                            {optionalTasks.map((task) => (
-                                <div key={task.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 border-b border-border last:border-0 hover:bg-muted/30 gap-4">
-                                    <div>
-                                        <p className="font-semibold text-foreground text-base">{task.title}</p>
-                                        <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
-                                            <School className="w-3.5 h-3.5" /> {task.school}
-                                        </p>
-                                        {task.status === 'Rejected' && task.reason && (
-                                            <p className="text-sm text-destructive mt-2 bg-destructive/10 p-2 rounded-md border border-destructive/20 inline-block">
-                                                <span className="font-medium">Reason:</span> {task.reason}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        {task.status === 'Accepted' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
-                                        {task.status === 'Rejected' && <XCircle className="w-4 h-4 text-destructive" />}
-                                        {task.status === 'Pending' && <Clock className="w-4 h-4 text-slate-500" />}
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${task.status === 'Accepted' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : task.status === 'Rejected' ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
-                                            {task.status.toUpperCase()}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                <TabsContent value="tasks" className="animate-in fade-in-50">
+                    <TasksTab tasks={optionalTasks} />
                 </TabsContent>
 
-                {/* --- PAYROLL & DEDUCTIONS TAB --- */}
-                <TabsContent value="payroll" className="space-y-6">
-                    <div className="bg-card rounded-xl shadow-card p-6 border border-border">
-                        <h3 className="text-lg font-semibold mb-4">Deduction History</h3>
-                        <div className="space-y-3">
-                            {deductions.map((d) => (
-                                <div key={d.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border/50">
-                                    <div>
-                                        <p className="font-medium">{d.reason}</p>
-                                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                                            <Calendar className="w-3.5 h-3.5" />{d.date}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className={`px-2 py-1 rounded text-xs font-medium ${d.status === "applied" ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"}`}>
-                                            {d.status}
-                                        </span>
-                                        <span className="font-semibold text-destructive text-lg">-${d.amount}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="bg-card rounded-xl shadow-card p-6 border border-border">
-                        <h3 className="text-lg font-semibold mb-4">Add New Deduction</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <Label>Amount ($)</Label>
-                                <Input type="number" placeholder="0.00" value={newDeduction.amount} onChange={(e) => setNewDeduction({ ...newDeduction, amount: e.target.value })} />
-                            </div>
-                            <div>
-                                <Label>Reason</Label>
-                                <Input placeholder="Reason for deduction" value={newDeduction.reason} onChange={(e) => setNewDeduction({ ...newDeduction, reason: e.target.value })} />
-                            </div>
-                        </div>
-                        <Button className="mt-4 gap-2">
-                            <Plus className="w-4 h-4" /> Add Deduction
-                        </Button>
-                    </div>
+                <TabsContent value="media" className="animate-in fade-in-50">
+                    <MediaTab collections={mediaCollections} />
                 </TabsContent>
 
-                {/* --- WARNINGS TAB --- */}
-                <TabsContent value="warnings" className="space-y-6">
-                    <div className="bg-card rounded-xl shadow-card p-6 border border-border">
-                        <h3 className="text-lg font-semibold mb-4">Warning History</h3>
-                        <div className="space-y-3">
-                            {warnings.map((w) => (
-                                <div key={w.id} className="flex items-start gap-4 p-4 bg-muted/50 rounded-lg border border-border/50">
-                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${w.type === "Written" ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"}`}>
-                                        <AlertTriangle className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-semibold">{w.type} Warning</span>
-                                            <span className="text-sm text-muted-foreground">· {w.date}</span>
-                                        </div>
-                                        <p className="text-sm text-foreground mt-1">{w.reason}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">Issued by: {w.issuedBy}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="bg-card rounded-xl shadow-card p-6 border border-border">
-                        <h3 className="text-lg font-semibold mb-4">Issue New Warning</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <Label>Type</Label>
-                                <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={newWarning.type} onChange={(e) => setNewWarning({ ...newWarning, type: e.target.value })}>
-                                    <option>Verbal</option>
-                                    <option>Written</option>
-                                    <option>Final</option>
-                                </select>
-                            </div>
-                            <div>
-                                <Label>Reason</Label>
-                                <Input placeholder="Reason for warning" value={newWarning.reason} onChange={(e) => setNewWarning({ ...newWarning, reason: e.target.value })} />
-                            </div>
-                        </div>
-                        <Button className="mt-4 gap-2">
-                            <Plus className="w-4 h-4" /> Issue Warning
-                        </Button>
-                    </div>
+                <TabsContent value="warnings" className="animate-in fade-in-50">
+                    <WarningsTab warningsList={warnings} />
                 </TabsContent>
 
-                {/* --- ATTENDANCE RECORD TAB --- */}
-                <TabsContent value="attendance" className="space-y-6 animate-in fade-in-50">
-                    <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
-                        <div className="p-6 border-b border-border bg-muted/20">
-                            <h3 className="text-lg font-semibold flex items-center gap-2"><CalendarDays className="w-5 h-5 text-primary" /> Historical Attendance</h3>
-                            <p className="text-sm text-muted-foreground mt-1">Select a month to view the detailed daily breakdown.</p>
-                        </div>
-
-                        <div className="p-0">
-                            {/* Desktop Table: Shows only Month and Action */}
-                            <div className="hidden md:block overflow-x-auto">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-muted/50 text-muted-foreground font-medium border-b border-border">
-                                        <tr>
-                                            <th className="px-6 py-3">Month</th>
-                                            <th className="px-6 py-3 text-right">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {monthlyAttendanceData.map((record) => (
-                                            <tr key={record.id} className="border-b border-border hover:bg-muted/30">
-                                                <td className="px-6 py-4 font-medium">{record.month}</td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="gap-2 h-8"
-                                                        onClick={() => setSelectedMonth(record)}
-                                                    >
-                                                        <Eye className="w-3.5 h-3.5" /> View Details
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Mobile Cards: Tap to view details */}
-                            <div className="grid grid-cols-1 gap-3 md:hidden p-4">
-                                {monthlyAttendanceData.map((record) => (
-                                    <div
-                                        key={record.id}
-                                        onClick={() => setSelectedMonth(record)}
-                                        className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between active:scale-[0.98] transition-transform cursor-pointer"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                                                <CalendarDays className="w-6 h-6" />
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-base text-foreground">{record.month}</span>
-                                                <span className="text-[11px] font-medium text-muted-foreground mt-0.5">Tap to view details</span>
-                                            </div>
-                                        </div>
-                                        <ChevronRight className="w-5 h-5 text-muted-foreground/50" />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+                <TabsContent value="attendance" className="animate-in fade-in-50">
+                    <AttendanceTab attendanceData={monthlyAttendanceData} />
                 </TabsContent>
             </Tabs>
-
-            {/* --- Modals --- */}
-            <AssignSchoolModal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} />
-            <AssignTaskModal isOpen={isTaskModalOpen} onClose={() => setIsTaskModalOpen(false)} />
-            <AttendanceDetailsModal selectedMonth={selectedMonth} onClose={() => setSelectedMonth(null)} />
         </div>
     );
 };

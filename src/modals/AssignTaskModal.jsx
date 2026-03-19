@@ -48,19 +48,18 @@ const AssignTaskModal = ({ isOpen, onClose }) => {
 
                 <div className="p-6 space-y-6 overflow-y-auto flex-1">
                     <div className="space-y-2">
-                        <Label>Primary Task / Objective</Label>
-                        <Input placeholder="What is the employee supposed to do here?" value={taskForm.task} onChange={(e) => setTaskForm({ ...taskForm, task: e.target.value })} className="h-11 rounded-xl" />
-                    </div>
-
-                    <div className="space-y-2">
                         <Label>Target School Name</Label>
                         <Input placeholder="e.g. Lincoln High School" value={taskForm.schoolName} onChange={(e) => setTaskForm({ ...taskForm, schoolName: e.target.value })} className="h-11 rounded-xl" />
                     </div>
-
                     <div className="space-y-2">
                         <Label>School Address / Location</Label>
                         <Input placeholder="e.g. 123 Education Blvd, Sultanpur" value={taskForm.location} onChange={(e) => setTaskForm({ ...taskForm, location: e.target.value })} className="h-11 rounded-xl" />
                     </div>
+                    <div className="space-y-2">
+                        <Label>Primary Task / Objective</Label>
+                        <Input placeholder="What is the employee supposed to do here?" value={taskForm.task} onChange={(e) => setTaskForm({ ...taskForm, task: e.target.value })} className="h-11 rounded-xl" />
+                    </div>
+
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
