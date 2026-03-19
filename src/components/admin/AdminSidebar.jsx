@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom"; // <-- ADDED useNavigate
 import { useDispatch, useSelector } from "react-redux";
 import {
     LayoutDashboard,
@@ -23,6 +23,7 @@ import SettingsModal from "../../modals/SettingModal";
 
 const AdminSidebar = () => {
     const dispatch = useDispatch();
+    const navigate = useNavigate(); // <-- INITIALIZED useNavigate
 
     const { user } = useSelector((state) => state.auth);
     const adminName = user?.name || "Admin User";
@@ -30,8 +31,8 @@ const AdminSidebar = () => {
 
     // UI States
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
-    const [isMenuOpen, setIsMenuOpen] = useState(false); // Desktop Menu
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
     const desktopMenuRef = useRef(null);
@@ -63,22 +64,26 @@ const AdminSidebar = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // --- Logout Handler ---
+    // --- FIXED LOGOUT HANDLER ---
     const handleLogout = async () => {
+        // 1. Close menus
         setIsMenuOpen(false);
         setIsMobileMenuOpen(false);
 
+        // 2. Wipe frontend Redux state and LocalStorage immediately
         dispatch(logout());
         localStorage.removeItem("access_token");
         localStorage.removeItem("user");
 
         try {
+            // 3. Tell backend to clear the httpOnly refresh cookie
             await api.post('/auth/logout');
         } catch (error) {
             console.error("Backend logout cleanup failed:", error);
         }
 
-        window.location.href = "/";
+        // 4. Client-side navigation (Prevents the hard refresh loop!)
+        navigate("/", { replace: true });
     };
 
     // --- Styling Helpers ---
@@ -124,7 +129,6 @@ const AdminSidebar = () => {
                         <NavLink to="/admin/progress" className={desktopNavClasses}>
                             <TrendingUp className="w-5 h-5" /> Progress Report
                         </NavLink>
-                        {/* --- NOTIFICATIONS MOVED ABOVE COMMUNICATION --- */}
                         <NavLink to="/admin/notifications" className={desktopNavClasses}>
                             <Bell className="w-5 h-5" /> Notifications
                         </NavLink>
@@ -222,28 +226,27 @@ const AdminSidebar = () => {
                 ========================================= */}
             <nav className="md:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-1 pb-safe">
                 <NavLink to="/admin/dashboard" className={mobileNavClasses}>
-                    <LayoutDashboard className="w-5.5 h-5.5" />
+                    <LayoutDashboard className="w-[22px] h-[22px]" />
                     <span className="text-[9px] font-medium hidden sm:block">Home</span>
                 </NavLink>
                 <NavLink to="/admin/employees" className={mobileNavClasses}>
-                    <Users className="w-5.5 h-5.5" />
+                    <Users className="w-[22px] h-[22px]" />
                     <span className="text-[9px] font-medium hidden sm:block">Roster</span>
                 </NavLink>
                 <NavLink to="/admin/attendance" className={mobileNavClasses}>
-                    <Radio className="w-5.5 h-5.5" />
+                    <Radio className="w-[22px] h-[22px]" />
                     <span className="text-[9px] font-medium hidden sm:block">Feed</span>
                 </NavLink>
                 <NavLink to="/admin/progress" className={mobileNavClasses}>
-                    <TrendingUp className="w-5.5 h-5.5" />
+                    <TrendingUp className="w-[22px] h-[22px]" />
                     <span className="text-[9px] font-medium hidden sm:block">Progress</span>
                 </NavLink>
-                {/* --- NOTIFICATIONS MOVED ABOVE COMMUNICATION --- */}
                 <NavLink to="/admin/notifications" className={mobileNavClasses}>
-                    <Bell className="w-5.5 h-5.5" />
+                    <Bell className="w-[22px] h-[22px]" />
                     <span className="text-[9px] font-medium hidden sm:block">Alerts</span>
                 </NavLink>
                 <NavLink to="/admin/communication" className={mobileNavClasses}>
-                    <MessageSquare className="w-5.5 h-5.5" />
+                    <MessageSquare className="w-[22px] h-[22px]" />
                     <span className="text-[9px] font-medium hidden sm:block">Chat</span>
                 </NavLink>
             </nav>
