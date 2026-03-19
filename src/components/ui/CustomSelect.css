@@ -1,0 +1,89 @@
+:root {
+  /* Default Dark Mode Colors (Matching your UI) */
+  --select-bg: #161a23;
+  --select-border: #2a3143;
+  --select-text: #f1f5f9;
+  --select-hover-bg: #1e70eb;
+  --select-hover-text: #ffffff;
+  --select-shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* Light Mode Overrides (Triggered by your app's theme logic) */
+[data-theme='light'], .light-mode {
+  --select-bg: #ffffff;
+  --select-border: #e2e8f0;
+  --select-text: #1e293b;
+  --select-hover-bg: #3b82f6;
+  --select-hover-text: #ffffff;
+  --select-shadow: rgba(0, 0, 0, 0.1);
+}
+
+.custom-select-container {
+  position: relative;
+  width: 100%;
+  font-family: inherit;
+  color: var(--select-text);
+  font-size: 14px;
+}
+
+.select-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--select-bg);
+  border: 1px solid var(--select-border);
+  border-radius: 6px;
+  /* Shorter height: Reduced padding from 12px to 8px */
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.select-trigger:hover {
+  border-color: var(--select-hover-bg);
+}
+
+.chevron {
+  transition: transform 0.3s ease;
+  opacity: 0.7;
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+.select-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  width: 100%;
+  background-color: var(--select-bg);
+  border: 1px solid var(--select-border);
+  border-radius: 6px;
+  margin: 0;
+  padding: 4px 0; /* Vertical breathing room for the list */
+  list-style: none;
+  z-index: 100;
+  overflow: hidden;
+  box-shadow: 0 10px 15px -3px var(--select-shadow);
+}
+
+.select-option {
+  /* Slim height: Reduced from 12px to 6px vertical padding */
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s ease;
+}
+
+.select-option:hover {
+  background-color: var(--select-hover-bg);
+  color: var(--select-hover-text);
+}
+
+/* Style for the currently selected item in the list */
+.select-option.selected {
+  background-color: var(--select-hover-bg);
+  color: var(--select-hover-text);
+  font-weight: 500;
+}

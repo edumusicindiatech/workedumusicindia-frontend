@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { NavLink, useNavigate } from "react-router-dom"; // <-- ADDED useNavigate
+import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
     LayoutDashboard,
@@ -11,10 +11,9 @@ import {
     Sun,
     Settings,
     LogOut,
-    ChevronUp,
-    UserCircle,
     TrendingUp,
-    Bell
+    Bell,
+    UserCircle
 } from "lucide-react";
 
 import api from "../../api/axios";
@@ -23,7 +22,7 @@ import SettingsModal from "../../modals/SettingModal";
 
 const AdminSidebar = () => {
     const dispatch = useDispatch();
-    const navigate = useNavigate(); // <-- INITIALIZED useNavigate
+    const navigate = useNavigate();
 
     const { user } = useSelector((state) => state.auth);
     const adminName = user?.name || "Admin User";
@@ -31,11 +30,9 @@ const AdminSidebar = () => {
 
     // UI States
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
-    const desktopMenuRef = useRef(null);
     const mobileMenuRef = useRef(null);
 
     // --- Theme Management ---
@@ -53,9 +50,6 @@ const AdminSidebar = () => {
     // --- Click Outside Handlers ---
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (desktopMenuRef.current && !desktopMenuRef.current.contains(event.target)) {
-                setIsMenuOpen(false);
-            }
             if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
                 setIsMobileMenuOpen(false);
             }
@@ -64,37 +58,32 @@ const AdminSidebar = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // --- FIXED LOGOUT HANDLER ---
+    // --- Logout Handler ---
     const handleLogout = async () => {
-        // 1. Close menus
-        setIsMenuOpen(false);
         setIsMobileMenuOpen(false);
-
-        // 2. Wipe frontend Redux state and LocalStorage immediately
         dispatch(logout());
         localStorage.removeItem("access_token");
         localStorage.removeItem("user");
 
         try {
-            // 3. Tell backend to clear the httpOnly refresh cookie
             await api.post('/auth/logout');
         } catch (error) {
             console.error("Backend logout cleanup failed:", error);
         }
 
-        // 4. Client-side navigation (Prevents the hard refresh loop!)
         navigate("/", { replace: true });
     };
 
-    // --- Styling Helpers ---
+    // --- Desktop Nav Styling ---
     const desktopNavClasses = ({ isActive }) =>
-        `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium text-sm ${isActive
-            ? "bg-primary text-primary-foreground shadow-md"
+        `flex items-center gap-2 px-3 py-2 rounded-lg transition-all font-medium text-sm ${isActive
+            ? "bg-primary text-primary-foreground shadow-sm"
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
         }`;
 
+    // --- Mobile/Tablet Bottom Nav Styling ---
     const mobileNavClasses = ({ isActive }) =>
-        `flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${isActive
+        `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive
             ? "text-primary"
             : "text-muted-foreground hover:text-foreground"
         }`;
@@ -102,87 +91,60 @@ const AdminSidebar = () => {
     return (
         <>
             {/* =========================================
-                1. DESKTOP VIEW (Left Sidebar)
+                1. DESKTOP VIEW (Top Horizontal Navbar - xl and up)
                 ========================================= */}
-            <aside className="hidden md:flex fixed left-0 top-0 w-64 h-full bg-card border-r border-border z-30 flex-col">
-                <div className="p-6 flex-1 flex flex-col overflow-y-auto">
-                    <div className="flex items-center gap-3 mb-8">
-                        <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
-                            <Shield className="w-5 h-5 text-primary-foreground" />
-                        </div>
-                        <div>
-                            <h1 className="font-bold text-lg text-foreground tracking-tight">WorkForce</h1>
-                            <p className="text-[10px] uppercase font-bold text-primary tracking-widest opacity-80">Admin Portal</p>
-                        </div>
+            <nav className="hidden xl:flex fixed top-0 w-full h-16 bg-card border-b border-border z-50 items-center justify-between px-6 shadow-sm">
+
+                {/* Left: Logo Area */}
+                <div className="flex items-center gap-3 w-64 shrink-0">
+                    <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
+                        <Shield className="w-5 h-5 text-primary-foreground" />
                     </div>
-
-                    <nav className="space-y-1.5 flex-1">
-                        <NavLink to="/admin/dashboard" className={desktopNavClasses}>
-                            <LayoutDashboard className="w-5 h-5" /> Dashboard
-                        </NavLink>
-                        <NavLink to="/admin/employees" className={desktopNavClasses}>
-                            <Users className="w-5 h-5" /> Employee Roster
-                        </NavLink>
-                        <NavLink to="/admin/attendance" className={desktopNavClasses}>
-                            <Radio className="w-5 h-5" /> Attendance Feed
-                        </NavLink>
-                        <NavLink to="/admin/progress" className={desktopNavClasses}>
-                            <TrendingUp className="w-5 h-5" /> Progress Report
-                        </NavLink>
-                        <NavLink to="/admin/notifications" className={desktopNavClasses}>
-                            <Bell className="w-5 h-5" /> Notifications
-                        </NavLink>
-                        <NavLink to="/admin/communication" className={desktopNavClasses}>
-                            <MessageSquare className="w-5 h-5" /> Communication
-                        </NavLink>
-                    </nav>
+                    <div>
+                        <h1 className="font-bold text-lg text-foreground tracking-tight leading-none">WorkForce</h1>
+                    </div>
                 </div>
 
-                {/* Desktop Footer Controls */}
-                <div className="p-4 border-t border-border bg-muted/20 backdrop-blur-sm space-y-4 relative" ref={desktopMenuRef}>
-                    <button onClick={toggleTheme} className="w-full flex items-center justify-between px-3 py-2 rounded-xl border border-border bg-card hover:bg-muted transition-all text-sm font-medium text-foreground group shadow-sm">
-                        <div className="flex items-center gap-3 text-muted-foreground group-hover:text-foreground">
-                            {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}
-                            <span>{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
-                        </div>
-                        <div className={`w-8 h-4 rounded-full p-0.5 flex items-center transition-colors duration-300 ${theme === 'dark' ? 'bg-primary' : 'bg-slate-300'}`}>
-                            <div className={`w-3 h-3 rounded-full bg-white shadow-sm transform transition-transform duration-300 ${theme === 'dark' ? 'translate-x-4' : 'translate-x-0'}`} />
-                        </div>
+                {/* Center: Navigation Links (With Text) */}
+                <div className="flex items-center justify-center flex-1 gap-2">
+                    <NavLink to="/admin/dashboard" className={desktopNavClasses} title="Dashboard">
+                        <LayoutDashboard className="w-4.5 h-4.5" /> Dashboard
+                    </NavLink>
+                    <NavLink to="/admin/employees" className={desktopNavClasses}title="Roster">
+                        <Users className="w-4.5 h-4.5" /> Roster
+                    </NavLink>
+                    <NavLink to="/admin/attendance" className={desktopNavClasses} title="Live Attendance">
+                        <Radio className="w-4.5 h-4.5" /> Live Attendance
+                    </NavLink>
+                    <NavLink to="/admin/progress" className={desktopNavClasses} title="Progress">
+                        <TrendingUp className="w-4.5 h-4.5" /> Progress
+                    </NavLink>
+                    <NavLink to="/admin/notifications" className={desktopNavClasses} title="Alerts">
+                        <Bell className="w-4.5 h-4.5" /> Alerts
+                    </NavLink>
+                    <NavLink to="/admin/communication" className={desktopNavClasses} title="Broadcast">
+                        <MessageSquare className="w-4.5 h-4.5" /> Broadcast
+                    </NavLink>
+                </div>
+
+                {/* Right: Actions */}
+                <div className="flex items-center justify-end gap-3 w-64 shrink-0 border-l border-border pl-6">
+                    <button onClick={toggleTheme} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title="Theme">
+                        {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-500" />}
                     </button>
-
-                    {isMenuOpen && (
-                        <div className="absolute bottom-22 left-4 right-4 bg-card border border-border rounded-2xl shadow-2xl p-2 animate-in slide-in-from-bottom-4 fade-in duration-200 z-50">
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                                onClick={() => { setIsMenuOpen(false); setIsSettingsModalOpen(true); }}
-                            >
-                                <Settings className="w-4 h-4 text-primary" /> System Settings
-                            </button>
-                            <div className="my-1 border-t border-border" />
-                            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors">
-                                <LogOut className="w-4 h-4" /> Log out
-                            </button>
-                        </div>
-                    )}
-
-                    <button onClick={() => setIsMenuOpen(!isMenuOpen)} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all duration-200 ${isMenuOpen ? "bg-card border-primary ring-2 ring-primary/10 shadow-lg" : "bg-card border-border hover:border-primary/50 hover:bg-muted/50"}`}>
-                        <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground shadow-sm shrink-0 uppercase">
-                                {adminName.charAt(0)}
-                            </div>
-                            <div className="flex-1 overflow-hidden text-left">
-                                <p className="text-sm font-bold text-foreground truncate leading-tight">{adminName}</p>
-                                <p className="text-[10px] text-muted-foreground truncate">{adminEmail}</p>
-                            </div>
-                        </div>
-                        <ChevronUp className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${isMenuOpen ? "rotate-180" : ""}`} />
+                    <button onClick={() => setIsSettingsModalOpen(true)} className="p-2 text-muted-foreground md:cursor-pointer hover:text-foreground hover:bg-muted rounded-full transition-colors" title="Settings">
+                        <Settings className="w-5 h-5" />
+                    </button>
+                    <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-destructive  md:cursor-pointer hover:bg-destructive/10 rounded-full transition-colors" title="Log Out">
+                        <LogOut className="w-5 h-5" />
                     </button>
                 </div>
-            </aside>
+            </nav>
 
             {/* =========================================
-                2. MOBILE VIEW (Top Header)
+                2. TABLET/MOBILE VIEW (Top Header - below xl)
                 ========================================= */}
-            <header className="md:hidden fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4 shadow-sm">
+            <header className="xl:hidden fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4 shadow-sm">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
                         <Shield className="w-4 h-4 text-primary-foreground" />
@@ -222,32 +184,31 @@ const AdminSidebar = () => {
             </header>
 
             {/* =========================================
-                3. MOBILE VIEW (Bottom Navigation)
+                3. TABLET/MOBILE VIEW (Bottom Navigation - below xl)
                 ========================================= */}
-            <nav className="md:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-1 pb-safe">
+            <nav className="xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe">
                 <NavLink to="/admin/dashboard" className={mobileNavClasses}>
-                    <LayoutDashboard className="w-[22px] h-[22px]" />
-                    <span className="text-[9px] font-medium hidden sm:block">Home</span>
+                    <LayoutDashboard className="w-6 h-6" />
                 </NavLink>
+
                 <NavLink to="/admin/employees" className={mobileNavClasses}>
-                    <Users className="w-[22px] h-[22px]" />
-                    <span className="text-[9px] font-medium hidden sm:block">Roster</span>
+                    <Users className="w-6 h-6" />
                 </NavLink>
+
                 <NavLink to="/admin/attendance" className={mobileNavClasses}>
-                    <Radio className="w-[22px] h-[22px]" />
-                    <span className="text-[9px] font-medium hidden sm:block">Feed</span>
+                    <Radio className="w-6 h-6" />
                 </NavLink>
+
                 <NavLink to="/admin/progress" className={mobileNavClasses}>
-                    <TrendingUp className="w-[22px] h-[22px]" />
-                    <span className="text-[9px] font-medium hidden sm:block">Progress</span>
+                    <TrendingUp className="w-6 h-6" />
                 </NavLink>
+
                 <NavLink to="/admin/notifications" className={mobileNavClasses}>
-                    <Bell className="w-[22px] h-[22px]" />
-                    <span className="text-[9px] font-medium hidden sm:block">Alerts</span>
+                    <Bell className="w-6 h-6" />
                 </NavLink>
+
                 <NavLink to="/admin/communication" className={mobileNavClasses}>
-                    <MessageSquare className="w-[22px] h-[22px]" />
-                    <span className="text-[9px] font-medium hidden sm:block">Chat</span>
+                    <MessageSquare className="w-6 h-6" />
                 </NavLink>
             </nav>
 

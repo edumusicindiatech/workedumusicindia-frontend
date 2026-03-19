@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Settings, X, Globe, Mail } from "lucide-react";
+import CustomSelect from "../components/ui/CustomSelect";
 
 const SettingsModal = ({ isOpen, onClose }) => {
     const [settings, setSettings] = useState({
@@ -41,16 +42,16 @@ const SettingsModal = ({ isOpen, onClose }) => {
                         <Label className="text-base flex items-center gap-2">
                             <Globe className="w-4 h-4 text-muted-foreground" /> System Language
                         </Label>
-                        <select
-                            className="w-full h-11 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                        <CustomSelect
+                            options={[
+                                "English",
+                                "हिन्दी (Hindi)",
+                                "Español (Spanish)",
+                                "Français (French)"
+                            ]}
                             value={settings.language}
-                            onChange={(e) => setSettings({ ...settings, language: e.target.value })}
-                        >
-                            <option value="English">English</option>
-                            <option value="Hindi">हिन्दी (Hindi)</option>
-                            <option value="Spanish">Español (Spanish)</option>
-                            <option value="French">Français (French)</option>
-                        </select>
+                            onChange={(selectedValue) => setSettings({ ...settings, language: selectedValue })}
+                        />
                         <p className="text-xs text-muted-foreground">This changes the language of the admin dashboard interface.</p>
                     </div>
 

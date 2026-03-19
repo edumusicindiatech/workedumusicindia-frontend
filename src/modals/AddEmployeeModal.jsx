@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, X, Loader2, ShieldAlert } from "lucide-react";
+import CustomSelect from "../components/ui/CustomSelect";
 
 const AddEmployeeModal = ({ isOpen, onClose }) => {
     const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +44,7 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
                     </button>
                 </div>
 
-                <div className="p-6 space-y-5 overflow-y-auto flex-1">
+                <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
                     <div className="space-y-2">
                         <Label>Full Name</Label>
                         <Input placeholder="e.g. John Doe" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="h-11 rounded-xl" />
@@ -55,10 +56,11 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label>Role</Label>
-                            <select className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm" value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
-                                <option value="Teacher">Teacher</option>
-                                <option value="Admin">Admin</option>
-                            </select>
+                            <CustomSelect
+                                options={["Teacher", "Admin"]}
+                                value={formData.role}
+                                onChange={(selectedValue) => setFormData({ ...formData, role: selectedValue })}
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label>Mobile No.</Label>
