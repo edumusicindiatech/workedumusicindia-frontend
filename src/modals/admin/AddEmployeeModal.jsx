@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, X, Loader2, ShieldAlert } from "lucide-react";
-import CustomSelect from "../components/ui/CustomSelect";
+import CustomSelect from "../../components/ui/CustomSelect";
 
 const AddEmployeeModal = ({ isOpen, onClose }) => {
     const [isLoading, setIsLoading] = useState(false);

@@ -6,7 +6,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 // --- Import Modal ---
-import ActionItemsModal from "../../modals/ActionItemsModal";
+import ActionItemsModal from "../../modals/employee/ActionItemsModal";
 
 const DailyReport = () => {
     // Auto-generate today's date in YYYY-MM-DD format for the date picker

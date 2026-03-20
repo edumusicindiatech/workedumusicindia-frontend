@@ -11,8 +11,8 @@ import WarningsTab from "./tabs/WarningsTab";
 import AttendanceTab from "./tabs/AttendanceTab";
 
 // --- Import Modals ---
-import EditEmployeeModal from "../../modals/EditEmployeeModal"; // <-- Make sure path is correct
-import DeleteEmployeeModal from "../../modals/DeleteEmployeeModal"; // <-- Make sure path is correct
+import EditEmployeeModal from "../../modals/admin/EditEmployeeModal"; // <-- Make sure path is correct
+import DeleteEmployeeModal from "../../modals/admin/DeleteEmployeeModal"; // <-- Make sure path is correct
 
 // --- MOCK DATA ---
 const employeeData = {

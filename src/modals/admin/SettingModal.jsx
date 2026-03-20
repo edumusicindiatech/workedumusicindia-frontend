@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Settings, X, Globe, Mail } from "lucide-react";
-import CustomSelect from "../components/ui/CustomSelect";
+import CustomSelect from "../../components/ui/CustomSelect";
 
 const SettingsModal = ({ isOpen, onClose }) => {
     const [settings, setSettings] = useState({

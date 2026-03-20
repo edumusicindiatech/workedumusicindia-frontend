@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, Eye, ChevronRight } from "lucide-react";
-import AttendanceDetailsModal from "../../../modals/AttendanceDetailsModal";
+import AttendanceDetailsModal from "../../../modals/employee/AttendanceDetailsModal";
 
 const AttendanceTab = ({ attendanceData }) => {
     const [selectedMonth, setSelectedMonth] = useState(null);

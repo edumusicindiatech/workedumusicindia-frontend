@@ -3,7 +3,7 @@ import { X, CheckCircle2, Clock, MapPin, UserX, PartyPopper, ChevronRight, Chevr
 import { Button } from "@/components/ui/button";
 
 // Import Modals
-import AddEventModal from "./AddEventModal";
+import AddEventModal from "../admin/AddEventModal";
 import MediaUploadModal from "./MediaUploadModal"; // <-- NEW
 
 const SchoolDetailsModal = ({ isOpen, onClose, school }) => {

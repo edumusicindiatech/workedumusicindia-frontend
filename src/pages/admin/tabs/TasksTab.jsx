@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ClipboardList, School, Plus, CheckCircle2, XCircle, Clock } from "lucide-react";
-import AssignTaskModal from "../../../modals/AssignTaskModal";
+import AssignTaskModal from "../../../modals/admin/AssignTaskModal";
 
 const TasksTab = ({ tasks }) => {
     const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);

@@ -4,7 +4,7 @@ import {
     FileVideo, X, CheckCircle, ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import MediaDetailsModal from "../../modals/MediaDetailsModal";
+import MediaDetailsModal from "../../modals/employee/MediaDetailsModal";
 
 const MediaUpload = () => {
     const isUploadAllowed = true;

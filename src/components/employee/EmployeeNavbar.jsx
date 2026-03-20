@@ -10,7 +10,7 @@ import {
     Moon, Sun, LogOut, UserCircle, Settings, ClipboardList
 } from "lucide-react";
 
-import SettingsModal from "../../modals/SettingModal";
+import EmployeeSettingsModal from "../../modals/employee/EmployeeSettingsModal";
 
 const EmployeeNavbar = () => {
     const navigate = useNavigate();
@@ -165,7 +165,7 @@ const EmployeeNavbar = () => {
                 ))}
             </nav>
 
-            <SettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />
+            <EmployeeSettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />
         </>
     );
 };

@@ -18,7 +18,7 @@ import {
 
 import api from "../../api/axios";
 import { logout } from "../../store/slices/authSlice";
-import SettingsModal from "../../modals/SettingModal";
+import SettingsModal from "../../modals/admin/SettingModal";
 
 const AdminSidebar = () => {
     const dispatch = useDispatch();

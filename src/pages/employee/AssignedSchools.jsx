@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { School, MapPin, ChevronRight, Tags } from "lucide-react";
-import SchoolDetailsModal from "../../modals/SchoolDetailsModal";
+import SchoolDetailsModal from "../../modals/employee/SchoolDetailsModal";
 
 // --- MOCK DATA: RESTRUCTURED FOR CATEGORY-SPECIFIC HISTORY ---
 const initialAssignments = [

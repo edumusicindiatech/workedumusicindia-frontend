@@ -4,7 +4,7 @@ import {
     CheckCircle, XCircle, Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import RejectTaskModal from "../../modals/RejectTaskModal";
+import RejectTaskModal from "../../modals/employee/RejectTaskModal";
 
 const Tasks = () => {
     const [tasks, setTasks] = useState([

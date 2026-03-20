@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, ChevronRight } from "lucide-react";
-import AddEmployeeModal from "../../modals/AddEmployeeModal";
-
+import AddEmployeeModal from "../../modals/admin/AddEmployeeModal";
 // Mock Data
 const employees = [
     { id: 1, name: "Sarah Johnson", role: "Field Officer", location: "District A", status: "active", attendance: "Present" },

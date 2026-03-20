@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSelector } from "react-redux";
 import { Mail, Phone, ShieldCheck, MapPin, School, Edit2, CheckCircle } from "lucide-react";
-import ChangePasswordModal from "../../modals/ChangePasswordModal";
+import ChangePasswordModal from "../../modals/employee/ChangePasswordModal";
 
 const MyProfile = () => {
     const { user } = useSelector((state) => state.auth);

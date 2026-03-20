@@ -9,10 +9,10 @@ import {
 import { Button } from "@/components/ui/button";
 
 // --- Import Modals ---
-import CheckInModal from "../../modals/CheckInModal";
-import AbsentModal from "../../modals/AbsentModal";
-import CheckOutModal from "../../modals/CheckOutModal";
-import HolidayModal from "../../modals/HolidayModal";
+import CheckInModal from "../../modals/employee/CheckInModal";
+import AbsentModal from "../../modals/employee/AbsentModal";
+import CheckOutModal from "../../modals/employee/CheckOutModal";
+import HolidayModal from "../../modals/employee/HolidayModal";
 
 // Helper to generate dynamic demo times
 const getMockTime = (offsetMinutes) => {

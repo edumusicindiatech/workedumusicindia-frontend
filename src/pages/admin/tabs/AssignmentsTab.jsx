@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { School, MapPin, Plus } from "lucide-react";
-import AssignSchoolModal from "../../../modals/AssignSchoolModals";
+import AssignSchoolModal from "../../../modals/admin/AssignSchoolModals";
 
 const AssignmentsTab = ({ schools }) => {
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
