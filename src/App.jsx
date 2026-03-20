@@ -22,14 +22,14 @@ import Communication from "./pages/admin/Communication";
 import AttendanceFeed from "./pages/admin/AttendenceFeed";
 import ProgressReport from "./pages/admin/ProgressReport";
 import Notifications from "./pages/admin/Notifications";
+import EmployeeNotifications from "./pages/employee/EmployeeNotifications";
 
 // Employee Imports
 import EmployeeLayout from "./components/employee/EmployeeLayout";
 import EmployeeDashboard from "./pages/employee/Dashboard"; // <-- ADDED: Dashboard Import
 import MyProfile from "./pages/employee/MyProfile";
 import AssignedSchools from "./pages/employee/AssignedSchools";
-import OptionalTasks from "./pages/employee/OptionalTasks";
-import MediaUpload from "./pages/employee/MediaUpload";
+import OptionalTasks from "./pages/employee/Tasks";
 import DailyReport from "./pages/employee/DailyReport";
 
 function App() {
@@ -83,8 +83,8 @@ function App() {
           <Route path="profile" element={<MyProfile />} />
           <Route path="assignments" element={<AssignedSchools />} />
           <Route path="optional" element={<OptionalTasks />} />
-          <Route path="media" element={<MediaUpload />} />
           <Route path="report" element={<DailyReport />} />
+          <Route path="notifications" element={<Notifications />} />
         </Route>
 
         {/* Admin Routes */}
@@ -96,7 +96,7 @@ function App() {
           <Route path="attendance" element={<AttendanceFeed />} />
           <Route path="progress" element={<ProgressReport />} />
           <Route path="communication" element={<Communication />} />
-          <Route path="notifications" element={<Notifications />} />
+          <Route path="notifications" element={<EmployeeNotifications />} />
         </Route>
 
         {/* 404 Fallback */}

@@ -4,12 +4,9 @@ import {
     CheckCircle, XCircle, Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-// --- Import Modal ---
 import RejectTaskModal from "../../modals/RejectTaskModal";
 
-const OptionalTasks = () => {
-    // Mock Data for assigned optional schools
+const Tasks = () => {
     const [tasks, setTasks] = useState([
         {
             id: "TASK-001",
@@ -19,7 +16,7 @@ const OptionalTasks = () => {
             duration: "2 Days",
             timing: "08:00 AM - 01:00 PM",
             taskDescription: "Conduct mid-term inventory check for science lab equipment and verify attendance registers.",
-            status: "pending", // 'pending' | 'accepted' | 'rejected'
+            status: "pending",
             rejectReason: null
         },
         {
@@ -35,24 +32,17 @@ const OptionalTasks = () => {
         }
     ]);
 
-    // State for Rejection Modal
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
     const [selectedTaskId, setSelectedTaskId] = useState(null);
-
-    // State for Success Message
     const [successMessage, setSuccessMessage] = useState("");
-
-    // Derived state for the header counter
     const pendingCount = tasks.filter(task => task.status === "pending").length;
 
     const handleAccept = (id) => {
-        // Update status to 'accepted' instead of removing
         setTasks(prevTasks => prevTasks.map(task =>
             task.id === id ? { ...task, status: "accepted" } : task
         ));
-
-        setSuccessMessage("School accepted successfully! Added to your Assigned Schools.");
-        setTimeout(() => setSuccessMessage(""), 4000); // Hide after 4 seconds
+        setSuccessMessage("Task accepted successfully! Check your schedule.");
+        setTimeout(() => setSuccessMessage(""), 4000);
     };
 
     const openRejectModal = (id) => {
@@ -60,15 +50,11 @@ const OptionalTasks = () => {
         setIsRejectModalOpen(true);
     };
 
-    // This function receives the reason directly from the RejectTaskModal
     const handleRejectSubmit = (reason) => {
         if (!reason.trim()) return;
-
-        // Update status to 'rejected' and save the reason instead of removing
         setTasks(prevTasks => prevTasks.map(task =>
             task.id === selectedTaskId ? { ...task, status: "rejected", rejectReason: reason.trim() } : task
         ));
-
         setIsRejectModalOpen(false);
         setSelectedTaskId(null);
     };
@@ -80,22 +66,22 @@ const OptionalTasks = () => {
 
     return (
         <div className="space-y-6 md:space-y-8 animate-fade-in p-4 md:p-8 max-w-6xl mx-auto pb-20 relative">
-            {/* Header */}
+            {/* Header Updated to 'Tasks' */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground flex items-center gap-3">
-                        Optional Tasks
+                        Tasks
                         {pendingCount > 0 && (
                             <span className="bg-primary/10 text-primary text-sm px-3 py-1 rounded-full font-bold tracking-wide mt-1">
                                 {pendingCount} Pending
                             </span>
                         )}
                     </h1>
-                    <p className="text-muted-foreground mt-1">Review and accept or reject additional school assignments.</p>
+                    <p className="text-muted-foreground mt-1">Review and accept or reject assigned tasks.</p>
                 </div>
             </div>
 
-            {/* Success Toast / Message */}
+            {/* Success Toast */}
             {successMessage && (
                 <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-4 py-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 shadow-sm">
                     <CheckCircle className="w-5 h-5 shrink-0" />
@@ -110,7 +96,7 @@ const OptionalTasks = () => {
                         <CheckCircle className="w-8 h-8 text-muted-foreground" />
                     </div>
                     <h3 className="text-xl font-bold text-foreground mb-1">All caught up!</h3>
-                    <p className="text-muted-foreground">You have no assigned optional tasks at the moment.</p>
+                    <p className="text-muted-foreground">You have no assigned tasks at the moment.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -120,12 +106,7 @@ const OptionalTasks = () => {
                         const isRejected = task.status === "rejected";
 
                         return (
-                            <div
-                                key={task.id}
-                                className={`bg-card rounded-2xl p-6 transition-all duration-300 flex flex-col ${isPending ? "border-primary/20 border-2 shadow-elevated" :
-                                        "border border-border opacity-80 grayscale-[0.1] shadow-sm"
-                                    }`}
-                            >
+                            <div key={task.id} className={`bg-card rounded-2xl p-6 transition-all duration-300 flex flex-col ${isPending ? "border-primary/20 border-2 shadow-elevated" : "border border-border opacity-80 grayscale-[0.1] shadow-sm"}`}>
                                 <div className="flex justify-between items-start mb-4">
                                     <div>
                                         <h2 className="text-xl font-bold text-foreground">{task.schoolName}</h2>
@@ -166,21 +147,13 @@ const OptionalTasks = () => {
                                     </p>
                                 </div>
 
-                                {/* Dynamic Footer based on Status */}
                                 <div className="pt-5 border-t border-border mt-auto">
                                     {isPending && (
                                         <div className="flex items-center gap-3">
-                                            <Button
-                                                onClick={() => openRejectModal(task.id)}
-                                                variant="outline"
-                                                className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive font-bold h-12 rounded-xl"
-                                            >
+                                            <Button onClick={() => openRejectModal(task.id)} variant="outline" className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive font-bold h-12 rounded-xl">
                                                 <XCircle className="w-4 h-4 mr-2" /> Reject
                                             </Button>
-                                            <Button
-                                                onClick={() => handleAccept(task.id)}
-                                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold h-12 rounded-xl shadow-glow"
-                                            >
+                                            <Button onClick={() => handleAccept(task.id)} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold h-12 rounded-xl shadow-glow">
                                                 <CheckCircle className="w-4 h-4 mr-2" /> Accept Task
                                             </Button>
                                         </div>
@@ -204,22 +177,15 @@ const OptionalTasks = () => {
                                         </div>
                                     )}
                                 </div>
-
                             </div>
                         );
                     })}
                 </div>
             )}
 
-            {/* Render the Cleaned-Up Modal Component */}
-            <RejectTaskModal
-                isOpen={isRejectModalOpen}
-                onClose={closeRejectModal}
-                onSubmit={handleRejectSubmit}
-            />
-
+            <RejectTaskModal isOpen={isRejectModalOpen} onClose={closeRejectModal} onSubmit={handleRejectSubmit} />
         </div>
     );
 };
 
-export default OptionalTasks;
+export default Tasks;
