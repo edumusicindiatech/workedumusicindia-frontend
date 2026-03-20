@@ -1,24 +1,31 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
     Upload, AlertCircle, Image as ImageIcon,
-    FileVideo, X, MapPin, School, Send, CheckCircle
+    FileVideo, X, CheckCircle, ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import MediaDetailsModal from "../../modals/MediaDetailsModal";
 
 const MediaUpload = () => {
-    // Mock Admin Permission (Replace this with your actual user context/API state)
     const isUploadAllowed = true;
     const MAX_FILES = 5;
 
     // State Management
     const [selectedFiles, setSelectedFiles] = useState([]);
-    const [schoolName, setSchoolName] = useState("");
-    const [location, setLocation] = useState("");
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
 
     // UI States
     const [errorMsg, setErrorMsg] = useState("");
     const [successMsg, setSuccessMsg] = useState("");
     const fileInputRef = useRef(null);
+
+    // Clean up temporary thumbnail URLs to prevent memory leaks
+    useEffect(() => {
+        return () => {
+            selectedFiles.forEach(file => URL.revokeObjectURL(file.preview));
+        };
+    }, [selectedFiles]);
 
     const triggerError = (msg) => {
         setErrorMsg(msg);
@@ -32,20 +39,23 @@ const MediaUpload = () => {
         if (!incomingFiles.length) return;
 
         const totalFilesCount = selectedFiles.length + incomingFiles.length;
+        let allowedFiles = incomingFiles;
 
         if (totalFilesCount > MAX_FILES) {
             triggerError(`Limit exceeded. You can only upload a maximum of ${MAX_FILES} files at a time.`);
-
-            // Only take enough files to fill up to the limit of 5
             const availableSlots = MAX_FILES - selectedFiles.length;
-            const allowedFiles = incomingFiles.slice(0, availableSlots);
-            setSelectedFiles(prev => [...prev, ...allowedFiles]);
+            allowedFiles = incomingFiles.slice(0, availableSlots);
         } else {
-            setSelectedFiles(prev => [...prev, ...incomingFiles]);
             setErrorMsg("");
         }
 
-        // Reset input so the same files can be selected again if removed
+        // Attach a preview URL for the thumbnail
+        const filesWithPreviews = allowedFiles.map(file => Object.assign(file, {
+            preview: URL.createObjectURL(file)
+        }));
+
+        setSelectedFiles(prev => [...prev, ...filesWithPreviews]);
+
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
@@ -58,29 +68,37 @@ const MediaUpload = () => {
     };
 
     const removeFile = (indexToRemove) => {
+        const fileToRemove = selectedFiles[indexToRemove];
+        URL.revokeObjectURL(fileToRemove.preview); // Memory cleanup
         setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
     };
 
-    const handleSubmit = () => {
-        if (!schoolName || !location || selectedFiles.length === 0) return;
+    const handleFinalSubmit = (details) => {
+        setIsUploading(true);
 
-        // Mocking the API submission logic
-        console.log("Submitting:", {
+        // Mocking API submission
+        console.log("🚀 Uploading to Backend:", {
             filesCount: selectedFiles.length,
-            schoolName,
-            location
+            files: selectedFiles.map(f => f.name),
+            ...details
         });
 
-        // Reset and show success
-        setSelectedFiles([]);
-        setSchoolName("");
-        setLocation("");
-        setSuccessMsg("All media files uploaded successfully!");
-        setTimeout(() => setSuccessMsg(""), 4000);
+        // Simulate network delay
+        setTimeout(() => {
+            setIsUploading(false);
+            setIsModalOpen(false);
+
+            // Clean up URLs and clear state
+            selectedFiles.forEach(file => URL.revokeObjectURL(file.preview));
+            setSelectedFiles([]);
+
+            setSuccessMsg("All media files and details uploaded successfully!");
+            setTimeout(() => setSuccessMsg(""), 5000);
+        }, 1500);
     };
 
     return (
-        <div className="space-y-6 md:space-y-8 animate-fade-in p-4 md:p-8 max-w-3xl mx-auto">
+        <div className="space-y-6 md:space-y-8 animate-fade-in p-4 md:p-8 max-w-4xl mx-auto pb-20">
 
             {/* Header */}
             <div>
@@ -88,7 +106,7 @@ const MediaUpload = () => {
                     Site Media Upload
                 </h1>
                 <p className="text-muted-foreground mt-1">
-                    Upload your site visit photos and videos (Maximum {MAX_FILES} files).
+                    Upload site visit photos and videos.
                 </p>
             </div>
 
@@ -101,9 +119,9 @@ const MediaUpload = () => {
             )}
 
             {successMsg && (
-                <div className="bg-success/10 border border-success/20 text-success px-4 py-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
+                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-4 py-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 shadow-sm">
                     <CheckCircle className="w-5 h-5 shrink-0" />
-                    <p className="font-semibold text-sm">{successMsg}</p>
+                    <p className="font-bold text-sm">{successMsg}</p>
                 </div>
             )}
 
@@ -122,7 +140,7 @@ const MediaUpload = () => {
                         ref={fileInputRef}
                         onChange={handleFileSelect}
                         accept="image/*,video/*"
-                        multiple // Enables selecting multiple files at once
+                        multiple
                         className="hidden"
                         disabled={!isUploadAllowed}
                     />
@@ -133,48 +151,60 @@ const MediaUpload = () => {
                     </div>
 
                     <h3 className={`text-lg font-bold mb-1 ${isUploadAllowed ? "text-foreground" : "text-muted-foreground"}`}>
-                        {isUploadAllowed ? "Click to add media files" : "Upload Portal Locked"}
+                        {isUploadAllowed ? "Click to select media files" : "Upload Portal Locked"}
                     </h3>
                     <p className="text-sm text-muted-foreground max-w-xs mx-auto">
                         {isUploadAllowed
-                            ? `You can upload ${MAX_FILES - selectedFiles.length} more file(s).`
+                            ? `You can select ${MAX_FILES - selectedFiles.length} more file(s).`
                             : "Please contact your admin to enable media uploads for your account."}
                     </p>
                 </div>
             )}
 
-            {/* File Review & Submission Form */}
+            {/* File Review Section with Thumbnails */}
             {selectedFiles.length > 0 && (
                 <div className="bg-card border border-border rounded-2xl shadow-card p-6 animate-in zoom-in-95 mt-6">
 
-                    <div className="mb-4 flex items-center justify-between">
-                        <h3 className="font-bold text-lg">Selected Files ({selectedFiles.length}/{MAX_FILES})</h3>
+                    <div className="mb-5 flex items-center justify-between">
+                        <h3 className="font-bold text-lg">Selected Media ({selectedFiles.length}/{MAX_FILES})</h3>
                     </div>
 
-                    {/* Media Cards List */}
-                    <div className="space-y-3 mb-6 max-h-75 overflow-y-auto pr-2 custom-scrollbar">
+                    {/* Rich Media Grid List */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                         {selectedFiles.map((file, index) => (
-                            <div key={index} className="bg-muted/30 border border-border/50 rounded-xl p-3 flex items-center justify-between">
-                                <div className="flex items-center gap-4 overflow-hidden">
-                                    <div className="p-2.5 bg-background rounded-lg shadow-sm text-primary shrink-0">
+                            <div key={index} className="bg-muted/30 border border-border/50 rounded-xl p-2.5 flex items-center justify-between gap-3 hover:border-primary/30 transition-colors">
+
+                                <div className="flex items-center gap-3 overflow-hidden flex-1">
+                                    {/* THUMBNAIL PREVIEW */}
+                                    <div className="w-14 h-14 rounded-lg bg-background border border-border overflow-hidden shrink-0 flex items-center justify-center relative">
                                         {file.type.startsWith('video/') ? (
-                                            <FileVideo className="w-5 h-5" />
+                                            <>
+                                                <video src={file.preview} className="w-full h-full object-cover opacity-80" />
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <FileVideo className="w-6 h-6 text-white drop-shadow-md" />
+                                                </div>
+                                            </>
                                         ) : (
-                                            <ImageIcon className="w-5 h-5" />
+                                            <img src={file.preview} alt="preview" className="w-full h-full object-cover" />
                                         )}
                                     </div>
-                                    <div className="truncate">
-                                        <p className="font-semibold text-sm text-foreground truncate max-w-45 sm:max-w-xs">
+
+                                    {/* FILE INFO */}
+                                    <div className="truncate flex-1">
+                                        <p className="font-semibold text-sm text-foreground truncate">
                                             {file.name}
                                         </p>
-                                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                                        <p className="text-xs font-medium text-muted-foreground mt-0.5">
                                             {(file.size / (1024 * 1024)).toFixed(2)} MB
                                         </p>
                                     </div>
                                 </div>
+
+                                {/* REMOVE BUTTON */}
                                 <button
-                                    onClick={() => removeFile(index)}
-                                    className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-colors shrink-0"
+                                    onClick={(e) => { e.stopPropagation(); removeFile(index); }}
+                                    className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-colors shrink-0"
+                                    title="Remove File"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
@@ -182,46 +212,27 @@ const MediaUpload = () => {
                         ))}
                     </div>
 
-                    {/* Input Fields */}
-                    <div className="space-y-4 mb-6 pt-4 border-t border-border/50">
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-foreground">School Name</label>
-                            <div className="relative">
-                                <School className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                                <input
-                                    type="text"
-                                    placeholder="e.g., Ryan International School"
-                                    value={schoolName}
-                                    onChange={(e) => setSchoolName(e.target.value)}
-                                    className="w-full h-12 rounded-xl border border-input bg-background pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-foreground">Location</label>
-                            <div className="relative">
-                                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                                <input
-                                    type="text"
-                                    placeholder="Ayodhya"
-                                    value={location}
-                                    onChange={(e) => setLocation(e.target.value)}
-                                    className="w-full h-12 rounded-xl border border-input bg-background pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
-                                />
-                            </div>
-                        </div>
+                    {/* Proceed Button */}
+                    <div className="pt-4 border-t border-border/50 flex justify-end">
+                        <Button
+                            onClick={() => setIsModalOpen(true)}
+                            className="w-full sm:w-auto h-12 rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground text-base shadow-glow px-8"
+                        >
+                            Continue to Details <ChevronRight className="w-5 h-5 ml-1" />
+                        </Button>
                     </div>
-
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={!schoolName.trim() || !location.trim() || selectedFiles.length === 0}
-                        className="w-full h-12 rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground text-base shadow-sm"
-                    >
-                        <Send className="w-4 h-4 mr-2" /> Upload {selectedFiles.length} File{selectedFiles.length !== 1 && 's'}
-                    </Button>
                 </div>
             )}
+
+            {/* Details Modal */}
+            <MediaDetailsModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSubmit={handleFinalSubmit}
+                fileCount={selectedFiles.length}
+                actionLoading={isUploading}
+            />
+
         </div>
     );
 };
