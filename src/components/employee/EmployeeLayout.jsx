@@ -1,17 +1,16 @@
 import { Outlet } from "react-router-dom";
-import EmployeeNavbar from "../../components/employee/EmployeeNavbar";
+import EmployeeNavbar from "./EmployeeNavbar";
 
 const EmployeeLayout = () => {
     return (
-        <div className="min-h-screen bg-background text-foreground flex flex-col transition-colors duration-300">
-            {/* The Top Navigation Bar */}
+        <div className="flex flex-col min-h-screen bg-background text-foreground">
             <EmployeeNavbar />
 
-            {/* The Page Content Area */}
-            <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8">
-                {/* <Outlet /> is where the individual pages will render based on the URL */}
-                <Outlet />
-            </main>
+            <div className="flex-1 flex flex-col pt-16 pb-16 lg:pb-0 transition-all duration-300">
+                <main className="flex-1 p-4 lg:p-8 overflow-x-hidden w-full max-w-400 mx-auto">
+                    <Outlet />
+                </main>
+            </div>
         </div>
     );
 };

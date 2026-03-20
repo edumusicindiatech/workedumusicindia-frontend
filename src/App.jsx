@@ -21,10 +21,11 @@ import EmployeeProfile from "./pages/admin/EmployeeProfile";
 import Communication from "./pages/admin/Communication";
 import AttendanceFeed from "./pages/admin/AttendenceFeed";
 import ProgressReport from "./pages/admin/ProgressReport";
-import Notifications from "./pages/admin/Notifications"; // <-- ADDED: Notifications Import
+import Notifications from "./pages/admin/Notifications";
 
 // Employee Imports
 import EmployeeLayout from "./components/employee/EmployeeLayout";
+import EmployeeDashboard from "./pages/employee/Dashboard"; // <-- ADDED: Dashboard Import
 import MyProfile from "./pages/employee/MyProfile";
 import AssignedSchools from "./pages/employee/AssignedSchools";
 import OptionalTasks from "./pages/employee/OptionalTasks";
@@ -77,7 +78,8 @@ function App() {
 
         {/* Employee Routes */}
         <Route path="/employee" element={<ProtectedRoute requireAdmin={false}><EmployeeLayout /></ProtectedRoute>}>
-          <Route index element={<Navigate to="/employee/profile" replace />} />
+          <Route index element={<Navigate to="/employee/dashboard" replace />} /> {/* <-- UPDATED Redirect */}
+          <Route path="dashboard" element={<EmployeeDashboard />} /> {/* <-- ADDED Route */}
           <Route path="profile" element={<MyProfile />} />
           <Route path="assignments" element={<AssignedSchools />} />
           <Route path="optional" element={<OptionalTasks />} />
@@ -94,7 +96,6 @@ function App() {
           <Route path="attendance" element={<AttendanceFeed />} />
           <Route path="progress" element={<ProgressReport />} />
           <Route path="communication" element={<Communication />} />
-          {/* <-- ADDED: Notifications Route --> */}
           <Route path="notifications" element={<Notifications />} />
         </Route>
 
