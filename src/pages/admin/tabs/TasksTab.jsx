@@ -1,50 +1,103 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, School, Plus, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { ClipboardList, MapPin, Plus, CheckCircle2, AlertCircle, XCircle } from "lucide-react";
+
+// Import Modals (Adjust paths as needed)
 import AssignTaskModal from "../../../modals/admin/AssignTaskModal";
+import ManageTaskModal from "../../../modals/admin/ManageTaskModal";
 
 const TasksTab = ({ tasks }) => {
-    const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [manageModalData, setManageModalData] = useState({ isOpen: false, task: null });
+
+    const getStatusIcon = (status) => {
+        if (status === "Accepted") return <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />;
+        if (status === "Rejected") return <XCircle className="w-3.5 h-3.5 mr-1.5" />;
+        return <AlertCircle className="w-3.5 h-3.5 mr-1.5" />;
+    };
+
+    const getStatusColor = (status) => {
+        if (status === "Accepted") return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+        if (status === "Rejected") return "bg-destructive/10 text-destructive border-destructive/20";
+        return "bg-amber-500/10 text-amber-600 border-amber-500/20";
+    };
 
     return (
         <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
-            <div className="p-6 border-b border-border flex justify-between items-center bg-muted/20">
-                <div>
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                        <ClipboardList className="w-5 h-5 text-primary" /> Task Requests
-                    </h3>
-                    <p className="text-sm text-muted-foreground mt-1 hidden md:block">Review the status of optional assignments sent to this employee.</p>
-                </div>
-                <Button size="sm" className="gap-2" onClick={() => setIsTaskModalOpen(true)}>
-                    <Plus className="w-4 h-4" /> Send Request
+
+            {/* Header */}
+            <div className="p-4 sm:p-6 border-b border-border flex justify-between items-center bg-muted/10">
+                <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5 text-primary shrink-0" /> Assigned Tasks
+                </h3>
+                <Button size="sm" className="gap-2 shadow-glow rounded-lg" onClick={() => setIsAssignModalOpen(true)}>
+                    <Plus className="w-4 h-4 shrink-0" />
+                    <span className="hidden sm:inline">Assign Task</span>
+                    <span className="sm:hidden">Assign</span>
                 </Button>
             </div>
+
+            {/* Task List */}
             <div className="p-0">
                 {tasks.map((task) => (
-                    <div key={task.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 border-b border-border last:border-0 hover:bg-muted/30 gap-4">
-                        <div>
-                            <p className="font-semibold text-foreground text-base">{task.title}</p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
-                                <School className="w-3.5 h-3.5" /> {task.school}
-                            </p>
-                            {task.status === 'Rejected' && task.reason && (
-                                <p className="text-sm text-destructive mt-2 bg-destructive/10 p-2 rounded-md border border-destructive/20 inline-block">
-                                    <span className="font-medium">Reason:</span> {task.reason}
-                                </p>
-                            )}
+                    <div
+                        key={task.id}
+                        onClick={() => setManageModalData({ isOpen: true, task: task })}
+                        className="flex flex-col sm:flex-row sm:items-start justify-between p-4 sm:p-6 border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer group gap-4"
+                    >
+                        <div className="min-w-0 flex-1 space-y-2.5">
+                            {/* Task Title */}
+                            <h4 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors leading-tight">
+                                {task.title}
+                            </h4>
+
+                            {/* Responsive School & Location Info */}
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 text-sm text-muted-foreground">
+                                <div className="flex items-start sm:items-center gap-1.5 shrink-0">
+                                    <MapPin className="w-4 h-4 shrink-0 mt-0.5 sm:mt-0" />
+                                    <span className="font-medium text-foreground/80 leading-snug">{task.schoolName}</span>
+                                </div>
+                                <span className="hidden sm:block opacity-40 shrink-0">•</span>
+                                <div className="pl-5 sm:pl-0 leading-snug opacity-90 truncate">
+                                    {task.location}
+                                </div>
+                            </div>
+
+                            {/* Mobile Badge (Renders underneath text on small screens) */}
+                            <div className="pt-2 sm:hidden">
+                                <span className={`px-3 py-1 rounded-full text-xs font-bold w-fit flex items-center border ${getStatusColor(task.status)}`}>
+                                    {getStatusIcon(task.status)} {task.status}
+                                </span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            {task.status === 'Accepted' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
-                            {task.status === 'Rejected' && <XCircle className="w-4 h-4 text-destructive" />}
-                            {task.status === 'Pending' && <Clock className="w-4 h-4 text-slate-500" />}
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${task.status === 'Accepted' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : task.status === 'Rejected' ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
-                                {task.status.toUpperCase()}
+
+                        {/* Desktop Badge (Renders on the right on larger screens) */}
+                        <div className="hidden sm:flex shrink-0 pt-1">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold w-fit flex items-center border ${getStatusColor(task.status)}`}>
+                                {getStatusIcon(task.status)} {task.status}
                             </span>
                         </div>
                     </div>
                 ))}
+
+                {tasks.length === 0 && (
+                    <div className="p-8 text-center text-muted-foreground">
+                        No tasks assigned to this employee yet.
+                    </div>
+                )}
             </div>
-            <AssignTaskModal isOpen={isTaskModalOpen} onClose={() => setIsTaskModalOpen(false)} />
+
+            {/* Modals rendered here */}
+            <AssignTaskModal
+                isOpen={isAssignModalOpen}
+                onClose={() => setIsAssignModalOpen(false)}
+            />
+
+            <ManageTaskModal
+                isOpen={manageModalData.isOpen}
+                onClose={() => setManageModalData({ isOpen: false, task: null })}
+                task={manageModalData.task}
+            />
         </div>
     );
 };

@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { School, X, Map, MapPin, ExternalLink } from "lucide-react";
+import { School, X, Map, MapPin, ExternalLink, Check } from "lucide-react";
 
 const AssignSchoolModal = ({ isOpen, onClose }) => {
     const [schoolForm, setSchoolForm] = useState({
-        schoolName: "", location: "", startDate: "", endDate: "", timeFrom: "08:00", timeTo: "14:00", days: [], latitude: "", longitude: ""
+        schoolName: "", location: "", category: "Junior Band", 
+        startDate: "", endDate: "", timeFrom: "08:00", timeTo: "14:00", 
+        days: [], latitude: "", longitude: ""
     });
 
     if (!isOpen) return null;
@@ -24,7 +26,7 @@ const AssignSchoolModal = ({ isOpen, onClose }) => {
     };
 
     const handleSave = () => {
-        console.log("Saving School:", schoolForm);
+        console.log("Saving New Assignment:", schoolForm);
         onClose();
     };
 
@@ -32,7 +34,6 @@ const AssignSchoolModal = ({ isOpen, onClose }) => {
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm md:p-4 animate-in fade-in" onClick={onClose}>
             <div className="bg-card w-full max-w-2xl rounded-t-3xl md:rounded-2xl shadow-2xl border-t md:border border-border flex flex-col max-h-[90vh] md:max-h-[85vh] animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0" onClick={e => e.stopPropagation()}>
 
-                {/* Mobile Drag Handle */}
                 <div className="w-full flex justify-center pt-3 pb-1 md:hidden">
                     <div className="w-12 h-1.5 bg-muted rounded-full"></div>
                 </div>
@@ -46,7 +47,7 @@ const AssignSchoolModal = ({ isOpen, onClose }) => {
                     </button>
                 </div>
 
-                <div className="p-6 space-y-6 overflow-y-auto flex-1">
+                <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
                     <div className="space-y-2">
                         <Label>School Name</Label>
                         <Input placeholder="e.g. Lincoln High School" value={schoolForm.schoolName} onChange={(e) => setSchoolForm({ ...schoolForm, schoolName: e.target.value })} className="h-11 rounded-xl" />
@@ -55,6 +56,27 @@ const AssignSchoolModal = ({ isOpen, onClose }) => {
                     <div className="space-y-2">
                         <Label>School Address / Location</Label>
                         <Input placeholder="123 Education Blvd" value={schoolForm.location} onChange={(e) => setSchoolForm({ ...schoolForm, location: e.target.value })} className="h-11 rounded-xl" />
+                    </div>
+
+                    {/* CATEGORY SELECTION */}
+                    <div className="space-y-2 p-4 bg-muted/20 border border-border rounded-xl">
+                        <Label className="text-foreground">Assignment Category</Label>
+                        <div className="flex gap-3 mt-2">
+                            <button 
+                                type="button" 
+                                onClick={() => setSchoolForm({ ...schoolForm, category: "Junior Band" })}
+                                className={`flex-1 flex items-center justify-center gap-2 h-11 rounded-lg border font-semibold text-sm transition-all ${schoolForm.category === "Junior Band" ? 'bg-primary/10 border-primary text-primary' : 'bg-background border-border text-muted-foreground hover:bg-muted'}`}
+                            >
+                                {schoolForm.category === "Junior Band" && <Check className="w-4 h-4" />} Junior Band
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => setSchoolForm({ ...schoolForm, category: "Senior Band" })}
+                                className={`flex-1 flex items-center justify-center gap-2 h-11 rounded-lg border font-semibold text-sm transition-all ${schoolForm.category === "Senior Band" ? 'bg-primary/10 border-primary text-primary' : 'bg-background border-border text-muted-foreground hover:bg-muted'}`}
+                            >
+                                {schoolForm.category === "Senior Band" && <Check className="w-4 h-4" />} Senior Band
+                            </button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -99,9 +121,7 @@ const AssignSchoolModal = ({ isOpen, onClose }) => {
                                 </p>
                             </div>
                             <Button type="button" variant="outline" size="sm" onClick={openGoogleMaps} className="gap-2 text-xs h-9 bg-background shrink-0 shadow-sm rounded-lg w-full md:w-auto">
-                                <MapPin className="w-3 h-3 text-primary" />
-                                Search Maps
-                                <ExternalLink className="w-3 h-3 text-muted-foreground ml-1" />
+                                <MapPin className="w-3 h-3 text-primary" /> Search Maps <ExternalLink className="w-3 h-3 text-muted-foreground ml-1" />
                             </Button>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -120,7 +140,7 @@ const AssignSchoolModal = ({ isOpen, onClose }) => {
                 <div className="sticky bottom-0 bg-muted/10 p-4 md:p-6 border-t border-border flex justify-end gap-3 rounded-b-3xl md:rounded-b-2xl pb-safe">
                     <Button variant="ghost" onClick={onClose} className="rounded-xl">Cancel</Button>
                     <Button className="gap-2 shadow-glow rounded-xl" onClick={handleSave}>
-                        <School className="w-4 h-4" /> Save
+                        <School className="w-4 h-4" /> Save Assignment
                     </Button>
                 </div>
             </div>

@@ -1,9 +1,9 @@
-import { useState } from "react"; // <-- ADDED useState
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, School, ClipboardList, Film, AlertTriangle, CalendarDays, MapPin, Pencil, Trash2 } from "lucide-react"; // <-- ADDED Pencil, Trash2
+import { ArrowLeft, School, ClipboardList, Film, AlertTriangle, CalendarDays, MapPin, Pencil, Trash2 } from "lucide-react";
 
-// --- Import your new Tab Components ---
+// --- Import Tab Components ---
 import AssignmentsTab from "./tabs/AssignmentsTab";
 import TasksTab from "./tabs/TasksTab";
 import MediaTab from "./tabs/MediaTab";
@@ -11,8 +11,8 @@ import WarningsTab from "./tabs/WarningsTab";
 import AttendanceTab from "./tabs/AttendanceTab";
 
 // --- Import Modals ---
-import EditEmployeeModal from "../../modals/admin/EditEmployeeModal"; // <-- Make sure path is correct
-import DeleteEmployeeModal from "../../modals/admin/DeleteEmployeeModal"; // <-- Make sure path is correct
+import EditEmployeeModal from "../../modals/admin/EditEmployeeModal";
+import DeleteEmployeeModal from "../../modals/admin/DeleteEmployeeModal";
 
 // --- MOCK DATA ---
 const employeeData = {
@@ -20,15 +20,39 @@ const employeeData = {
     email: "sarah.j@workforce.com", phone: "+1 (555) 123-4567", joinDate: "Jan 15, 2023", status: "active",
 };
 
+// Contains full category data for the ManageAssignedSchoolModal
 const assignedSchools = [
-    { id: 101, name: "Lincoln High School", address: "123 Main St", status: "Pending Visit" },
-    { id: 102, name: "Washington Elementary", address: "456 Oak Ave", status: "Visited Today" },
+    {
+        id: 101, name: "Lincoln High School", address: "123 Main St", status: "Pending Visit",
+        categories: [
+            { id: "c1", name: "Junior Band", assignedDate: "Mar 10, 2026", startDate: "2026-03-15", endDate: "", timeFrom: "08:00", timeTo: "12:00", days: ["Mon", "Wed"] }
+        ]
+    },
+    {
+        id: 102, name: "Washington Elementary", address: "456 Oak Ave", status: "Visited Today",
+        categories: [
+            { id: "c2", name: "Senior Band", assignedDate: "Mar 12, 2026", startDate: "2026-03-20", endDate: "2026-12-15", timeFrom: "13:00", timeTo: "16:00", days: ["Tue", "Thu"] }
+        ]
+    },
 ];
 
+// Contains rich data for the ManageTaskModal
 const optionalTasks = [
-    { id: 201, title: "Emergency Equipment Audit", school: "Roosevelt Middle", status: "Accepted", reason: "" },
-    { id: 202, title: "Staff Training Session", school: "Lincoln High School", status: "Pending", reason: "" },
-    { id: 203, title: "Facility Inspection", school: "Washington Elementary", status: "Rejected", reason: "Schedule conflict." },
+    {
+        id: 201, title: "Emergency Equipment Audit", schoolName: "Roosevelt Middle", location: "789 Pine Blvd, Springfield",
+        startDate: "2026-03-22", endDate: "2026-03-23", timeFrom: "09:00", timeTo: "12:00", days: ["Mon", "Tue"],
+        status: "Accepted", reason: ""
+    },
+    {
+        id: 202, title: "Staff Training Session", schoolName: "Lincoln High School", location: "123 Main St, Springfield",
+        startDate: "2026-03-25", endDate: "", timeFrom: "14:00", timeTo: "16:00", days: ["Wed"],
+        status: "Pending", reason: ""
+    },
+    {
+        id: 203, title: "Facility Inspection", schoolName: "Washington Elementary", location: "456 Oak Ave, Springfield",
+        startDate: "2026-03-28", endDate: "2026-03-28", timeFrom: "08:00", timeTo: "10:00", days: ["Fri"],
+        status: "Rejected", reason: "Schedule conflict."
+    },
 ];
 
 const warnings = [
@@ -39,7 +63,7 @@ const monthlyAttendanceData = [
     {
         id: 'm1', month: "March 2024",
         schools: [
-            { id: 101, name: "Lincoln High School", address: "123 Main St", stats: { present: 12, late: 2, absent: 1, holidays: 2 }, records: [{ date: 'Mar 15, 2024 (Fri)', status: 'Present', timeIn: '08:00 AM' }, { date: 'Mar 12, 2024 (Tue)', status: 'Late', timeIn: '08:45 AM' }, { date: 'Mar 10, 2024 (Sun)', status: 'Holiday', timeIn: '-' }] },
+            { id: 101, name: "Lincoln High School", address: "123 Main St", stats: { present: 12, late: 2, absent: 1, holidays: 2 }, records: [{ date: 'Mar 15, 2024 (Fri)', status: 'Present', timeIn: '08:00 AM' }] },
             { id: 102, name: "Washington Elementary", address: "456 Oak Ave", stats: { present: 6, late: 0, absent: 0, holidays: 2 }, records: [{ date: 'Mar 14, 2024 (Thu)', status: 'Present', timeIn: '07:55 AM' }] }
         ]
     }
@@ -47,15 +71,22 @@ const monthlyAttendanceData = [
 
 const mediaCollections = [
     {
-        id: 'mm1', month: "March 2024",
-        dates: [
-            { id: 'md1', date: "Mar 15, 2024", files: [{ id: 'v1', type: 'video', title: 'Classroom Activity Video', url: 'https://www.w3schools.com/html/mov_bbb.mp4', size: '12 MB' }, { id: 'v2', type: 'video', title: 'Morning Assembly', url: 'https://www.w3schools.com/html/mov_bbb.mp4', size: '25 MB' }, { id: 'i1', type: 'image', title: 'Whiteboard Notes', url: 'https://picsum.photos/800/450', size: '2 MB' }] },
-            { id: 'md2', date: "Mar 10, 2024", files: [{ id: 'v3', type: 'video', title: 'Sports Day Practice', url: 'https://www.w3schools.com/html/mov_bbb.mp4', size: '40 MB' }] }
+        id: "m1", month: "March 2024",
+        categories: [
+            {
+                id: "c1", name: "Junior Band",
+                dates: [
+                    {
+                        id: "d1", date: "Mar 15, 2024",
+                        files: [
+                            { id: "f1", type: "video", url: "https://www.w3schools.com/html/mov_bbb.mp4", title: "Morning Assembly & Warmup", size: "24.5 MB" }
+                        ]
+                    }
+                ]
+            }
         ]
-    },
-    { id: 'mm2', month: "February 2024", dates: [{ id: 'md3', date: "Feb 20, 2024", files: [{ id: 'i2', type: 'image', title: 'Student Projects', url: 'https://picsum.photos/800/451', size: '3 MB' }] }] }
+    }
 ];
-
 
 const EmployeeProfile = () => {
     const { id } = useParams();
@@ -66,10 +97,7 @@ const EmployeeProfile = () => {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
     // --- Handlers ---
-    const handleSaveEdit = (updatedData) => {
-        console.log("Saving...", updatedData);
-    };
-
+    const handleSaveEdit = (updatedData) => console.log("Saving...", updatedData);
     const handleConfirmDelete = () => {
         console.log("Deleting...");
         navigate("/admin/employees");
@@ -89,30 +117,18 @@ const EmployeeProfile = () => {
                 <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center text-2xl font-bold text-primary-foreground shadow-md shrink-0">
                     {employeeData.name.charAt(0)}
                 </div>
-                {/* UPDATED: Added flex-1 to min-w-0 to allow proper flexbox spacing */}
                 <div className="min-w-0 flex-1">
-
-                    {/* UPDATED: Name and Action Icons Container */}
                     <div className="flex items-center gap-2">
                         <h1 className="text-base sm:text-2xl font-bold text-foreground truncate">{employeeData.name}</h1>
                         <div className="flex items-center shrink-0">
-                            <button
-                                onClick={() => setIsEditModalOpen(true)}
-                                className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
-                                title="Edit Employee"
-                            >
+                            <button onClick={() => setIsEditModalOpen(true)} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors">
                                 <Pencil className="w-4 h-4 sm:w-4 sm:h-4" />
                             </button>
-                            <button
-                                onClick={() => setIsDeleteModalOpen(true)}
-                                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-                                title="Delete Employee"
-                            >
+                            <button onClick={() => setIsDeleteModalOpen(true)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors">
                                 <Trash2 className="w-4 h-4 sm:w-4 sm:h-4" />
                             </button>
                         </div>
                     </div>
-
                     <div className="flex items-center gap-2 mt-1 text-muted-foreground flex-wrap">
                         <span className="hidden sm:inline font-medium text-primary bg-primary/10 px-2 py-0.5 rounded text-sm">{employeeData.role}</span>
                         <span className="hidden sm:inline">·</span>
@@ -167,19 +183,8 @@ const EmployeeProfile = () => {
             </Tabs>
 
             {/* --- Modals Added at the Bottom --- */}
-            <EditEmployeeModal
-                isOpen={isEditModalOpen}
-                onClose={() => setIsEditModalOpen(false)}
-                employee={employeeData}
-                onSave={handleSaveEdit}
-            />
-
-            <DeleteEmployeeModal
-                isOpen={isDeleteModalOpen}
-                onClose={() => setIsDeleteModalOpen(false)}
-                employeeName={employeeData.name}
-                onConfirm={handleConfirmDelete}
-            />
+            <EditEmployeeModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} employee={employeeData} onSave={handleSaveEdit} />
+            <DeleteEmployeeModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} employeeName={employeeData.name} onConfirm={handleConfirmDelete} />
         </div>
     );
 };
