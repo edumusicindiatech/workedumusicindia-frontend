@@ -1,33 +1,71 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, ChevronRight } from "lucide-react";
+import { Plus, Search, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 import AddEmployeeModal from "../../modals/admin/AddEmployeeModal";
-
-// Mock Data (Attendance removed)
-const employees = [
-    { id: 1, name: "Sarah Johnson", role: "Field Officer", location: "District A", status: "active" },
-    { id: 2, name: "Mike Chen", role: "Supervisor", location: "District B", status: "active" },
-    { id: 3, name: "Emily Davis", role: "Field Officer", location: "District C", status: "warning" },
-    { id: 4, name: "James Wilson", role: "Field Officer", location: "District A", status: "inactive" },
-    { id: 5, name: "Ana Garcia", role: "Team Lead", location: "District B", status: "active" },
-    { id: 6, name: "David Lee", role: "Field Officer", location: "District D", status: "active" },
-    { id: 7, name: "Lisa Brown", role: "Coordinator", location: "District A", status: "active" },
-    { id: 8, name: "Tom Martinez", role: "Field Officer", location: "District C", status: "warning" },
-];
+import api from "../../api/axios";
 
 const EmployeeRoster = () => {
+    // --- UI STATES ---
     const [search, setSearch] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const navigate = useNavigate();
 
+    // --- API DATA STATES ---
+    const [employees, setEmployees] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    // --- FETCH FUNCTION ---
+    const fetchRoster = async () => {
+        try {
+            setIsLoading(true);
+            const response = await api.get('/admin/roster');
+            setEmployees(response.data.data);
+            setError("");
+        } catch (err) {
+            console.error("Error fetching roster:", err);
+            setError("Failed to load employee roster. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Fetch data on initial component mount
+    useEffect(() => {
+        fetchRoster();
+    }, []);
+
+    // Filter employees based on search input
     const filtered = employees.filter((e) =>
         e.name.toLowerCase().includes(search.toLowerCase())
     );
 
+    // --- LOADING STATE ---
+    if (isLoading) {
+        return (
+            <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground animate-in fade-in">
+                <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+                <p className="text-sm font-medium">Loading roster data...</p>
+            </div>
+        );
+    }
+
+    // --- ERROR STATE ---
+    if (error) {
+        return (
+            <div className="h-full w-full flex flex-col items-center justify-center text-destructive animate-in fade-in">
+                <AlertCircle className="w-12 h-12 mb-4 opacity-80" />
+                <p className="font-semibold">{error}</p>
+                <Button variant="outline" className="mt-6" onClick={fetchRoster}>
+                    Retry Connection
+                </Button>
+            </div>
+        );
+    }
+
     return (
-        // Added pb-24 so the floating button doesn't cover the last list item
         <div className="animate-fade-in relative pb-24 md:pb-10 h-full">
 
             {/* Header Section */}
@@ -37,7 +75,7 @@ const EmployeeRoster = () => {
                     <p className="text-sm text-muted-foreground">{employees.length} total employees</p>
                 </div>
 
-                {/* Desktop 'Add' Button (Hidden on Mobile) */}
+                {/* Desktop 'Add' Button */}
                 <Button
                     className="hidden md:flex shadow-glow gap-2 h-11 px-6 rounded-xl"
                     onClick={() => setIsAddModalOpen(true)}
@@ -49,7 +87,7 @@ const EmployeeRoster = () => {
             {/* Main Content Area */}
             <div className="bg-transparent md:bg-card md:rounded-2xl md:shadow-card md:border md:border-border overflow-hidden">
 
-                {/* Search Bar - Full width on mobile, constrained on desktop */}
+                {/* Search Bar */}
                 <div className="mb-4 md:mb-0 md:p-5 md:border-b md:border-border">
                     <div className="relative w-full md:max-w-sm">
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -57,7 +95,7 @@ const EmployeeRoster = () => {
                             placeholder="Search employees..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-10 h-12 md:h-11 rounded-xl bg-card border-border shadow-sm w-full text-base md:text-sm"
+                            className="pl-10 h-12 md:h-11 rounded-xl bg-card border-border shadow-sm w-full text-base md:text-sm focus-visible:ring-primary"
                         />
                     </div>
                 </div>
@@ -82,7 +120,7 @@ const EmployeeRoster = () => {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground shadow-sm">
-                                                {emp.name.charAt(0)}
+                                                {emp.name.charAt(0).toUpperCase()}
                                             </div>
                                             <span className="font-medium text-sm text-foreground">{emp.name}</span>
                                         </div>
@@ -105,7 +143,7 @@ const EmployeeRoster = () => {
                         >
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-lg font-bold text-primary-foreground shadow-sm shrink-0">
-                                    {emp.name.charAt(0)}
+                                    {emp.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="font-bold text-base text-foreground mb-0.5">{emp.name}</span>
@@ -121,14 +159,20 @@ const EmployeeRoster = () => {
                             </div>
                         </div>
                     ))}
-
-                    {/* Empty State */}
-                    {filtered.length === 0 && (
-                        <div className="py-10 text-center text-muted-foreground">
-                            No employees found.
-                        </div>
-                    )}
                 </div>
+
+                {/* Empty State */}
+                {filtered.length === 0 && (
+                    <div className="py-16 flex flex-col items-center justify-center text-center">
+                        <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                            <Search className="w-8 h-8 text-muted-foreground/50" />
+                        </div>
+                        <h3 className="text-lg font-semibold mb-1">No employees found</h3>
+                        <p className="text-sm text-muted-foreground max-w-62.5">
+                            {search ? "We couldn't find anyone matching that search." : "Your roster is currently empty. Add your first employee to get started!"}
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* --- MOBILE APP: FLOATING ACTION BUTTON (FAB) --- */}
@@ -144,6 +188,11 @@ const EmployeeRoster = () => {
             <AddEmployeeModal
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
+                // We pass fetchRoster so the modal can call it upon a successful creation!
+                onSuccess={() => {
+                    fetchRoster();
+                    setIsAddModalOpen(false);
+                }}
             />
         </div>
     );

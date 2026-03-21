@@ -7,7 +7,7 @@ import { UserPlus, X, Loader2, ShieldAlert, AlertCircle } from "lucide-react";
 import CustomSelect from "../../components/ui/CustomSelect";
 import api from "../../api/axios";
 
-const AddEmployeeModal = ({ isOpen, onClose }) => {
+const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
     // Determine if the logged-in user is a SuperAdmin
     const { user } = useSelector((state) => state.auth);
     const isSuperAdmin = user?.role === 'SuperAdmin';
@@ -15,9 +15,9 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
 
-    // Default role is always 'Employee'. SuperAdmins can change this to 'Admin'.
+    // Added 'zone' to the default state
     const [formData, setFormData] = useState({
-        name: "", email: "", mobile: "", role: "Employee", designation: "", adminId: "", password: ""
+        name: "", email: "", mobile: "", role: "Employee", designation: "", zone: "", adminId: "", password: ""
     });
 
     if (!isOpen) return null;
@@ -45,13 +45,17 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
                     email: formData.email,
                     mobile: formData.mobile,
                     designation: formData.designation || 'Staff', // e.g., Teacher, Supervisor
-                    zone: ''
+                    zone: formData.zone // Connect the input field to the API payload
                 });
             }
 
             // Reset form and close modal on success
-            setFormData({ name: "", email: "", mobile: "", role: "Employee", designation: "", adminId: "", password: "" });
-            onClose();
+            setFormData({ name: "", email: "", mobile: "", role: "Employee", designation: "", zone: "", adminId: "", password: "" });
+            if (onSuccess) {
+                onSuccess();
+            } else {
+                onClose();
+            }
 
         } catch (error) {
             console.error("Save Error:", error);
@@ -115,11 +119,17 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
                         )}
                     </div>
 
-                    {/* Show Designation IF creating an Employee */}
+                    {/* Show Designation and Location IF creating an Employee */}
                     {!isAdminForm && (
-                        <div className="space-y-2 animate-in fade-in">
-                            <Label>Designation <span className="text-muted-foreground font-normal">(Optional)</span></Label>
-                            <Input placeholder="Teacher, Supervisor etc." value={formData.designation} onChange={(e) => setFormData({ ...formData, designation: e.target.value })} className="h-11 rounded-xl" />
+                        <div className="grid grid-cols-2 gap-4 animate-in fade-in">
+                            <div className="space-y-2">
+                                <Label>Designation <span className="text-muted-foreground font-normal">(Optional)</span></Label>
+                                <Input placeholder="Teacher, etc." value={formData.designation} onChange={(e) => setFormData({ ...formData, designation: e.target.value })} className="h-11 rounded-xl" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Location <span className="text-muted-foreground font-normal">(Optional)</span></Label>
+                                <Input placeholder="e.g., District A" value={formData.zone} onChange={(e) => setFormData({ ...formData, zone: e.target.value })} className="h-11 rounded-xl" />
+                            </div>
                         </div>
                     )}
 
