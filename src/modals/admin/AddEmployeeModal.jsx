@@ -94,17 +94,17 @@ const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
 
                     <div className="space-y-2">
                         <Label>Full Name</Label>
-                        <Input placeholder="e.g. John Doe" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="h-11 rounded-xl" />
+                        <Input placeholder="e.g. Rahul Sharma" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="h-11 rounded-xl" />
                     </div>
                     <div className="space-y-2">
                         <Label>Email Address</Label>
-                        <Input type="email" placeholder="john.doe@example.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="h-11 rounded-xl" />
+                        <Input type="email" placeholder="rahul@example.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="h-11 rounded-xl" />
                     </div>
 
                     <div className={`grid ${isSuperAdmin ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
                         <div className="space-y-2">
                             <Label>Mobile No.</Label>
-                            <Input type="tel" placeholder="+1 234 567 890" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} className="h-11 rounded-xl" />
+                            <Input type="tel" placeholder="94234XXXXX" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} className="h-11 rounded-xl" />
                         </div>
                         {/* Only show the Role dropdown if the logged-in user is a SuperAdmin */}
                         {isSuperAdmin && (

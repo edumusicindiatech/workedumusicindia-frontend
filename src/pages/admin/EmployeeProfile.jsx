@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, School, ClipboardList, Film, AlertTriangle, CalendarDays, MapPin, Pencil, Trash2, Loader2, AlertCircle } from "lucide-react";
@@ -15,12 +15,11 @@ import AttendanceTab from "./tabs/AttendanceTab";
 import EditEmployeeModal from "../../modals/admin/EditEmployeeModal";
 import DeleteEmployeeModal from "../../modals/admin/DeleteEmployeeModal";
 
-// --- MOCK DATA FOR TABS KEEPT EXACTLY AS YOU HAD IT ---
-const assignedSchools = [ /* ... your mock data ... */];
-const optionalTasks = [ /* ... your mock data ... */];
-const warnings = [ /* ... your mock data ... */];
-const monthlyAttendanceData = [ /* ... your mock data ... */];
-const mediaCollections = [ /* ... your mock data ... */];
+// --- MOCK DATA FOR TABS ---
+const optionalTasks = [];
+const warnings = [];
+const monthlyAttendanceData = [];
+const mediaCollections = [];
 
 const EmployeeProfile = () => {
     const { id } = useParams();
@@ -35,26 +34,26 @@ const EmployeeProfile = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-    // --- Fetch Live Employee Data ---
-    useEffect(() => {
-        const fetchEmployeeDetails = async () => {
-            try {
-                setIsLoading(true);
-                const response = await api.get(`/admin/employees/${id}`);
-                setEmployeeData(response.data.data);
-                setErrorMsg("");
-            } catch (err) {
-                console.error("Error fetching employee:", err);
-                setErrorMsg("Failed to load employee profile.");
-            } finally {
-                setIsLoading(false);
-            }
-        };
+    // --- CRITICAL FIX: Move fetch function outside useEffect so it can be passed as a prop! ---
+    const fetchEmployeeDetails = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const response = await api.get(`/admin/employees/${id}`);
+            setEmployeeData(response.data.data);
+            setErrorMsg("");
+        } catch (err) {
+            console.error("Error fetching employee:", err);
+            setErrorMsg("Failed to load employee profile.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [id]);
 
+    useEffect(() => {
         if (id) {
             fetchEmployeeDetails();
         }
-    }, [id]);
+    }, [id, fetchEmployeeDetails]);
 
     // --- Handlers ---
     const handleSaveEdit = (updatedData) => console.log("Saving...", updatedData);
@@ -64,7 +63,7 @@ const EmployeeProfile = () => {
     };
 
     // --- LOADING & ERROR UI ---
-    if (isLoading) {
+    if (isLoading && !employeeData) {
         return (
             <div className="h-[60vh] flex flex-col items-center justify-center text-muted-foreground animate-fade-in">
                 <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
@@ -88,13 +87,13 @@ const EmployeeProfile = () => {
     return (
         <div className="animate-fade-in pb-10 relative">
             <button
-                onClick={() => navigate("/admin/roster")} // Make sure this matches your actual roster path
+                onClick={() => navigate("/admin/employees")}
                 className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
             >
                 <ArrowLeft className="w-4 h-4" /> Back to Roster
             </button>
 
-            {/* Header Card (NOW LIVE CONNECTED!) */}
+            {/* Header Card */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8 bg-card p-6 rounded-2xl shadow-sm border border-border">
                 <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center text-2xl font-bold text-primary-foreground shadow-md shrink-0">
                     {employeeData.name.charAt(0).toUpperCase()}
@@ -112,7 +111,6 @@ const EmployeeProfile = () => {
                         </div>
                     </div>
 
-                    {/* Live Data mapped from Database Schema */}
                     <div className="flex items-center gap-2 mt-1 text-muted-foreground flex-wrap">
                         <span className="hidden sm:inline font-medium text-primary bg-primary/10 px-2 py-0.5 rounded text-sm">
                             {employeeData.designation || 'Staff'}
@@ -132,16 +130,15 @@ const EmployeeProfile = () => {
                     </div>
                 </div>
 
-                {/* Status Badge */}
                 <span className={`mt-4 sm:mt-0 px-4 py-1.5 rounded-full text-sm font-semibold border text-center ${employeeData.isActive
-                        ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                        : "bg-destructive/10 text-destructive border-destructive/20"
+                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                    : "bg-destructive/10 text-destructive border-destructive/20"
                     }`}>
                     {employeeData.isActive ? 'ACTIVE' : 'INACTIVE'}
                 </span>
             </div>
 
-            {/* Main Tabs Navigation (Everything below here is the exact same) */}
+            {/* Main Tabs Navigation */}
             <Tabs defaultValue="schools" className="space-y-6">
                 <TabsList className="bg-card w-full flex justify-between sm:justify-center border border-border p-1 h-auto rounded-xl flex-wrap">
                     <TabsTrigger value="schools" className="flex-1 sm:flex-initial md:cursor-pointer justify-center gap-2 py-2.5 px-2 sm:px-4 rounded-lg data-[state=active]:shadow-sm">
@@ -163,7 +160,11 @@ const EmployeeProfile = () => {
 
                 {/* Render Separated Tab Components */}
                 <TabsContent value="schools" className="animate-in fade-in-50">
-                    <AssignmentsTab schools={assignedSchools} />
+                    <AssignmentsTab
+                        schools={employeeData?.assignments || []}
+                        employeeId={id}
+                        onSuccess={fetchEmployeeDetails} // <-- NOW IT WORKS!
+                    />
                 </TabsContent>
 
                 <TabsContent value="tasks" className="animate-in fade-in-50">
@@ -183,8 +184,6 @@ const EmployeeProfile = () => {
                 </TabsContent>
             </Tabs>
 
-            {/* --- Modals Added at the Bottom --- */}
-            {/* We pass the live employeeData to the edit modal now! */}
             {employeeData && (
                 <>
                     <EditEmployeeModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} employee={employeeData} onSave={handleSaveEdit} />

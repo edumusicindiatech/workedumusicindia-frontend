@@ -9,7 +9,7 @@ const ProtectedRoute = ({ children, requireAdmin }) => {
 
     // Safely check if the user is an admin
     const userRole = user?.role?.toLowerCase() || '';
-    const isAdmin = ['admin1', 'admin2', 'admin3', 'admin'].includes(userRole);
+    const isAdmin = ['admin','superadmin'].includes(userRole);
 
     // If the route requires admin, but they aren't one -> send to employee dash
     if (requireAdmin && !isAdmin) return <Navigate to="/employee/profile" replace />;

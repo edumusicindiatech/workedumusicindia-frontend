@@ -33,6 +33,7 @@ import OptionalTasks from "./pages/employee/Tasks";
 import DailyReport from "./pages/employee/DailyReport";
 import EmployeeNotifications from "./pages/employee/EmployeeNotifications";
 import EmployeeResetPassword from "./pages/employee/EmployeeResetPassword"; // <-- ADDED
+import { Toaster } from "react-hot-toast";
 
 function App() {
   const dispatch = useDispatch();
@@ -74,6 +75,25 @@ function App() {
 
   return (
     <Router>
+      <Toaster position="top-right"
+        toastOptions={{
+          style: {
+            background: 'hsl(var(--card))', // Matches your Tailwind bg-card
+            color: 'hsl(var(--foreground))', // Matches your text color
+            border: '1px solid hsl(var(--border))',
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+            fontSize: '14px',
+            fontWeight: '500',
+          },
+          success: {
+            iconTheme: { primary: '#10b981', secondary: '#ffffff' }, // Emerald green
+          },
+          error: {
+            iconTheme: { primary: '#ef4444', secondary: '#ffffff' }, // Destructive red
+          },
+        }}
+      />
       <Routes>
         {/* Public Routes (Traffic Controller) */}
         <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />

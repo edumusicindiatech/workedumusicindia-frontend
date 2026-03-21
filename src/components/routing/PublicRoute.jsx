@@ -10,7 +10,6 @@ const PublicRoute = ({ children }) => {
     if (isAuthenticated && user) {
         const userRole = user.role?.toLowerCase() || '';
         const isAdmin = ['admin', 'superadmin'].includes(userRole);
-
         // --- 1. INTERCEPT FIRST LOGIN ---
         if (user.isFirstLogin) {
             return isAdmin
