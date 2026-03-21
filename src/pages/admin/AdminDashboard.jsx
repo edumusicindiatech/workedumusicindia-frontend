@@ -24,7 +24,7 @@ const statusBadge = (status) => {
     return styles[status] || "";
 };
 
-const Dashboard = () => {
+const AdminDashboard = () => {
     return (
         <div className="animate-fade-in">
             <h1 className="text-2xl font-bold mb-1">Dashboard</h1>
@@ -75,4 +75,4 @@ const Dashboard = () => {
     );
 };
 
-export default Dashboard;
+export default AdminDashboard;

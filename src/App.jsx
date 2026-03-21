@@ -15,22 +15,24 @@ import NotFound from "./pages/Notfound";
 
 // Admin Imports
 import AdminLayout from "./components/admin/AdminLayout";
-import Dashboard from "./pages/admin/Dashboard";
+import Dashboard from "./pages/admin/AdminDashboard";
 import EmployeeRoster from "./pages/admin/EmployeeRoster";
 import EmployeeProfile from "./pages/admin/EmployeeProfile";
 import Communication from "./pages/admin/Communication";
 import AttendanceFeed from "./pages/admin/AttendenceFeed";
 import ProgressReport from "./pages/admin/ProgressReport";
 import Notifications from "./pages/admin/Notifications";
-import EmployeeNotifications from "./pages/employee/EmployeeNotifications";
+import AdminResetPassword from "./pages/admin/AdminResetPassword"; // <-- ADDED
 
 // Employee Imports
 import EmployeeLayout from "./components/employee/EmployeeLayout";
-import EmployeeDashboard from "./pages/employee/Dashboard"; // <-- ADDED: Dashboard Import
+import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import MyProfile from "./pages/employee/MyProfile";
 import AssignedSchools from "./pages/employee/AssignedSchools";
 import OptionalTasks from "./pages/employee/Tasks";
 import DailyReport from "./pages/employee/DailyReport";
+import EmployeeNotifications from "./pages/employee/EmployeeNotifications";
+import EmployeeResetPassword from "./pages/employee/EmployeeResetPassword"; // <-- ADDED
 
 function App() {
   const dispatch = useDispatch();
@@ -73,21 +75,37 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Public Routes */}
+        {/* Public Routes (Traffic Controller) */}
         <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
 
-        {/* Employee Routes */}
+        {/* ========================================== */}
+        {/* SECURE RESET PASSWORD ROUTES (No Layouts)  */}
+        {/* ========================================== */}
+        <Route
+          path="/admin/reset-password"
+          element={<ProtectedRoute requireAdmin={true}><AdminResetPassword /></ProtectedRoute>}
+        />
+        <Route
+          path="/employee/reset-password"
+          element={<ProtectedRoute requireAdmin={false}><EmployeeResetPassword /></ProtectedRoute>}
+        />
+
+        {/* ========================================== */}
+        {/* Employee Routes (Inside Layout)            */}
+        {/* ========================================== */}
         <Route path="/employee" element={<ProtectedRoute requireAdmin={false}><EmployeeLayout /></ProtectedRoute>}>
-          <Route index element={<Navigate to="/employee/dashboard" replace />} /> {/* <-- UPDATED Redirect */}
-          <Route path="dashboard" element={<EmployeeDashboard />} /> {/* <-- ADDED Route */}
+          <Route index element={<Navigate to="/employee/dashboard" replace />} />
+          <Route path="dashboard" element={<EmployeeDashboard />} />
           <Route path="profile" element={<MyProfile />} />
           <Route path="assignments" element={<AssignedSchools />} />
           <Route path="optional" element={<OptionalTasks />} />
           <Route path="report" element={<DailyReport />} />
-          <Route path="notifications" element={<Notifications />} />
+          <Route path="notifications" element={<EmployeeNotifications />} />
         </Route>
 
-        {/* Admin Routes */}
+        {/* ========================================== */}
+        {/* Admin Routes (Inside Layout)               */}
+        {/* ========================================== */}
         <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminLayout /></ProtectedRoute>}>
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
@@ -96,7 +114,7 @@ function App() {
           <Route path="attendance" element={<AttendanceFeed />} />
           <Route path="progress" element={<ProgressReport />} />
           <Route path="communication" element={<Communication />} />
-          <Route path="notifications" element={<EmployeeNotifications />} />
+          <Route path="notifications" element={<Notifications />} />
         </Route>
 
         {/* 404 Fallback */}

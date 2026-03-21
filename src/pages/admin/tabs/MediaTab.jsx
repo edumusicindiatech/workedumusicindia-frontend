@@ -109,7 +109,7 @@ const MediaTab = ({ collections }) => {
 
     return (
         <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in duration-300 pb-24 md:pb-8">
-            <div className="bg-card rounded-xl sm:rounded-2xl shadow-card border border-border min-h-[400px] sm:min-h-[500px] flex flex-col overflow-hidden">
+            <div className="bg-card rounded-xl sm:rounded-2xl shadow-card border border-border min-h-100 sm:min-h-125 flex flex-col overflow-hidden">
 
                 {/* --- HEADER --- */}
                 <div className="p-4 sm:p-6 border-b border-border bg-muted/20 flex items-center gap-3 sm:gap-4">

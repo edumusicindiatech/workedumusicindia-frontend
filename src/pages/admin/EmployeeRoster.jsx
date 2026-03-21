@@ -4,27 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, ChevronRight } from "lucide-react";
 import AddEmployeeModal from "../../modals/admin/AddEmployeeModal";
-// Mock Data
-const employees = [
-    { id: 1, name: "Sarah Johnson", role: "Field Officer", location: "District A", status: "active", attendance: "Present" },
-    { id: 2, name: "Mike Chen", role: "Supervisor", location: "District B", status: "active", attendance: "Present" },
-    { id: 3, name: "Emily Davis", role: "Field Officer", location: "District C", status: "warning", attendance: "Late" },
-    { id: 4, name: "James Wilson", role: "Field Officer", location: "District A", status: "inactive", attendance: "No-Show" },
-    { id: 5, name: "Ana Garcia", role: "Team Lead", location: "District B", status: "active", attendance: "Present" },
-    { id: 6, name: "David Lee", role: "Field Officer", location: "District D", status: "active", attendance: "Present" },
-    { id: 7, name: "Lisa Brown", role: "Coordinator", location: "District A", status: "active", attendance: "Present" },
-    { id: 8, name: "Tom Martinez", role: "Field Officer", location: "District C", status: "warning", attendance: "Pending" },
-];
 
-const attendanceBadge = (a) => {
-    const m = {
-        Present: "bg-success/10 text-success",
-        Late: "bg-warning/10 text-warning",
-        "No-Show": "bg-destructive/10 text-destructive",
-        Pending: "bg-warning/10 text-warning",
-    };
-    return m[a] || "bg-muted text-muted-foreground";
-};
+// Mock Data (Attendance removed)
+const employees = [
+    { id: 1, name: "Sarah Johnson", role: "Field Officer", location: "District A", status: "active" },
+    { id: 2, name: "Mike Chen", role: "Supervisor", location: "District B", status: "active" },
+    { id: 3, name: "Emily Davis", role: "Field Officer", location: "District C", status: "warning" },
+    { id: 4, name: "James Wilson", role: "Field Officer", location: "District A", status: "inactive" },
+    { id: 5, name: "Ana Garcia", role: "Team Lead", location: "District B", status: "active" },
+    { id: 6, name: "David Lee", role: "Field Officer", location: "District D", status: "active" },
+    { id: 7, name: "Lisa Brown", role: "Coordinator", location: "District A", status: "active" },
+    { id: 8, name: "Tom Martinez", role: "Field Officer", location: "District C", status: "warning" },
+];
 
 const EmployeeRoster = () => {
     const [search, setSearch] = useState("");
@@ -79,7 +70,6 @@ const EmployeeRoster = () => {
                                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Employee</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Attendance</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -99,11 +89,6 @@ const EmployeeRoster = () => {
                                     </td>
                                     <td className="px-6 py-4 text-sm text-muted-foreground">{emp.role}</td>
                                     <td className="px-6 py-4 text-sm text-muted-foreground">{emp.location}</td>
-                                    <td className="px-6 py-4 text-right">
-                                        <span className={`px-2.5 py-1.5 rounded-full text-xs font-semibold ${attendanceBadge(emp.attendance)}`}>
-                                            {emp.attendance}
-                                        </span>
-                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -131,10 +116,7 @@ const EmployeeRoster = () => {
                                 </div>
                             </div>
 
-                            <div className="flex flex-col items-end gap-3">
-                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${attendanceBadge(emp.attendance)}`}>
-                                    {emp.attendance}
-                                </span>
+                            <div className="flex items-center justify-center px-2">
                                 <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
                             </div>
                         </div>

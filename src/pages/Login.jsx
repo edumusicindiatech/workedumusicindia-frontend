@@ -32,12 +32,15 @@ const Login = () => {
             const data = response.data;
 
             if (data.access_token) {
-                // 1. Immediately inject token into Axios for subsequent requests
                 setAxiosToken(data.access_token);
 
-                const completeUser = data.user ? { ...data.user, role: data.role } : null;
-                // 2. Save directly to Redux memory ONLY (Zero localStorage involved!)
-                // PublicRoute will catch this state change and automatically route the user
+                // CRITICAL FIX: Merge role AND isFirstLogin into the user object for Redux
+                const completeUser = data.user
+                    ? { ...data.user, role: data.role, isFirstLogin: data.isFirstLogin }
+                    : { role: data.role, isFirstLogin: data.isFirstLogin, name: "New User" };
+
+                // Dispatch to Redux. 
+                // PublicRoute will instantly unmount this page and redirect the user!
                 dispatch(setCredentials({
                     user: completeUser,
                     access_token: data.access_token

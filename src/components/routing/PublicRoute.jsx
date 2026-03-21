@@ -1,3 +1,4 @@
+// src/components/routing/PublicRoute.jsx
 import { Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 
@@ -6,11 +7,21 @@ const PublicRoute = ({ children }) => {
 
     if (isHydrating) return null;
 
-    if (isAuthenticated) {
-        const userRole = user?.role?.toLowerCase() || '';
-        const isAdmin = ['admin1', 'admin2', 'admin3', 'admin'].includes(userRole);
+    if (isAuthenticated && user) {
+        const userRole = user.role?.toLowerCase() || '';
+        const isAdmin = ['admin', 'superadmin'].includes(userRole);
 
-        return isAdmin ? <Navigate to="/admin/dashboard" replace /> : <Navigate to="/employee/profile" replace />;
+        // --- 1. INTERCEPT FIRST LOGIN ---
+        if (user.isFirstLogin) {
+            return isAdmin
+                ? <Navigate to="/admin/reset-password" replace />
+                : <Navigate to="/employee/reset-password" replace />;
+        }
+
+        // --- 2. STANDARD ROUTING ---
+        return isAdmin
+            ? <Navigate to="/admin/dashboard" replace />
+            : <Navigate to="/employee/dashboard" replace />;
     }
 
     return children;
