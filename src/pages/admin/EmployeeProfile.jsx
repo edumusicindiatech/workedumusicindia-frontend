@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, replace } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, School, ClipboardList, Film, AlertTriangle, CalendarDays, MapPin, Pencil, Trash2, Loader2, AlertCircle } from "lucide-react";
 import api from "../../api/axios";
@@ -56,10 +56,9 @@ const EmployeeProfile = () => {
     }, [id, fetchEmployeeDetails]);
 
     // --- Handlers ---
-    const handleSaveEdit = (updatedData) => console.log("Saving...", updatedData);
+    const handleSaveEdit = (updatedEmployee) => setEmployeeData(updatedEmployee);
     const handleConfirmDelete = () => {
-        console.log("Deleting...");
-        navigate("/admin/employees");
+        navigate("/admin/employees"), { replace: true };
     };
 
     // --- LOADING & ERROR UI ---
@@ -186,12 +185,21 @@ const EmployeeProfile = () => {
 
             {employeeData && (
                 <>
-                    <EditEmployeeModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} employee={employeeData} onSave={handleSaveEdit} />
-                    <DeleteEmployeeModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} employeeName={employeeData.name} onConfirm={handleConfirmDelete} />
-                </>
+                    <EditEmployeeModal isOpen={isEditModalOpen}
+                        onClose={() => setIsEditModalOpen(false)}
+                        employee={employeeData}
+                        onSave={handleSaveEdit} />
+
+                    <DeleteEmployeeModal
+                        isOpen={isDeleteModalOpen}
+                        onClose={() => setIsDeleteModalOpen(false)}
+                        employeeId={id} // Pass the ID from useParams()
+                        employeeName={employeeData.name}
+                        onConfirm={handleConfirmDelete}
+                    /></>
             )}
         </div>
     );
 };
 
-export default EmployeeProfile;
+export default EmployeeProfile; 

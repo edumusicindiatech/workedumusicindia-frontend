@@ -189,7 +189,7 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                                         type="date" 
                                         value={schoolForm.startDate} 
                                         onChange={(e) => setSchoolForm({ ...schoolForm, startDate: e.target.value })} 
-                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-60" 
+                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary scheme-dark [&::-webkit-calendar-picker-indicator]:opacity-60" 
                                     />
                                 </div>
                                 
@@ -203,7 +203,7 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                                         type="date" 
                                         value={schoolForm.endDate} 
                                         onChange={(e) => setSchoolForm({ ...schoolForm, endDate: e.target.value })} 
-                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-60" 
+                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary scheme-dark [&::-webkit-calendar-picker-indicator]:opacity-60" 
                                     />
                                 </div>
                             </div>
@@ -221,7 +221,7 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                                         type="time" 
                                         value={schoolForm.timeFrom} 
                                         onChange={(e) => setSchoolForm({ ...schoolForm, timeFrom: e.target.value })} 
-                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-60" 
+                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary scheme-dark [&::-webkit-calendar-picker-indicator]:opacity-60" 
                                     />
                                 </div>
                                 
@@ -235,7 +235,7 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                                         type="time" 
                                         value={schoolForm.timeTo} 
                                         onChange={(e) => setSchoolForm({ ...schoolForm, timeTo: e.target.value })} 
-                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-60" 
+                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary scheme-dark [&::-webkit-calendar-picker-indicator]:opacity-60" 
                                     />
                                 </div>
                             </div>
@@ -264,7 +264,7 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 relative z-10">
                             <div>
                                 <Label className="flex items-center gap-2 text-base"><Map className="w-4 h-4 text-primary" /> Geofence Coordinates</Label>
-                                <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[250px]">
+                                <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-62.5">
                                     Required for GPS check-ins. Copy the coordinates directly from Maps.
                                 </p>
                             </div>

@@ -1,20 +1,22 @@
 import { useState, useEffect } from "react";
-import { X, Loader2, Save } from "lucide-react";
+import { X, Loader2, Save, MapPin } from "lucide-react";
+import toast from "react-hot-toast"; // Assuming you use this for feedback
+import api from "../../api/axios";
 
 const EditEmployeeModal = ({ isOpen, onClose, employee, onSave }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [formData, setFormData] = useState({
-        name: "", email: "", phone: "", password: ""
+        name: "", email: "", phone: "", zone: "", password: ""
     });
 
-    // Populate form when modal opens or employee changes
     useEffect(() => {
         if (employee) {
             setFormData({
                 name: employee.name || "",
                 email: employee.email || "",
-                phone: employee.phone || "",
-                password: "" // Keep password blank initially for security
+                phone: employee.mobile || "", // Map backend 'mobile' to frontend 'phone'
+                zone: employee.zone || "",
+                password: ""
             });
         }
     }, [employee, isOpen]);
@@ -23,13 +25,21 @@ const EditEmployeeModal = ({ isOpen, onClose, employee, onSave }) => {
 
     const handleSave = async () => {
         setIsLoading(true);
-        // Simulate API call
-        console.log("Saving updated employee data:", formData);
-        setTimeout(() => {
+        try {
+            // API call to update employee
+            const response = await api.put(`/admin/employees/${employee._id}`, formData);
+
+            if (response.data.success) {
+                toast.success("Profile updated successfully!");
+                onSave(response.data.data); // Update local state in parent
+                onClose();
+            }
+        } catch (error) {
+            console.error("Update Error:", error);
+            toast.error(error.response?.data?.message || "Failed to update employee.");
+        } finally {
             setIsLoading(false);
-            onSave(formData);
-            onClose();
-        }, 1000);
+        }
     };
 
     return (
@@ -50,15 +60,36 @@ const EditEmployeeModal = ({ isOpen, onClose, employee, onSave }) => {
                         <label className="text-sm font-medium">Full Name</label>
                         <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none" />
                     </div>
+
                     <div className="space-y-1.5">
                         <label className="text-sm font-medium">Email Address</label>
                         <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none" />
                     </div>
-                    <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Phone Number</label>
-                        <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none" />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium">Phone Number</label>
+                            <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none" />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium">Location / Zone</label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
+                                    <MapPin className="w-4 h-4" />
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. North Zone"
+                                    value={formData.zone}
+                                    onChange={(e) => setFormData({ ...formData, zone: e.target.value })}
+                                    className="w-full h-11 rounded-xl border border-input bg-background pl-9 pr-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                                />
+                            </div>
+                        </div>
                     </div>
-                    <div className="space-y-1.5">
+
+                    <div className="space-y-1.5 pt-2">
                         <label className="text-sm font-medium">New Password (Optional)</label>
                         <input type="password" placeholder="Leave blank to keep current" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none" />
                     </div>
