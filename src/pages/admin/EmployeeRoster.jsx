@@ -72,7 +72,7 @@ const EmployeeRoster = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:mb-8">
                 <div>
                     <h1 className="text-2xl font-bold mb-1">Employee Roster</h1>
-                    <p className="text-sm text-muted-foreground">{employees.length} total employees</p>
+                    <p className="text-sm text-muted-foreground">{employees.length} total staff members</p>
                 </div>
 
                 {/* Desktop 'Add' Button */}
@@ -122,7 +122,15 @@ const EmployeeRoster = () => {
                                             <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground shadow-sm">
                                                 {emp.name.charAt(0).toUpperCase()}
                                             </div>
-                                            <span className="font-medium text-sm text-foreground">{emp.name}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium text-sm text-foreground">{emp.name}</span>
+                                                {/* --- NEW: ADMIN BADGE --- */}
+                                                {emp.systemRole === 'Admin' && (
+                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-600 border border-purple-500/20 leading-none">
+                                                        ADMIN
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-muted-foreground">{emp.role}</td>
@@ -146,7 +154,15 @@ const EmployeeRoster = () => {
                                     {emp.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="font-bold text-base text-foreground mb-0.5">{emp.name}</span>
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <span className="font-bold text-base text-foreground">{emp.name}</span>
+                                        {/* --- NEW: ADMIN BADGE (MOBILE) --- */}
+                                        {emp.systemRole === 'Admin' && (
+                                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/10 text-purple-600 border border-purple-500/20 leading-none">
+                                                ADMIN
+                                            </span>
+                                        )}
+                                    </div>
                                     <span className="text-xs font-medium text-muted-foreground">{emp.role}</span>
                                     <span className="text-[11px] text-muted-foreground opacity-80 mt-1 flex items-center gap-1">
                                         📍 {emp.location}

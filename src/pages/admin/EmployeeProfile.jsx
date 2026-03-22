@@ -167,7 +167,11 @@ const EmployeeProfile = () => {
                 </TabsContent>
 
                 <TabsContent value="tasks" className="animate-in fade-in-50">
-                    <TasksTab tasks={optionalTasks} />
+                    <TasksTab
+                        tasks={employeeData?.tasks || []} // Pass REAL tasks
+                        employeeId={id}
+                        onSuccess={fetchEmployeeDetails}  // Refreshes the page instantly!
+                    />
                 </TabsContent>
 
                 <TabsContent value="media" className="animate-in fade-in-50">
