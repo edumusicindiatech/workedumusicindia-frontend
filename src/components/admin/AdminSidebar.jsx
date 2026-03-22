@@ -35,10 +35,20 @@ const AdminSidebar = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
+    // --- Preferences State (Initialize from Redux user object) ---
+    const [userPreferences, setUserPreferences] = useState(user?.preferences || null);
+
     // --- Notification State ---
     const [unreadCount, setUnreadCount] = useState(0);
 
     const mobileMenuRef = useRef(null);
+
+    // Keep preferences in sync if the Redux user object updates
+    useEffect(() => {
+        if (user?.preferences) {
+            setUserPreferences(user.preferences);
+        }
+    }, [user?.preferences]);
 
     // --- Theme Management ---
     useEffect(() => {
@@ -293,6 +303,10 @@ const AdminSidebar = () => {
             <AdminSettingsModal
                 isOpen={isSettingsModalOpen}
                 onClose={() => setIsSettingsModalOpen(false)}
+                currentPreferences={userPreferences}
+                onSaveSuccess={(newPreferences) => {
+                    setUserPreferences(newPreferences);
+                }}
             />
         </>
     );

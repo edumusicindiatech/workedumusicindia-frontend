@@ -4,10 +4,11 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Settings, X, Globe, Mail, Loader2 } from "lucide-react";
 import CustomSelect from "../../components/ui/CustomSelect";
-import { toast } from "sonner"; // Or react-hot-toast depending on your setup
+import { toast } from "sonner";
 import api from "../../api/axios";
 
-const AdminSettingsModal = ({ isOpen, onClose, currentPreferences }) => {
+// Notice the new 'onSaveSuccess' prop
+const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess }) => {
     const [settings, setSettings] = useState({
         language: "English",
         adminEmailNotifications: true,
@@ -31,7 +32,6 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences }) => {
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            // Map the frontend state to match your new backend schema
             const payload = {
                 systemLanguage: settings.language,
                 adminNotifications: settings.adminEmailNotifications,
@@ -42,6 +42,10 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences }) => {
 
             if (response.data.success) {
                 toast.success("Preferences updated successfully!");
+                // 1. Tell the parent component about the new settings so it updates its state
+                if (onSaveSuccess) {
+                    onSaveSuccess(response.data.preferences);
+                }
                 onClose();
             }
         } catch (error) {
