@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, Plus, User, Calendar } from "lucide-react";
 
 // Import the new modal (adjust path if needed)
-import IssueWarningModal from "../../../modals/admin/IssueWarningModal";
+import IssueWarningModal from '../../../modals/admin/IssueWarningModal'
 
-const WarningsTab = ({ warningsList }) => {
+// 1. ADDED employeeId and onSuccess HERE
+const WarningsTab = ({ warningsList, employeeId, onSuccess }) => {
     const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
 
     const getWarningColor = (type) => {
@@ -36,19 +37,19 @@ const WarningsTab = ({ warningsList }) => {
 
             {/* Warnings List */}
             <div className="p-0">
-                {warningsList.map((w) => (
+                {warningsList && warningsList.map((w) => (
                     <div
-                        key={w.id}
+                        key={w._id || w.id}
                         className="flex flex-col sm:flex-row sm:items-start justify-between p-4 sm:p-6 border-b border-border last:border-0 hover:bg-muted/30 transition-colors group gap-4"
                     >
                         <div className="min-w-0 flex-1 space-y-2.5">
                             {/* Type & Date */}
                             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                 <h4 className="font-bold text-lg text-foreground leading-tight">
-                                    {w.type} Warning
+                                    {w.level || w.type} Warning
                                 </h4>
-                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border shrink-0 ${getWarningColor(w.type)}`}>
-                                    Level: {w.type}
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border shrink-0 ${getWarningColor(w.level || w.type)}`}>
+                                    Level: {w.level || w.type}
                                 </span>
                             </div>
 
@@ -60,10 +61,12 @@ const WarningsTab = ({ warningsList }) => {
                             {/* Meta Info (Date & Issuer) */}
                             <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-muted-foreground pt-1">
                                 <div className="flex items-center gap-1.5">
-                                    <Calendar className="w-3.5 h-3.5 opacity-70" /> {w.date}
+                                    <Calendar className="w-3.5 h-3.5 opacity-70" />
+                                    {new Date(w.dateIssued || w.date || w.createdAt).toLocaleDateString()}
                                 </div>
                                 <div className="flex items-center gap-1.5">
-                                    <User className="w-3.5 h-3.5 opacity-70" /> Issued by: {w.issuedBy}
+                                    {/* Handle populated issuer if available */}
+                                    <User className="w-3.5 h-3.5 opacity-70" /> Issued by: {w.issuedBy?.name || "Admin"}
                                 </div>
                             </div>
                         </div>
@@ -82,10 +85,15 @@ const WarningsTab = ({ warningsList }) => {
                 )}
             </div>
 
-            {/* Modal rendered here */}
+            {/* 2. PASSED PROPS TO MODAL HERE */}
             <IssueWarningModal
                 isOpen={isIssueModalOpen}
                 onClose={() => setIsIssueModalOpen(false)}
+                employeeId={employeeId}
+                onSuccess={() => {
+                    setIsIssueModalOpen(false);
+                    if (onSuccess) onSuccess();
+                }}
             />
         </div>
     );

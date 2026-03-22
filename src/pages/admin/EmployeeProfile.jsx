@@ -179,7 +179,11 @@ const EmployeeProfile = () => {
                 </TabsContent>
 
                 <TabsContent value="warnings" className="animate-in fade-in-50">
-                    <WarningsTab warningsList={warnings} />
+                    <WarningsTab
+                        warningsList={employeeData?.warnings || []}
+                        employeeId={id}
+                        onSuccess={fetchEmployeeDetails}
+                    />
                 </TabsContent>
 
                 <TabsContent value="attendance" className="animate-in fade-in-50">

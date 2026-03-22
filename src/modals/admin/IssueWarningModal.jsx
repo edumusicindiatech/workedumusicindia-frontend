@@ -2,16 +2,17 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle, X, ChevronDown, Check, Send, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
+import api from "../../api/axios";
 
-const IssueWarningModal = ({ isOpen, onClose }) => {
+// NOTE: Add employeeId and onSuccess props!
+const IssueWarningModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
     const [warningForm, setWarningForm] = useState({ type: "Verbal", reason: "" });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Custom Select State
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
 
-    // Reset fields when modal opens
     useEffect(() => {
         if (isOpen) {
             setWarningForm({ type: "Verbal", reason: "" });
@@ -20,7 +21,6 @@ const IssueWarningModal = ({ isOpen, onClose }) => {
         }
     }, [isOpen]);
 
-    // Handle clicking outside the custom select
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -33,21 +33,37 @@ const IssueWarningModal = ({ isOpen, onClose }) => {
 
     if (!isOpen) return null;
 
-    const handleSave = () => {
-        setIsSubmitting(true);
-        console.log("Issuing Warning:", warningForm);
+    const handleSave = async () => {
+        if (!warningForm.reason.trim()) {
+            toast.error("Please provide a reason for the warning.");
+            return;
+        }
 
-        // Mock API Call
-        setTimeout(() => {
-            setIsSubmitting(false);
+        setIsSubmitting(true);
+        const loadingToast = toast.loading("Issuing warning...");
+
+        try {
+            // API Call mapping 'type' to backend 'level'
+            await api.post(`/admin/employees/${employeeId}/warnings`, {
+                level: warningForm.type,
+                reason: warningForm.reason
+            });
+
+            toast.success("Warning issued successfully.", { id: loadingToast });
+            if (onSuccess) onSuccess(); // Refresh data
             onClose();
-        }, 1000);
+        } catch (error) {
+            console.error("Warning Error:", error);
+            toast.error(error.response?.data?.message || "Failed to issue warning.", { id: loadingToast });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const isFormValid = warningForm.reason.trim().length > 0;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300" onClick={onClose}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300" onClick={!isSubmitting ? onClose : undefined}>
             <div className="bg-card w-full max-w-lg rounded-2xl shadow-2xl border border-border flex flex-col max-h-[90vh] animate-in zoom-in-95 fade-in duration-300 overflow-hidden" onClick={(e) => e.stopPropagation()}>
 
                 {/* Header */}
@@ -61,7 +77,7 @@ const IssueWarningModal = ({ isOpen, onClose }) => {
                             <p className="text-xs text-muted-foreground mt-0.5">Record a formal warning for this employee.</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors bg-background border border-border shrink-0">
+                    <button onClick={onClose} disabled={isSubmitting} className="p-2 hover:bg-muted rounded-full transition-colors bg-background border border-border shrink-0">
                         <X className="w-4 h-4 text-muted-foreground" />
                     </button>
                 </div>
@@ -69,7 +85,6 @@ const IssueWarningModal = ({ isOpen, onClose }) => {
                 {/* Body */}
                 <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
 
-                    {/* CUSTOM SELECT FOR WARNING TYPE */}
                     <div className="space-y-2" ref={dropdownRef}>
                         <Label className="text-sm font-semibold text-foreground">Warning Level</Label>
                         <div className="relative">
@@ -78,9 +93,7 @@ const IssueWarningModal = ({ isOpen, onClose }) => {
                                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                 className="w-full h-11 rounded-xl border border-input bg-background px-4 text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-destructive/50 transition-all hover:bg-muted/30"
                             >
-                                <span className={`font-semibold ${warningForm.type === "Final" ? "text-destructive" :
-                                        warningForm.type === "Written" ? "text-orange-500" : "text-amber-500"
-                                    }`}>
+                                <span className={`font-semibold ${warningForm.type === "Final" ? "text-destructive" : warningForm.type === "Written" ? "text-orange-500" : "text-amber-500"}`}>
                                     {warningForm.type} Warning
                                 </span>
                                 <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
@@ -97,10 +110,7 @@ const IssueWarningModal = ({ isOpen, onClose }) => {
                                                     setWarningForm({ ...warningForm, type: option });
                                                     setIsDropdownOpen(false);
                                                 }}
-                                                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${warningForm.type === option
-                                                        ? "bg-muted font-bold text-foreground"
-                                                        : "text-foreground hover:bg-muted/50 font-medium"
-                                                    }`}
+                                                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${warningForm.type === option ? "bg-muted font-bold text-foreground" : "text-foreground hover:bg-muted/50 font-medium"}`}
                                             >
                                                 <span>{option} Warning</span>
                                                 {warningForm.type === option && <Check className="w-4 h-4" />}
@@ -125,15 +135,9 @@ const IssueWarningModal = ({ isOpen, onClose }) => {
 
                 {/* Footer */}
                 <div className="p-6 border-t border-border bg-muted/10 flex justify-end gap-3 shrink-0 rounded-b-2xl">
-                    <Button variant="ghost" onClick={onClose} className="rounded-xl h-11 px-6 font-semibold">Cancel</Button>
-                    <Button
-                        onClick={handleSave}
-                        disabled={!isFormValid || isSubmitting}
-                        className="rounded-xl h-11 px-8 font-bold bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-glow"
-                    >
-                        {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                            <><Send className="w-4 h-4 mr-2" /> Issue Warning</>
-                        )}
+                    <Button variant="ghost" onClick={onClose} disabled={isSubmitting} className="rounded-xl h-11 px-6 font-semibold">Cancel</Button>
+                    <Button onClick={handleSave} disabled={!isFormValid || isSubmitting} className="rounded-xl h-11 px-8 font-bold bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-glow">
+                        {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-4 h-4 mr-2" /> Issue Warning</>}
                     </Button>
                 </div>
             </div>
