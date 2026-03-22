@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import api from "../../api/axios";
+import * as XLSX from 'xlsx-js-style'; // <-- Added styling library import
 
 const ProgressReport = () => {
     const [teachers, setTeachers] = useState([]);
@@ -138,48 +139,76 @@ const ProgressReport = () => {
         return `px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${styles[status] || styles.Holiday}`;
     };
 
-    // --- CRITICAL FIX: ROBUST EXPORT LOGIC USING AXIOS ---
+    // --- STYLED EXPORT LOGIC ---
     const handleExportExcel = async () => {
         if (!selectedMonth || !selectedTeacher) return;
         const toastId = toast.loading("Preparing Excel report...");
 
         try {
-            // 1. Use your configured 'api' so base URLs and Auth Tokens are handled automatically.
-            // 2. responseType: 'blob' is mandatory to prevent Axios from corrupting the binary data.
+            // 1. Fetch file from backend
             const response = await api.get(`/admin/progress/${selectedTeacher._id}/export/${selectedMonth}`, {
                 responseType: 'blob'
             });
 
-            // 3. Catch edge cases where the server returns a 200 OK, but it's an error JSON object.
             if (response.data.type === 'application/json') {
                 const text = await response.data.text();
                 const json = JSON.parse(text);
                 throw new Error(json.message || "Failed to generate report.");
             }
 
-            // 4. Create the blob with the specific Excel MIME type.
-            const blob = new Blob([response.data], {
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            });
+            // 2. Read the Blob as an ArrayBuffer and parse it into an XLSX workbook
+            const arrayBuffer = await response.data.arrayBuffer();
+            const workbook = XLSX.read(arrayBuffer, { type: 'array', cellStyles: true });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
 
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = downloadUrl;
+            // 3. Define vibrant headers
+            const headerColors = [
+                "2563EB", // Blue
+                "0D9488", // Teal
+                "4F46E5", // Indigo
+                "7C3AED", // Purple
+                "DB2777", // Pink
+                "D97706", // Orange
+                "059669", // Green
+                "DC2626", // Red
+                "475569"  // Slate
+            ];
 
-            // Ensure no spaces or weird characters in filename for older Excel versions
+            // 4. Apply styles specifically to Row 1 (Headers)
+            if (worksheet['!ref']) {
+                const headerRange = XLSX.utils.decode_range(worksheet['!ref']);
+                for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
+                    const headerAddress = XLSX.utils.encode_col(C) + "1";
+                    if (!worksheet[headerAddress]) continue;
+
+                    // Use modulo to cycle colors if there are more columns than colors
+                    const bgColor = headerColors[C % headerColors.length];
+
+                    worksheet[headerAddress].s = {
+                        font: { bold: true, color: { rgb: "FFFFFF" } },
+                        fill: { fgColor: { rgb: bgColor } },
+                        alignment: { horizontal: "center", vertical: "center" },
+                        border: {
+                            top: { style: "thin", color: { auto: 1 } },
+                            bottom: { style: "thin", color: { auto: 1 } },
+                            left: { style: "thin", color: { auto: 1 } },
+                            right: { style: "thin", color: { auto: 1 } }
+                        }
+                    };
+                }
+            }
+
+            // 5. Generate and download styled file
             const safeName = selectedTeacher.name.replace(/[^a-z0-9]/gi, '_');
-            a.download = `${safeName}_${selectedMonth}_Report.xlsx`;
+            const fileName = `${safeName}_${selectedMonth}_Report.xlsx`;
 
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(downloadUrl);
+            XLSX.writeFile(workbook, fileName);
 
             toast.success("Excel report downloaded!", { id: toastId });
         } catch (err) {
             console.error("Export error:", err);
 
-            // Handle Axios error parsing when responseType is 'blob'
             if (err.response && err.response.data instanceof Blob) {
                 const text = await err.response.data.text();
                 try {
@@ -194,7 +223,6 @@ const ProgressReport = () => {
         }
     };
 
-    // Added the missing search filter for the render block
     const filteredTeachers = teachers.filter(t =>
         t.name.toLowerCase().includes(searchTerm.toLowerCase())
     );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, ArrowLeft, School, Users, ChevronRight, FileText, CheckCircle2, Clock, PlaySquare, AlertCircle, XCircle, Download, Coffee, Star } from "lucide-react";
-import * as XLSX from 'xlsx'; // Make sure you ran: npm install xlsx
+// Change the import from 'xlsx' to 'xlsx-js-style'
+import * as XLSX from 'xlsx-js-style';
 import toast from "react-hot-toast";
 
 const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName }) => {
@@ -69,15 +70,45 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
             // 2. Create Worksheet
             const worksheet = XLSX.utils.json_to_sheet(rowData);
 
-            // 3. Apply Bold Headlines and styling
+            // 3. Apply Bold Headlines and Distinct Colors
+            const headerColors = [
+                "2563EB", // Blue (Employee Name)
+                "0D9488", // Teal (Month)
+                "4F46E5", // Indigo (School Name)
+                "7C3AED", // Purple (Category)
+                "DB2777", // Pink (Date)
+                "D97706", // Orange (Status)
+                "059669", // Green (Check In Time)
+                "DC2626", // Red (Check Out Time)
+                "475569"  // Slate (Event / Reason Note)
+            ];
+
             const headerRange = XLSX.utils.decode_range(worksheet['!ref']);
             for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
                 const headerAddress = XLSX.utils.encode_col(C) + "1";
                 if (!worksheet[headerAddress]) continue;
+
+                // Pick the color for the current column, fallback to slate if out of bounds
+                const bgColor = headerColors[C] || "475569";
+
                 worksheet[headerAddress].s = {
-                    font: { bold: true, color: { rgb: "FFFFFF" } },
-                    fill: { fgColor: { rgb: "4F46E5" } },
-                    alignment: { horizontal: "center" }
+                    font: {
+                        bold: true,
+                        color: { rgb: "FFFFFF" }
+                    },
+                    fill: {
+                        fgColor: { rgb: bgColor }
+                    },
+                    alignment: {
+                        horizontal: "center",
+                        vertical: "center"
+                    },
+                    border: {
+                        top: { style: "thin", color: { auto: 1 } },
+                        bottom: { style: "thin", color: { auto: 1 } },
+                        left: { style: "thin", color: { auto: 1 } },
+                        right: { style: "thin", color: { auto: 1 } }
+                    }
                 };
             }
 
@@ -99,10 +130,7 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Monthly Attendance");
 
-            // 6. Set bold headers metadata
-            worksheet['!rowHeaderBold'] = true;
-
-            // 7. Download file
+            // 6. Download file
             const fileName = `${employeeName.replace(' ', '_')}_Attendance_${monthData.month.replace(' ', '_')}.xlsx`;
             XLSX.writeFile(workbook, fileName);
 
@@ -219,7 +247,6 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
                 <div className="space-y-3">
                     {selectedCategory.records.map(record => (
                         <div key={record.id} onClick={() => { setSelectedRecord(record); setViewLevel("detail"); }} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 md:p-5 rounded-xl border border-border bg-card hover:bg-muted/30 cursor-pointer group transition-colors gap-4 sm:gap-0">
-                            {/* Fixed JSX Comment Issue Here */}
                             <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-6 min-w-0">
                                 <span className="font-bold text-sm md:text-base text-foreground sm:w-45 truncate">{record.date}</span>
                                 <span className="text-xs md:text-sm text-muted-foreground flex items-center gap-1.5 shrink-0"><Clock className="w-3.5 h-3.5" /> {record.time}</span>
