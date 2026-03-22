@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate, replace } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, School, ClipboardList, Film, AlertTriangle, CalendarDays, MapPin, Pencil, Trash2, Loader2, AlertCircle } from "lucide-react";
 import api from "../../api/axios";
@@ -15,45 +15,7 @@ import AttendanceTab from "./tabs/AttendanceTab";
 import EditEmployeeModal from "../../modals/admin/EditEmployeeModal";
 import DeleteEmployeeModal from "../../modals/admin/DeleteEmployeeModal";
 
-// --- MOCK DATA FOR TABS ---
-const optionalTasks = [];
-const warnings = [];
-const mediaCollections = [];
-
-// --- ADDED DUMMY ATTENDANCE DATA HERE ---
-const monthlyAttendanceData = [
-    {
-        id: 1,
-        month: "March 2026",
-        records: [
-            { id: 1, date: "01 Mar, 2026", status: "Present", checkIn: "08:00 AM", checkOut: "04:00 PM", hours: "8h 00m" },
-            { id: 2, date: "02 Mar, 2026", status: "Late", checkIn: "08:45 AM", checkOut: "04:00 PM", hours: "7h 15m" },
-            { id: 3, date: "03 Mar, 2026", status: "Absent", checkIn: "-", checkOut: "-", hours: "0h 00m" },
-            { id: 4, date: "04 Mar, 2026", status: "Present", checkIn: "07:55 AM", checkOut: "04:05 PM", hours: "8h 10m" },
-            { id: 5, date: "05 Mar, 2026", status: "Present", checkIn: "08:02 AM", checkOut: "04:00 PM", hours: "7h 58m" },
-        ]
-    },
-    {
-        id: 2,
-        month: "February 2026",
-        records: [
-            { id: 1, date: "25 Feb, 2026", status: "Present", checkIn: "07:50 AM", checkOut: "04:10 PM", hours: "8h 20m" },
-            { id: 2, date: "26 Feb, 2026", status: "Present", checkIn: "08:00 AM", checkOut: "04:00 PM", hours: "8h 00m" },
-            { id: 3, date: "27 Feb, 2026", status: "Late", checkIn: "09:15 AM", checkOut: "04:00 PM", hours: "6h 45m" },
-            { id: 4, date: "28 Feb, 2026", status: "Present", checkIn: "07:58 AM", checkOut: "04:02 PM", hours: "8h 04m" }
-        ]
-    },
-    {
-        id: 3,
-        month: "January 2026",
-        records: [
-            { id: 1, date: "15 Jan, 2026", status: "Present", checkIn: "08:00 AM", checkOut: "04:00 PM", hours: "8h 00m" },
-            { id: 2, date: "16 Jan, 2026", status: "Present", checkIn: "08:05 AM", checkOut: "04:00 PM", hours: "7h 55m" },
-            { id: 3, date: "17 Jan, 2026", status: "Absent", checkIn: "-", checkOut: "-", hours: "0h 00m" },
-            { id: 4, date: "18 Jan, 2026", status: "Absent", checkIn: "-", checkOut: "-", hours: "0h 00m" },
-        ]
-    }
-];
+const mediaCollections = []; // Placeholder for media tab
 
 const EmployeeProfile = () => {
     const { id } = useParams();
@@ -61,6 +23,7 @@ const EmployeeProfile = () => {
 
     // --- API Data States ---
     const [employeeData, setEmployeeData] = useState(null);
+    const [attendanceData, setAttendanceData] = useState([]); // New state for attendance
     const [isLoading, setIsLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState("");
 
@@ -71,8 +34,14 @@ const EmployeeProfile = () => {
     const fetchEmployeeDetails = useCallback(async () => {
         try {
             setIsLoading(true);
+            // 1. Fetch Profile, Tasks, Assignments, Warnings
             const response = await api.get(`/admin/employees/${id}`);
             setEmployeeData(response.data.data);
+
+            // 2. Fetch Hierarchical Attendance Data
+            const attResponse = await api.get(`/admin/employees/${id}/attendance`);
+            setAttendanceData(attResponse.data.data || []);
+
             setErrorMsg("");
         } catch (err) {
             console.error("Error fetching employee:", err);
@@ -91,7 +60,7 @@ const EmployeeProfile = () => {
     // --- Handlers ---
     const handleSaveEdit = (updatedEmployee) => setEmployeeData(updatedEmployee);
     const handleConfirmDelete = () => {
-        navigate("/admin/employees"), { replace: true };
+        navigate("/admin/employees", { replace: true });
     };
 
     // --- LOADING & ERROR UI ---
@@ -109,7 +78,7 @@ const EmployeeProfile = () => {
             <div className="h-[60vh] flex flex-col items-center justify-center text-destructive animate-fade-in">
                 <AlertCircle className="w-10 h-10 mb-4" />
                 <p className="font-semibold text-lg">{errorMsg || "Employee not found"}</p>
-                <button onClick={() => navigate("/admin/roster")} className="mt-4 text-primary underline">
+                <button onClick={() => navigate("/admin/employees")} className="mt-4 text-primary underline">
                     Return to Roster
                 </button>
             </div>
@@ -192,19 +161,11 @@ const EmployeeProfile = () => {
 
                 {/* Render Separated Tab Components */}
                 <TabsContent value="schools" className="animate-in fade-in-50">
-                    <AssignmentsTab
-                        schools={employeeData?.assignments || []}
-                        employeeId={id}
-                        onSuccess={fetchEmployeeDetails}
-                    />
+                    <AssignmentsTab schools={employeeData?.assignments || []} employeeId={id} onSuccess={fetchEmployeeDetails} />
                 </TabsContent>
 
                 <TabsContent value="tasks" className="animate-in fade-in-50">
-                    <TasksTab
-                        tasks={employeeData?.tasks || []}
-                        employeeId={id}
-                        onSuccess={fetchEmployeeDetails}
-                    />
+                    <TasksTab tasks={employeeData?.tasks || []} employeeId={id} onSuccess={fetchEmployeeDetails} />
                 </TabsContent>
 
                 <TabsContent value="media" className="animate-in fade-in-50">
@@ -212,33 +173,19 @@ const EmployeeProfile = () => {
                 </TabsContent>
 
                 <TabsContent value="warnings" className="animate-in fade-in-50">
-                    <WarningsTab
-                        warningsList={employeeData?.warnings || []}
-                        employeeId={id}
-                        onSuccess={fetchEmployeeDetails}
-                    />
+                    <WarningsTab warningsList={employeeData?.warnings || []} employeeId={id} onSuccess={fetchEmployeeDetails} />
                 </TabsContent>
 
                 <TabsContent value="attendance" className="animate-in fade-in-50">
-                    {/* PASSED DUMMY DATA HERE */}
-                    <AttendanceTab attendanceData={monthlyAttendanceData} />
+                    {/* Passed REAL data from the new backend route */}
+                    <AttendanceTab attendanceData={attendanceData} employeeName={employeeData?.name} />
                 </TabsContent>
             </Tabs>
 
             {employeeData && (
                 <>
-                    <EditEmployeeModal isOpen={isEditModalOpen}
-                        onClose={() => setIsEditModalOpen(false)}
-                        employee={employeeData}
-                        onSave={handleSaveEdit} />
-
-                    <DeleteEmployeeModal
-                        isOpen={isDeleteModalOpen}
-                        onClose={() => setIsDeleteModalOpen(false)}
-                        employeeId={id}
-                        employeeName={employeeData.name}
-                        onConfirm={handleConfirmDelete}
-                    />
+                    <EditEmployeeModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} employee={employeeData} onSave={handleSaveEdit} />
+                    <DeleteEmployeeModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} employeeId={id} employeeName={employeeData.name} onConfirm={handleConfirmDelete} />
                 </>
             )}
         </div>
