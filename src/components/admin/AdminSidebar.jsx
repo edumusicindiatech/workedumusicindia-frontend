@@ -19,7 +19,7 @@ import {
 
 import api from "../../api/axios";
 import { logout } from "../../store/slices/authSlice";
-import SettingsModal from "../../modals/admin/SettingModal";
+import AdminSettingsModal from "../../modals/admin/AdminSettingsModal";
 
 const AdminSidebar = () => {
     const dispatch = useDispatch();
@@ -290,7 +290,7 @@ const AdminSidebar = () => {
             </nav>
 
             {/* Modals */}
-            <SettingsModal
+            <AdminSettingsModal
                 isOpen={isSettingsModalOpen}
                 onClose={() => setIsSettingsModalOpen(false)}
             />

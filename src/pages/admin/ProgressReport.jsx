@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import api from "../../api/axios";
-import * as XLSX from 'xlsx-js-style'; // <-- Added styling library import
+import * as XLSX from 'xlsx-js-style';
 
 const ProgressReport = () => {
     const [teachers, setTeachers] = useState([]);
@@ -145,7 +145,6 @@ const ProgressReport = () => {
         const toastId = toast.loading("Preparing Excel report...");
 
         try {
-            // 1. Fetch file from backend
             const response = await api.get(`/admin/progress/${selectedTeacher._id}/export/${selectedMonth}`, {
                 responseType: 'blob'
             });
@@ -156,33 +155,21 @@ const ProgressReport = () => {
                 throw new Error(json.message || "Failed to generate report.");
             }
 
-            // 2. Read the Blob as an ArrayBuffer and parse it into an XLSX workbook
             const arrayBuffer = await response.data.arrayBuffer();
             const workbook = XLSX.read(arrayBuffer, { type: 'array', cellStyles: true });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
 
-            // 3. Define vibrant headers
             const headerColors = [
-                "2563EB", // Blue
-                "0D9488", // Teal
-                "4F46E5", // Indigo
-                "7C3AED", // Purple
-                "DB2777", // Pink
-                "D97706", // Orange
-                "059669", // Green
-                "DC2626", // Red
-                "475569"  // Slate
+                "2563EB", "0D9488", "4F46E5", "7C3AED", "DB2777", "D97706", "059669", "DC2626", "475569"
             ];
 
-            // 4. Apply styles specifically to Row 1 (Headers)
             if (worksheet['!ref']) {
                 const headerRange = XLSX.utils.decode_range(worksheet['!ref']);
                 for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
                     const headerAddress = XLSX.utils.encode_col(C) + "1";
                     if (!worksheet[headerAddress]) continue;
 
-                    // Use modulo to cycle colors if there are more columns than colors
                     const bgColor = headerColors[C % headerColors.length];
 
                     worksheet[headerAddress].s = {
@@ -199,12 +186,10 @@ const ProgressReport = () => {
                 }
             }
 
-            // 5. Generate and download styled file
             const safeName = selectedTeacher.name.replace(/[^a-z0-9]/gi, '_');
             const fileName = `${safeName}_${selectedMonth}_Report.xlsx`;
 
             XLSX.writeFile(workbook, fileName);
-
             toast.success("Excel report downloaded!", { id: toastId });
         } catch (err) {
             console.error("Export error:", err);
@@ -228,95 +213,151 @@ const ProgressReport = () => {
     );
 
     return (
-        <div className="p-4 md:p-8 max-w-4xl mx-auto animate-in fade-in pb-20">
+        <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto animate-in fade-in duration-500 pb-20">
             {/* Header */}
-            <div className="mb-8 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                    <TrendingUp className="w-6 h-6" />
+            <div className="mb-6 sm:mb-8 flex items-center gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm shrink-0">
+                    <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Progress Reports</h1>
-                    <p className="text-muted-foreground text-sm">Monthly workforce activity metrics.</p>
+                <div className="min-w-0">
+                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">Progress Reports</h1>
+                    <p className="text-muted-foreground text-xs sm:text-sm truncate">Monthly workforce activity metrics.</p>
                 </div>
             </div>
 
             {/* Breadcrumb */}
             {(selectedTeacher || selectedMonth) && (
-                <button onClick={handleBackNavigation} className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 text-sm font-medium">
-                    <ArrowLeft className="w-4 h-4" />
-                    {selectedDay ? "Back to Overview" : selectedCategory ? `Back to ${selectedSchool.schoolName}` : selectedSchool ? `Back to Months` : "Back to Rankings"}
+                <button
+                    onClick={handleBackNavigation}
+                    className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground hover:text-primary mb-5 sm:mb-6 text-xs sm:text-sm font-semibold transition-colors duration-200 group"
+                >
+                    <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform duration-300 group-hover:-translate-x-1" />
+                    <span className="truncate">
+                        {selectedDay ? "Back to Overview" : selectedCategory ? `Back to ${selectedSchool.schoolName}` : selectedSchool ? `Back to Months` : "Back to Rankings"}
+                    </span>
                 </button>
             )}
 
-            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col min-h-100">
+            <div className="bg-card rounded-2xl sm:rounded-3xl border border-border shadow-lg shadow-slate-200/40 dark:shadow-none overflow-hidden flex flex-col min-h-100 transition-all duration-300">
                 {/* Dynamic Title Bar */}
-                <div className="p-5 border-b border-border bg-muted/20 flex items-center justify-between gap-4">
-                    <h3 className="font-bold truncate">
+                <div className="p-4 sm:p-5 border-b border-border bg-muted/30 flex items-center justify-between gap-3 sm:gap-4">
+                    <h3 className="font-bold text-sm sm:text-base text-foreground truncate">
                         {!selectedTeacher ? "Workforce Rankings" : !selectedMonth ? `${selectedTeacher.name}'s Reports` : formatMonth(selectedMonth)}
                     </h3>
                     {selectedMonth && !selectedSchool && (
-                        <Button onClick={handleExportExcel} variant="outline" size="sm" className="gap-2 border-primary/20 text-primary font-bold">
-                            <Download className="w-4 h-4" /> Export Excel
+                        <Button
+                            onClick={handleExportExcel}
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 sm:gap-2 border-primary/20 text-primary font-bold hover:bg-primary hover:text-primary-foreground transition-all duration-300 h-8 sm:h-9 px-2.5 sm:px-4 shrink-0"
+                        >
+                            <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            <span className="hidden sm:inline">Export Excel</span>
+                            <span className="sm:hidden">Export</span>
                         </Button>
                     )}
                 </div>
 
-                <div className="p-4 md:p-6 flex-1 bg-background/50">
+                <div className="p-3 sm:p-4 md:p-6 flex-1 bg-background/50 relative overflow-hidden">
                     {/* LEVEL 1: LIST */}
                     {!selectedTeacher && (
-                        <div className="space-y-4">
-                            <Input
-                                placeholder="Search teacher..."
-                                value={searchTerm}
-                                onChange={e => setSearchTerm(e.target.value)}
-                                className="mb-4 h-11"
-                            />
-                            {isLoadingTeachers ? <Loader2 className="w-8 h-8 animate-spin mx-auto mt-10" /> :
-                                filteredTeachers.map((t, idx) => (
-                                    <div key={t._id} onClick={() => handleSelectTeacher(t)} className="flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:bg-muted/50 cursor-pointer transition-all active:scale-[0.99]">
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-xs font-bold text-muted-foreground">#{idx + 1}</span>
-                                            <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-white font-bold">{t.name[0]}</div>
-                                            <div>
-                                                <p className="font-bold text-sm">{t.name}</p>
-                                                <p className="text-[11px] text-muted-foreground uppercase font-bold">{t.zone || 'Unassigned'}</p>
+                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="relative mb-4 sm:mb-6">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search teacher..."
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                    className="pl-9 h-11 sm:h-12 bg-card border-border/60 focus-visible:ring-primary/30 rounded-xl shadow-sm text-sm"
+                                />
+                            </div>
+                            {isLoadingTeachers ? (
+                                <div className="py-12 flex justify-center">
+                                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                                </div>
+                            ) : (
+                                <div className="space-y-2.5 sm:space-y-3">
+                                    {filteredTeachers.map((t, idx) => (
+                                        <div
+                                            key={t._id}
+                                            onClick={() => handleSelectTeacher(t)}
+                                            className="flex items-center justify-between p-3 sm:p-4 bg-card border border-border/80 rounded-xl sm:rounded-2xl hover:border-primary/40 hover:shadow-md cursor-pointer transition-all duration-300 active:scale-[0.99] group"
+                                        >
+                                            <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+                                                <span className="text-[10px] sm:text-xs font-bold text-muted-foreground w-4 sm:w-6 shrink-0">#{idx + 1}</span>
+                                                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full gradient-primary flex items-center justify-center text-white font-bold shadow-inner shrink-0 text-sm sm:text-base">
+                                                    {t.name[0]}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="font-bold text-xs sm:text-sm text-foreground group-hover:text-primary transition-colors truncate">{t.name}</p>
+                                                    <p className="text-[9px] sm:text-[11px] text-muted-foreground uppercase font-semibold mt-0.5 truncate">{t.zone || 'Unassigned'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right flex items-center shrink-0 pl-2">
+                                                <span className="text-[9px] sm:text-[10px] font-black text-emerald-500 uppercase flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 bg-emerald-500/10 rounded-md">
+                                                    <Trophy className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> {t.score}/100
+                                                </span>
+                                                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 ml-1.5 sm:ml-3" />
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <span className="text-[10px] font-black text-emerald-500 uppercase flex items-center gap-1"><Trophy className="w-3 h-3" /> {t.score}/100</span>
-                                            <ChevronRight className="w-4 h-4 text-muted-foreground/30 inline ml-2" />
+                                    ))}
+                                    {filteredTeachers.length === 0 && (
+                                        <div className="text-center py-10 text-muted-foreground text-sm font-medium bg-muted/10 rounded-2xl border border-dashed">
+                                            No teachers found matching your search.
                                         </div>
-                                    </div>
-                                ))
-                            }
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
 
                     {/* LEVEL 2: MONTHS */}
                     {selectedTeacher && !selectedMonth && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-right-8 duration-300">
                             {monthsAvailable.map(m => (
-                                <div key={m} onClick={() => setSelectedMonth(m)} className="p-5 border border-border rounded-xl flex items-center justify-between hover:bg-muted/30 cursor-pointer">
-                                    <div className="flex items-center gap-4">
-                                        <CalendarDays className="w-5 h-5 text-primary" />
-                                        <span className="font-bold">{formatMonth(m)}</span>
+                                <div
+                                    key={m}
+                                    onClick={() => setSelectedMonth(m)}
+                                    className="p-4 sm:p-5 border border-border/80 rounded-xl sm:rounded-2xl flex items-center justify-between hover:bg-muted/30 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 cursor-pointer transition-all duration-300 group bg-card"
+                                >
+                                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                                        <div className="p-2 sm:p-2.5 bg-primary/10 rounded-lg sm:rounded-xl text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300 shrink-0">
+                                            <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5" />
+                                        </div>
+                                        <span className="font-bold text-sm sm:text-base text-foreground truncate">{formatMonth(m)}</span>
                                     </div>
-                                    <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
+                                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 shrink-0" />
                                 </div>
                             ))}
+                            {monthsAvailable.length === 0 && !isLoadingRecords && (
+                                <div className="col-span-1 sm:col-span-2 text-center py-12 text-sm text-muted-foreground font-medium bg-muted/10 rounded-2xl border border-dashed">
+                                    No records available for this teacher.
+                                </div>
+                            )}
+                            {isLoadingRecords && (
+                                <div className="col-span-1 sm:col-span-2 py-12 flex justify-center">
+                                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                                </div>
+                            )}
                         </div>
                     )}
 
                     {/* LEVEL 3: SCHOOLS */}
                     {selectedMonth && !selectedSchool && (
-                        <div className="space-y-3">
+                        <div className="space-y-2.5 sm:space-y-3 animate-in fade-in slide-in-from-right-8 duration-300">
                             {schoolsInMonth.map(s => (
-                                <div key={s._id} onClick={() => setSelectedSchool(s)} className="p-4 border border-border rounded-xl flex items-center justify-between hover:border-primary/40 cursor-pointer bg-card">
-                                    <div className="flex items-center gap-4">
-                                        <School className="w-5 h-5 text-indigo-500" />
-                                        <span className="font-bold">{s.schoolName}</span>
+                                <div
+                                    key={s._id}
+                                    onClick={() => setSelectedSchool(s)}
+                                    className="p-3.5 sm:p-4 md:p-5 border border-border/80 rounded-xl sm:rounded-2xl flex items-center justify-between hover:bg-muted/30 hover:border-indigo-500/40 hover:shadow-md cursor-pointer bg-card transition-all duration-300 group"
+                                >
+                                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                                        <div className="p-2 sm:p-2.5 bg-indigo-500/10 rounded-lg sm:rounded-xl text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors duration-300 shrink-0">
+                                            <School className="w-4 h-4 sm:w-5 sm:h-5" />
+                                        </div>
+                                        <span className="font-bold text-foreground text-sm md:text-base truncate">{s.schoolName}</span>
                                     </div>
-                                    <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
+                                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground/40 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all duration-300 shrink-0" />
                                 </div>
                             ))}
                         </div>
@@ -324,63 +365,137 @@ const ProgressReport = () => {
 
                     {/* LEVEL 4: CATEGORIES */}
                     {selectedSchool && !selectedCategory && (
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-right-8 duration-300">
                             {categoriesData.map(c => (
-                                <div key={c.name} onClick={() => c.count > 0 && setSelectedCategory(c.name)} className={`p-6 border rounded-2xl text-center flex flex-col items-center ${c.count > 0 ? 'hover:bg-muted/30 cursor-pointer' : 'opacity-40 grayscale cursor-not-allowed'}`}>
-                                    <Users className="w-8 h-8 text-violet-500 mb-3" />
-                                    <p className="font-bold text-sm">{c.name}</p>
-                                    <p className="text-[10px] font-bold text-muted-foreground">{c.count} records</p>
+                                <div
+                                    key={c.name}
+                                    onClick={() => c.count > 0 && setSelectedCategory(c.name)}
+                                    className={`p-5 sm:p-6 md:p-8 border border-border/80 rounded-xl sm:rounded-2xl text-center flex flex-col items-center transition-all duration-300 bg-card ${c.count > 0
+                                            ? 'hover:bg-muted/20 hover:border-violet-500/40 hover:shadow-md hover:-translate-y-1 cursor-pointer group'
+                                            : 'opacity-50 grayscale cursor-not-allowed'
+                                        }`}
+                                >
+                                    <div className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl mb-3 sm:mb-4 transition-colors duration-300 ${c.count > 0 ? 'bg-violet-500/10 text-violet-500 group-hover:bg-violet-500 group-hover:text-white' : 'bg-muted text-muted-foreground'}`}>
+                                        <Users className="w-6 h-6 sm:w-8 sm:h-8" />
+                                    </div>
+                                    <p className="font-bold text-sm md:text-base text-foreground mb-1">{c.name}</p>
+                                    <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-muted px-2.5 py-1 rounded-full">{c.count} records</p>
                                 </div>
                             ))}
                         </div>
                     )}
 
-                    {/* LEVEL 5: OVERVIEW */}
+                    {/* LEVEL 5: OVERVIEW (REDESIGNED METRICS + SMALLER RESPONSIVE SIZES) */}
                     {selectedCategory && !selectedDay && (
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-                                {Object.entries(activeCategoryInfo.stats).map(([key, val]) => (
-                                    <div key={key} className="p-3 border border-border rounded-xl bg-card text-center">
-                                        <p className="text-xl font-black text-foreground">{val}</p>
-                                        <p className="text-[8px] font-black uppercase text-muted-foreground">{key}</p>
-                                    </div>
-                                ))}
+                        <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-right-8 duration-300">
+
+                            <div>
+                                <h4 className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-3 sm:mb-4">Summary Metrics</h4>
+                                <div className="grid grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3 md:gap-4">
+                                    {Object.entries(activeCategoryInfo.stats).map(([key, val]) => {
+                                        let icon, colorClass, borderClass, bgClass, label;
+                                        switch (key) {
+                                            case 'present':
+                                                icon = <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 mb-1.5 sm:mb-2 text-emerald-500" />;
+                                                colorClass = "text-emerald-500"; borderClass = "border-emerald-500/30 hover:border-emerald-500/60"; bgClass = "bg-emerald-500/5"; label = "Present";
+                                                break;
+                                            case 'late':
+                                                icon = <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 mb-1.5 sm:mb-2 text-amber-500" />;
+                                                colorClass = "text-amber-500"; borderClass = "border-amber-500/30 hover:border-amber-500/60"; bgClass = "bg-amber-500/5"; label = "Late";
+                                                break;
+                                            case 'absent':
+                                                icon = <XCircle className="w-4 h-4 sm:w-5 sm:h-5 mb-1.5 sm:mb-2 text-destructive" />;
+                                                colorClass = "text-destructive"; borderClass = "border-destructive/30 hover:border-destructive/60"; bgClass = "bg-destructive/5"; label = "Absent";
+                                                break;
+                                            case 'events':
+                                                icon = <Star className="w-4 h-4 sm:w-5 sm:h-5 mb-1.5 sm:mb-2 text-violet-500" />;
+                                                colorClass = "text-violet-500"; borderClass = "border-violet-500/30 hover:border-violet-500/60"; bgClass = "bg-violet-500/5"; label = "Events";
+                                                break;
+                                            case 'holidays':
+                                                icon = <Coffee className="w-4 h-4 sm:w-5 sm:h-5 mb-1.5 sm:mb-2 text-slate-400" />;
+                                                colorClass = "text-slate-400"; borderClass = "border-slate-400/30 hover:border-slate-400/60"; bgClass = "bg-slate-400/5"; label = "Holidays";
+                                                break;
+                                            case 'mediaSent':
+                                                icon = <Film className="w-4 h-4 sm:w-5 sm:h-5 mb-1.5 sm:mb-2 text-blue-500" />;
+                                                colorClass = "text-blue-500"; borderClass = "border-blue-500/30 hover:border-blue-500/60"; bgClass = "bg-blue-500/5"; label = "Media";
+                                                break;
+                                            default:
+                                                icon = <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 mb-1.5 sm:mb-2 text-muted-foreground" />;
+                                                colorClass = "text-foreground"; borderClass = "border-border"; bgClass = "bg-card"; label = key;
+                                        }
+
+                                        return (
+                                            <div
+                                                key={key}
+                                                className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border flex flex-col items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1 cursor-default ${bgClass} ${borderClass}`}
+                                            >
+                                                {icon}
+                                                <span className={`text-2xl sm:text-3xl font-black mb-1 sm:mb-1.5 ${colorClass}`}>{val}</span>
+                                                <span className={`text-[8px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest ${colorClass} opacity-80`}>{label}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                {activeCategoryInfo.records.map(r => (
-                                    <div key={r._id} onClick={() => setSelectedDay(r)} className="p-3 border border-border/50 rounded-xl flex items-center justify-between hover:bg-muted/20 cursor-pointer">
-                                        <span className="text-xs font-bold">{formatFullDate(r.date)}</span>
-                                        <div className="flex items-center gap-3">
-                                            {r.mediaFilesCount > 0 && <Film className="w-3.5 h-3.5 text-blue-500" />}
-                                            <span className={getStatusBadge(r.status)}>{r.status}</span>
+
+                            <div>
+                                <h4 className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-3 sm:mb-4">Daily Breakdown</h4>
+                                <div className="space-y-2.5 sm:space-y-3">
+                                    {activeCategoryInfo.records.map(r => (
+                                        <div
+                                            key={r._id}
+                                            onClick={() => setSelectedDay(r)}
+                                            className="p-3.5 sm:p-4 border border-border/80 rounded-xl sm:rounded-2xl flex items-center justify-between hover:bg-muted/30 hover:border-primary/30 hover:shadow-sm cursor-pointer bg-card transition-all duration-200 group"
+                                        >
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 min-w-0">
+                                                <span className="text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate">{formatFullDate(r.date)}</span>
+                                                <span className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1.5 shrink-0"><Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> {r.time}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3 sm:gap-4 shrink-0 pl-2">
+                                                {r.mediaFilesCount > 0 && <Film className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 opacity-80 group-hover:opacity-100 transition-opacity" />}
+                                                <span className={getStatusBadge(r.status)}>{r.status}</span>
+                                                <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 hidden sm:block" />
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                    {activeCategoryInfo.records.length === 0 && (
+                                        <div className="p-8 text-center text-muted-foreground bg-muted/10 border border-dashed border-border/80 rounded-2xl text-sm font-medium">
+                                            No records found for this category.
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
 
                     {/* LEVEL 6: DETAIL */}
                     {selectedDay && (
-                        <div className="space-y-6">
-                            <div className="bg-muted/20 rounded-2xl p-6 text-center border border-border">
+                        <div className="space-y-4 sm:space-y-6 max-w-2xl mx-auto animate-in fade-in slide-in-from-right-8 duration-300">
+                            <div className="bg-card rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center border border-border/80 shadow-sm relative overflow-hidden group hover:border-primary/30 transition-colors">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                 <span className={getStatusBadge(selectedDay.status)}>{selectedDay.status}</span>
-                                <h2 className="text-2xl font-bold mt-3">{formatFullDate(selectedDay.date)}</h2>
-                                <div className="flex justify-center gap-4 mt-4">
-                                    <div className="text-xs font-bold text-emerald-500 bg-emerald-500/5 px-3 py-1.5 rounded-full border border-emerald-500/20">In: {formatTime(selectedDay.checkInTime) || '--:--'}</div>
-                                    <div className="text-xs font-bold text-rose-500 bg-rose-500/5 px-3 py-1.5 rounded-full border border-rose-500/20">Out: {formatTime(selectedDay.checkOutTime) || '--:--'}</div>
+                                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mt-4 sm:mt-5 mb-5 sm:mb-6 text-foreground tracking-tight px-2">{formatFullDate(selectedDay.date)}</h2>
+                                <div className="flex flex-row justify-center gap-3 sm:gap-6">
+                                    <div className="flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold text-emerald-600 bg-emerald-500/10 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border border-emerald-500/20 w-full sm:w-auto shadow-sm">
+                                        <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> In: {formatTime(selectedDay.checkInTime) || '--:--'}
+                                    </div>
+                                    <div className="flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold text-rose-600 bg-rose-500/10 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border border-rose-500/20 w-full sm:w-auto shadow-sm">
+                                        <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Out: {formatTime(selectedDay.checkOutTime) || '--:--'}
+                                    </div>
                                 </div>
                             </div>
+
                             {selectedDay.dailyReport && (
-                                <div className="space-y-2">
-                                    <p className="text-[10px] font-black text-blue-500 uppercase flex items-center gap-2"><ClipboardCheck className="w-4 h-4" /> Daily Report</p>
-                                    <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-xl text-sm leading-relaxed">{selectedDay.dailyReport}</div>
+                                <div className="space-y-1.5 sm:space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+                                    <p className="text-[10px] sm:text-[11px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 pl-1"><ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Daily Report</p>
+                                    <div className="p-4 sm:p-5 bg-blue-500/5 border border-blue-500/20 rounded-xl sm:rounded-2xl text-xs sm:text-sm leading-relaxed text-foreground/90 shadow-sm">{selectedDay.dailyReport}</div>
                                 </div>
                             )}
+
                             {(selectedDay.teacherNote || selectedDay.lateReason) && (
-                                <div className="space-y-2">
-                                    <p className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-2"><FileText className="w-4 h-4" /> Teacher Note</p>
-                                    <div className="p-4 bg-muted/20 border border-border rounded-xl text-sm italic">"{selectedDay.teacherNote || selectedDay.lateReason}"</div>
+                                <div className="space-y-1.5 sm:space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+                                    <p className="text-[10px] sm:text-[11px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 pl-1"><FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Teacher Note</p>
+                                    <div className="p-4 sm:p-5 bg-muted/30 border border-border/80 rounded-xl sm:rounded-2xl text-xs sm:text-sm italic text-muted-foreground shadow-sm">"{selectedDay.teacherNote || selectedDay.lateReason}"</div>
                                 </div>
                             )}
                         </div>

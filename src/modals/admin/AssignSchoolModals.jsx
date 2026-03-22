@@ -8,7 +8,7 @@ import api from "../../api/axios";
 
 const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
-    
+
     // Swipe & Animation states
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState(0);
@@ -27,12 +27,12 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
     const handleClose = () => {
         setIsClosing(true);
         setDragOffset(window.innerHeight); // Push it completely off the bottom of the screen
-        
+
         // Wait for the 300ms CSS transition to finish before actually unmounting
         setTimeout(() => {
             onClose();
             // Reset states invisibly so it's ready for the next time it opens
-            setIsClosing(false); 
+            setIsClosing(false);
             setDragOffset(0);
         }, 300);
     };
@@ -47,7 +47,7 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
         if (!isDragging) return;
         const currentY = e.touches[0].clientY;
         const delta = currentY - dragStartY.current;
-        
+
         // Only allow dragging downwards
         if (delta > 0) {
             setDragOffset(delta);
@@ -103,19 +103,19 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
     };
 
     return (
-        <div 
+        <div
             // IMPROVEMENT: Added dynamic opacity to fade the backdrop smoothly when closing
-            className={`fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-sm animate-in fade-in'}`} 
+            className={`fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-sm animate-in fade-in'}`}
             onClick={!isLoading ? handleClose : undefined}
         >
-            <div 
+            <div
                 className={`bg-card w-full max-w-2xl rounded-t-3xl md:rounded-2xl shadow-2xl border-t md:border border-border flex flex-col max-h-[90vh] md:max-h-[85vh] ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0' : ''}`}
                 style={{ transform: `translateY(${dragOffset}px)` }}
                 onClick={e => e.stopPropagation()}
             >
 
                 {/* --- DRAGGABLE HEADER AREA --- */}
-                <div 
+                <div
                     className="sticky top-0 bg-card z-10 rounded-t-3xl md:rounded-t-2xl touch-none border-b border-border"
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
@@ -139,7 +139,7 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
 
                 {/* --- SCROLLABLE FORM CONTENT --- */}
                 <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
-                    
+
                     {/* Basic Info */}
                     <div className="space-y-4">
                         <div className="space-y-2">
@@ -176,7 +176,7 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
 
                     {/* Modern Date & Time Section */}
                     <div className="bg-muted/30 border border-border rounded-2xl p-4 md:p-5 space-y-5">
-                        
+
                         {/* Dates */}
                         <div>
                             <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3 block">Timeline</Label>
@@ -185,25 +185,25 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
                                         <Calendar className="w-4 h-4" />
                                     </div>
-                                    <Input 
-                                        type="date" 
-                                        value={schoolForm.startDate} 
-                                        onChange={(e) => setSchoolForm({ ...schoolForm, startDate: e.target.value })} 
-                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary scheme-dark [&::-webkit-calendar-picker-indicator]:opacity-60" 
+                                    <Input
+                                        type="date"
+                                        value={schoolForm.startDate}
+                                        onChange={(e) => setSchoolForm({ ...schoolForm, startDate: e.target.value })}
+                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary scheme-dark [&::-webkit-calendar-picker-indicator]:opacity-60"
                                     />
                                 </div>
-                                
+
                                 <ArrowRight className="w-4 h-4 text-muted-foreground hidden md:block shrink-0" />
-                                
+
                                 <div className="relative w-full">
                                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
                                         <Calendar className="w-4 h-4" />
                                     </div>
-                                    <Input 
-                                        type="date" 
-                                        value={schoolForm.endDate} 
-                                        onChange={(e) => setSchoolForm({ ...schoolForm, endDate: e.target.value })} 
-                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary scheme-dark [&::-webkit-calendar-picker-indicator]:opacity-60" 
+                                    <Input
+                                        type="date"
+                                        value={schoolForm.endDate}
+                                        onChange={(e) => setSchoolForm({ ...schoolForm, endDate: e.target.value })}
+                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary scheme-dark [&::-webkit-calendar-picker-indicator]:opacity-60"
                                     />
                                 </div>
                             </div>
@@ -217,25 +217,25 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
                                         <Clock className="w-4 h-4" />
                                     </div>
-                                    <Input 
-                                        type="time" 
-                                        value={schoolForm.timeFrom} 
-                                        onChange={(e) => setSchoolForm({ ...schoolForm, timeFrom: e.target.value })} 
-                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary scheme-dark [&::-webkit-calendar-picker-indicator]:opacity-60" 
+                                    <Input
+                                        type="time"
+                                        value={schoolForm.timeFrom}
+                                        onChange={(e) => setSchoolForm({ ...schoolForm, timeFrom: e.target.value })}
+                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary scheme-dark [&::-webkit-calendar-picker-indicator]:opacity-60"
                                     />
                                 </div>
-                                
+
                                 <span className="text-sm font-medium text-muted-foreground hidden md:block shrink-0">to</span>
-                                
+
                                 <div className="relative w-full">
                                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
                                         <Clock className="w-4 h-4" />
                                     </div>
-                                    <Input 
-                                        type="time" 
-                                        value={schoolForm.timeTo} 
-                                        onChange={(e) => setSchoolForm({ ...schoolForm, timeTo: e.target.value })} 
-                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary scheme-dark [&::-webkit-calendar-picker-indicator]:opacity-60" 
+                                    <Input
+                                        type="time"
+                                        value={schoolForm.timeTo}
+                                        onChange={(e) => setSchoolForm({ ...schoolForm, timeTo: e.target.value })}
+                                        className="h-11 rounded-xl pl-10 bg-background border-border shadow-sm focus-visible:ring-primary scheme-dark [&::-webkit-calendar-picker-indicator]:opacity-60"
                                     />
                                 </div>
                             </div>
@@ -246,8 +246,8 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                             <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3 block">Working Days</Label>
                             <div className="flex flex-wrap gap-2">
                                 {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-                                    <button 
-                                        key={day} type="button" onClick={() => toggleDay(day)} 
+                                    <button
+                                        key={day} type="button" onClick={() => toggleDay(day)}
                                         className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${schoolForm.days.includes(day) ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'bg-background text-muted-foreground border-border hover:bg-muted'}`}
                                     >
                                         {day}
@@ -260,7 +260,7 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                     {/* Geofence Section */}
                     <div className="p-5 bg-background border border-border rounded-2xl shadow-sm space-y-4 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full pointer-events-none"></div>
-                        
+
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 relative z-10">
                             <div>
                                 <Label className="flex items-center gap-2 text-base"><Map className="w-4 h-4 text-primary" /> Geofence Coordinates</Label>
@@ -268,13 +268,13 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                                     Required for GPS check-ins. Copy the coordinates directly from Maps.
                                 </p>
                             </div>
-                            
-                            <a 
-                                href="http://googleusercontent.com/maps.google.com/" target="_blank" rel="noopener noreferrer"
+
+                            <a
+                                href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer"
                                 className="inline-flex items-center justify-center gap-2 text-sm font-medium h-10 px-4 bg-muted hover:bg-muted/80 text-foreground rounded-xl transition-colors shrink-0 border border-border w-full md:w-auto"
                             >
-                                <MapPin className="w-4 h-4 text-primary" /> 
-                                Open Google Maps 
+                                <MapPin className="w-4 h-4 text-primary" />
+                                Open Google Maps
                                 <ExternalLink className="w-3 h-3 text-muted-foreground ml-1" />
                             </a>
                         </div>

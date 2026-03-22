@@ -54,11 +54,6 @@ const AssignTaskModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
         }));
     };
 
-    const openGoogleMaps = () => {
-        const query = taskForm.location ? encodeURIComponent(taskForm.location) : "";
-        const url = query ? `http://googleusercontent.com/maps.google.com/maps?q=${query}` : "http://googleusercontent.com/maps.google.com/";
-        window.open(url, "_blank");
-    };
 
     const handleSave = async () => {
         if (!taskForm.task || !taskForm.schoolName) {
@@ -181,8 +176,15 @@ const AssignTaskModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                                 <Label className="flex items-center gap-2 text-base"><Map className="w-4 h-4 text-primary" /> Geofence Coordinates</Label>
                                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-62.5">Required for GPS check-ins. Copy coordinates from Maps.</p>
                             </div>
-                            <Button type="button" variant="outline" onClick={openGoogleMaps} className="gap-2 text-sm font-medium h-10 px-4 bg-muted hover:bg-muted/80 text-foreground rounded-xl transition-colors shrink-0 border border-border w-full md:w-auto">
-                                <MapPin className="w-4 h-4 text-primary" /> Open Google Maps <ExternalLink className="w-3 h-3 text-muted-foreground ml-1" />
+                            <Button
+                                type="button"
+                                onClick={() => window.open("https://www.google.com/maps/", "_blank", "noopener,noreferrer")}
+                                variant="outline"
+                                className="gap-2 text-sm font-medium h-10 px-4 bg-muted hover:bg-muted/80 text-foreground rounded-xl transition-colors shrink-0 border border-border w-full md:w-auto"
+                            >
+                                <MapPin className="w-4 h-4 text-primary" />
+                                Open Google Maps
+                                <ExternalLink className="w-3 h-3 text-muted-foreground ml-1" />
                             </Button>
                         </div>
                         <div className="grid grid-cols-2 gap-4 pt-2 relative z-10">
