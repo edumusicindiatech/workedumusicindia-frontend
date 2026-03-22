@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Send, Users, Bell, UserCheck, Search, CheckCircle2, Clock, Loader2, AlertCircle } from "lucide-react";
-import { toast } from "sonner"; // Make sure <Toaster richColors /> is in your App.jsx!
+import { Send, Users, Bell, UserCheck, Search, CheckCircle2, Clock, Loader2, AlertCircle, Megaphone } from "lucide-react";
+import { toast, Toaster } from "sonner"; // <-- Imported Toaster here
 import api from "../../api/axios";
 
 const Communication = () => {
@@ -72,8 +72,8 @@ const Communication = () => {
             if (response.data.success) {
                 toast.success(`Broadcast delivered to ${response.data.data.reachCount} users!`);
 
-                // Add to recent list and reset form
-                setRecentBroadcasts(prev => [response.data.data, ...prev].slice(0, 5));
+                // Add to recent list and keep ONLY the 3 most recent
+                setRecentBroadcasts(prev => [response.data.data, ...prev].slice(0, 3));
                 setMessage("");
                 setSelectedCity("");
                 setSelectedEmployees([]);
@@ -110,102 +110,121 @@ const Communication = () => {
     // --- LOADING & ERROR UI ---
     if (isFetching) {
         return (
-            <div className="h-[60vh] flex flex-col items-center justify-center text-muted-foreground animate-fade-in">
-                <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-                <p className="font-medium">Loading communication hub...</p>
+            <div className="h-[60vh] flex flex-col items-center justify-center text-muted-foreground animate-pulse">
+                <div className="p-4 bg-primary/10 rounded-full mb-4">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+                <p className="font-medium text-lg">Loading Communication Hub...</p>
             </div>
         );
     }
 
     if (errorMsg && employees.length === 0) {
         return (
-            <div className="h-[60vh] flex flex-col items-center justify-center text-destructive animate-fade-in p-6 text-center">
-                <AlertCircle className="w-10 h-10 mb-4" />
-                <p className="font-semibold text-lg">{errorMsg}</p>
+            <div className="h-[60vh] flex flex-col items-center justify-center text-destructive animate-in fade-in zoom-in p-6 text-center">
+                <div className="p-4 bg-destructive/10 rounded-full mb-4">
+                    <AlertCircle className="w-10 h-10 text-destructive" />
+                </div>
+                <p className="font-semibold text-xl">{errorMsg}</p>
+                <p className="text-muted-foreground mt-2">Please refresh the page and try again.</p>
             </div>
         );
     }
 
     return (
-        <div className="animate-fade-in pb-24 md:pb-10 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24 md:pb-10 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+
+            {/* Added Toaster here so notifications render correctly */}
+            <Toaster richColors position="top-right" />
 
             {/* Header */}
-            <div className="mb-6 sm:mb-8">
-                <h1 className="text-2xl sm:text-3xl font-bold mb-1 text-foreground tracking-tight">Communication</h1>
-                <p className="text-muted-foreground text-sm sm:text-base">Broadcast announcements and alerts to your workforce.</p>
+            <div className="mb-6 sm:mb-8 flex items-center gap-4">
+                <div className="p-2.5 bg-primary/10 rounded-xl hidden sm:flex items-center justify-center">
+                    <Megaphone className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold mb-1 text-foreground tracking-tight">Communication Hub</h1>
+                    <p className="text-muted-foreground text-sm sm:text-base font-normal">Instantly broadcast announcements and alerts to your workforce.</p>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
 
                 {/* --- MAIN FORM AREA --- */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-card rounded-2xl shadow-sm p-4 sm:p-6 lg:p-8 border border-border">
-                        <h3 className="text-lg sm:text-xl font-bold mb-5 sm:mb-6 flex items-center gap-2 text-foreground">
-                            <Send className="w-5 h-5 text-primary" /> Broadcast Message
+                    <div className="bg-card rounded-2xl shadow-sm p-5 sm:p-7 border border-border/60 relative overflow-hidden">
+                        {/* Decorative background accent */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+
+                        <h3 className="text-lg sm:text-xl font-semibold mb-6 flex items-center gap-2 text-foreground relative z-10">
+                            <Send className="w-5 h-5 text-primary" /> New Broadcast
                         </h3>
 
-                        <div className="space-y-6">
+                        <div className="space-y-6 relative z-10">
                             {/* Target Selection */}
-                            <div>
-                                <Label className="text-sm sm:text-base font-bold">Target Group</Label>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 mt-3">
+                            <div className="space-y-3">
+                                <Label className="text-sm font-semibold text-foreground">1. Select Target Group</Label>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                                     {[
                                         { id: "All Employees", icon: Users },
                                         { id: "By Zone", icon: Bell },
                                         { id: "Specific People", icon: UserCheck },
-                                    ].map((t) => (
-                                        <button
-                                            key={t.id}
-                                            onClick={() => setTarget(t.id)}
-                                            className={`flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-3 sm:py-2.5 rounded-xl text-sm font-bold transition-all duration-200 border ${target === t.id
-                                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                                : "bg-muted/10 text-muted-foreground border-border hover:bg-muted/50 hover:text-foreground"
-                                                }`}
-                                        >
-                                            <t.icon className="w-4 h-4 shrink-0" />
-                                            <span className="truncate">{t.id}</span>
-                                        </button>
-                                    ))}
+                                    ].map((t) => {
+                                        const isSelected = target === t.id;
+                                        return (
+                                            <button
+                                                key={t.id}
+                                                onClick={() => setTarget(t.id)}
+                                                className={`flex items-center justify-center sm:justify-start gap-2.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border ${isSelected
+                                                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                                    : "bg-background text-muted-foreground border-border hover:border-primary/30 hover:bg-primary/5"
+                                                    }`}
+                                            >
+                                                <t.icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-primary-foreground" : "text-muted-foreground"}`} />
+                                                <span className="truncate">{t.id}</span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
                             {/* Conditional: By Zone */}
                             {target === "By Zone" && (
-                                <div className="bg-muted/20 border border-border rounded-xl p-4 sm:p-5 animate-in slide-in-from-top-2">
-                                    <Label className="text-xs sm:text-sm font-bold">Target City / Location</Label>
+                                <div className="bg-muted/30 border border-border/50 rounded-xl p-4 animate-in slide-in-from-top-2 fade-in duration-300">
+                                    <Label className="text-sm font-semibold">Target City / Location</Label>
                                     <Input
                                         placeholder="e.g. Sultanpur, Lucknow, Delhi (comma separated)..."
                                         value={selectedCity}
                                         onChange={(e) => setSelectedCity(e.target.value)}
-                                        className="mt-2 h-10 sm:h-11 bg-background"
+                                        className="mt-2.5 h-11 bg-background border-border/50 focus-visible:ring-primary/40 rounded-lg text-sm"
                                     />
-                                    <p className="text-[10px] sm:text-xs font-medium text-muted-foreground mt-2 leading-relaxed">
-                                        Multiple cities can be separated by commas. Not case-sensitive.
+                                    <p className="text-xs font-normal text-muted-foreground mt-2 flex items-center gap-1.5">
+                                        <AlertCircle className="w-3.5 h-3.5" /> Multiple cities can be separated by commas.
                                     </p>
                                 </div>
                             )}
 
                             {/* Conditional: Specific People */}
                             {target === "Specific People" && (
-                                <div className="bg-muted/20 border border-border rounded-xl p-4 sm:p-5 animate-in slide-in-from-top-2">
-                                    <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                                        <Label className="text-xs sm:text-sm font-bold">Select Recipients</Label>
-                                        <span className="text-[10px] font-black uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20">
+                                <div className="bg-muted/30 border border-border/50 rounded-xl p-4 animate-in slide-in-from-top-2 fade-in duration-300">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                        <Label className="text-sm font-semibold">Select Recipients</Label>
+                                        <span className="text-xs font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20">
                                             {selectedEmployees.length} Selected
                                         </span>
                                     </div>
 
-                                    <div className="relative mb-4">
+                                    <div className="relative mb-3">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                         <Input
                                             placeholder="Search employees by name..."
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="pl-9 h-10 bg-background text-sm"
+                                            className="pl-9 h-10 bg-background border-border/50 focus-visible:ring-primary/40 rounded-lg text-sm"
                                         />
                                     </div>
 
-                                    <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1 sm:pr-2 custom-scrollbar border border-border/50 bg-background rounded-lg p-1.5">
+                                    <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1.5 custom-scrollbar border border-border/40 bg-background rounded-lg p-1.5">
                                         {filteredEmployees.length > 0 ? (
                                             filteredEmployees.map((emp) => {
                                                 const isSelected = selectedEmployees.includes(emp._id);
@@ -213,84 +232,99 @@ const Communication = () => {
                                                     <button
                                                         key={emp._id}
                                                         onClick={() => toggleEmployeeSelection(emp._id)}
-                                                        className={`w-full flex items-center justify-between p-3 rounded-lg text-sm transition-all border ${isSelected
-                                                            ? "bg-primary/10 border-primary/30 shadow-sm"
-                                                            : "bg-transparent border-transparent hover:bg-muted/50"
+                                                        className={`w-full flex items-center justify-between p-2.5 rounded-lg text-sm transition-all border ${isSelected
+                                                            ? "bg-primary/5 border-primary/30"
+                                                            : "bg-transparent border-transparent hover:bg-muted/60"
                                                             }`}
                                                     >
                                                         <div className="flex flex-col items-start min-w-0 text-left">
-                                                            <span className={`font-bold text-sm truncate w-full ${isSelected ? "text-primary" : "text-foreground"}`}>
+                                                            <span className={`font-medium text-sm truncate w-full ${isSelected ? "text-primary" : "text-foreground"}`}>
                                                                 {emp.name}
                                                             </span>
-                                                            <span className="text-[10px] sm:text-[11px] font-medium text-muted-foreground mt-0.5 truncate w-full">
+                                                            <span className="text-xs font-normal text-muted-foreground mt-0.5 truncate w-full">
                                                                 {emp.designation || "Employee"} • {emp.zone || "Unassigned"}
                                                             </span>
                                                         </div>
                                                         {isSelected ? (
-                                                            <CheckCircle2 className="w-5 h-5 text-primary shrink-0 ml-2" />
+                                                            <CheckCircle2 className="w-4 h-4 text-primary shrink-0 ml-2" />
                                                         ) : (
-                                                            <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 shrink-0 ml-2" />
+                                                            <div className="w-4 h-4 rounded-full border border-muted-foreground/40 shrink-0 ml-2" />
                                                         )}
                                                     </button>
                                                 );
                                             })
                                         ) : (
-                                            <p className="text-center text-xs sm:text-sm text-muted-foreground py-8">No employees found.</p>
+                                            <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                                                <Users className="w-6 h-6 mb-2 opacity-30" />
+                                                <p className="text-xs font-medium">No employees found.</p>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
                             )}
 
                             {/* Message Context */}
-                            <div>
-                                <Label className="text-sm sm:text-base font-bold">Message Context</Label>
+                            <div className="space-y-3">
+                                <Label className="text-sm font-semibold text-foreground">2. Compose Message</Label>
                                 <textarea
-                                    className="w-full mt-2 sm:mt-3 min-h-30 sm:min-h-37.5 rounded-xl border border-border bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow leading-relaxed"
+                                    className="w-full min-h-35 rounded-xl border border-border/60 bg-muted/10 px-4 py-3 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 focus:bg-background transition-all leading-relaxed"
                                     placeholder="Type your official announcement here..."
                                     value={message}
                                     onChange={(e) => setMessage(e.target.value)}
                                 />
                             </div>
 
-                            <Button
-                                onClick={handleSendBroadcast}
-                                disabled={isSending}
-                                className="w-full sm:w-auto gap-2 rounded-xl font-bold px-8 h-11 sm:h-12 text-sm sm:text-base"
-                            >
-                                {isSending ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : <Send className="w-4 h-4 sm:w-5 sm:h-5" />}
-                                {isSending ? "Broadcasting..." : "Send Broadcast"}
-                            </Button>
+                            {/* Submit */}
+                            <div className="pt-2">
+                                <Button
+                                    onClick={handleSendBroadcast}
+                                    disabled={isSending}
+                                    className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-lg font-medium px-6 h-10 text-sm transition-all"
+                                >
+                                    {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                    {isSending ? "Broadcasting..." : "Send Broadcast Now"}
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* --- SIDEBAR: RECENT ACTIVITY --- */}
-                <div className="bg-card rounded-2xl shadow-sm p-4 sm:p-6 border border-border h-fit flex flex-col max-h-125 lg:max-h-200">
-                    <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-5 flex items-center gap-2 text-foreground shrink-0">
-                        <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /> Recent Broadcasts
-                    </h3>
+                <div className="bg-card rounded-2xl shadow-sm p-5 sm:p-6 border border-border/60 h-fit flex flex-col">
+                    <div className="flex items-center justify-between mb-5 pb-3 border-b border-border/50 shrink-0">
+                        <h3 className="text-base font-semibold flex items-center gap-2 text-foreground">
+                            <Clock className="w-4 h-4 text-primary" /> History
+                        </h3>
+                        <span className="text-[11px] font-medium bg-muted px-2 py-1 rounded-md text-muted-foreground">
+                            Last 3
+                        </span>
+                    </div>
 
                     <div className="space-y-3 overflow-y-auto custom-scrollbar pr-1">
                         {recentBroadcasts.length > 0 ? (
-                            recentBroadcasts.map((b) => (
-                                <div key={b._id} className="p-4 bg-muted/20 border border-border/50 rounded-xl hover:bg-muted/40 transition-colors flex flex-col">
-                                    <p className="text-xs sm:text-sm font-medium text-foreground leading-relaxed line-clamp-3 mb-3">
-                                        {b.message}
+                            recentBroadcasts.slice(0, 3).map((b) => (
+                                <div key={b._id} className="p-3.5 bg-background border border-border/60 rounded-xl hover:border-border transition-colors flex flex-col group relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-0.75 h-full bg-primary/20 group-hover:bg-primary/60 transition-colors"></div>
+                                    <p className="text-sm font-normal text-foreground/90 leading-relaxed line-clamp-3 mb-3 pl-2">
+                                        "{b.message}"
                                     </p>
-                                    <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/50">
-                                        <span className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                            <Clock className="w-3 h-3" /> {getTimeAgo(b.createdAt)}
+                                    <div className="flex items-center justify-between mt-auto pt-2.5 border-t border-border/40 pl-2">
+                                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                                            {getTimeAgo(b.createdAt)}
                                         </span>
-                                        <span className="bg-background text-[9px] sm:text-[10px] font-black uppercase text-foreground px-2 py-1 rounded-md border border-border shadow-sm">
+                                        <span className="bg-primary/10 text-[10px] font-medium uppercase text-primary px-2 py-0.5 rounded border border-primary/20">
                                             Sent to {b.reachCount}
                                         </span>
                                     </div>
                                 </div>
                             ))
                         ) : (
-                            <p className="text-center text-xs font-medium text-muted-foreground py-10 bg-muted/10 rounded-xl border border-dashed border-border">
-                                No recent broadcasts.
-                            </p>
+                            <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-muted/10 rounded-xl border border-dashed border-border">
+                                <Bell className="w-6 h-6 text-muted-foreground/40 mb-2" />
+                                <p className="text-xs font-medium text-muted-foreground">
+                                    No recent broadcasts to show.
+                                </p>
+                            </div>
                         )}
                     </div>
                 </div>
