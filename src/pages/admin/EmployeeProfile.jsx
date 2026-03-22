@@ -18,8 +18,42 @@ import DeleteEmployeeModal from "../../modals/admin/DeleteEmployeeModal";
 // --- MOCK DATA FOR TABS ---
 const optionalTasks = [];
 const warnings = [];
-const monthlyAttendanceData = [];
 const mediaCollections = [];
+
+// --- ADDED DUMMY ATTENDANCE DATA HERE ---
+const monthlyAttendanceData = [
+    {
+        id: 1,
+        month: "March 2026",
+        records: [
+            { id: 1, date: "01 Mar, 2026", status: "Present", checkIn: "08:00 AM", checkOut: "04:00 PM", hours: "8h 00m" },
+            { id: 2, date: "02 Mar, 2026", status: "Late", checkIn: "08:45 AM", checkOut: "04:00 PM", hours: "7h 15m" },
+            { id: 3, date: "03 Mar, 2026", status: "Absent", checkIn: "-", checkOut: "-", hours: "0h 00m" },
+            { id: 4, date: "04 Mar, 2026", status: "Present", checkIn: "07:55 AM", checkOut: "04:05 PM", hours: "8h 10m" },
+            { id: 5, date: "05 Mar, 2026", status: "Present", checkIn: "08:02 AM", checkOut: "04:00 PM", hours: "7h 58m" },
+        ]
+    },
+    {
+        id: 2,
+        month: "February 2026",
+        records: [
+            { id: 1, date: "25 Feb, 2026", status: "Present", checkIn: "07:50 AM", checkOut: "04:10 PM", hours: "8h 20m" },
+            { id: 2, date: "26 Feb, 2026", status: "Present", checkIn: "08:00 AM", checkOut: "04:00 PM", hours: "8h 00m" },
+            { id: 3, date: "27 Feb, 2026", status: "Late", checkIn: "09:15 AM", checkOut: "04:00 PM", hours: "6h 45m" },
+            { id: 4, date: "28 Feb, 2026", status: "Present", checkIn: "07:58 AM", checkOut: "04:02 PM", hours: "8h 04m" }
+        ]
+    },
+    {
+        id: 3,
+        month: "January 2026",
+        records: [
+            { id: 1, date: "15 Jan, 2026", status: "Present", checkIn: "08:00 AM", checkOut: "04:00 PM", hours: "8h 00m" },
+            { id: 2, date: "16 Jan, 2026", status: "Present", checkIn: "08:05 AM", checkOut: "04:00 PM", hours: "7h 55m" },
+            { id: 3, date: "17 Jan, 2026", status: "Absent", checkIn: "-", checkOut: "-", hours: "0h 00m" },
+            { id: 4, date: "18 Jan, 2026", status: "Absent", checkIn: "-", checkOut: "-", hours: "0h 00m" },
+        ]
+    }
+];
 
 const EmployeeProfile = () => {
     const { id } = useParams();
@@ -34,7 +68,6 @@ const EmployeeProfile = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-    // --- CRITICAL FIX: Move fetch function outside useEffect so it can be passed as a prop! ---
     const fetchEmployeeDetails = useCallback(async () => {
         try {
             setIsLoading(true);
@@ -162,15 +195,15 @@ const EmployeeProfile = () => {
                     <AssignmentsTab
                         schools={employeeData?.assignments || []}
                         employeeId={id}
-                        onSuccess={fetchEmployeeDetails} // <-- NOW IT WORKS!
+                        onSuccess={fetchEmployeeDetails}
                     />
                 </TabsContent>
 
                 <TabsContent value="tasks" className="animate-in fade-in-50">
                     <TasksTab
-                        tasks={employeeData?.tasks || []} // Pass REAL tasks
+                        tasks={employeeData?.tasks || []}
                         employeeId={id}
-                        onSuccess={fetchEmployeeDetails}  // Refreshes the page instantly!
+                        onSuccess={fetchEmployeeDetails}
                     />
                 </TabsContent>
 
@@ -187,6 +220,7 @@ const EmployeeProfile = () => {
                 </TabsContent>
 
                 <TabsContent value="attendance" className="animate-in fade-in-50">
+                    {/* PASSED DUMMY DATA HERE */}
                     <AttendanceTab attendanceData={monthlyAttendanceData} />
                 </TabsContent>
             </Tabs>
@@ -201,13 +235,14 @@ const EmployeeProfile = () => {
                     <DeleteEmployeeModal
                         isOpen={isDeleteModalOpen}
                         onClose={() => setIsDeleteModalOpen(false)}
-                        employeeId={id} // Pass the ID from useParams()
+                        employeeId={id}
                         employeeName={employeeData.name}
                         onConfirm={handleConfirmDelete}
-                    /></>
+                    />
+                </>
             )}
         </div>
     );
 };
 
-export default EmployeeProfile; 
+export default EmployeeProfile;
