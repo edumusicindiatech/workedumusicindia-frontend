@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { io } from "socket.io-client";
 import {
     LayoutDashboard,
     Users,
@@ -23,15 +24,19 @@ import SettingsModal from "../../modals/admin/SettingModal";
 const AdminSidebar = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const location = useLocation(); // To track current page
 
     const { user } = useSelector((state) => state.auth);
     const adminName = user?.name || "Admin User";
     const adminEmail = user?.email || "admin@workforce.com";
 
-    // UI States
+    // --- UI States ---
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+
+    // --- Notification State ---
+    const [unreadCount, setUnreadCount] = useState(0);
 
     const mobileMenuRef = useRef(null);
 
@@ -57,6 +62,59 @@ const AdminSidebar = () => {
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    // --- Global Notification Fetch & Socket (WITH SOUND) ---
+    useEffect(() => {
+        // 1. Fetch initial unread count
+        const fetchUnreadCount = async () => {
+            try {
+                const res = await api.get('/admin/notifications');
+                if (res.data.success) {
+                    const unread = res.data.data.filter(n => !n.isRead && !n.isHidden).length;
+                    setUnreadCount(unread);
+                }
+            } catch (error) {
+                console.error("Failed to fetch global notifications count", error);
+            }
+        };
+
+        // Don't fetch if they are already on the notifications page (it clears automatically)
+        if (location.pathname !== '/admin/notifications') {
+            fetchUnreadCount();
+        }
+
+        // 2. Setup Socket for Real-time Badge & Sound
+        const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
+
+        if (user?._id) {
+            socket.emit("join_room", user._id);
+        }
+
+        socket.on("new_notification", () => {
+            // A. Play the Ting Sound Globally
+            const audio = new Audio('/sounds/notification-ting.mp3');
+            audio.play().catch(err => {
+                console.log("Audio blocked by browser policy until user interacts with the page:", err);
+            });
+
+            // B. Increment the badge (if not currently on the notifications page)
+            if (location.pathname !== '/admin/notifications') {
+                setUnreadCount(prev => prev + 1);
+            }
+        });
+
+        // Cleanup on unmount
+        return () => {
+            socket.disconnect();
+        };
+    }, [user?._id, location.pathname]);
+
+    // --- Auto-Clear Badge when viewing Alerts page ---
+    useEffect(() => {
+        if (location.pathname === '/admin/notifications') {
+            setUnreadCount(0);
+        }
+    }, [location.pathname]);
 
     // --- Logout Handler ---
     const handleLogout = async () => {
@@ -110,7 +168,7 @@ const AdminSidebar = () => {
                     <NavLink to="/admin/dashboard" className={desktopNavClasses} title="Dashboard">
                         <LayoutDashboard className="w-4.5 h-4.5" /> Dashboard
                     </NavLink>
-                    <NavLink to="/admin/employees" className={desktopNavClasses}title="Roster">
+                    <NavLink to="/admin/employees" className={desktopNavClasses} title="Roster">
                         <Users className="w-4.5 h-4.5" /> Roster
                     </NavLink>
                     <NavLink to="/admin/attendance" className={desktopNavClasses} title="Live Attendance">
@@ -119,9 +177,20 @@ const AdminSidebar = () => {
                     <NavLink to="/admin/progress" className={desktopNavClasses} title="Progress">
                         <TrendingUp className="w-4.5 h-4.5" /> Progress
                     </NavLink>
+
+                    {/* ALERTS LINK WITH BADGE */}
                     <NavLink to="/admin/notifications" className={desktopNavClasses} title="Alerts">
-                        <Bell className="w-4.5 h-4.5" /> Alerts
+                        <div className="relative flex items-center justify-center">
+                            <Bell className="w-4.5 h-4.5" />
+                            {unreadCount > 0 && (
+                                <span className="absolute -top-1.5 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white shadow-sm border border-card animate-in zoom-in duration-300">
+                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                </span>
+                            )}
+                        </div>
+                        Alerts
                     </NavLink>
+
                     <NavLink to="/admin/communication" className={desktopNavClasses} title="Broadcast">
                         <MessageSquare className="w-4.5 h-4.5" /> Broadcast
                     </NavLink>
@@ -135,7 +204,7 @@ const AdminSidebar = () => {
                     <button onClick={() => setIsSettingsModalOpen(true)} className="p-2 text-muted-foreground md:cursor-pointer hover:text-foreground hover:bg-muted rounded-full transition-colors" title="Settings">
                         <Settings className="w-5 h-5" />
                     </button>
-                    <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-destructive  md:cursor-pointer hover:bg-destructive/10 rounded-full transition-colors" title="Log Out">
+                    <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-destructive md:cursor-pointer hover:bg-destructive/10 rounded-full transition-colors" title="Log Out">
                         <LogOut className="w-5 h-5" />
                     </button>
                 </div>
@@ -203,8 +272,16 @@ const AdminSidebar = () => {
                     <TrendingUp className="w-6 h-6" />
                 </NavLink>
 
+                {/* MOBILE ALERTS LINK WITH BADGE */}
                 <NavLink to="/admin/notifications" className={mobileNavClasses}>
-                    <Bell className="w-6 h-6" />
+                    <div className="relative flex items-center justify-center">
+                        <Bell className="w-6 h-6" />
+                        {unreadCount > 0 && (
+                            <span className="absolute -top-1 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white shadow-sm border border-card animate-in zoom-in duration-300">
+                                {unreadCount > 99 ? '99+' : unreadCount}
+                            </span>
+                        )}
+                    </div>
                 </NavLink>
 
                 <NavLink to="/admin/communication" className={mobileNavClasses}>
