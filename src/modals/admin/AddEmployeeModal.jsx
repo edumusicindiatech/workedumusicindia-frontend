@@ -1,21 +1,26 @@
-import { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, X, Loader2, ShieldAlert, AlertCircle } from "lucide-react";
 import CustomSelect from "../../components/ui/CustomSelect";
+import toast from "react-hot-toast";
 import api from "../../api/axios";
 
 const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
-    // Determine if the logged-in user is a SuperAdmin
     const { user } = useSelector((state) => state.auth);
     const isSuperAdmin = user?.role === 'SuperAdmin';
 
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
 
-    // Added 'zone' to the default state
+    // Swipe & Animation states
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragOffset, setDragOffset] = useState(0);
+    const [isClosing, setIsClosing] = useState(false);
+    const dragStartY = useRef(0);
+
     const [formData, setFormData] = useState({
         name: "", email: "", mobile: "", role: "Employee", designation: "", zone: "", adminId: "", password: ""
     });
@@ -24,13 +29,49 @@ const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
 
     const isAdminForm = formData.role === "Admin";
 
+    // Smooth Close Logic
+    const handleClose = () => {
+        setIsClosing(true);
+        setDragOffset(window.innerHeight);
+        setTimeout(() => {
+            onClose();
+            setIsClosing(false);
+            setDragOffset(0);
+            setErrorMsg("");
+            setFormData({ name: "", email: "", mobile: "", role: "Employee", designation: "", zone: "", adminId: "", password: "" });
+        }, 300);
+    };
+
+    const handleTouchStart = (e) => { dragStartY.current = e.touches[0].clientY; setIsDragging(true); };
+    const handleTouchMove = (e) => {
+        if (!isDragging) return;
+        const delta = e.touches[0].clientY - dragStartY.current;
+        if (delta > 0) setDragOffset(delta);
+    };
+    const handleTouchEnd = () => {
+        setIsDragging(false);
+        if (dragOffset > 120) handleClose();
+        else setDragOffset(0);
+    };
+
     const handleSave = async () => {
+        // Basic frontend validation to prevent unnecessary API calls
+        if (!formData.name || !formData.email || !formData.mobile) {
+            toast.error("Please fill out all mandatory fields (Name, Email, Mobile).");
+            return;
+        }
+
+        if (isAdminForm && (!formData.adminId || !formData.password)) {
+            toast.error("Admin ID and Password are required for Admin accounts.");
+            return;
+        }
+
         setIsLoading(true);
         setErrorMsg("");
+        const loadingToast = toast.loading(isAdminForm ? "Creating Admin account..." : "Creating Employee account...");
 
         try {
             if (isAdminForm) {
-                // Route for Admin (SuperAdmin only)
                 await api.post('/admin/create-admin', {
                     name: formData.name,
                     email: formData.email,
@@ -39,50 +80,51 @@ const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
                     password: formData.password
                 });
             } else {
-                // Route for Employee
                 await api.post('/admin/create-employee', {
                     name: formData.name,
                     email: formData.email,
                     mobile: formData.mobile,
-                    designation: formData.designation || 'Staff', // e.g., Teacher, Supervisor
-                    zone: formData.zone // Connect the input field to the API payload
+                    designation: formData.designation || 'Staff',
+                    zone: formData.zone
                 });
             }
 
-            // Reset form and close modal on success
-            setFormData({ name: "", email: "", mobile: "", role: "Employee", designation: "", zone: "", adminId: "", password: "" });
-            if (onSuccess) {
-                onSuccess();
-            } else {
-                onClose();
-            }
+            toast.success(isAdminForm ? "Admin created successfully!" : "Employee created successfully!", { id: loadingToast });
+
+            if (onSuccess) onSuccess();
+            handleClose();
 
         } catch (error) {
             console.error("Save Error:", error);
-            setErrorMsg(error.response?.data?.message || "Failed to create user. Please check your inputs.");
+            const errorMessage = error.response?.data?.message || "Failed to create user. Please check your inputs.";
+            setErrorMsg(errorMessage);
+            toast.error(errorMessage, { id: loadingToast });
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm md:p-4 animate-in fade-in" onClick={onClose}>
-            <div className="bg-card w-full max-w-md rounded-t-3xl md:rounded-2xl shadow-2xl border-t md:border border-border flex flex-col max-h-[90vh] md:max-h-[85vh] animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0" onClick={e => e.stopPropagation()}>
+        <div className={`fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-sm animate-in fade-in'}`} onClick={!isLoading ? handleClose : undefined}>
+            <div className={`bg-card w-full max-w-md rounded-t-3xl md:rounded-2xl shadow-2xl border-t md:border border-border flex flex-col max-h-[90vh] md:max-h-[85vh] ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0' : ''}`} style={{ transform: `translateY(${dragOffset}px)` }} onClick={e => e.stopPropagation()}>
 
-                <div className="w-full flex justify-center pt-3 pb-1 md:hidden">
-                    <div className="w-12 h-1.5 bg-muted rounded-full"></div>
+                {/* Header & Mobile Drag Handle */}
+                <div className="sticky top-0 bg-card z-10 rounded-t-3xl md:rounded-t-2xl touch-none border-b border-border" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+                    <div className="w-full flex justify-center pt-3 pb-1 md:hidden">
+                        <div className="w-12 h-1.5 bg-muted rounded-full"></div>
+                    </div>
+                    <div className="flex items-center justify-between px-6 pb-4 pt-2 md:pt-6">
+                        <h2 className="text-xl font-bold flex items-center gap-2">
+                            {isAdminForm ? <ShieldAlert className="w-5 h-5 text-primary" /> : <UserPlus className="w-5 h-5 text-primary" />}
+                            {isAdminForm ? "Add New Admin" : "Add New Employee"}
+                        </h2>
+                        <button onClick={handleClose} disabled={isLoading} className="p-2 hover:bg-muted rounded-full transition-colors hidden md:block">
+                            <X className="w-5 h-5 text-muted-foreground" />
+                        </button>
+                    </div>
                 </div>
 
-                <div className="bg-card flex items-center justify-between px-6 pb-4 pt-2 md:pt-6 border-b border-border">
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                        {isAdminForm ? <ShieldAlert className="w-5 h-5 text-primary" /> : <UserPlus className="w-5 h-5 text-primary" />}
-                        {isAdminForm ? "Add New Admin" : "Add New Employee"}
-                    </h2>
-                    <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors hidden md:block">
-                        <X className="w-5 h-5 text-muted-foreground" />
-                    </button>
-                </div>
-
+                {/* Form Content */}
                 <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
 
                     {errorMsg && (
@@ -106,7 +148,6 @@ const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
                             <Label>Mobile No.</Label>
                             <Input type="tel" placeholder="94234XXXXX" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} className="h-11 rounded-xl" />
                         </div>
-                        {/* Only show the Role dropdown if the logged-in user is a SuperAdmin */}
                         {isSuperAdmin && (
                             <div className="space-y-2">
                                 <Label>Account Level</Label>
@@ -119,21 +160,19 @@ const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
                         )}
                     </div>
 
-                    {/* Show Designation and Location IF creating an Employee */}
                     {!isAdminForm && (
                         <div className="grid grid-cols-2 gap-4 animate-in fade-in">
                             <div className="space-y-2">
-                                <Label>Designation <span className="text-muted-foreground font-normal">(Optional)</span></Label>
+                                <Label>Designation <span className="text-muted-foreground font-normal">(Opt)</span></Label>
                                 <Input placeholder="Teacher, etc." value={formData.designation} onChange={(e) => setFormData({ ...formData, designation: e.target.value })} className="h-11 rounded-xl" />
                             </div>
                             <div className="space-y-2">
-                                <Label>Location <span className="text-muted-foreground font-normal">(Optional)</span></Label>
+                                <Label>Location <span className="text-muted-foreground font-normal">(Opt)</span></Label>
                                 <Input placeholder="e.g., District A" value={formData.zone} onChange={(e) => setFormData({ ...formData, zone: e.target.value })} className="h-11 rounded-xl" />
                             </div>
                         </div>
                     )}
 
-                    {/* Show Admin ID and Password IF creating an Admin */}
                     {isAdminForm && (
                         <div className="space-y-4 p-4 border border-border rounded-xl bg-muted/20 animate-in slide-in-from-top-2">
                             <div className="grid grid-cols-2 gap-4">
@@ -150,9 +189,10 @@ const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
                     )}
                 </div>
 
-                <div className="bg-muted/10 p-4 md:p-6 border-t border-border flex justify-end gap-3 pb-safe">
-                    <Button variant="ghost" onClick={onClose} disabled={isLoading} className="rounded-xl">Cancel</Button>
-                    <Button className="gap-2 shadow-glow rounded-xl" onClick={handleSave} disabled={isLoading}>
+                {/* Footer Action */}
+                <div className="sticky bottom-0 bg-muted/10 p-4 md:p-6 border-t border-border flex justify-end gap-3 rounded-b-3xl md:rounded-b-2xl pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+                    <Button variant="ghost" onClick={handleClose} disabled={isLoading} className="rounded-xl font-medium">Cancel</Button>
+                    <Button className="gap-2 shadow-glow rounded-xl font-semibold" onClick={handleSave} disabled={isLoading}>
                         {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : isAdminForm ? <ShieldAlert className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
                         {isLoading ? "Saving..." : isAdminForm ? "Create Admin" : "Create Employee"}
                     </Button>
