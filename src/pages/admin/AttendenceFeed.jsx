@@ -153,8 +153,8 @@ const AttendanceFeed = () => {
                                 onClick={() => hasDetails && setSelectedNoteRecord(record)}
                                 className={`bg-card rounded-2xl border p-3 sm:p-5 shadow-sm transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 
                   ${hasDetails ? 'cursor-pointer hover:shadow-md group active:scale-[0.99]' : 'cursor-default opacity-80'} 
-                  ${hadEvent ? 'border-violet-500/40 bg-violet-500/[0.02]' : 'border-border'}
-                  ${isAbsent ? 'border-destructive/30 bg-destructive/[0.01]' : ''}
+                  ${hadEvent ? 'border-violet-500/40 bg-violet-500/2' : 'border-border'}
+                  ${isAbsent ? 'border-destructive/30 bg-destructive/1' : ''}
                 `}
                             >
                                 {/* 1. TEACHER INFO */}

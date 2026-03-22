@@ -1,74 +1,154 @@
-import { Users, UserCheck, UserX, Clock } from "lucide-react";
-
-const stats = [
-    { label: "Total Employees", value: "124", icon: Users, color: "bg-primary/10 text-primary" },
-    { label: "Present Today", value: "98", icon: UserCheck, color: "bg-success/10 text-success" },
-    { label: "No-Show", value: "8", icon: UserX, color: "bg-destructive/10 text-destructive" },
-    { label: "Pending", value: "18", icon: Clock, color: "bg-warning/10 text-warning" },
-];
-
-const recentActivity = [
-    { name: "Sarah Johnson", action: "Marked attendance", time: "2 min ago", status: "present" },
-    { name: "Mike Chen", action: "No-show alert", time: "5 min ago", status: "absent" },
-    { name: "Emily Davis", action: "Marked attendance", time: "8 min ago", status: "present" },
-    { name: "James Wilson", action: "Late arrival", time: "12 min ago", status: "warning" },
-    { name: "Ana Garcia", action: "Marked attendance", time: "15 min ago", status: "present" },
-];
-
-const statusBadge = (status) => {
-    const styles = {
-        present: "bg-success/10 text-success",
-        absent: "bg-destructive/10 text-destructive",
-        warning: "bg-warning/10 text-warning",
-    };
-    return styles[status] || "";
-};
+import React, { useState, useEffect } from "react";
+import { Users, UserCheck, UserX, Clock, MapPin, School, BookOpen, RefreshCw } from "lucide-react";
+import api from "../../api/axios";
 
 const AdminDashboard = () => {
-    return (
-        <div className="animate-fade-in">
-            <h1 className="text-2xl font-bold mb-1">Dashboard</h1>
-            <p className="text-muted-foreground mb-8">Overview of today's workforce activity</p>
+    const [dashboardData, setDashboardData] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    const fetchDashboardStats = async () => {
+        setLoading(true);
+        try {
+            const response = await api.get('/admin/dashboard-stats');
+            if (response.data.success) {
+                setDashboardData(response.data.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch dashboard stats:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchDashboardStats();
+        const interval = setInterval(fetchDashboardStats, 60000); // Auto-refresh every minute
+        return () => clearInterval(interval);
+    }, []);
+
+    // Custom badge styling matching your screenshot's design
+    const statusBadge = (status) => {
+        const styles = {
+            present: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+            absent: "bg-rose-500/10 text-rose-500 border-rose-500/20",
+            warning: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+            event: "bg-violet-500/10 text-violet-500 border-violet-500/20",
+        };
+        return styles[status] || "bg-muted text-muted-foreground border-border";
+    };
+
+    if (loading && !dashboardData) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[60vh] animate-pulse">
+                <RefreshCw className="w-8 h-8 text-primary animate-spin mb-4" />
+                <p className="text-muted-foreground font-medium">Aggregating live operations data...</p>
+            </div>
+        );
+    }
+
+    const stats = [
+        { label: "Total Employees", value: dashboardData?.stats.totalEmployees || 0, icon: Users, color: "bg-primary/10 text-primary" },
+        { label: "Present Today", value: dashboardData?.stats.presentToday || 0, icon: UserCheck, color: "bg-emerald-500/10 text-emerald-500" },
+        { label: "Absent", value: dashboardData?.stats.noShow || 0, icon: UserX, color: "bg-rose-500/10 text-rose-500" }, // Updated label
+        { label: "Pending", value: dashboardData?.stats.pending || 0, icon: Clock, color: "bg-amber-500/10 text-amber-500" },
+    ];
+
+    return (
+        <div className="animate-fade-in p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
+
+            {/* --- Header --- */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-1 text-foreground">Dashboard</h1>
+                    <p className="text-muted-foreground text-sm font-medium">Overview of today's workforce activity.</p>
+                </div>
+                <button
+                    onClick={fetchDashboardStats}
+                    className="p-2 sm:p-2.5 bg-card border border-border hover:bg-muted rounded-full transition-colors group shadow-sm"
+                    title="Refresh Data"
+                >
+                    <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground group-hover:text-primary transition-colors ${loading ? 'animate-spin' : ''}`} />
+                </button>
+            </div>
+
+            {/* --- Stats Grid --- */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-8">
                 {stats.map((stat) => (
-                    <div key={stat.label} className="bg-card rounded-xl p-5 shadow-card hover:shadow-elevated transition-shadow duration-150">
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-sm font-medium text-muted-foreground">{stat.label}</span>
-                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${stat.color}`}>
-                                <stat.icon className="w-5 h-5" />
+                    <div key={stat.label} className="bg-card rounded-2xl p-4 sm:p-5 border border-border shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 sm:mb-4">
+                            <span className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider">{stat.label}</span>
+                            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${stat.color}`}>
+                                <stat.icon className="w-4 h-4 sm:w-5 sm:h-5" />
                             </div>
                         </div>
-                        <p className="text-3xl font-bold">{stat.value}</p>
+                        <p className="text-2xl sm:text-3xl font-black text-foreground">{stat.value}</p>
                     </div>
                 ))}
             </div>
 
-            <div className="bg-card rounded-xl shadow-card p-6">
-                <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
-                <div className="space-y-0">
-                    {recentActivity.map((item, i) => (
-                        <div
-                            key={i}
-                            className="flex items-center justify-between py-4 border-b border-border last:border-0 hover:bg-muted/50 -mx-2 px-2 rounded-lg transition-colors duration-150"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center text-sm font-semibold text-primary-foreground">
-                                    {item.name.charAt(0)}
+            {/* --- Recent Activity Feed --- */}
+            <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
+                <div className="p-5 sm:p-6 border-b border-border bg-muted/10">
+                    <h2 className="text-base sm:text-lg font-bold text-foreground">Recent Activity</h2>
+                </div>
+
+                <div className="flex flex-col">
+                    {dashboardData?.recentActivity?.length > 0 ? (
+                        dashboardData.recentActivity.map((item, i) => (
+                            <div
+                                key={item.id || i}
+                                className="flex flex-col md:flex-row md:items-center justify-between p-5 sm:p-6 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors gap-4 sm:gap-6"
+                            >
+
+                                {/* Left: Profile & Zone */}
+                                <div className="flex items-center gap-3 sm:gap-4 md:w-64 shrink-0">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary flex items-center justify-center text-sm sm:text-base font-bold text-primary-foreground shadow-inner">
+                                        {item.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-sm sm:text-base font-bold text-foreground truncate">{item.name}</p>
+                                        <p className="text-[11px] sm:text-xs text-muted-foreground font-medium flex items-center gap-1 mt-0.5 truncate">
+                                            <MapPin className="w-3 h-3 shrink-0" /> {item.zone}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-sm font-medium">{item.name}</p>
-                                    <p className="text-xs text-muted-foreground">{item.action}</p>
+
+                                {/* Middle: School & Category Context (Card style on mobile, inline on desktop) */}
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 bg-muted/40 md:bg-transparent rounded-xl p-3.5 md:p-0 flex-1 border border-border/50 md:border-none">
+                                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                        <School className="w-4 h-4 text-indigo-500 shrink-0" />
+                                        <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{item.school}</span>
+                                    </div>
+                                    <div className="hidden sm:block md:hidden lg:block w-px h-6 bg-border"></div>
+                                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                        <BookOpen className="w-4 h-4 text-violet-500 shrink-0" />
+                                        <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{item.category}</span>
+                                    </div>
                                 </div>
+
+                                {/* Right: Action Badge & Time */}
+                                <div className="flex flex-col sm:flex-row md:flex-col items-start sm:items-center md:items-end justify-between md:justify-center gap-3 md:gap-2 shrink-0 md:w-48 lg:w-56 mt-1 md:mt-0">
+                                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${statusBadge(item.status)}`}>
+                                        {item.action}
+                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                        <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                                        <span className="text-xs font-bold text-foreground">{item.checkInTime}</span>
+                                        <span className="text-[10px] text-muted-foreground font-medium">• {item.timeAgo}</span>
+                                    </div>
+                                </div>
+
                             </div>
-                            <div className="flex items-center gap-3">
-                                <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusBadge(item.status)}`}>
-                                    {item.status}
-                                </span>
-                                <span className="text-xs text-muted-foreground">{item.time}</span>
+                        ))
+                    ) : (
+                        <div className="p-16 text-center flex flex-col items-center justify-center">
+                            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                                <Clock className="w-8 h-8 text-muted-foreground/50" />
                             </div>
+                            <h3 className="text-foreground font-bold text-lg mb-1">No Activity Yet</h3>
+                            <p className="text-muted-foreground text-sm font-medium">Workforce check-ins will appear here.</p>
                         </div>
-                    ))}
+                    )}
                 </div>
             </div>
         </div>
