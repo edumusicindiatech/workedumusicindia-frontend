@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { NavLink, useNavigate, useLocation } from "react-router-dom"; // <-- Added useLocation
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { toggleTheme } from "@/store/slices/themeSlice";
 import { logout } from "@/store/slices/authSlice";
 import api from "../../api/axios";
 import { setAxiosToken } from "../../api/axios";
-import { io } from "socket.io-client"; // <-- Added socket.io
+import { io } from "socket.io-client";
 
 import {
     LayoutDashboard, User, Calendar, BellRing, FileText,
@@ -14,27 +14,38 @@ import {
 
 import EmployeeSettingsModal from "../../modals/employee/EmployeeSettingsModal";
 
-// Setup global socket connection
+// 1. Setup global socket and audio OUTSIDE the component to prevent re-renders
 const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5000");
+const notificationSound = new Audio('/sounds/notification-ting.mp3');
 
 const EmployeeNavbar = () => {
     const navigate = useNavigate();
-    const location = useLocation(); // <-- To track what page we are on
+    const location = useLocation();
     const dispatch = useDispatch();
 
-    const [notifCount, setNotifCount] = useState(0); // <-- Made dynamic
+    const [notifCount, setNotifCount] = useState(0);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
     const mobileMenuRef = useRef(null);
 
+    // 2. Use a ref to track the path without triggering useEffect
+    const pathnameRef = useRef(location.pathname);
+    useEffect(() => {
+        pathnameRef.current = location.pathname;
+    }, [location.pathname]);
+
     const { user, token } = useSelector((state) => state.auth);
     const themeMode = useSelector((state) => state.theme.mode);
 
-    // 1. Fetch initial unread count when Navbar mounts
+    // 3. --- ONE COMBINED Fetch & Socket useEffect ---
     useEffect(() => {
+        if (!user || !token) return;
+
+        const currentUserId = user.id || user._id;
+
+        // --- FETCH INITIAL COUNT ---
         const fetchInitialUnreadCount = async () => {
-            if (!token) return;
             try {
                 const response = await api.get('/employee/notifications');
                 if (response.data.success) {
@@ -45,23 +56,36 @@ const EmployeeNavbar = () => {
                 console.error("Failed to fetch initial notifications count:", error);
             }
         };
-        fetchInitialUnreadCount();
-    }, [token]);
 
-    // 2. Global Socket Listener for new notifications
-    useEffect(() => {
-        if (!user) return;
+        if (pathnameRef.current !== '/employee/notifications') {
+            fetchInitialUnreadCount();
+        }
 
-        const currentUserId = user.id || user._id;
-        socket.emit("join_room", currentUserId);
+        // --- WAIT FOR SOCKET TO CONNECT BEFORE JOINING ROOM ---
+        const onConnect = () => {
+            socket.emit("join_room", currentUserId);
+        };
 
+        if (socket.connected) {
+            onConnect();
+        } else {
+            socket.on("connect", onConnect);
+        }
+
+        // --- HANDLE THE INCOMING NOTIFICATION ---
         const handleNewNotification = () => {
-            // Play Ting Sound globally
-            const audio = new Audio('/sounds/notification-ting.mp3');
-            audio.play().catch(err => console.log("Audio blocked by browser:", err));
+            // A. Play Audio
+            try {
+                notificationSound.currentTime = 0;
+                notificationSound.play().catch(() => {
+                    // Silently catch browser autoplay restrictions
+                });
+            } catch (e) {
+                console.error("Error playing sound:", e);
+            }
 
-            // Only increment badge if they are NOT currently looking at the notifications page
-            if (location.pathname !== '/employee/notifications') {
+            // B. Increment badge checking the REF
+            if (pathnameRef.current !== '/employee/notifications') {
                 setNotifCount(prev => prev + 1);
             }
         };
@@ -69,18 +93,19 @@ const EmployeeNavbar = () => {
         socket.on("new_notification", handleNewNotification);
 
         return () => {
+            socket.off("connect", onConnect);
             socket.off("new_notification", handleNewNotification);
         };
-    }, [user, location.pathname]); // Re-bind if route changes
+    }, [user, token]);
 
-    // 3. Auto-clear the badge when navigating TO the notifications page
+    // Auto-Clear Badge when navigating to the alerts page
     useEffect(() => {
         if (location.pathname === '/employee/notifications') {
             setNotifCount(0);
         }
     }, [location.pathname]);
 
-    // --- Click Outside Mobile Menu ---
+    // Click Outside Mobile Menu
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
@@ -178,7 +203,6 @@ const EmployeeNavbar = () => {
                                         <p className="text-[11px] text-muted-foreground truncate">{user?.email || "employee@workforce.com"}</p>
                                     </div>
 
-                                    {/* On mobile, profile acts as a menu item */}
                                     <NavLink to="/employee/profile" onClick={() => setIsMobileMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                                         <User className="w-4 h-4" /> My Profile
                                     </NavLink>
@@ -204,7 +228,6 @@ const EmployeeNavbar = () => {
                 </div>
             </header>
 
-            {/* Mobile Bottom Navigation */}
             <nav className="xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] overflow-x-auto overflow-y-hidden">
                 {navItems.filter(item => item.path !== "/employee/profile").map((item) => (
                     <NavLink key={item.path} to={item.path} className={mobileNavClasses} title={item.label}>

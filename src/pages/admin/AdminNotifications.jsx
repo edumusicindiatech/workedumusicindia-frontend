@@ -1,13 +1,17 @@
-import { useState, useEffect, useCallback } from "react";
-import { Bell, CheckCircle2, AlertCircle, Info, Clock, Check, Trash2, XCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useSelector } from "react-redux"; // <-- Added to get real user ID
+import { Bell, CheckCircle2, AlertCircle, Info, Clock, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import api from "../../api/axios"; // Your axios instance
+import api from "../../api/axios";
 import { io } from "socket.io-client";
 
-// Setup socket connection (Adjust URL if needed)
+// Setup socket connection
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 const AdminNotifications = () => {
+    // Bring in the user from Redux
+    const { user } = useSelector((state) => state.auth);
+
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -32,18 +36,39 @@ const AdminNotifications = () => {
         fetchNotifications();
     }, []);
 
+    // --- AUTO-MARK AS READ ON LOAD ---
+    useEffect(() => {
+        // If there are unread notifications, automatically mark them as read in the DB
+        if (notifications.length > 0 && unreadCount > 0) {
+            const autoMarkAsRead = async () => {
+                try {
+                    // FIXED: Correct Admin URL
+                    await api.put('/admin/notifications/mark-read');
+
+                    // Update local UI state immediately
+                    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                } catch (error) {
+                    console.error("Failed to auto-mark as read:", error);
+                }
+            };
+
+            autoMarkAsRead();
+        }
+    }, [notifications.length, unreadCount]);
+
     // --- REAL-TIME SOCKET LOGIC ---
     useEffect(() => {
-        // Replace with actual admin user ID from your auth context
-        const currentUserId = "REPLACE_WITH_ACTUAL_USER_ID";
+        if (!user) return;
+
+        // FIXED: Get the actual dynamic user ID
+        const currentUserId = user.id || user._id;
 
         // Join a personal room to receive targeted alerts
         socket.emit("join_room", currentUserId);
 
         const handleNewNotification = (newNotif) => {
-            // Play Ting Sound
-            const audio = new Audio('/sounds/notification-ting.mp3');
-            audio.play().catch(err => console.log("Audio play blocked by browser policy:", err));
+            // NOTE: Audio 'ting' logic removed here because AdminSidebar 
+            // handles it globally to avoid double-sounds.
 
             // Add new notification to the top of the list
             setNotifications(prev => [newNotif, ...prev]);
@@ -54,7 +79,7 @@ const AdminNotifications = () => {
         return () => {
             socket.off("new_notification", handleNewNotification);
         };
-    }, []);
+    }, [user]);
 
     // --- ACTIONS ---
     const markAllAsRead = async () => {

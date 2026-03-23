@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { Bell, CheckCircle2, AlertCircle, Info, Clock, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-// 1. Use your custom api instance
 import api from "../../api/axios";
 import { io } from "socket.io-client";
 
+// Setup socket connection
 const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5000");
 
 const EmployeeNotifications = () => {
@@ -19,7 +19,6 @@ const EmployeeNotifications = () => {
     useEffect(() => {
         const fetchNotifications = async () => {
             try {
-                // 2. Use 'api' and remove /api prefix
                 const response = await api.get('/employee/notifications');
                 if (response.data.success) {
                     setNotifications(response.data.data);
@@ -34,6 +33,25 @@ const EmployeeNotifications = () => {
         fetchNotifications();
     }, []);
 
+    // --- AUTO-MARK AS READ ON LOAD ---
+    useEffect(() => {
+        // If there are unread notifications, automatically mark them as read in the DB
+        if (notifications.length > 0 && unreadCount > 0) {
+            const autoMarkAsRead = async () => {
+                try {
+                    await api.put('/employee/notifications/mark-read');
+
+                    // Update local UI state immediately
+                    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                } catch (error) {
+                    console.error("Failed to auto-mark as read:", error);
+                }
+            };
+
+            autoMarkAsRead();
+        }
+    }, [notifications.length, unreadCount]);
+
     // --- REAL-TIME SOCKET LOGIC ---
     useEffect(() => {
         if (!user) return;
@@ -42,9 +60,7 @@ const EmployeeNotifications = () => {
         socket.emit("join_room", currentUserId);
 
         const handleNewNotification = (newNotif) => {
-            // NOTE: Audio 'ting' logic removed here because EmployeeNavbar 
-            // handles it globally to avoid double-sounds.
-
+            // NOTE: Audio 'ting' logic is handled in EmployeeNavbar globally
             setNotifications(prev => [newNotif, ...prev]);
         };
 
@@ -60,7 +76,6 @@ const EmployeeNotifications = () => {
         // Optimistic UI update
         setNotifications(notifications.map(n => ({ ...n, isRead: true })));
         try {
-            // 3. Use 'api' instance
             await api.put('/employee/notifications/mark-read');
         } catch (error) {
             console.error("Failed to mark as read:", error);
@@ -70,7 +85,6 @@ const EmployeeNotifications = () => {
     const clearAll = async () => {
         setNotifications([]);
         try {
-            // 4. Use 'api' instance
             await api.delete('/employee/notifications/clear');
         } catch (error) {
             console.error("Failed to clear notifications:", error);

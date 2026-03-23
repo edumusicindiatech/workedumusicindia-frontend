@@ -3,79 +3,52 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { io } from "socket.io-client";
 import {
-    LayoutDashboard,
-    Users,
-    Radio,
-    MessageSquare,
-    Shield,
-    Moon,
-    Sun,
-    Settings,
-    LogOut,
-    TrendingUp,
-    Bell,
-    UserCircle
+    LayoutDashboard, Users, Radio, MessageSquare, Shield,
+    Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle
 } from "lucide-react";
 
 import api from "../../api/axios";
 import { logout } from "../../store/slices/authSlice";
 import AdminSettingsModal from "../../modals/admin/AdminSettingsModal";
 
+// 1. Setup global socket and audio OUTSIDE the component
+const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
+const notificationSound = new Audio('/sounds/notification-ting.mp3');
+
 const AdminSidebar = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const location = useLocation(); // To track current page
+    const location = useLocation();
 
     const { user } = useSelector((state) => state.auth);
     const adminName = user?.name || "Admin User";
     const adminEmail = user?.email || "admin@workforce.com";
 
-    // --- UI States ---
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-
-    // --- Preferences State (Initialize from Redux user object) ---
     const [userPreferences, setUserPreferences] = useState(user?.preferences || null);
-
-    // --- Notification State ---
     const [unreadCount, setUnreadCount] = useState(0);
 
     const mobileMenuRef = useRef(null);
 
-    // Keep preferences in sync if the Redux user object updates
+    // 2. The Golden Fix: Use a ref to track the path
+    const pathnameRef = useRef(location.pathname);
+    useEffect(() => {
+        pathnameRef.current = location.pathname;
+    }, [location.pathname]);
+
     useEffect(() => {
         if (user?.preferences) {
             setUserPreferences(user.preferences);
         }
     }, [user?.preferences]);
 
-    // --- Theme Management ---
+    // 3. --- ONE COMBINED Fetch & Socket useEffect ---
     useEffect(() => {
-        if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-        localStorage.setItem('theme', theme);
-    }, [theme]);
+        if (!user) return;
 
-    const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
-
-    // --- Click Outside Handlers ---
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
-                setIsMobileMenuOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    // --- Global Notification Fetch & Socket (WITH SOUND) ---
-    useEffect(() => {
-        // 1. Fetch initial unread count
+        // Fetch initial unread count
         const fetchUnreadCount = async () => {
             try {
                 const res = await api.get('/admin/notifications');
@@ -88,45 +61,66 @@ const AdminSidebar = () => {
             }
         };
 
-        // Don't fetch if they are already on the notifications page (it clears automatically)
-        if (location.pathname !== '/admin/notifications') {
+        if (pathnameRef.current !== '/admin/notifications') {
             fetchUnreadCount();
         }
 
-        // 2. Setup Socket for Real-time Badge & Sound
-        const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
+        // Setup Socket
+        const currentUserId = user.id || user._id;
+        socket.emit("join_room", currentUserId);
 
-        if (user?._id) {
-            socket.emit("join_room", user._id);
-        }
+        const handleNewNotification = () => {
+            // A. Play Audio
+            try {
+                notificationSound.currentTime = 0;
+                notificationSound.play().catch(err => {
+                    console.warn("🔇 BROWSER BLOCKED AUDIO! Click anywhere on the page first.", err);
+                });
+            } catch (e) {
+                console.error("Error playing sound:", e);
+            }
 
-        socket.on("new_notification", () => {
-            // A. Play the Ting Sound Globally
-            const audio = new Audio('/sounds/notification-ting.mp3');
-            audio.play().catch(err => {
-                console.log("Audio blocked by browser policy until user interacts with the page:", err);
-            });
-
-            // B. Increment the badge (if not currently on the notifications page)
-            if (location.pathname !== '/admin/notifications') {
+            // B. Increment badge checking the REF
+            if (pathnameRef.current !== '/admin/notifications') {
                 setUnreadCount(prev => prev + 1);
             }
-        });
-
-        // Cleanup on unmount
-        return () => {
-            socket.disconnect();
         };
-    }, [user?._id, location.pathname]);
 
-    // --- Auto-Clear Badge when viewing Alerts page ---
+        socket.on("new_notification", handleNewNotification);
+
+        return () => {
+            socket.off("new_notification", handleNewNotification);
+        };
+    }, [user]); // Only re-run if auth state changes!
+
+    // Auto-Clear Badge when navigating to the alerts page
     useEffect(() => {
         if (location.pathname === '/admin/notifications') {
             setUnreadCount(0);
         }
     }, [location.pathname]);
 
-    // --- Logout Handler ---
+    useEffect(() => {
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+                setIsMobileMenuOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
         dispatch(logout());
@@ -142,14 +136,12 @@ const AdminSidebar = () => {
         navigate("/", { replace: true });
     };
 
-    // --- Desktop Nav Styling ---
     const desktopNavClasses = ({ isActive }) =>
         `flex items-center gap-2 px-3 py-2 rounded-lg transition-all font-medium text-sm ${isActive
             ? "bg-primary text-primary-foreground shadow-sm"
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
         }`;
 
-    // --- Mobile/Tablet Bottom Nav Styling ---
     const mobileNavClasses = ({ isActive }) =>
         `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive
             ? "text-primary"
@@ -158,12 +150,7 @@ const AdminSidebar = () => {
 
     return (
         <>
-            {/* =========================================
-                1. DESKTOP VIEW (Top Horizontal Navbar - xl and up)
-                ========================================= */}
             <nav className="hidden xl:flex fixed top-0 w-full h-16 bg-card border-b border-border z-50 items-center justify-between px-6 shadow-sm">
-
-                {/* Left: Logo Area */}
                 <div className="flex items-center gap-3 w-64 shrink-0">
                     <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
                         <Shield className="w-5 h-5 text-primary-foreground" />
@@ -173,7 +160,6 @@ const AdminSidebar = () => {
                     </div>
                 </div>
 
-                {/* Center: Navigation Links (With Text) */}
                 <div className="flex items-center justify-center flex-1 gap-2">
                     <NavLink to="/admin/dashboard" className={desktopNavClasses} title="Dashboard">
                         <LayoutDashboard className="w-4.5 h-4.5" /> Dashboard
@@ -206,7 +192,6 @@ const AdminSidebar = () => {
                     </NavLink>
                 </div>
 
-                {/* Right: Actions */}
                 <div className="flex items-center justify-end gap-3 w-64 shrink-0 border-l border-border pl-6">
                     <button onClick={toggleTheme} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title="Theme">
                         {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-500" />}
@@ -220,9 +205,6 @@ const AdminSidebar = () => {
                 </div>
             </nav>
 
-            {/* =========================================
-                2. TABLET/MOBILE VIEW (Top Header - below xl)
-                ========================================= */}
             <header className="xl:hidden fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4 shadow-sm">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
@@ -262,22 +244,16 @@ const AdminSidebar = () => {
                 </div>
             </header>
 
-            {/* =========================================
-                3. TABLET/MOBILE VIEW (Bottom Navigation - below xl)
-                ========================================= */}
             <nav className="xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe">
                 <NavLink to="/admin/dashboard" className={mobileNavClasses}>
                     <LayoutDashboard className="w-6 h-6" />
                 </NavLink>
-
                 <NavLink to="/admin/employees" className={mobileNavClasses}>
                     <Users className="w-6 h-6" />
                 </NavLink>
-
                 <NavLink to="/admin/attendance" className={mobileNavClasses}>
                     <Radio className="w-6 h-6" />
                 </NavLink>
-
                 <NavLink to="/admin/progress" className={mobileNavClasses}>
                     <TrendingUp className="w-6 h-6" />
                 </NavLink>
@@ -293,13 +269,11 @@ const AdminSidebar = () => {
                         )}
                     </div>
                 </NavLink>
-
                 <NavLink to="/admin/communication" className={mobileNavClasses}>
                     <MessageSquare className="w-6 h-6" />
                 </NavLink>
             </nav>
 
-            {/* Modals */}
             <AdminSettingsModal
                 isOpen={isSettingsModalOpen}
                 onClose={() => setIsSettingsModalOpen(false)}
