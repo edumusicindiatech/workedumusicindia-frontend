@@ -43,10 +43,10 @@ const Tasks = () => {
     const handleResponse = async (taskId, status, reason = null) => {
         setActionLoading(true);
         try {
-            await axios.put(`/api/employee/tasks/${taskId}/respond`, {
+            await api.put(`/employee/tasks/${taskId}/respond`, {
                 status: status, // 'Accepted' or 'Rejected'
                 rejectReason: reason
-            }, { headers: { Authorization: `Bearer ${token}` } });
+            });
 
             // Update UI Locally for instant feedback
             setTasks(prevTasks => prevTasks.map(task =>
