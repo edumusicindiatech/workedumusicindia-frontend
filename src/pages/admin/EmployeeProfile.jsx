@@ -178,7 +178,11 @@ const EmployeeProfile = () => {
 
                 <TabsContent value="attendance" className="animate-in fade-in-50">
                     {/* Passed REAL data from the new backend route */}
-                    <AttendanceTab attendanceData={attendanceData} employeeName={employeeData?.name} />
+                    <AttendanceTab
+                        attendanceData={attendanceData}
+                        employeeName={employeeData?.name}
+                        assignments={employeeData?.assignments} // <-- ADD THIS PROP
+                    />
                 </TabsContent>
             </Tabs>
 
