@@ -1,22 +1,25 @@
 import { useState, useRef, useEffect } from "react";
+// 1. Import your custom api instance
+import api from "../../api/axios";
 import {
     FileText, Calendar, MapPin,
     CheckCircle, Tag, ChevronDown, Check, ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 // --- Import Modal ---
 import ActionItemsModal from "../../modals/employee/ActionItemsModal";
 
 const DailyReport = () => {
-    // Auto-generate today's date in YYYY-MM-DD format for the date picker
+    // Auto-generate today's date in YYYY-MM-DD format
     const getTodayDateString = () => {
         const now = new Date();
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     };
 
     // State Management
-    const [category, setCategory] = useState("Regular Report"); // 'Regular Report' | 'Event Report'
+    const [category, setCategory] = useState("Regular Report");
     const [summary, setSummary] = useState("");
     const [eventName, setEventName] = useState("");
     const [eventDate, setEventDate] = useState(getTodayDateString());
@@ -30,12 +33,10 @@ const DailyReport = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [successMsg, setSuccessMsg] = useState("");
 
-    // Display Date
     const todayFormatted = new Date().toLocaleDateString('en-IN', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 
-    // Close custom dropdown if clicked outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -46,7 +47,6 @@ const DailyReport = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Form Validation before opening modal
     const isFormValid = () => {
         if (!summary.trim()) return false;
         if (category === "Event Report") {
@@ -55,12 +55,12 @@ const DailyReport = () => {
         return true;
     };
 
-    // Triggered from the Modal
+    // 2. Updated final submit logic
     const handleFinalSubmit = async (actionItems) => {
         setIsSubmitting(true);
 
         const payload = {
-            date: getTodayDateString(), // Sends "2026-03-23"
+            date: getTodayDateString(),
             category,
             summary: summary.trim(),
             eventName: category === "Event Report" ? eventName.trim() : null,
@@ -69,14 +69,15 @@ const DailyReport = () => {
         };
 
         try {
-            await axios.post('/api/employee/daily-report', payload, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            // Use 'api' and remove manual headers
+            await api.post('/employee/daily-report', payload);
 
             setIsSubmitting(false);
             setIsModalOpen(false);
 
             setSuccessMsg("Daily report submitted successfully!");
+
+            // Reset Form
             setSummary("");
             setEventName("");
             setCategory("Regular Report");
@@ -85,7 +86,8 @@ const DailyReport = () => {
             setTimeout(() => setSuccessMsg(""), 4000);
         } catch (error) {
             console.error("Failed to submit report", error);
-            alert(error.response?.data?.message || "Failed to submit report.");
+            const errorMsg = error.response?.data?.message || "Failed to submit report.";
+            alert(errorMsg);
             setIsSubmitting(false);
         }
     };
@@ -114,7 +116,6 @@ const DailyReport = () => {
             )}
 
             <div className="bg-card border border-border rounded-2xl shadow-sm overflow-visible">
-                {/* Read-only Context Bar */}
                 <div className="bg-muted/30 border-b border-border/50 p-4 sm:px-6 flex flex-col sm:flex-row gap-4 justify-between text-sm">
                     <div className="flex items-center gap-2 text-muted-foreground font-medium">
                         <Calendar className="w-4 h-4 text-primary shrink-0" />
@@ -122,14 +123,12 @@ const DailyReport = () => {
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground font-medium">
                         <MapPin className="w-4 h-4 text-primary shrink-0" />
-                        <span className="truncate max-w-50 sm:max-w-none">Uttar Pradesh, Sultanpur, 228001</span>
+                        <span className="truncate max-w-50 sm:max-w-none">Location context active</span>
                     </div>
                 </div>
 
-                {/* Form */}
                 <div className="p-4 sm:p-6 space-y-6">
-
-                    {/* Custom Category Selection */}
+                    {/* Category Selection */}
                     <div className="space-y-2 relative z-20" ref={dropdownRef}>
                         <label className="text-sm font-semibold text-foreground flex items-center gap-2">
                             <Tag className="w-4 h-4 text-primary" /> Report Category
@@ -156,8 +155,8 @@ const DailyReport = () => {
                                                 setIsDropdownOpen(false);
                                             }}
                                             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${category === option
-                                                    ? "bg-primary/10 text-primary font-bold"
-                                                    : "text-foreground hover:bg-muted font-medium"
+                                                ? "bg-primary/10 text-primary font-bold"
+                                                : "text-foreground hover:bg-muted font-medium"
                                                 }`}
                                         >
                                             {option}
@@ -169,7 +168,6 @@ const DailyReport = () => {
                         )}
                     </div>
 
-                    {/* Conditional Event Fields */}
                     {category === "Event Report" && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 z-10">
                             <div className="space-y-2">
@@ -194,7 +192,6 @@ const DailyReport = () => {
                         </div>
                     )}
 
-                    {/* Summary */}
                     <div className="space-y-2 z-10">
                         <label className="text-sm font-semibold text-foreground flex items-center gap-2">
                             <FileText className="w-4 h-4 text-primary" /> Daily Summary
@@ -207,7 +204,6 @@ const DailyReport = () => {
                         />
                     </div>
 
-                    {/* Proceed Button */}
                     <div className="pt-4 border-t border-border/50 flex justify-end z-10">
                         <Button
                             type="button"
@@ -221,7 +217,6 @@ const DailyReport = () => {
                 </div>
             </div>
 
-            {/* Final Submission Modal */}
             <ActionItemsModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}

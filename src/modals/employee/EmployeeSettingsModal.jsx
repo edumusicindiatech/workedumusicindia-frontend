@@ -6,10 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Settings, X, Globe, Mail, Loader2 } from "lucide-react";
 import CustomSelect from "../../components/ui/CustomSelect";
 import { toast } from "sonner";
-import axios from "axios"; // or import api from "../../api/axios" if you use interceptors
+// 1. Import your custom api instance
+import api from "@/api/axios";
 
 const EmployeeSettingsModal = ({ isOpen, onClose }) => {
-    const { user, token } = useSelector((state) => state.auth);
+    // We no longer need 'token' here because 'api' handles it automatically
+    const { user } = useSelector((state) => state.auth);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [settings, setSettings] = useState({
@@ -22,7 +24,6 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
         if (isOpen && user?.preferences) {
             setSettings({
                 language: user.preferences.systemLanguage || "English",
-                // Fallback to true if undefined
                 emailNotifications: user.preferences.employeeNotifications ?? true,
             });
         }
@@ -35,21 +36,14 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
         const toastId = toast.loading("Saving preferences...");
 
         try {
-            await axios.put('/api/employee/settings/preferences', {
+            // 2. Use 'api' instance, remove /api prefix and manual headers
+            await api.put('/employee/settings/preferences', {
                 systemLanguage: settings.language,
                 employeeNotifications: settings.emailNotifications
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
             });
 
             toast.success("Preferences updated successfully!", { id: toastId });
-
-            // Close modal after success
             onClose();
-
-            // Note: If your app requires the UI to immediately reflect the new language/settings 
-            // across all components, you might want to dispatch a Redux action here to update 
-            // the user object in your store (e.g., dispatch(updateUserPreferences(response.data.preferences))).
 
         } catch (error) {
             console.error("Failed to save settings:", error);
@@ -75,7 +69,6 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
 
                 {/* Body */}
                 <div className="p-6 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar flex-1">
-
                     {/* Language Preference */}
                     <div className="space-y-3">
                         <Label className="text-base flex items-center gap-2 font-semibold">

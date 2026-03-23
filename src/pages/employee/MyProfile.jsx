@@ -3,10 +3,11 @@ import { useSelector } from "react-redux";
 import { Mail, Phone, ShieldCheck, MapPin, School, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
+import api from "../../api/axios";
 import ChangePasswordModal from "../../modals/employee/ChangePasswordModal";
 
 const MyProfile = () => {
-    const { user, token } = useSelector((state) => state.auth);
+    const { user } = useSelector((state) => state.auth);
 
     // Modal & Action States
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -27,13 +28,12 @@ const MyProfile = () => {
         const toastId = toast.loading("Updating password...");
 
         try {
-            await axios.put('/api/employee/profile/password', { newPassword }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.put('/employee/profile/password', { newPassword });
 
             setIsPasswordModalOpen(false);
             toast.success("Password updated successfully!", { id: toastId });
         } catch (error) {
+            console.error("Password change error:", error);
             toast.error(error.response?.data?.message || "Failed to update password.", { id: toastId });
         } finally {
             setIsSubmitting(false);

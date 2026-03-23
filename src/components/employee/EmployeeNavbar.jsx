@@ -3,7 +3,8 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom"; // <-- Add
 import { useSelector, useDispatch } from "react-redux";
 import { toggleTheme } from "@/store/slices/themeSlice";
 import { logout } from "@/store/slices/authSlice";
-import api, { setAxiosToken } from "@/api/axios";
+import api from "../../api/axios";
+import { setAxiosToken } from "../../api/axios";
 import { io } from "socket.io-client"; // <-- Added socket.io
 
 import {

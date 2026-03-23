@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import axios from "axios";
-import { X, CheckCircle2, Clock, MapPin, UserX, PartyPopper, ChevronRight, ChevronLeft, CalendarDays, Plus, Camera, Loader2 } from "lucide-react";
+// 1. Import your custom api instance
+import api from "../../api/axios";
+import { X, CheckCircle2, Clock, MapPin, UserX, PartyPopper, ChevronRight, ChevronLeft, CalendarDays, Plus, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import AddEventModal from "../admin/AddEventModal";
 import MediaUploadModal from "./MediaUploadModal";
 
 const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
-    const { token } = useSelector((state) => state.auth);
+    // Note: We no longer need 'token' here because 'api' handles headers automatically
     const [activeCategory, setActiveCategory] = useState(null);
 
     // Modal States
@@ -28,26 +29,31 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
     if (!isOpen || !school) return null;
 
     // --- API HANDLERS ---
+
+    // 2. Updated Event Handler
     const handleSaveEvent = async (eventData) => {
         setIsSavingEvent(true);
         try {
-            // Append the School ID and Band to whatever the inner modal returns
             const payload = {
                 ...eventData,
                 schoolId: school.id,
                 band: eventModalData.categoryName
             };
-            await axios.post('/api/employee/events', payload, { headers: { Authorization: `Bearer ${token}` } });
+
+            // Use 'api' and remove /api prefix + manual headers
+            await api.post('/employee/events', payload);
 
             setEventModalData({ isOpen: false, categoryName: null });
-            if (onRefresh) onRefresh(); // Refresh background stats
+            if (onRefresh) onRefresh();
         } catch (error) {
+            console.error("Event save error:", error);
             alert("Failed to save event. " + (error.response?.data?.message || ""));
         } finally {
             setIsSavingEvent(false);
         }
     };
 
+    // 3. Updated Media Handler
     const handleUploadMedia = async (mediaData) => {
         setIsUploadingMedia(true);
         try {
@@ -56,10 +62,13 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                 schoolId: school.id,
                 band: mediaModalData.categoryName
             };
-            await axios.post('/api/employee/media', payload, { headers: { Authorization: `Bearer ${token}` } });
+
+            // Use 'api' and remove /api prefix + manual headers
+            await api.post('/employee/media', payload);
 
             setMediaModalData({ isOpen: false, categoryName: null });
         } catch (error) {
+            console.error("Media upload error:", error);
             alert("Failed to upload media. " + (error.response?.data?.message || ""));
         } finally {
             setIsUploadingMedia(false);
@@ -115,7 +124,6 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                                             </p>
                                         </div>
 
-                                        {/* Action Buttons */}
                                         <div className="flex items-center gap-2 mt-4 sm:mt-0 shrink-0">
                                             <Button variant="outline" size="sm" className="h-9 rounded-lg"
                                                 onClick={(e) => { e.stopPropagation(); setMediaModalData({ isOpen: true, categoryName: category.name }); }}>

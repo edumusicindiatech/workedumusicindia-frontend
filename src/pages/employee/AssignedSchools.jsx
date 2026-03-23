@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import axios from "axios";
+import api from "../../api/axios";
 import { School, MapPin, ChevronRight, Tags, Loader2 } from "lucide-react";
 import SchoolDetailsModal from "../../modals/employee/SchoolDetailsModal";
 
 const AssignedSchools = () => {
-    const { token } = useSelector((state) => state.auth);
     const [assignedSchools, setAssignedSchools] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedSchool, setSelectedSchool] = useState(null);
@@ -13,9 +13,8 @@ const AssignedSchools = () => {
     const fetchSchools = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await axios.get('/api/employee/assigned-schools', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await api.get('/employee/assigned-schools');
+
             if (response.data.success) {
                 setAssignedSchools(response.data.data);
             }
@@ -24,7 +23,7 @@ const AssignedSchools = () => {
         } finally {
             setLoading(false);
         }
-    }, [token]);
+    }, []);
 
     useEffect(() => {
         fetchSchools();

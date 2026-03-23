@@ -2,28 +2,25 @@ import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { Bell, CheckCircle2, AlertCircle, Info, Clock, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import axios from "axios"; // Or import api from "../../api/axios" if it has interceptors
+// 1. Use your custom api instance
+import api from "../../api/axios";
 import { io } from "socket.io-client";
 
-// Setup socket connection
 const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5000");
 
 const EmployeeNotifications = () => {
-    const { user, token } = useSelector((state) => state.auth);
+    const { user } = useSelector((state) => state.auth);
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Calculate unread count
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
     // --- FETCH INITIAL DATA ---
     useEffect(() => {
         const fetchNotifications = async () => {
             try {
-                // Ensure this matches your backend route for employee notifications
-                const response = await axios.get('/api/employee/notifications', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                // 2. Use 'api' and remove /api prefix
+                const response = await api.get('/employee/notifications');
                 if (response.data.success) {
                     setNotifications(response.data.data);
                 }
@@ -34,23 +31,20 @@ const EmployeeNotifications = () => {
             }
         };
 
-        if (token) fetchNotifications();
-    }, [token]);
+        fetchNotifications();
+    }, []);
 
     // --- REAL-TIME SOCKET LOGIC ---
     useEffect(() => {
         if (!user) return;
 
-        // Use the actual employee's ID to join their personal room
         const currentUserId = user.id || user._id;
         socket.emit("join_room", currentUserId);
 
         const handleNewNotification = (newNotif) => {
-            // Play Ting Sound
-            const audio = new Audio('/sounds/notification-ting.mp3');
-            audio.play().catch(err => console.log("Audio play blocked by browser policy:", err));
+            // NOTE: Audio 'ting' logic removed here because EmployeeNavbar 
+            // handles it globally to avoid double-sounds.
 
-            // Add new notification to the top of the list
             setNotifications(prev => [newNotif, ...prev]);
         };
 
@@ -66,9 +60,8 @@ const EmployeeNotifications = () => {
         // Optimistic UI update
         setNotifications(notifications.map(n => ({ ...n, isRead: true })));
         try {
-            await axios.put('/api/employee/notifications/mark-read', {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            // 3. Use 'api' instance
+            await api.put('/employee/notifications/mark-read');
         } catch (error) {
             console.error("Failed to mark as read:", error);
         }
@@ -77,9 +70,8 @@ const EmployeeNotifications = () => {
     const clearAll = async () => {
         setNotifications([]);
         try {
-            await axios.delete('/api/employee/notifications/clear', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            // 4. Use 'api' instance
+            await api.delete('/employee/notifications/clear');
         } catch (error) {
             console.error("Failed to clear notifications:", error);
         }
@@ -101,7 +93,6 @@ const EmployeeNotifications = () => {
         return "Just now";
     };
 
-    // Map your DB Enum Types to visual styles
     const getIconInfo = (type) => {
         switch (type) {
             case 'Warning':
@@ -123,7 +114,6 @@ const EmployeeNotifications = () => {
 
     return (
         <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-4xl mx-auto animate-in fade-in duration-300 pb-24 md:pb-8">
-            {/* --- HEADER --- */}
             <div className="mb-4 sm:mb-6 md:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
                 <div>
                     <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
@@ -153,10 +143,8 @@ const EmployeeNotifications = () => {
                 )}
             </div>
 
-            {/* --- NOTIFICATIONS LIST --- */}
             <div className="bg-card rounded-xl sm:rounded-2xl shadow-card border border-border min-h-100 sm:min-h-125 overflow-hidden flex flex-col">
                 <div className="p-3 sm:p-4 md:p-6 flex-1 bg-muted/5 flex flex-col gap-2.5 sm:gap-3">
-
                     {notifications.length === 0 ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-center p-6 sm:p-8">
                             <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-muted/50 flex items-center justify-center mb-3 sm:mb-4">
@@ -168,7 +156,6 @@ const EmployeeNotifications = () => {
                     ) : (
                         notifications.map((notification) => {
                             const { icon, bg } = getIconInfo(notification.type);
-
                             return (
                                 <div
                                     key={notification._id}
@@ -180,7 +167,6 @@ const EmployeeNotifications = () => {
                                     {!notification.isRead && (
                                         <div className="absolute top-3 right-3 sm:top-5 sm:right-5 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.8)] animate-pulse" />
                                     )}
-
                                     <div className="flex gap-3 sm:gap-4 pr-4 sm:pr-6">
                                         <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 border ${bg}`}>
                                             {icon}

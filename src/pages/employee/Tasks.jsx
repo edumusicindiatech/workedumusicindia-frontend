@@ -6,10 +6,10 @@ import {
     CheckCircle, XCircle, Info, Loader2, Tags
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import api from "../../api/axios";
 import RejectTaskModal from "../../modals/employee/RejectTaskModal";
 
 const Tasks = () => {
-    const { token } = useSelector((state) => state.auth);
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
@@ -23,9 +23,8 @@ const Tasks = () => {
     // --- FETCH TASKS ---
     const fetchTasks = useCallback(async () => {
         try {
-            const res = await axios.get('/api/employee/tasks', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            setLoading(true);
+            const res = await api.get('/employee/tasks');
             if (res.data.success) {
                 setTasks(res.data.data);
             }
@@ -34,7 +33,7 @@ const Tasks = () => {
         } finally {
             setLoading(false);
         }
-    }, [token]);
+    }, []);
 
     useEffect(() => {
         fetchTasks();

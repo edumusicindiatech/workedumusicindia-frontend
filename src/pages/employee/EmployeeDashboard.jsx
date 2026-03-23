@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
+import api from "../../api/axios";
 import {
     MapPin, LogOut, Navigation, Clock, UserX,
     CalendarX, Loader2, School, PartyPopper, Sparkles
@@ -13,7 +14,7 @@ import AbsentModal from "../../modals/employee/AbsentModal";
 import HolidayModal from "../../modals/employee/HolidayModal";
 
 const EmployeeDashboard = () => {
-    const { user, token } = useSelector((state) => state.auth);
+    const { user } = useSelector((state) => state.auth);
 
     const [assignments, setAssignments] = useState([]);
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -31,9 +32,7 @@ const EmployeeDashboard = () => {
     // ==========================================
     const fetchSchedule = useCallback(async () => {
         try {
-            const res = await axios.get('/api/employee/my-schedule', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get('/employee/my-schedule');
             if (res.data.success) {
                 setAssignments(res.data.data);
             }
@@ -42,7 +41,7 @@ const EmployeeDashboard = () => {
         } finally {
             setLoading(false);
         }
-    }, [token]);
+    }, []);
 
     // Initialize & Timer
     useEffect(() => {
