@@ -21,7 +21,7 @@ import EmployeeProfile from "./pages/admin/EmployeeProfile";
 import Communication from "./pages/admin/Communication";
 import AttendanceFeed from "./pages/admin/AttendenceFeed";
 import ProgressReport from "./pages/admin/ProgressReport";
-import Notifications from "./pages/admin/Notifications";
+import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminResetPassword from "./pages/admin/AdminResetPassword"; // <-- ADDED
 
 // Employee Imports
@@ -134,7 +134,7 @@ function App() {
           <Route path="attendance" element={<AttendanceFeed />} />
           <Route path="progress" element={<ProgressReport />} />
           <Route path="communication" element={<Communication />} />
-          <Route path="notifications" element={<Notifications />} />
+          <Route path="notifications" element={<AdminNotifications />} />
         </Route>
 
         {/* 404 Fallback */}

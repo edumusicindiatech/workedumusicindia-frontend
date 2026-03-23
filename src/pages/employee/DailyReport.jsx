@@ -20,7 +20,7 @@ const DailyReport = () => {
     const [summary, setSummary] = useState("");
     const [eventName, setEventName] = useState("");
     const [eventDate, setEventDate] = useState(getTodayDateString());
-    
+
     // Custom Select State
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -56,10 +56,11 @@ const DailyReport = () => {
     };
 
     // Triggered from the Modal
-    const handleFinalSubmit = (actionItems) => {
+    const handleFinalSubmit = async (actionItems) => {
         setIsSubmitting(true);
 
         const payload = {
+            date: getTodayDateString(), // Sends "2026-03-23"
             category,
             summary: summary.trim(),
             eventName: category === "Event Report" ? eventName.trim() : null,
@@ -67,14 +68,14 @@ const DailyReport = () => {
             actionItems: actionItems.trim() || null
         };
 
-        // Mock API Call 
-        console.log("🚀 Submitting Daily Report:", payload);
+        try {
+            await axios.post('/api/employee/daily-report', payload, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
 
-        setTimeout(() => {
             setIsSubmitting(false);
             setIsModalOpen(false);
-            
-            // Reset Form
+
             setSuccessMsg("Daily report submitted successfully!");
             setSummary("");
             setEventName("");
@@ -82,7 +83,11 @@ const DailyReport = () => {
             setEventDate(getTodayDateString());
 
             setTimeout(() => setSuccessMsg(""), 4000);
-        }, 1500);
+        } catch (error) {
+            console.error("Failed to submit report", error);
+            alert(error.response?.data?.message || "Failed to submit report.");
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -129,7 +134,7 @@ const DailyReport = () => {
                         <label className="text-sm font-semibold text-foreground flex items-center gap-2">
                             <Tag className="w-4 h-4 text-primary" /> Report Category
                         </label>
-                        
+
                         <button
                             type="button"
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -150,11 +155,10 @@ const DailyReport = () => {
                                                 setCategory(option);
                                                 setIsDropdownOpen(false);
                                             }}
-                                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${
-                                                category === option 
-                                                    ? "bg-primary/10 text-primary font-bold" 
+                                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${category === option
+                                                    ? "bg-primary/10 text-primary font-bold"
                                                     : "text-foreground hover:bg-muted font-medium"
-                                            }`}
+                                                }`}
                                         >
                                             {option}
                                             {category === option && <Check className="w-4 h-4" />}
@@ -218,7 +222,7 @@ const DailyReport = () => {
             </div>
 
             {/* Final Submission Modal */}
-            <ActionItemsModal 
+            <ActionItemsModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onSubmit={handleFinalSubmit}

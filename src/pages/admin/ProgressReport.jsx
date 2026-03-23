@@ -371,8 +371,8 @@ const ProgressReport = () => {
                                     key={c.name}
                                     onClick={() => c.count > 0 && setSelectedCategory(c.name)}
                                     className={`p-5 sm:p-6 md:p-8 border border-border/80 rounded-xl sm:rounded-2xl text-center flex flex-col items-center transition-all duration-300 bg-card ${c.count > 0
-                                            ? 'hover:bg-muted/20 hover:border-violet-500/40 hover:shadow-md hover:-translate-y-1 cursor-pointer group'
-                                            : 'opacity-50 grayscale cursor-not-allowed'
+                                        ? 'hover:bg-muted/20 hover:border-violet-500/40 hover:shadow-md hover:-translate-y-1 cursor-pointer group'
+                                        : 'opacity-50 grayscale cursor-not-allowed'
                                         }`}
                                 >
                                     <div className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl mb-3 sm:mb-4 transition-colors duration-300 ${c.count > 0 ? 'bg-violet-500/10 text-violet-500 group-hover:bg-violet-500 group-hover:text-white' : 'bg-muted text-muted-foreground'}`}>
@@ -485,7 +485,48 @@ const ProgressReport = () => {
                                 </div>
                             </div>
 
-                            {selectedDay.dailyReport && (
+                            {/* --- UPDATED: DAILY REPORT DETAILS --- */}
+                            {selectedDay.dailyReport && typeof selectedDay.dailyReport === 'object' && (
+                                <div className="space-y-1.5 sm:space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+                                    <div className="flex items-center justify-between pl-1">
+                                        <p className="text-[10px] sm:text-[11px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-1.5 sm:gap-2">
+                                            <ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> EOD Summary
+                                        </p>
+                                        <span className="text-[10px] font-bold bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded uppercase">
+                                            {selectedDay.dailyReport.category}
+                                        </span>
+                                    </div>
+
+                                    <div className="p-4 sm:p-5 bg-blue-500/5 border border-blue-500/20 rounded-xl sm:rounded-2xl text-xs sm:text-sm leading-relaxed text-foreground/90 shadow-sm space-y-4">
+
+                                        {/* Summary */}
+                                        <div>
+                                            <p className="font-semibold text-blue-700/80 dark:text-blue-400 mb-1">Daily Summary</p>
+                                            <p>{selectedDay.dailyReport.summary}</p>
+                                        </div>
+
+                                        {/* Event Details (If Applicable) */}
+                                        {selectedDay.dailyReport.category === 'Event Report' && selectedDay.dailyReport.eventName && (
+                                            <div className="bg-white dark:bg-black/20 p-3 rounded-lg border border-blue-500/20">
+                                                <p className="font-semibold text-blue-700/80 dark:text-blue-400 text-xs uppercase mb-1">Logged Event</p>
+                                                <p className="font-bold">{selectedDay.dailyReport.eventName}</p>
+                                                <p className="text-xs text-muted-foreground mt-0.5">{selectedDay.dailyReport.eventDate}</p>
+                                            </div>
+                                        )}
+
+                                        {/* Action Items */}
+                                        {selectedDay.dailyReport.actionItems && (
+                                            <div className="border-t border-blue-500/20 pt-3">
+                                                <p className="font-semibold text-blue-700/80 dark:text-blue-400 mb-1">Pending Action Items</p>
+                                                <p className="whitespace-pre-wrap">{selectedDay.dailyReport.actionItems}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Legacy String Support (Just in case) */}
+                            {selectedDay.dailyReport && typeof selectedDay.dailyReport === 'string' && (
                                 <div className="space-y-1.5 sm:space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
                                     <p className="text-[10px] sm:text-[11px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 pl-1"><ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Daily Report</p>
                                     <div className="p-4 sm:p-5 bg-blue-500/5 border border-blue-500/20 rounded-xl sm:rounded-2xl text-xs sm:text-sm leading-relaxed text-foreground/90 shadow-sm">{selectedDay.dailyReport}</div>
@@ -494,7 +535,7 @@ const ProgressReport = () => {
 
                             {(selectedDay.teacherNote || selectedDay.lateReason) && (
                                 <div className="space-y-1.5 sm:space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
-                                    <p className="text-[10px] sm:text-[11px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 pl-1"><FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Teacher Note</p>
+                                    <p className="text-[10px] sm:text-[11px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 pl-1"><FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Exception Note</p>
                                     <div className="p-4 sm:p-5 bg-muted/30 border border-border/80 rounded-xl sm:rounded-2xl text-xs sm:text-sm italic text-muted-foreground shadow-sm">"{selectedDay.teacherNote || selectedDay.lateReason}"</div>
                                 </div>
                             )}

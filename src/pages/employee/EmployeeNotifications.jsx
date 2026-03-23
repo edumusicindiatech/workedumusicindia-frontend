@@ -1,146 +1,209 @@
-import { useState } from "react";
-import {
-    Bell, Megaphone, School, ClipboardList,
-    AlertTriangle, CheckCircle2, Trash2, Clock
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
+import { Bell, CheckCircle2, AlertCircle, Info, Clock, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import axios from "axios"; // Or import api from "../../api/axios" if it has interceptors
+import { io } from "socket.io-client";
+
+// Setup socket connection
+const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5000");
 
 const EmployeeNotifications = () => {
-    // Mock Data: Real-time notifications from Admin
-    const [notifications, setNotifications] = useState([
-        {
-            id: 1,
-            type: "broadcast", // broadcast | assignment | warning
-            title: "Admin Announcement: System Maintenance",
-            message: "The application will undergo scheduled maintenance tonight at 11:00 PM. Please ensure all your daily reports are submitted before then.",
-            timestamp: "10 mins ago",
-            isUnread: true,
-        },
-        {
-            id: 2,
-            type: "assignment",
-            title: "New School Assigned",
-            message: "You have been assigned a new routine visit to 'Lincoln High School' starting tomorrow.",
-            timestamp: "2 hours ago",
-            isUnread: true,
-        },
-        {
-            id: 3,
-            type: "warning",
-            title: "Missed Check-Out",
-            message: "You forgot to check out of 'Washington Middle School' yesterday. Please update your timesheet manually.",
-            timestamp: "1 day ago",
-            isUnread: false,
-        },
-        {
-            id: 4,
-            type: "assignment",
-            title: "New Task Available",
-            message: "A new optional task for 'Science Lab Inventory' has been posted. Review it in the Tasks section.",
-            timestamp: "2 days ago",
-            isUnread: false,
+    const { user, token } = useSelector((state) => state.auth);
+    const [notifications, setNotifications] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    // Calculate unread count
+    const unreadCount = notifications.filter(n => !n.isRead).length;
+
+    // --- FETCH INITIAL DATA ---
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            try {
+                // Ensure this matches your backend route for employee notifications
+                const response = await axios.get('/api/employee/notifications', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (response.data.success) {
+                    setNotifications(response.data.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch notifications:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (token) fetchNotifications();
+    }, [token]);
+
+    // --- REAL-TIME SOCKET LOGIC ---
+    useEffect(() => {
+        if (!user) return;
+
+        // Use the actual employee's ID to join their personal room
+        const currentUserId = user.id || user._id;
+        socket.emit("join_room", currentUserId);
+
+        const handleNewNotification = (newNotif) => {
+            // Play Ting Sound
+            const audio = new Audio('/sounds/notification-ting.mp3');
+            audio.play().catch(err => console.log("Audio play blocked by browser policy:", err));
+
+            // Add new notification to the top of the list
+            setNotifications(prev => [newNotif, ...prev]);
+        };
+
+        socket.on("new_notification", handleNewNotification);
+
+        return () => {
+            socket.off("new_notification", handleNewNotification);
+        };
+    }, [user]);
+
+    // --- ACTIONS ---
+    const markAllAsRead = async () => {
+        // Optimistic UI update
+        setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+        try {
+            await axios.put('/api/employee/notifications/mark-read', {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        } catch (error) {
+            console.error("Failed to mark as read:", error);
         }
-    ]);
-
-    const unreadCount = notifications.filter(n => n.isUnread).length;
-
-    const markAllAsRead = () => {
-        setNotifications(prev => prev.map(n => ({ ...n, isUnread: false })));
     };
 
-    const clearAll = () => {
+    const clearAll = async () => {
         setNotifications([]);
-    };
-
-    const getIconForType = (type) => {
-        switch (type) {
-            case "broadcast":
-                return <div className="p-2.5 rounded-full bg-blue-500/10 text-blue-500 shrink-0"><Megaphone className="w-5 h-5" /></div>;
-            case "assignment":
-                return <div className="p-2.5 rounded-full bg-emerald-500/10 text-emerald-500 shrink-0"><School className="w-5 h-5" /></div>;
-            case "warning":
-                return <div className="p-2.5 rounded-full bg-destructive/10 text-destructive shrink-0"><AlertTriangle className="w-5 h-5" /></div>;
-            default:
-                return <div className="p-2.5 rounded-full bg-primary/10 text-primary shrink-0"><Bell className="w-5 h-5" /></div>;
+        try {
+            await axios.delete('/api/employee/notifications/clear', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        } catch (error) {
+            console.error("Failed to clear notifications:", error);
         }
     };
+
+    // --- HELPERS ---
+    const getTimeAgo = (dateString) => {
+        const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + " yrs ago";
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + " mos ago";
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + " days ago";
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + " hrs ago";
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + " mins ago";
+        return "Just now";
+    };
+
+    // Map your DB Enum Types to visual styles
+    const getIconInfo = (type) => {
+        switch (type) {
+            case 'Warning':
+            case 'Deletion':
+                return { icon: <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5" />, bg: 'bg-destructive/10 text-destructive border-destructive/20' };
+            case 'Assignment':
+            case 'Updation':
+                return { icon: <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />, bg: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' };
+            case 'System':
+            case 'General':
+            default:
+                return { icon: <Info className="w-4 h-4 sm:w-5 sm:h-5" />, bg: 'bg-blue-500/10 text-blue-500 border-blue-500/20' };
+        }
+    };
+
+    if (loading) {
+        return <div className="p-8 text-center animate-pulse text-muted-foreground">Loading notifications...</div>;
+    }
 
     return (
-        <div className="space-y-6 md:space-y-8 animate-fade-in p-4 md:p-8 max-w-4xl mx-auto pb-20">
-
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border/50 pb-6">
+        <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-4xl mx-auto animate-in fade-in duration-300 pb-24 md:pb-8">
+            {/* --- HEADER --- */}
+            <div className="mb-4 sm:mb-6 md:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground flex items-center gap-3">
-                        Notifications
-                        {unreadCount > 0 && (
-                            <span className="bg-destructive/10 text-destructive text-sm px-3 py-1 rounded-full font-bold tracking-wide mt-1">
-                                {unreadCount} Unread
-                            </span>
-                        )}
-                    </h1>
-                    <p className="text-muted-foreground mt-1">Stay updated with administrative broadcasts and alerts.</p>
+                    <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+                        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                            <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+                            {unreadCount > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 sm:h-3 sm:w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 bg-destructive border-2 border-card"></span>
+                                </span>
+                            )}
+                        </div>
+                        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground tracking-tight">Notifications</h1>
+                    </div>
+                    <p className="text-muted-foreground text-xs sm:text-sm">Stay updated on alerts, assignments, and schedule changes.</p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    {unreadCount > 0 && (
-                        <Button variant="outline" onClick={markAllAsRead} className="h-10 rounded-xl gap-2 font-medium">
-                            <CheckCircle2 className="w-4 h-4" /> Mark all read
+                {notifications.length > 0 && (
+                    <div className="flex items-center gap-2 self-start md:self-auto w-full md:w-auto">
+                        <Button variant="outline" size="sm" onClick={markAllAsRead} disabled={unreadCount === 0} className="gap-1.5 sm:gap-2 flex-1 md:flex-none text-xs sm:text-sm h-8 sm:h-9">
+                            <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Mark all read
                         </Button>
-                    )}
-                    {notifications.length > 0 && (
-                        <Button variant="ghost" onClick={clearAll} className="h-10 rounded-xl gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
-                            <Trash2 className="w-4 h-4" /> Clear All
+                        <Button variant="ghost" size="sm" onClick={clearAll} className="text-destructive hover:bg-destructive/10 hover:text-destructive gap-1.5 sm:gap-2 flex-1 md:flex-none text-xs sm:text-sm h-8 sm:h-9">
+                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Clear All
                         </Button>
+                    </div>
+                )}
+            </div>
+
+            {/* --- NOTIFICATIONS LIST --- */}
+            <div className="bg-card rounded-xl sm:rounded-2xl shadow-card border border-border min-h-100 sm:min-h-125 overflow-hidden flex flex-col">
+                <div className="p-3 sm:p-4 md:p-6 flex-1 bg-muted/5 flex flex-col gap-2.5 sm:gap-3">
+
+                    {notifications.length === 0 ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-6 sm:p-8">
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-muted/50 flex items-center justify-center mb-3 sm:mb-4">
+                                <Bell className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground/50" />
+                            </div>
+                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">All caught up!</h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground">You don't have any new notifications at the moment.</p>
+                        </div>
+                    ) : (
+                        notifications.map((notification) => {
+                            const { icon, bg } = getIconInfo(notification.type);
+
+                            return (
+                                <div
+                                    key={notification._id}
+                                    className={`relative p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl border transition-all ${notification.isRead
+                                        ? 'bg-card border-border hover:bg-muted/30'
+                                        : 'bg-primary/5 border-primary/20 shadow-sm'
+                                        }`}
+                                >
+                                    {!notification.isRead && (
+                                        <div className="absolute top-3 right-3 sm:top-5 sm:right-5 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.8)] animate-pulse" />
+                                    )}
+
+                                    <div className="flex gap-3 sm:gap-4 pr-4 sm:pr-6">
+                                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 border ${bg}`}>
+                                            {icon}
+                                        </div>
+                                        <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
+                                            <h4 className={`text-sm sm:text-base font-bold truncate ${notification.isRead ? 'text-foreground/90' : 'text-foreground'}`}>
+                                                {notification.title}
+                                            </h4>
+                                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                                                {notification.message}
+                                            </p>
+                                            <div className="flex items-center gap-1 sm:gap-1.5 mt-1.5 sm:mt-2 text-[10px] sm:text-xs font-medium text-muted-foreground/80">
+                                                <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                                {getTimeAgo(notification.createdAt)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
                     )}
                 </div>
             </div>
-
-            {/* Notification Feed */}
-            {notifications.length === 0 ? (
-                <div className="bg-card border border-border rounded-2xl p-12 text-center shadow-sm flex flex-col items-center">
-                    <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mb-5">
-                        <Bell className="w-10 h-10 text-muted-foreground/50" />
-                    </div>
-                    <h3 className="text-xl font-bold text-foreground mb-2">No notifications yet</h3>
-                    <p className="text-muted-foreground max-w-sm">When the admin assigns you a school, posts a task, or makes an announcement, it will appear here.</p>
-                </div>
-            ) : (
-                <div className="space-y-4">
-                    {notifications.map((notification) => (
-                        <div
-                            key={notification.id}
-                            className={`group relative flex gap-4 p-5 rounded-2xl border transition-all duration-300 ${notification.isUnread
-                                ? "bg-card border-primary/20 shadow-sm"
-                                : "bg-muted/10 border-transparent hover:bg-muted/30"
-                                }`}
-                        >
-                            {/* Unread Indicator Dot */}
-                            {notification.isUnread && (
-                                <div className="absolute top-6 right-6 w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
-                            )}
-
-                            {/* Icon */}
-                            {getIconForType(notification.type)}
-
-                            {/* Content */}
-                            <div className="flex-1 pr-6">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
-                                    <h3 className={`font-bold text-base ${notification.isUnread ? 'text-foreground' : 'text-foreground/80'}`}>
-                                        {notification.title}
-                                    </h3>
-                                    <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                                        <Clock className="w-3.5 h-3.5" /> {notification.timestamp}
-                                    </span>
-                                </div>
-                                <p className={`text-sm leading-relaxed ${notification.isUnread ? 'text-muted-foreground' : 'text-muted-foreground/70'}`}>
-                                    {notification.message}
-                                </p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
         </div>
     );
 };

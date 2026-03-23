@@ -1,13 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Users, UserCheck, UserX, Clock, MapPin, School, BookOpen, RefreshCw } from "lucide-react";
+import { io } from "socket.io-client"; // <-- NEW IMPORT
 import api from "../../api/axios";
 
 const AdminDashboard = () => {
     const [dashboardData, setDashboardData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false); // For the spin icon
 
-    const fetchDashboardStats = async () => {
-        setLoading(true);
+    // Updated to support "silent" background refreshing
+    const fetchDashboardStats = useCallback(async (showFullLoader = true) => {
+        if (showFullLoader) setLoading(true);
+        setIsRefreshing(true); // Always spin the little icon
+
         try {
             const response = await api.get('/admin/dashboard-stats');
             if (response.data.success) {
@@ -16,17 +21,37 @@ const AdminDashboard = () => {
         } catch (error) {
             console.error("Failed to fetch dashboard stats:", error);
         } finally {
-            setLoading(false);
+            if (showFullLoader) setLoading(false);
+            setIsRefreshing(false);
         }
-    };
-
-    useEffect(() => {
-        fetchDashboardStats();
-        const interval = setInterval(fetchDashboardStats, 60000); // Auto-refresh every minute
-        return () => clearInterval(interval);
     }, []);
 
-    // Custom badge styling matching your screenshot's design
+    useEffect(() => {
+        // 1. Initial Load
+        fetchDashboardStats(true);
+
+        // 2. Fallback Polling (Every 1 minute)
+        const interval = setInterval(() => fetchDashboardStats(false), 60000);
+
+        // 3. --- REAL-TIME SOCKET CONNECTION ---
+        // Ensure this URL matches your backend domain. If it's running on the same domain, io() works.
+        // If your backend is separate, use io('http://localhost:5000') or your env variable.
+        const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
+
+        socket.on('new_notification', (data) => {
+            console.log("Live update received via socket!", data);
+            // Fetch quietly in the background without blanking the screen
+            fetchDashboardStats(false);
+        });
+
+        // Cleanup on unmount
+        return () => {
+            clearInterval(interval);
+            socket.disconnect();
+        };
+    }, [fetchDashboardStats]);
+
+    // Custom badge styling
     const statusBadge = (status) => {
         const styles = {
             present: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
@@ -49,7 +74,7 @@ const AdminDashboard = () => {
     const stats = [
         { label: "Total Employees", value: dashboardData?.stats.totalEmployees || 0, icon: Users, color: "bg-primary/10 text-primary" },
         { label: "Present Today", value: dashboardData?.stats.presentToday || 0, icon: UserCheck, color: "bg-emerald-500/10 text-emerald-500" },
-        { label: "Absent", value: dashboardData?.stats.noShow || 0, icon: UserX, color: "bg-rose-500/10 text-rose-500" }, // Updated label
+        { label: "Absent", value: dashboardData?.stats.noShow || 0, icon: UserX, color: "bg-rose-500/10 text-rose-500" },
         { label: "Pending", value: dashboardData?.stats.pending || 0, icon: Clock, color: "bg-amber-500/10 text-amber-500" },
     ];
 
@@ -63,11 +88,11 @@ const AdminDashboard = () => {
                     <p className="text-muted-foreground text-sm font-medium">Overview of today's workforce activity.</p>
                 </div>
                 <button
-                    onClick={fetchDashboardStats}
+                    onClick={() => fetchDashboardStats(false)}
                     className="p-2 sm:p-2.5 bg-card border border-border hover:bg-muted rounded-full transition-colors group shadow-sm"
                     title="Refresh Data"
                 >
-                    <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground group-hover:text-primary transition-colors ${loading ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground group-hover:text-primary transition-colors ${isRefreshing ? 'animate-spin' : ''}`} />
                 </button>
             </div>
 
@@ -99,7 +124,6 @@ const AdminDashboard = () => {
                                 key={item.id || i}
                                 className="flex flex-col md:flex-row md:items-center justify-between p-5 sm:p-6 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors gap-4 sm:gap-6"
                             >
-
                                 {/* Left: Profile & Zone */}
                                 <div className="flex items-center gap-3 sm:gap-4 md:w-64 shrink-0">
                                     <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary flex items-center justify-center text-sm sm:text-base font-bold text-primary-foreground shadow-inner">
@@ -113,7 +137,7 @@ const AdminDashboard = () => {
                                     </div>
                                 </div>
 
-                                {/* Middle: School & Category Context (Card style on mobile, inline on desktop) */}
+                                {/* Middle: School & Category Context */}
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 bg-muted/40 md:bg-transparent rounded-xl p-3.5 md:p-0 flex-1 border border-border/50 md:border-none">
                                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                         <School className="w-4 h-4 text-indigo-500 shrink-0" />

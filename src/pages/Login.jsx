@@ -34,13 +34,10 @@ const Login = () => {
             if (data.access_token) {
                 setAxiosToken(data.access_token);
 
-                // CRITICAL FIX: Merge role AND isFirstLogin into the user object for Redux
                 const completeUser = data.user
                     ? { ...data.user, role: data.role, isFirstLogin: data.isFirstLogin }
                     : { role: data.role, isFirstLogin: data.isFirstLogin, name: "New User" };
 
-                // Dispatch to Redux. 
-                // PublicRoute will instantly unmount this page and redirect the user!
                 dispatch(setCredentials({
                     user: completeUser,
                     access_token: data.access_token
@@ -48,7 +45,38 @@ const Login = () => {
             }
         } catch (error) {
             console.error("Login Error:", error);
-            setErrorMsg(error.response?.data?.message || "Invalid credentials. Please try again.");
+
+            // --- USER-FRIENDLY ERROR MAPPING ---
+            let friendlyMessage = "Unable to sign in. Please try again.";
+
+            if (!error.response) {
+                // The request was made but no response was received (e.g., no internet, server is completely down)
+                friendlyMessage = "Cannot connect to the server. Please check your internet connection.";
+            } else {
+                const status = error.response.status;
+                const backendMsg = error.response.data?.message?.toLowerCase() || "";
+
+                // Map specific status codes to friendly messages
+                if (status === 400 || status === 401) {
+                    friendlyMessage = "Incorrect Employee ID or password. Please try again.";
+
+                    // Catch weird edge cases where a token error leaks through on login
+                    if (backendMsg.includes("token") || backendMsg.includes("jwt")) {
+                        friendlyMessage = "Authentication error. Please refresh the page and try again.";
+                    }
+                } else if (status === 403) {
+                    friendlyMessage = "Your account has been restricted. Please contact your administrator.";
+                } else if (status === 404) {
+                    friendlyMessage = "Account not found. Please double-check your Employee ID.";
+                } else if (status === 429) {
+                    friendlyMessage = "Too many failed attempts. Please wait a few minutes and try again.";
+                } else if (status >= 500) {
+                    friendlyMessage = "We're experiencing technical difficulties on our end. Please try again later.";
+                }
+            }
+
+            // Set the friendly message to your existing UI alert state
+            setErrorMsg(friendlyMessage);
         } finally {
             setIsLoading(false);
         }

@@ -1,43 +1,47 @@
 import { useState } from "react";
 import { useSelector } from "react-redux";
-import { Mail, Phone, ShieldCheck, MapPin, School, Edit2, CheckCircle } from "lucide-react";
+import { Mail, Phone, ShieldCheck, MapPin, School, Edit2 } from "lucide-react";
+import { toast } from "sonner";
+import axios from "axios";
 import ChangePasswordModal from "../../modals/employee/ChangePasswordModal";
 
 const MyProfile = () => {
-    const { user } = useSelector((state) => state.auth);
+    const { user, token } = useSelector((state) => state.auth);
 
     // Modal & Action States
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [successMsg, setSuccessMsg] = useState("");
 
     if (!user) return null;
 
-    // --- MOCK DATA FOR DEMO (Fallback if not in Redux) ---
-    // In a real scenario, this comes from the backend via the `user` object
-    const allottedLocation = user.location || "Sultanpur, Uttar Pradesh";
-    const assignedSchools = user.assignedSchools || [
-        "Lincoln High School",
-        "Washington Middle School",
-        "Roosevelt Elementary"
-    ];
+    // Dynamic data fallback
+    const allottedLocation = user.zone || "Unassigned Zone";
 
-    const handlePasswordChange = (currentPassword, newPassword) => {
+    // Extract school names safely from assignments array
+    const assignedSchools = user.assignments?.length > 0
+        ? [...new Set(user.assignments.map(a => a.school?.schoolName || "Unknown School"))]
+        : ["No assigned schools"];
+
+    const handlePasswordChange = async (newPassword) => {
         setIsSubmitting(true);
+        const toastId = toast.loading("Updating password...");
 
-        // Mock API Call
-        console.log("Updating password...", { currentPassword, newPassword });
+        try {
+            await axios.put('/api/employee/profile/password', { newPassword }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
 
-        setTimeout(() => {
-            setIsSubmitting(false);
             setIsPasswordModalOpen(false);
-            setSuccessMsg("Password updated successfully!");
-            setTimeout(() => setSuccessMsg(""), 4000);
-        }, 1500);
+            toast.success("Password updated successfully!", { id: toastId });
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to update password.", { id: toastId });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6 md:space-y-8 animate-fade-in pb-20">
+        <div className="max-w-3xl mx-auto space-y-6 md:space-y-8 animate-fade-in pb-20 p-4 sm:p-0">
 
             {/* Page Header */}
             <div>
@@ -46,14 +50,6 @@ const MyProfile = () => {
                 </h1>
                 <p className="text-muted-foreground mt-1">Manage your personal information and security.</p>
             </div>
-
-            {/* Success Toast */}
-            {successMsg && (
-                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-4 py-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 shadow-sm">
-                    <CheckCircle className="w-5 h-5 shrink-0" />
-                    <p className="font-bold text-sm">{successMsg}</p>
-                </div>
-            )}
 
             {/* Profile Card */}
             <div className="bg-card rounded-2xl shadow-sm border border-border p-6 md:p-8 relative overflow-hidden h-full">
@@ -70,7 +66,7 @@ const MyProfile = () => {
                         <div>
                             <h2 className="font-display font-bold text-2xl text-foreground">{user.name}</h2>
                             <p className="text-sm font-bold text-primary bg-primary/10 border border-primary/20 px-3 py-0.5 rounded-full w-fit mt-1.5 uppercase tracking-wide">
-                                {user.role || 'Employee'}
+                                {user.designation || 'Employee'}
                             </p>
                         </div>
                     </div>
@@ -118,7 +114,7 @@ const MyProfile = () => {
                             </div>
                             <div className="overflow-hidden">
                                 <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">Phone Number</p>
-                                <p className="text-sm font-bold text-foreground truncate">{user.mobile || "+91 9876543210"}</p>
+                                <p className="text-sm font-bold text-foreground truncate">{user.mobile || "Not Provided"}</p>
                             </div>
                         </div>
                     </div>
@@ -144,9 +140,9 @@ const MyProfile = () => {
                             <div className="w-full">
                                 <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider mb-2">Allotted Schools</p>
                                 <div className="flex flex-wrap gap-2">
-                                    {assignedSchools.map((school, index) => (
+                                    {assignedSchools.map((schoolName, index) => (
                                         <span key={index} className="text-xs font-bold bg-muted text-muted-foreground px-2.5 py-1 rounded-md border border-border">
-                                            {school}
+                                            {schoolName}
                                         </span>
                                     ))}
                                 </div>

@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom"; // <-- Added useLocation
 import { useSelector, useDispatch } from "react-redux";
 import { toggleTheme } from "@/store/slices/themeSlice";
 import { logout } from "@/store/slices/authSlice";
 import api, { setAxiosToken } from "@/api/axios";
+import { io } from "socket.io-client"; // <-- Added socket.io
 
 import {
     LayoutDashboard, User, Calendar, BellRing, FileText,
@@ -12,19 +13,73 @@ import {
 
 import EmployeeSettingsModal from "../../modals/employee/EmployeeSettingsModal";
 
+// Setup global socket connection
+const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5000");
+
 const EmployeeNavbar = () => {
     const navigate = useNavigate();
+    const location = useLocation(); // <-- To track what page we are on
     const dispatch = useDispatch();
 
-    const [notifCount] = useState(2); // Hardcoded for demo
+    const [notifCount, setNotifCount] = useState(0); // <-- Made dynamic
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
     const mobileMenuRef = useRef(null);
 
-    const { user } = useSelector((state) => state.auth);
+    const { user, token } = useSelector((state) => state.auth);
     const themeMode = useSelector((state) => state.theme.mode);
 
+    // 1. Fetch initial unread count when Navbar mounts
+    useEffect(() => {
+        const fetchInitialUnreadCount = async () => {
+            if (!token) return;
+            try {
+                const response = await api.get('/employee/notifications');
+                if (response.data.success) {
+                    const unread = response.data.data.filter(n => !n.isRead).length;
+                    setNotifCount(unread);
+                }
+            } catch (error) {
+                console.error("Failed to fetch initial notifications count:", error);
+            }
+        };
+        fetchInitialUnreadCount();
+    }, [token]);
+
+    // 2. Global Socket Listener for new notifications
+    useEffect(() => {
+        if (!user) return;
+
+        const currentUserId = user.id || user._id;
+        socket.emit("join_room", currentUserId);
+
+        const handleNewNotification = () => {
+            // Play Ting Sound globally
+            const audio = new Audio('/sounds/notification-ting.mp3');
+            audio.play().catch(err => console.log("Audio blocked by browser:", err));
+
+            // Only increment badge if they are NOT currently looking at the notifications page
+            if (location.pathname !== '/employee/notifications') {
+                setNotifCount(prev => prev + 1);
+            }
+        };
+
+        socket.on("new_notification", handleNewNotification);
+
+        return () => {
+            socket.off("new_notification", handleNewNotification);
+        };
+    }, [user, location.pathname]); // Re-bind if route changes
+
+    // 3. Auto-clear the badge when navigating TO the notifications page
+    useEffect(() => {
+        if (location.pathname === '/employee/notifications') {
+            setNotifCount(0);
+        }
+    }, [location.pathname]);
+
+    // --- Click Outside Mobile Menu ---
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
@@ -59,7 +114,6 @@ const EmployeeNavbar = () => {
             : "text-muted-foreground hover:text-foreground"
         }`;
 
-    // --- NAV ITEMS UPDATED (Media Upload Removed) ---
     const navItems = [
         { path: "/employee/dashboard", icon: <LayoutDashboard className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: "Dashboard" },
         { path: "/employee/assignments", icon: <Calendar className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: "Assigned Schools" },

@@ -7,7 +7,7 @@ import { io } from "socket.io-client";
 // Setup socket connection (Adjust URL if needed)
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
-const Notifications = () => {
+const AdminNotifications = () => {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -199,4 +199,4 @@ const Notifications = () => {
     );
 };
 
-export default Notifications;
+export default AdminNotifications;

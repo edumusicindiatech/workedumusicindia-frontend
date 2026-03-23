@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { X, CheckCircle2, Clock, MapPin, UserX, PartyPopper, ChevronRight, ChevronLeft, CalendarDays, Plus, Camera } from "lucide-react";
+import { useSelector } from "react-redux";
+import axios from "axios";
+import { X, CheckCircle2, Clock, MapPin, UserX, PartyPopper, ChevronRight, ChevronLeft, CalendarDays, Plus, Camera, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Import Modals
 import AddEventModal from "../admin/AddEventModal";
-import MediaUploadModal from "./MediaUploadModal"; // <-- NEW
+import MediaUploadModal from "./MediaUploadModal";
 
-const SchoolDetailsModal = ({ isOpen, onClose, school }) => {
+const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
+    const { token } = useSelector((state) => state.auth);
     const [activeCategory, setActiveCategory] = useState(null);
 
     // Modal States
@@ -25,23 +27,43 @@ const SchoolDetailsModal = ({ isOpen, onClose, school }) => {
 
     if (!isOpen || !school) return null;
 
-    // --- HANDLERS ---
-    const handleSaveEvent = (eventData) => {
+    // --- API HANDLERS ---
+    const handleSaveEvent = async (eventData) => {
         setIsSavingEvent(true);
-        console.log("Saving new event:", eventData);
-        setTimeout(() => {
-            setIsSavingEvent(false);
+        try {
+            // Append the School ID and Band to whatever the inner modal returns
+            const payload = {
+                ...eventData,
+                schoolId: school.id,
+                band: eventModalData.categoryName
+            };
+            await axios.post('/api/employee/events', payload, { headers: { Authorization: `Bearer ${token}` } });
+
             setEventModalData({ isOpen: false, categoryName: null });
-        }, 1000);
+            if (onRefresh) onRefresh(); // Refresh background stats
+        } catch (error) {
+            alert("Failed to save event. " + (error.response?.data?.message || ""));
+        } finally {
+            setIsSavingEvent(false);
+        }
     };
 
-    const handleUploadMedia = (mediaData) => {
+    const handleUploadMedia = async (mediaData) => {
         setIsUploadingMedia(true);
-        console.log("Uploading files:", mediaData);
-        setTimeout(() => {
-            setIsUploadingMedia(false);
+        try {
+            const payload = {
+                ...mediaData,
+                schoolId: school.id,
+                band: mediaModalData.categoryName
+            };
+            await axios.post('/api/employee/media', payload, { headers: { Authorization: `Bearer ${token}` } });
+
             setMediaModalData({ isOpen: false, categoryName: null });
-        }, 1500);
+        } catch (error) {
+            alert("Failed to upload media. " + (error.response?.data?.message || ""));
+        } finally {
+            setIsUploadingMedia(false);
+        }
     };
 
     return (
@@ -71,7 +93,7 @@ const SchoolDetailsModal = ({ isOpen, onClose, school }) => {
                 </div>
 
                 {/* SCROLLABLE BODY */}
-                <div className="p-6 overflow-y-auto flex-1">
+                <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
 
                     {/* VIEW 1: CATEGORY SELECTION */}
                     {!activeCategory ? (
@@ -95,31 +117,14 @@ const SchoolDetailsModal = ({ isOpen, onClose, school }) => {
 
                                         {/* Action Buttons */}
                                         <div className="flex items-center gap-2 mt-4 sm:mt-0 shrink-0">
-
-                                            {/* NEW: Upload Media Button */}
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setMediaModalData({ isOpen: true, categoryName: category.name });
-                                                }}
-                                                className="h-9 rounded-lg"
-                                            >
+                                            <Button variant="outline" size="sm" className="h-9 rounded-lg"
+                                                onClick={(e) => { e.stopPropagation(); setMediaModalData({ isOpen: true, categoryName: category.name }); }}>
                                                 <Camera className="w-4 h-4 sm:mr-1.5" />
                                                 <span className="hidden sm:inline">Upload</span>
                                             </Button>
 
-                                            {/* Add Event Button */}
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setEventModalData({ isOpen: true, categoryName: category.name });
-                                                }}
-                                                className="h-9 rounded-lg border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/50 hover:text-blue-500"
-                                            >
+                                            <Button variant="outline" size="sm" className="h-9 rounded-lg border-blue-500/30 text-blue-600 hover:bg-blue-500/10 hover:border-blue-500/50"
+                                                onClick={(e) => { e.stopPropagation(); setEventModalData({ isOpen: true, categoryName: category.name }); }}>
                                                 <Plus className="w-4 h-4 mr-1.5" /> Event
                                             </Button>
 
@@ -144,7 +149,6 @@ const SchoolDetailsModal = ({ isOpen, onClose, school }) => {
                                     <span className="text-sm font-medium text-muted-foreground hidden sm:inline">Last 30 Days</span>
                                 </div>
                                 <div className="flex gap-2">
-                                    {/* Sub-view Action Buttons */}
                                     <Button size="sm" variant="outline" onClick={() => setMediaModalData({ isOpen: true, categoryName: activeCategory.name })} className="h-8 rounded-lg text-xs">
                                         <Camera className="w-3.5 h-3.5 mr-1.5" /> Media
                                     </Button>

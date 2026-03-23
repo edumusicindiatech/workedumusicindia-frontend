@@ -3,7 +3,6 @@ import { Lock, Eye, EyeOff, Loader2, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const ChangePasswordModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
-    const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPasswords, setShowPasswords] = useState(false);
@@ -12,7 +11,6 @@ const ChangePasswordModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
     // Reset fields when modal opens
     useEffect(() => {
         if (isOpen) {
-            setCurrentPassword("");
             setNewPassword("");
             setConfirmPassword("");
             setShowPasswords(false);
@@ -33,7 +31,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
             return;
         }
 
-        onSubmit(currentPassword, newPassword);
+        onSubmit(newPassword);
     };
 
     return (
@@ -66,15 +64,6 @@ const ChangePasswordModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
                     )}
 
                     <div className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-foreground">Current Password</label>
-                            <input
-                                type={showPasswords ? "text" : "password"}
-                                value={currentPassword}
-                                onChange={(e) => setCurrentPassword(e.target.value)}
-                                className="w-full h-11 rounded-xl border border-input bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
-                            />
-                        </div>
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-foreground">New Password</label>
                             <input
@@ -114,7 +103,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
                     </Button>
                     <Button
                         onClick={handleSubmit}
-                        disabled={!currentPassword || !newPassword || !confirmPassword || actionLoading}
+                        disabled={!newPassword || !confirmPassword || actionLoading}
                         className="flex-1 h-11 rounded-xl font-bold shadow-glow"
                     >
                         {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Update Password"}

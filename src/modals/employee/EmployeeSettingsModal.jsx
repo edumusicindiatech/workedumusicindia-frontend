@@ -1,22 +1,62 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Settings, X, Globe, Mail } from "lucide-react";
+import { Settings, X, Globe, Mail, Loader2 } from "lucide-react";
 import CustomSelect from "../../components/ui/CustomSelect";
+import { toast } from "sonner";
+import axios from "axios"; // or import api from "../../api/axios" if you use interceptors
 
 const EmployeeSettingsModal = ({ isOpen, onClose }) => {
+    const { user, token } = useSelector((state) => state.auth);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const [settings, setSettings] = useState({
         language: "English",
-        emailNotifications: true, // Only employee email settings remain
+        emailNotifications: true,
     });
+
+    // Populate form with existing user data when modal opens
+    useEffect(() => {
+        if (isOpen && user?.preferences) {
+            setSettings({
+                language: user.preferences.systemLanguage || "English",
+                // Fallback to true if undefined
+                emailNotifications: user.preferences.employeeNotifications ?? true,
+            });
+        }
+    }, [isOpen, user]);
 
     if (!isOpen) return null;
 
-    const handleSave = () => {
-        console.log("Saving employee settings:", settings);
-        // Add API call to save settings here
-        onClose();
+    const handleSave = async () => {
+        setIsSubmitting(true);
+        const toastId = toast.loading("Saving preferences...");
+
+        try {
+            await axios.put('/api/employee/settings/preferences', {
+                systemLanguage: settings.language,
+                employeeNotifications: settings.emailNotifications
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            toast.success("Preferences updated successfully!", { id: toastId });
+
+            // Close modal after success
+            onClose();
+
+            // Note: If your app requires the UI to immediately reflect the new language/settings 
+            // across all components, you might want to dispatch a Redux action here to update 
+            // the user object in your store (e.g., dispatch(updateUserPreferences(response.data.preferences))).
+
+        } catch (error) {
+            console.error("Failed to save settings:", error);
+            toast.error(error.response?.data?.message || "Failed to update preferences.", { id: toastId });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -28,7 +68,7 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
                     <h2 className="text-xl font-bold flex items-center gap-2 text-foreground">
                         <Settings className="w-5 h-5 text-primary" /> Account Settings
                     </h2>
-                    <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors bg-background border border-border">
+                    <button onClick={onClose} disabled={isSubmitting} className="p-2 hover:bg-muted rounded-full transition-colors bg-background border border-border disabled:opacity-50">
                         <X className="w-4 h-4 text-muted-foreground" />
                     </button>
                 </div>
@@ -80,9 +120,15 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
 
                 {/* Footer */}
                 <div className="bg-muted/10 p-6 border-t border-border flex justify-end gap-3 shrink-0">
-                    <Button variant="ghost" onClick={onClose} className="rounded-xl font-semibold flex-1">Cancel</Button>
-                    <Button className="gap-2 shadow-glow rounded-xl font-bold flex-1" onClick={handleSave}>
-                        Save Changes
+                    <Button variant="ghost" onClick={onClose} disabled={isSubmitting} className="rounded-xl font-semibold flex-1">
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleSave}
+                        disabled={isSubmitting}
+                        className="gap-2 shadow-glow rounded-xl font-bold flex-1"
+                    >
+                        {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Save Changes"}
                     </Button>
                 </div>
             </div>
