@@ -100,14 +100,14 @@ const AttendanceFeed = () => {
         };
 
         socket.on("new_notification", handleRealTimeUpdate);
-
+        socket.on("operations_update", handleRealTimeUpdate);
         socket.on("operations_update", (data) => {
             console.log("Silent refresh triggered...");
             fetchFeed(false);
         });
         return () => {
             socket.off("new_notification", handleRealTimeUpdate)
-            socket.off("operations_update");
+            socket.off("operations_update", handleRealTimeUpdate);
         };
     }, [currentUserId, fetchFeed]);
 
