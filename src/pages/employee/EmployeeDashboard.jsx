@@ -4,17 +4,23 @@ import axios from "axios";
 import api from "../../api/axios";
 import {
     MapPin, LogOut, Navigation, Clock, UserX,
-    CalendarX, Loader2, School, PartyPopper, Sparkles
+    CalendarX, Loader2, School, PartyPopper, Sparkles, CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner"; // <-- Premium Toasts Added
 
 import CheckInModal from "../../modals/employee/CheckInModal";
 import CheckOutModal from "../../modals/employee/CheckOutModal";
 import AbsentModal from "../../modals/employee/AbsentModal";
 import HolidayModal from "../../modals/employee/HolidayModal";
 
+// --- SOCKET IMPORT FOR REAL-TIME REFRESH ---
+import { io } from "socket.io-client";
+const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5000");
+
 const EmployeeDashboard = () => {
-    const { user } = useSelector((state) => state.auth);
+    // Fixed: Added 'token' extraction to prevent undefined errors in your axios calls!
+    const { user, token } = useSelector((state) => state.auth);
 
     const [assignments, setAssignments] = useState([]);
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -38,6 +44,7 @@ const EmployeeDashboard = () => {
             }
         } catch (err) {
             console.error("Failed to fetch schedule", err);
+            toast.error("Failed to load your schedule.");
         } finally {
             setLoading(false);
         }
@@ -51,35 +58,72 @@ const EmployeeDashboard = () => {
     }, [fetchSchedule]);
 
     // ==========================================
-    // 2. HELPERS & ACTIONS
+    // 2. REAL-TIME DATA SYNC (THE FIX!)
+    // ==========================================
+    useEffect(() => {
+        if (!user) return;
+        const currentUserId = user.id || user._id;
+
+        // Join the room to listen for Admin updates
+        socket.emit("join_room", currentUserId);
+
+        const handleRealTimeUpdate = () => {
+            console.log("Schedule updated by Admin! Refreshing dashboard...");
+            fetchSchedule();
+        };
+
+        socket.on("new_notification", handleRealTimeUpdate);
+
+        return () => {
+            socket.off("new_notification", handleRealTimeUpdate);
+        };
+    }, [fetchSchedule, user]);
+
+    // ==========================================
+    // 3. HELPERS & ACTIONS
     // ==========================================
     const openGoogleMaps = (coords) => {
         const [lng, lat] = coords;
-        window.open(`http://maps.google.com/maps?q=${lat},${lng}`, '_blank');
+        window.open(`http://googleusercontent.com/maps.google.com/maps?q=${lat},${lng}`, '_blank');
     };
 
     // Generic GPS wrapper for API calls
     const executeWithGPS = (actionFn) => {
         if (!navigator.geolocation) {
-            return alert("GPS is not supported by your browser. Cannot verify location.");
+            return toast.error("GPS is not supported by your browser. Cannot verify location.");
         }
         setActionLoading(true);
-        navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-                await actionFn(pos.coords.latitude, pos.coords.longitude);
-            },
-            (err) => {
-                console.error("GPS Error", err);
-                alert("Please enable GPS/Location Services to perform this action.");
-                setActionLoading(false);
-            },
-            { enableHighAccuracy: true }
-        );
+
+        toast.promise(
+            new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                        try {
+                            await actionFn(pos.coords.latitude, pos.coords.longitude);
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
+                    },
+                    (err) => {
+                        console.error("GPS Error", err);
+                        reject(new Error("Please enable GPS/Location Services to perform this action."));
+                    },
+                    { enableHighAccuracy: true }
+                );
+            }),
+            {
+                loading: 'Verifying your location...',
+                success: 'Location verified successfully!',
+                error: (err) => err.message || 'Action failed.'
+            }
+        ).finally(() => setActionLoading(false));
     };
 
     // --- Specific API Submissions ---
     const submitCheckIn = async (visitId, { lateReason, eventNote }) => {
         const visit = assignments.find(v => v.id === visitId);
+
         executeWithGPS(async (lat, lng) => {
             try {
                 await axios.post('/api/employee/check-in', {
@@ -88,17 +132,17 @@ const EmployeeDashboard = () => {
                 }, { headers: { Authorization: `Bearer ${token}` } });
 
                 setCheckInModal({ isOpen: false, visit: null, isLate: false });
-                fetchSchedule(); // Refresh to show Check Out button
+                toast.success(`Successfully checked in at ${visit.schoolName}!`);
+                fetchSchedule();
             } catch (err) {
-                alert(err.response?.data?.message || "Check-in failed. Are you within 100 meters?");
-            } finally {
-                setActionLoading(false);
+                throw new Error(err.response?.data?.message || "Check-in failed. Are you within 100 meters?");
             }
         });
     };
 
     const submitCheckOut = async (visitId, { overtimeReason }) => {
         const visit = assignments.find(v => v.id === visitId);
+
         executeWithGPS(async (lat, lng) => {
             try {
                 await axios.post('/api/employee/check-out', {
@@ -107,17 +151,18 @@ const EmployeeDashboard = () => {
                 }, { headers: { Authorization: `Bearer ${token}` } });
 
                 setCheckOutModal({ isOpen: false, visit: null, overtimeMinutes: 0 });
-                fetchSchedule(); // Refresh to remove card from dashboard
+                toast.success(`Successfully checked out of ${visit.schoolName}!`);
+                fetchSchedule();
             } catch (err) {
-                alert(err.response?.data?.message || "Check-out failed. Must be at school.");
-            } finally {
-                setActionLoading(false);
+                throw new Error(err.response?.data?.message || "Check-out failed. Must be at school.");
             }
         });
     };
 
     const submitStatus = async (target, statusType, reason) => {
         setActionLoading(true);
+        const loadingId = toast.loading(`Marking as ${statusType}...`);
+
         try {
             const endpoint = target === 'ALL' ? '/api/employee/mark-day-status' : '/api/employee/mark-status';
             const payload = target === 'ALL'
@@ -129,42 +174,60 @@ const EmployeeDashboard = () => {
             if (statusType === 'Absent') setAbsentModal({ isOpen: false, target: null });
             if (statusType === 'Holiday') setHolidayModal({ isOpen: false, target: null });
 
-            fetchSchedule(); // Refresh to remove card(s)
+            toast.success(`Successfully marked as ${statusType}.`, { id: loadingId });
+            fetchSchedule();
         } catch (err) {
-            alert(err.response?.data?.message || `Failed to mark ${statusType}.`);
+            toast.error(err.response?.data?.message || `Failed to mark ${statusType}.`, { id: loadingId });
         } finally {
             setActionLoading(false);
         }
     };
 
     // ==========================================
-    // 3. RENDER LOGIC
+    // 4. RENDER LOGIC
     // ==========================================
     if (loading) {
         return (
-            <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
-                <Loader2 className="w-10 h-10 animate-spin text-primary" />
-                <p className="text-muted-foreground animate-pulse font-medium">Syncing live schedule...</p>
+            <div className="h-[70vh] flex flex-col items-center justify-center gap-5">
+                <div className="relative flex items-center justify-center">
+                    <div className="absolute inset-0 w-16 h-16 bg-primary/20 rounded-full animate-ping" />
+                    <div className="w-16 h-16 bg-card border border-border rounded-2xl shadow-xl flex items-center justify-center relative z-10">
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    </div>
+                </div>
+                <p className="text-muted-foreground font-medium animate-pulse tracking-wide">Syncing live schedule...</p>
             </div>
         );
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 pb-20 p-4 animate-fade-in">
+        <div className="max-w-5xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
 
             {/* Header & Global Controls */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl md:text-3xl font-bold text-foreground">Welcome, {user?.name?.split(' ')[0]} 👋</h1>
-                    <p className="text-muted-foreground mt-1">Here is your route for today.</p>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 pb-6 border-b border-border/40">
+                <div className="space-y-1.5">
+                    <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-linear-to-r from-primary to-primary/60">
+                        Welcome, {user?.name?.split(' ')[0]} 👋
+                    </h1>
+                    <p className="text-muted-foreground font-medium flex items-center gap-2 text-sm sm:text-base">
+                        Here is your route for today.
+                    </p>
                 </div>
 
                 {assignments.length > 0 && (
-                    <div className="flex gap-2">
-                        <Button variant="outline" className="text-amber-500 border-amber-500/30 hover:bg-amber-500/10 flex-1 sm:flex-none" onClick={() => setHolidayModal({ isOpen: true, target: 'ALL' })}>
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <Button
+                            variant="outline"
+                            className="flex-1 md:flex-none h-11 bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 rounded-xl font-semibold transition-all"
+                            onClick={() => setHolidayModal({ isOpen: true, target: 'ALL' })}
+                        >
                             <CalendarX className="w-4 h-4 mr-2" /> Day Holiday
                         </Button>
-                        <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10 flex-1 sm:flex-none" onClick={() => setAbsentModal({ isOpen: true, target: 'ALL' })}>
+                        <Button
+                            variant="outline"
+                            className="flex-1 md:flex-none h-11 bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20 hover:text-destructive rounded-xl font-semibold transition-all"
+                            onClick={() => setAbsentModal({ isOpen: true, target: 'ALL' })}
+                        >
                             <UserX className="w-4 h-4 mr-2" /> Day Absent
                         </Button>
                     </div>
@@ -173,33 +236,31 @@ const EmployeeDashboard = () => {
 
             {/* Assignments List */}
             {assignments.length === 0 ? (
-                /* --- NEW BEAUTIFUL "ALL CAUGHT UP" UI --- */
-                <div className="bg-card border border-border rounded-3xl p-12 mt-8 shadow-sm text-center flex flex-col items-center relative overflow-hidden">
-                    {/* Decorative Background Elements */}
-                    <div className="absolute top-0 left-0 w-full h-2 bg-linear-to-r from-emerald-400 to-teal-500" />
-                    <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-                    <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
+                /* --- PREMIUM "ALL CAUGHT UP" STATE --- */
+                <div className="bg-card border border-border rounded-4xl p-10 sm:p-16 mt-8 shadow-sm text-center flex flex-col items-center relative overflow-hidden group hover:shadow-md transition-shadow">
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-emerald-400 via-teal-400 to-emerald-500" />
+                    <div className="absolute -top-32 -right-32 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-emerald-500/20 transition-colors duration-700" />
+                    <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-teal-500/20 transition-colors duration-700" />
 
-                    {/* Animated Center Icon */}
-                    <div className="relative w-20 h-20 mb-6">
+                    <div className="relative w-24 h-24 mb-6">
                         <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping opacity-75" />
-                        <div className="relative w-full h-full bg-emerald-100 dark:bg-emerald-500/20 rounded-full flex items-center justify-center border-4 border-white dark:border-card shadow-sm z-10">
-                            <PartyPopper className="w-10 h-10 text-emerald-500" />
+                        <div className="relative w-full h-full bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center border-4 border-white dark:border-card shadow-sm z-10">
+                            <PartyPopper className="w-12 h-12 text-emerald-500 dark:text-emerald-400" />
                         </div>
                     </div>
 
-                    <h2 className="text-3xl font-extrabold text-foreground mb-3 tracking-tight">Shift Complete!</h2>
-                    <p className="text-muted-foreground mb-8 max-w-md text-lg">
-                        Great job today, {user?.name?.split(' ')[0]}! You have successfully completed all your assigned school visits.
+                    <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-3 tracking-tight">Shift Complete!</h2>
+                    <p className="text-muted-foreground mb-8 max-w-md text-base sm:text-lg leading-relaxed">
+                        Great job today, {user?.name?.split(' ')[0]}! You have successfully conquered all your assigned school visits.
                     </p>
 
-                    <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-5 py-2.5 rounded-full z-10 border border-emerald-500/20">
+                    <div className="flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-6 py-3 rounded-full z-10 border border-emerald-500/20 backdrop-blur-sm">
                         <Sparkles className="w-4 h-4" />
                         <span>Time to relax and recharge</span>
                     </div>
                 </div>
             ) : (
-                <div className="space-y-6 mt-6">
+                <div className="space-y-5 mt-6">
                     {assignments.map((visit) => {
                         // Safe Time Parsing for the live timer
                         const [time, modifier] = visit.startTime.split(' ');
@@ -225,74 +286,118 @@ const EmployeeDashboard = () => {
                         const isActive = visit.status === 'checked_in';
 
                         return (
-                            <div key={visit.id} className={`bg-card border rounded-2xl shadow-sm p-6 relative transition-all duration-300 ${isActive ? 'border-primary ring-1 ring-primary/20 scale-[1.01]' : 'border-border'}`}>
+                            <div
+                                key={visit.id}
+                                className={`group relative bg-card rounded-3xl p-5 sm:p-7 transition-all duration-300 border ${isActive
+                                        ? 'border-emerald-500/50 shadow-[0_0_30px_-5px_rgba(16,185,129,0.15)] scale-[1.01] dark:bg-emerald-950/10'
+                                        : 'border-border shadow-sm hover:shadow-md hover:border-primary/30'
+                                    }`}
+                            >
 
                                 {/* Status Banner Line */}
-                                <div className={`absolute top-0 left-0 w-full h-1.5 ${isActive ? 'bg-emerald-500' : isLateLive ? 'bg-destructive' : 'bg-primary'}`} />
+                                {isActive && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-emerald-500 rounded-b-full shadow-[0_0_10px_rgba(16,185,129,0.8)]" />}
+                                {isPending && <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 rounded-b-full ${isLateLive ? 'bg-destructive/80' : 'bg-primary/50'}`} />}
 
-                                <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                                <div className="flex flex-col lg:flex-row justify-between gap-6">
                                     {/* Left Info */}
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-bold uppercase tracking-wide">
+                                    <div className="flex-1">
+                                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                                            <span className="px-3.5 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-bold uppercase tracking-wider">
                                                 {visit.category}
                                             </span>
                                             {isActive && (
-                                                <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-full text-xs font-bold uppercase flex items-center gap-1">
-                                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Active Shift
+                                                <span className="px-3.5 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                                                    <span className="relative flex h-2 w-2">
+                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                    </span>
+                                                    Active Shift
                                                 </span>
                                             )}
                                         </div>
-                                        <h2 className="text-xl font-bold text-foreground flex items-center gap-2 mt-3">
-                                            <School className="w-5 h-5 text-muted-foreground" /> {visit.schoolName}
+                                        <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-start sm:items-center gap-2.5 leading-tight">
+                                            <div className="p-2 bg-muted rounded-xl shrink-0 mt-1 sm:mt-0">
+                                                <School className="w-5 h-5 text-primary" />
+                                            </div>
+                                            {visit.schoolName}
                                         </h2>
-                                        <p className="text-sm text-muted-foreground flex items-start gap-1.5 mt-1.5">
-                                            <MapPin className="w-4 h-4 mt-0.5 shrink-0" /> {visit.address}
+                                        <p className="text-sm sm:text-base text-muted-foreground flex items-start gap-2 mt-3 ml-1 max-w-2xl leading-relaxed">
+                                            <MapPin className="w-4 h-4 mt-1 shrink-0 text-muted-foreground/70" />
+                                            {visit.address}
                                         </p>
                                     </div>
 
                                     {/* Right Timer / Time info */}
-                                    <div className="bg-muted/30 p-3 rounded-xl border border-border/50 text-left md:text-right w-full md:w-auto min-w-35">
-                                        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Schedule</p>
-                                        <p className="text-base font-bold text-foreground">{visit.startTime} - {visit.endTime}</p>
+                                    <div className="bg-muted/40 dark:bg-muted/20 p-4 rounded-2xl border border-border/50 text-left lg:text-right w-full lg:w-auto min-w-50 flex flex-row lg:flex-col justify-between lg:justify-center items-center lg:items-end">
+                                        <div>
+                                            <p className="text-[11px] sm:text-xs text-muted-foreground font-bold uppercase tracking-widest mb-1">Schedule</p>
+                                            <p className="text-lg sm:text-xl font-extrabold text-foreground">{visit.startTime} - {visit.endTime}</p>
+                                        </div>
 
                                         {/* Live Running Timer */}
                                         {isPending && (
-                                            <p className={`text-sm font-bold mt-1.5 flex items-center md:justify-end gap-1 ${isLateLive ? 'text-destructive' : 'text-emerald-600'}`}>
+                                            <div className={`mt-0 lg:mt-2 px-3 py-1.5 rounded-lg flex items-center gap-1.5 border ${isLateLive
+                                                    ? 'bg-destructive/10 text-destructive border-destructive/20'
+                                                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                                }`}>
                                                 <Clock className="w-4 h-4" />
-                                                {isLateLive ? `Late by ${timerText}` : `Starts in ${timerText}`}
-                                            </p>
+                                                <span className="text-sm font-bold">
+                                                    {isLateLive ? `Late by ${timerText}` : `Starts in ${timerText}`}
+                                                </span>
+                                            </div>
                                         )}
                                         {isActive && visit.overtimeMinutes > 0 && (
-                                            <p className="text-sm font-bold mt-1.5 flex items-center md:justify-end gap-1 text-amber-500">
-                                                <Clock className="w-4 h-4" /> Overtime: {visit.overtimeMinutes}m
-                                            </p>
+                                            <div className="mt-0 lg:mt-2 px-3 py-1.5 rounded-lg flex items-center gap-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                                <Clock className="w-4 h-4 animate-pulse" />
+                                                <span className="text-sm font-bold">Overtime: {visit.overtimeMinutes}m</span>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="flex flex-wrap items-center gap-3 mt-6 pt-5 border-t border-border">
-                                    <Button variant="outline" onClick={() => openGoogleMaps(visit.coordinates)} className="flex-1 sm:flex-none">
-                                        <Navigation className="w-4 h-4 mr-2 text-primary" /> Maps
+                                <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mt-6 sm:mt-7 pt-5 sm:pt-6 border-t border-border/60">
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() => openGoogleMaps(visit.coordinates)}
+                                        className="w-full sm:w-auto h-12 px-6 rounded-xl font-semibold hover:bg-primary/10 hover:text-primary transition-colors"
+                                    >
+                                        <Navigation className="w-4 h-4 mr-2" /> Get Directions
                                     </Button>
 
-                                    <div className="flex-1 flex gap-3 justify-end">
+                                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:flex-1 sm:justify-end">
                                         {isPending ? (
                                             <>
-                                                <Button variant="ghost" className="text-destructive hover:bg-destructive/10 font-semibold hidden sm:flex" onClick={() => setAbsentModal({ isOpen: true, target: visit })}>
-                                                    Mark Absent
-                                                </Button>
-                                                <Button variant="ghost" className="text-amber-500 hover:bg-amber-500/10 font-semibold hidden sm:flex" onClick={() => setHolidayModal({ isOpen: true, target: visit })}>
-                                                    Mark Holiday
-                                                </Button>
-                                                <Button className="flex-1 sm:flex-none bg-primary text-white shadow-glow px-8" onClick={() => setCheckInModal({ isOpen: true, visit, isLate: isLateLive })}>
-                                                    <MapPin className="w-4 h-4 mr-2" /> Check In
+                                                <div className="flex gap-3 w-full sm:w-auto">
+                                                    <Button
+                                                        variant="outline"
+                                                        className="flex-1 sm:flex-none h-12 rounded-xl text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive font-semibold transition-colors"
+                                                        onClick={() => setAbsentModal({ isOpen: true, target: visit })}
+                                                    >
+                                                        Absent
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        className="flex-1 sm:flex-none h-12 rounded-xl text-amber-600 dark:text-amber-500 border-amber-500/20 hover:bg-amber-500/10 font-semibold transition-colors"
+                                                        onClick={() => setHolidayModal({ isOpen: true, target: visit })}
+                                                    >
+                                                        Holiday
+                                                    </Button>
+                                                </div>
+
+                                                <Button
+                                                    className="w-full sm:w-auto h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 px-10 font-bold text-base transition-all active:scale-95"
+                                                    onClick={() => setCheckInModal({ isOpen: true, visit, isLate: isLateLive })}
+                                                >
+                                                    <MapPin className="w-5 h-5 mr-2" /> Check In
                                                 </Button>
                                             </>
                                         ) : (
-                                            <Button className="flex-1 sm:flex-none bg-destructive hover:bg-destructive/90 text-white shadow-glow px-8" onClick={() => setCheckOutModal({ isOpen: true, visit, overtimeMinutes: visit.overtimeMinutes })}>
-                                                <LogOut className="w-4 h-4 mr-2" /> Check Out
+                                            <Button
+                                                className="w-full sm:w-auto h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/25 px-10 font-bold text-base transition-all active:scale-95"
+                                                onClick={() => setCheckOutModal({ isOpen: true, visit, overtimeMinutes: visit.overtimeMinutes })}
+                                            >
+                                                <CheckCircle2 className="w-5 h-5 mr-2" /> Complete & Check Out
                                             </Button>
                                         )}
                                     </div>

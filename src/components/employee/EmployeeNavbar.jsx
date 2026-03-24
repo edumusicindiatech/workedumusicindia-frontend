@@ -42,8 +42,6 @@ const EmployeeNavbar = () => {
     useEffect(() => {
         if (!user || !token) return;
 
-        const currentUserId = user.id || user._id;
-
         // --- FETCH INITIAL COUNT ---
         const fetchInitialUnreadCount = async () => {
             try {
@@ -61,24 +59,17 @@ const EmployeeNavbar = () => {
             fetchInitialUnreadCount();
         }
 
-        // --- WAIT FOR SOCKET TO CONNECT BEFORE JOINING ROOM ---
-        const onConnect = () => {
-            socket.emit("join_room", currentUserId);
-        };
-
-        if (socket.connected) {
-            onConnect();
-        } else {
-            socket.on("connect", onConnect);
-        }
+        // --- SETUP SOCKET (Aligned perfectly with Admin logic) ---
+        const currentUserId = user.id || user._id;
+        socket.emit("join_room", currentUserId);
 
         // --- HANDLE THE INCOMING NOTIFICATION ---
         const handleNewNotification = () => {
             // A. Play Audio
             try {
                 notificationSound.currentTime = 0;
-                notificationSound.play().catch(() => {
-                    // Silently catch browser autoplay restrictions
+                notificationSound.play().catch(err => {
+                    console.warn("🔇 BROWSER BLOCKED AUDIO! Click anywhere on the Employee page first to allow sound.", err);
                 });
             } catch (e) {
                 console.error("Error playing sound:", e);
@@ -93,7 +84,6 @@ const EmployeeNavbar = () => {
         socket.on("new_notification", handleNewNotification);
 
         return () => {
-            socket.off("connect", onConnect);
             socket.off("new_notification", handleNewNotification);
         };
     }, [user, token]);
