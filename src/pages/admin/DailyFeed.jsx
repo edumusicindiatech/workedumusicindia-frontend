@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import toast from "react-hot-toast"; // <-- Added toast import
 import EmptyFeedState from './EmptyFeed';
 
 const DailyFeed = () => {
@@ -17,6 +18,7 @@ const DailyFeed = () => {
                 }
             } catch (error) {
                 console.error("Failed to fetch feed", error);
+                toast.error("Failed to fetch live feed."); // <-- Added error toast
             } finally {
                 setLoading(false);
             }

@@ -7,7 +7,7 @@ import {
     CheckCircle2, Sparkles, CheckSquare, School
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import toast from "react-hot-toast"; // <-- Swapped to react-hot-toast
 import RejectTaskModal from "../../modals/employee/RejectTaskModal";
 
 // --- SOCKET IMPORT FOR REAL-TIME REFRESH ---
@@ -192,8 +192,8 @@ const Tasks = () => {
                             <div
                                 key={task.id}
                                 className={`group relative rounded-3xl border p-5 sm:p-7 flex flex-col h-full transition-all duration-300 overflow-hidden ${isPending ? "bg-card border-primary/40 shadow-[0_8px_30px_-5px_rgba(var(--primary),0.15)] hover:border-primary/70 scale-[1.01]" :
-                                        isAccepted ? "bg-emerald-500/5 border-emerald-500/20 shadow-sm" :
-                                            "bg-card/50 border-border opacity-80 grayscale-[0.15] shadow-none hover:grayscale-0"
+                                    isAccepted ? "bg-emerald-500/5 border-emerald-500/20 shadow-sm" :
+                                        "bg-card/50 border-border opacity-80 grayscale-[0.15] shadow-none hover:grayscale-0"
                                     }`}
                             >
                                 {/* Glowing status strip for Pending */}

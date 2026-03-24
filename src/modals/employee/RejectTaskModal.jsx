@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import toast from "react-hot-toast"; // <-- Added react-hot-toast import
 
 const RejectTaskModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
     const [rejectReason, setRejectReason] = useState("");
@@ -15,6 +16,11 @@ const RejectTaskModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
     if (!isOpen) return null;
 
     const handleSubmit = () => {
+        // Validation check for consistency
+        if (!rejectReason.trim()) {
+            toast.error("Please provide a reason for rejection.");
+            return;
+        }
         onSubmit(rejectReason);
     };
 

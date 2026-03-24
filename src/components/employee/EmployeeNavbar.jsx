@@ -6,6 +6,7 @@ import { logout } from "@/store/slices/authSlice";
 import api from "../../api/axios";
 import { setAxiosToken } from "../../api/axios";
 import { io } from "socket.io-client";
+import toast from "react-hot-toast"; // <-- Added react-hot-toast import
 
 import {
     LayoutDashboard, User, Calendar, BellRing, FileText,
@@ -78,6 +79,7 @@ const EmployeeNavbar = () => {
                 }
             } catch (error) {
                 console.error("Failed to fetch initial notifications count:", error);
+                toast.error("Failed to load notifications."); // <-- Added error toast
             }
         };
 
@@ -104,6 +106,7 @@ const EmployeeNavbar = () => {
             // B. Increment badge checking the REF
             if (pathnameRef.current !== '/employee/notifications') {
                 setNotifCount(prev => prev + 1);
+                toast("New notification received!", { icon: '🔔' }); // <-- Added system toast
             }
         };
 
@@ -133,10 +136,13 @@ const EmployeeNavbar = () => {
     }, []);
 
     const handleLogout = async () => {
+        const toastId = toast.loading("Logging out..."); // <-- Added loading toast
         try {
             await api.post('/auth/logout');
+            toast.success("Logged out successfully!", { id: toastId }); // <-- Added success toast
         } catch (error) {
             console.error("Backend logout failed, forcing local logout:", error);
+            toast.error("Logout issue, but session ended.", { id: toastId }); // <-- Added error toast
         } finally {
             setAxiosToken(null);
             dispatch(logout());

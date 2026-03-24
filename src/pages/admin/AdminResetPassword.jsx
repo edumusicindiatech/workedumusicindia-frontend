@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, ShieldAlert, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import toast, { Toaster } from "react-hot-toast"; // <-- Added react-hot-toast import
 import api from "../../api/axios";
 
 const AdminResetPassword = () => {
@@ -19,12 +20,22 @@ const AdminResetPassword = () => {
         setErrorMsg("");
 
         try {
-            await api.post('/auth/reset-initial-password', { newPassword });
+            const response = await api.post('/auth/reset-initial-password', { newPassword });
+
+            // Show Success Toast
+            toast.success(response.data?.message || "Password updated successfully!");
+
             // Always push to Admin Dashboard on success
             navigate('/admin/dashboard');
         } catch (error) {
             console.error("Reset Error:", error);
-            setErrorMsg(error.response?.data?.message || "Failed to reset password.");
+
+            // Extract error message
+            const errorMessage = error.response?.data?.message || "Failed to reset password.";
+
+            // Show Error Toast & Inline Error
+            setErrorMsg(errorMessage);
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -32,6 +43,9 @@ const AdminResetPassword = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-muted/20 p-4">
+            {/* Added Toaster to render the notifications */}
+            <Toaster position="top-right" />
+
             <div className="bg-card w-full max-w-md p-8 rounded-3xl shadow-xl border border-border animate-in zoom-in-95">
                 <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-6 border border-indigo-500/20">
                     <ShieldAlert className="w-8 h-8 text-indigo-500" />

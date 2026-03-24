@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import api from "../../api/axios";
 import { X, CheckCircle2, Clock, MapPin, UserX, PartyPopper, ChevronRight, ChevronLeft, CalendarDays, Plus, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import toast from "react-hot-toast"; // <-- Added react-hot-toast import
 
 import AddEventModal from "./AddEventModal";
 import MediaUploadModal from "./MediaUploadModal";
@@ -33,6 +34,7 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
     // 2. Updated Event Handler
     const handleSaveEvent = async (eventData) => {
         setIsSavingEvent(true);
+        const toastId = toast.loading("Saving event..."); // Added loading toast
         try {
             const payload = {
                 ...eventData,
@@ -43,11 +45,13 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
             // Use 'api' and remove /api prefix + manual headers
             await api.post('/employee/events', payload);
 
+            toast.success("Event saved successfully!", { id: toastId }); // Added success toast
             setEventModalData({ isOpen: false, categoryName: null });
             if (onRefresh) onRefresh();
         } catch (error) {
             console.error("Event save error:", error);
-            alert("Failed to save event. " + (error.response?.data?.message || ""));
+            // Replaced alert with error toast
+            toast.error("Failed to save event. " + (error.response?.data?.message || ""), { id: toastId });
         } finally {
             setIsSavingEvent(false);
         }
@@ -56,6 +60,7 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
     // 3. Updated Media Handler
     const handleUploadMedia = async (mediaData) => {
         setIsUploadingMedia(true);
+        const toastId = toast.loading("Uploading media..."); // Added loading toast
         try {
             const payload = {
                 ...mediaData,
@@ -66,10 +71,12 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
             // Use 'api' and remove /api prefix + manual headers
             await api.post('/employee/media', payload);
 
+            toast.success("Media uploaded successfully!", { id: toastId }); // Added success toast
             setMediaModalData({ isOpen: false, categoryName: null });
         } catch (error) {
             console.error("Media upload error:", error);
-            alert("Failed to upload media. " + (error.response?.data?.message || ""));
+            // Replaced alert with error toast
+            toast.error("Failed to upload media. " + (error.response?.data?.message || ""), { id: toastId });
         } finally {
             setIsUploadingMedia(false);
         }

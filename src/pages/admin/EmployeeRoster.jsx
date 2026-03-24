@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, ChevronRight, Loader2, AlertCircle } from "lucide-react";
+import toast from "react-hot-toast"; // <-- Added toast import
 import AddEmployeeModal from "../../modals/admin/AddEmployeeModal";
 import api from "../../api/axios";
 
@@ -27,6 +28,7 @@ const EmployeeRoster = () => {
         } catch (err) {
             console.error("Error fetching roster:", err);
             setError("Failed to load employee roster. Please try again.");
+            toast.error("Failed to load employee roster."); // <-- Added error toast
         } finally {
             setIsLoading(false);
         }
@@ -206,6 +208,7 @@ const EmployeeRoster = () => {
                 onClose={() => setIsAddModalOpen(false)}
                 // We pass fetchRoster so the modal can call it upon a successful creation!
                 onSuccess={() => {
+                    toast.success("Employee added successfully!"); // <-- Added success toast
                     fetchRoster();
                     setIsAddModalOpen(false);
                 }}

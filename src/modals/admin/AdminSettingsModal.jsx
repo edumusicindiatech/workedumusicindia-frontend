@@ -4,7 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Settings, X, Globe, Mail, Loader2 } from "lucide-react";
 import CustomSelect from "../../components/ui/CustomSelect";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 import api from "../../api/axios";
 
 // Notice the new 'onSaveSuccess' prop

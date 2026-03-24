@@ -6,6 +6,7 @@ import {
     LayoutDashboard, Users, Radio, MessageSquare, Shield,
     Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle, ClipboardCheck
 } from "lucide-react";
+import toast from "react-hot-toast"; // <-- Added react-hot-toast import
 
 import api from "../../api/axios";
 import { logout } from "../../store/slices/authSlice";
@@ -58,6 +59,7 @@ const AdminSidebar = () => {
                 }
             } catch (error) {
                 console.error("Failed to fetch global notifications count", error);
+                toast.error("Failed to sync notifications."); // <-- Added error toast
             }
         };
 
@@ -83,6 +85,7 @@ const AdminSidebar = () => {
             // B. Increment badge checking the REF
             if (pathnameRef.current !== '/admin/notifications') {
                 setUnreadCount(prev => prev + 1);
+                toast("New admin alert received!", { icon: '🛡️' }); // <-- Added system toast
             }
         };
 
@@ -127,10 +130,13 @@ const AdminSidebar = () => {
         localStorage.removeItem("access_token");
         localStorage.removeItem("user");
 
+        const toastId = toast.loading("Logging out..."); // <-- Added loading toast
         try {
             await api.post('/auth/logout');
+            toast.success("Session ended successfully!", { id: toastId }); // <-- Added success toast
         } catch (error) {
             console.error("Backend logout cleanup failed:", error);
+            toast.error("Logout issue, session cleared locally.", { id: toastId }); // <-- Added error toast
         }
 
         navigate("/", { replace: true });

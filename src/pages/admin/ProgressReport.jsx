@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import  toast  from "react-hot-toast";
 import api from "../../api/axios";
 import * as XLSX from 'xlsx-js-style';
 

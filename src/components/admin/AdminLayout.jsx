@@ -1,9 +1,13 @@
 import { Outlet } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
+import { Toaster } from "react-hot-toast"; // <-- Added Toaster import
 
 const AdminLayout = () => {
     return (
         <div className="flex flex-col min-h-screen bg-background text-foreground">
+            {/* Added Toaster here so all admin-side toasts render correctly */}
+            <Toaster position="top-right" reverseOrder={false} />
+
             {/* The Navbar component handles both Desktop Top Nav & Mobile Header/Bottom Nav */}
             <AdminSidebar />
 

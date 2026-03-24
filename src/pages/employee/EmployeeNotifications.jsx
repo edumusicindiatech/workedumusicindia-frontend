@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { Bell, CheckCircle2, AlertCircle, Info, Clock, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import toast from "react-hot-toast"; // <-- Added toast import
 import api from "../../api/axios";
 import { io } from "socket.io-client";
 
@@ -25,6 +26,7 @@ const EmployeeNotifications = () => {
                 }
             } catch (error) {
                 console.error("Failed to fetch notifications:", error);
+                toast.error("Failed to load notifications."); // <-- Added error toast
             } finally {
                 setLoading(false);
             }
@@ -75,19 +77,25 @@ const EmployeeNotifications = () => {
     const markAllAsRead = async () => {
         // Optimistic UI update
         setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+        const toastId = toast.loading("Marking all as read..."); // <-- Added loading toast
         try {
             await api.put('/employee/notifications/mark-read');
+            toast.success("All notifications marked as read!", { id: toastId }); // <-- Added success toast
         } catch (error) {
             console.error("Failed to mark as read:", error);
+            toast.error("Failed to mark as read.", { id: toastId }); // <-- Added error toast
         }
     };
 
     const clearAll = async () => {
         setNotifications([]);
+        const toastId = toast.loading("Clearing notifications..."); // <-- Added loading toast
         try {
             await api.delete('/employee/notifications/clear');
+            toast.success("Notifications cleared successfully!", { id: toastId }); // <-- Added success toast
         } catch (error) {
             console.error("Failed to clear notifications:", error);
+            toast.error("Failed to clear notifications.", { id: toastId }); // <-- Added error toast
         }
     };
 

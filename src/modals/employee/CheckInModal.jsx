@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { MapPin, AlertCircle, PartyPopper, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import toast from "react-hot-toast"; // <-- Added toast import
 
 const CheckInModal = ({ isOpen, onClose, visit, isLate, onSubmit, actionLoading }) => {
     const [lateReason, setLateReason] = useState("");
@@ -17,6 +18,12 @@ const CheckInModal = ({ isOpen, onClose, visit, isLate, onSubmit, actionLoading 
     if (!isOpen || !visit) return null;
 
     const handleSubmit = () => {
+        // <-- Added toast validation just in case they bypass the disabled button
+        if (isLate && !lateReason.trim()) {
+            toast.error("Please provide a reason for being late.");
+            return;
+        }
+
         // Automatically capture the exact date/time if an event note is provided
         const eventDate = eventNote.trim() ? new Date().toISOString() : null;
 

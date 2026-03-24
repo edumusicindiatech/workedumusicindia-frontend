@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import axios from "axios";
 import api from "../../api/axios";
 import {
     MapPin, LogOut, Navigation, Clock, UserX,
     CalendarX, Loader2, School, PartyPopper, Sparkles, CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner"; // <-- Premium Toasts Added
+import toast from "react-hot-toast"; // <-- Premium Toasts Added
 
 import CheckInModal from "../../modals/employee/CheckInModal";
 import CheckOutModal from "../../modals/employee/CheckOutModal";

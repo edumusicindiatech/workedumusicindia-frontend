@@ -5,6 +5,7 @@ import {
     AlertCircle, CheckCircle2, XCircle, Coffee, Star, X, Timer, Filter, ChevronDown, LogOut, Settings2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import toast from "react-hot-toast"; // <-- Added toast import
 import api from "../../api/axios";
 
 // --- SOCKET IMPORT FOR REAL-TIME REFRESH ---
@@ -73,6 +74,7 @@ const AttendanceFeed = () => {
             }
         } catch (error) {
             console.error("Failed to fetch live feed:", error);
+            toast.error("Failed to load live feed."); // <-- Added error toast
         } finally {
             if (showLoader) setLoading(false);
         }
@@ -153,6 +155,8 @@ const AttendanceFeed = () => {
     const handleOverrideSubmit = async () => {
         if (!overrideAction) return;
         setIsSubmittingOverride(true);
+        const toastId = toast.loading("Applying override..."); // <-- Added loading toast
+
         try {
             const res = await api.put(`/admin/attendance/${selectedNoteRecord._id}/override`, {
                 action: overrideAction,
@@ -167,11 +171,12 @@ const AttendanceFeed = () => {
                 setOverrideMode(false);
                 setOverrideAction("");
                 setOverrideReason("");
+                toast.success(`Override applied successfully!`, { id: toastId }); // <-- Replaced with success toast
                 fetchFeed(false);
             }
         } catch (error) {
             console.error("Override failed:", error);
-            alert(error.response?.data?.message || "Failed to override attendance.");
+            toast.error(error.response?.data?.message || "Failed to override attendance.", { id: toastId }); // <-- Replaced alert with error toast
         } finally {
             setIsSubmittingOverride(false);
         }

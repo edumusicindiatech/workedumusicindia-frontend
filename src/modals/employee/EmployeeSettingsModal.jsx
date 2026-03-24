@@ -5,9 +5,9 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Settings, X, Globe, Mail, Loader2 } from "lucide-react";
 import CustomSelect from "../../components/ui/CustomSelect";
-import { toast } from "sonner";
+import toast from "react-hot-toast"; // <-- Swapped to react-hot-toast
 // 1. Import your custom api instance
-import api from "@/api/axios";
+import api from "../../api/axios";
 
 const EmployeeSettingsModal = ({ isOpen, onClose }) => {
     // We no longer need 'token' here because 'api' handles it automatically

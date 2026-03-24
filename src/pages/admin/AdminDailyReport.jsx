@@ -5,7 +5,7 @@ import {
     ClipboardCheck, FileText, Loader2
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 import api from "../../api/axios";
 import { io } from "socket.io-client";
 
@@ -14,7 +14,7 @@ const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 const AdminDailyReport = () => {
     const { user } = useSelector((state) => state.auth);
-    
+
     const [employees, setEmployees] = useState([]);
     const [records, setRecords] = useState([]);
     const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
@@ -159,7 +159,7 @@ const AdminDailyReport = () => {
                 </div>
 
                 <div className="p-3 sm:p-4 md:p-6 flex-1 bg-background/50 relative overflow-hidden">
-                    
+
                     {/* LEVEL 1: EMPLOYEES LIST */}
                     {!selectedEmployee && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">

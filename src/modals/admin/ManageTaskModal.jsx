@@ -3,7 +3,7 @@ import { ClipboardList, X, MapPin, Calendar, Clock, Edit2, Trash2, Save, AlertTr
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner"; // <-- Ensure you are using Sonner here as well!
+import toast from "react-hot-toast"; // <-- Ensure you are using Sonner here as well!
 import api from "../../api/axios";
 
 const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {

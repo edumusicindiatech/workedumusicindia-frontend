@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Send, Users, Bell, UserCheck, Search, CheckCircle2, Clock, Loader2, AlertCircle, Megaphone } from "lucide-react";
-import { toast, Toaster } from "sonner";
+import { Toaster } from "sonner";
+import toast from "react-hot-toast";
 import api from "../../api/axios";
 
 // --- 1. SOCKET & AUDIO SETUP OUTSIDE COMPONENT ---

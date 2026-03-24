@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { Mail, Phone, ShieldCheck, MapPin, School, Edit2 } from "lucide-react";
-import { toast, Toaster } from "sonner";
+import toast, { Toaster } from "react-hot-toast"; // <-- Swapped to react-hot-toast
 import api from "../../api/axios";
 import ChangePasswordModal from "../../modals/employee/ChangePasswordModal";
 
@@ -95,7 +95,7 @@ const MyProfile = () => {
 
     return (
         <div className="max-w-3xl mx-auto space-y-6 md:space-y-8 animate-fade-in pb-20 p-4 sm:p-0">
-            <Toaster richColors position="top-right" />
+            <Toaster position="top-right" /> {/* <-- Removed Sonner-specific 'richColors' prop */}
 
             {/* Page Header */}
             <div>

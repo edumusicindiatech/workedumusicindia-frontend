@@ -5,7 +5,7 @@ import {
     CheckCircle, Tag, ChevronDown, Check, Send, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import toast from "react-hot-toast"
 
 const DailyReport = () => {
     // Auto-generate today's date in YYYY-MM-DD format

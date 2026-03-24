@@ -7,6 +7,7 @@ import {
     LogOut, ClipboardCheck, Users,
     Film
 } from "lucide-react";
+import toast from "react-hot-toast"; // <-- Added toast import
 
 const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
     const [selectedSchool, setSelectedSchool] = useState(null);
@@ -89,7 +90,7 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
         });
 
         if (rowsHtml === "") {
-            alert("No daily records found to export for this month.");
+            toast.error("No daily records found to export for this month."); // <-- Replaced alert with error toast
             return;
         }
 
@@ -126,6 +127,8 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
 
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
+
+        toast.success("Excel report downloaded!"); // <-- Added success toast
     };
 
     const displayCategories = selectedSchool?.categories || [

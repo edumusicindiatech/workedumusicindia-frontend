@@ -5,7 +5,7 @@ import {
     ClipboardCheck, FileText, Loader2, PartyPopper, School, MapPin, Clock
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 import api from "../../api/axios";
 import { io } from "socket.io-client";
 

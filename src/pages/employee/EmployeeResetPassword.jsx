@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, ShieldCheck, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
-import { toast, Toaster } from "sonner"; // <-- Added Toaster import
+import toast, { Toaster } from "react-hot-toast"; // <-- Swapped to react-hot-toast
 import api from "../../api/axios";
 
 const EmployeeResetPassword = () => {
@@ -45,7 +45,7 @@ const EmployeeResetPassword = () => {
     return (
         <div className="min-h-screen flex items-center justify-center bg-muted/20 p-4">
             {/* Added Toaster to render the notifications */}
-            <Toaster richColors position="top-right" />
+            <Toaster position="top-right" /> {/* <-- Removed Sonner-specific 'richColors' prop */}
 
             <div className="bg-card w-full max-w-md p-8 rounded-3xl shadow-xl border border-border animate-in zoom-in-95">
                 <div className="flex flex-col items-center text-center">
