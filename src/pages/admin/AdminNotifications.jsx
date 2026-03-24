@@ -201,13 +201,28 @@ const AdminNotifications = () => {
                                         <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 border ${bg}`}>
                                             {icon}
                                         </div>
-                                        <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
-                                            <h4 className={`text-sm sm:text-base font-bold truncate ${notification.isRead ? 'text-foreground/90' : 'text-foreground'}`}>
-                                                {notification.title}
-                                            </h4>
+                                        <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0 w-full">
+
+                                            <div className="flex items-center gap-2">
+                                                <h4 className={`text-sm sm:text-base font-bold truncate ${notification.isRead ? 'text-foreground/90' : 'text-foreground'}`}>
+                                                    {notification.title}
+                                                </h4>
+
+                                                {/* Added Conditional Warning Level Badge */}
+                                                {notification.type === 'Warning' && notification.level && (
+                                                    <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-md bg-destructive/10 text-destructive border border-destructive/20 shrink-0">
+                                                        {notification.level}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Conditionally Display Warning Reason or Fallback to Message */}
                                             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                                                {notification.message}
+                                                {notification.type === 'Warning' && notification.reason
+                                                    ? notification.reason
+                                                    : notification.message}
                                             </p>
+
                                             <div className="flex items-center gap-1 sm:gap-1.5 mt-1.5 sm:mt-2 text-[10px] sm:text-xs font-medium text-muted-foreground/80">
                                                 <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                                 {getTimeAgo(notification.createdAt)}
