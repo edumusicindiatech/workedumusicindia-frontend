@@ -222,7 +222,7 @@ const AttendanceFeed = () => {
                                             {hadEvent && uiStatus === 'Completed' && <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-violet-500 text-white">EVENT</span>}
                                         </div>
                                         <div className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-                                            {record.checkInTime ? `In: ${formatTime(record.checkInTime)}` : (isAbsent ? 'Off Duty' : 'Pending')}
+                                            {record.checkInTime ? `In: ${formatTime(record.checkInTime)}` : ((isAbsent || uiStatus === 'Holiday') ? 'Off Duty' : 'Pending')}
                                             {record.checkOutTime && ` • Out: ${formatTime(record.checkOutTime)}`}
                                         </div>
                                     </div>
