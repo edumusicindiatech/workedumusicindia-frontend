@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, ShieldCheck, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { toast, Toaster } from "sonner"; // <-- Added Toaster import
 import api from "../../api/axios";
 
 const EmployeeResetPassword = () => {
@@ -19,12 +20,23 @@ const EmployeeResetPassword = () => {
         setErrorMsg("");
 
         try {
-            await api.post('/auth/reset-initial-password', { newPassword });
+            const response = await api.post('/auth/reset-initial-password', { newPassword });
+
+            // Show Success Toast
+            toast.success(response.data?.message || "Password updated successfully!");
+
             // Always push to Employee Dashboard on success
             navigate('/employee/dashboard');
         } catch (error) {
             console.error("Reset Error:", error);
-            setErrorMsg(error.response?.data?.message || "Failed to reset password.");
+
+            // Extract error message
+            const errorMessage = error.response?.data?.message || "Failed to reset password.";
+
+            // Show Error Toast & Inline Error
+            setErrorMsg(errorMessage);
+            toast.error(errorMessage);
+
         } finally {
             setIsLoading(false);
         }
@@ -32,14 +44,19 @@ const EmployeeResetPassword = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-muted/20 p-4">
+            {/* Added Toaster to render the notifications */}
+            <Toaster richColors position="top-right" />
+
             <div className="bg-card w-full max-w-md p-8 rounded-3xl shadow-xl border border-border animate-in zoom-in-95">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                    <ShieldCheck className="w-8 h-8 text-primary" />
+                <div className="flex flex-col items-center text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
+                        <ShieldCheck className="w-8 h-8 text-primary" />
+                    </div>
+                    <h1 className="text-2xl font-bold mb-2">Secure Your Account</h1>
+                    <p className="text-muted-foreground mb-6 text-sm">
+                        For your security, please change your temporary password before accessing your dashboard.
+                    </p>
                 </div>
-                <h1 className="text-2xl font-bold mb-2">Secure Your Account</h1>
-                <p className="text-muted-foreground mb-6 text-sm">
-                    For your security, please change your temporary password before accessing your dashboard.
-                </p>
 
                 {errorMsg && (
                     <div className="mb-6 bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl flex items-start gap-3 animate-in fade-in">
@@ -60,7 +77,7 @@ const EmployeeResetPassword = () => {
                                 className="h-11 rounded-xl pr-10"
                                 required
                             />
-                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
                         </div>
@@ -71,7 +88,7 @@ const EmployeeResetPassword = () => {
                         </ul>
                     </div>
 
-                    <Button type="submit" disabled={isLoading} className="w-full h-11 rounded-xl text-base font-bold shadow-glow flex items-center justify-center gap-2">
+                    <Button type="submit" disabled={isLoading} className="w-full h-11 rounded-xl text-base font-bold shadow-glow flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
                         {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
                         {isLoading ? "Updating..." : "Update Password & Continue"}
                     </Button>
