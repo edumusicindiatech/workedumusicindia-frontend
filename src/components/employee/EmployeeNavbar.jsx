@@ -15,7 +15,7 @@ import {
 import EmployeeSettingsModal from "../../modals/employee/EmployeeSettingsModal";
 
 // 1. Setup global socket and audio OUTSIDE the component to prevent re-renders
-const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5000");
+const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 const notificationSound = new Audio('/sounds/notification-ting.mp3');
 
 const EmployeeNavbar = () => {

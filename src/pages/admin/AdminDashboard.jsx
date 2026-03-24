@@ -36,7 +36,7 @@ const AdminDashboard = () => {
         // 3. --- REAL-TIME SOCKET CONNECTION ---
         // Ensure this URL matches your backend domain. If it's running on the same domain, io() works.
         // If your backend is separate, use io('http://localhost:5000') or your env variable.
-        const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
+        const socket = io(import.meta.env.VITE_BASE_URL || 'http://localhost:5000');
 
         socket.on('new_notification', (data) => {
             console.log("Live update received via socket!", data);

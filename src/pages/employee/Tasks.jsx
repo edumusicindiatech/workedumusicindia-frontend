@@ -12,7 +12,7 @@ import RejectTaskModal from "../../modals/employee/RejectTaskModal";
 
 // --- SOCKET IMPORT FOR REAL-TIME REFRESH ---
 import { io } from "socket.io-client";
-const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5000");
+const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 const Tasks = () => {
     // 1. Grab the user from Redux so we know which room to join

@@ -16,7 +16,7 @@ import HolidayModal from "../../modals/employee/HolidayModal";
 
 // --- SOCKET IMPORT FOR REAL-TIME REFRESH ---
 import { io } from "socket.io-client";
-const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5000");
+const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 const EmployeeDashboard = () => {
     // Fixed: Added 'token' extraction to prevent undefined errors in your axios calls!

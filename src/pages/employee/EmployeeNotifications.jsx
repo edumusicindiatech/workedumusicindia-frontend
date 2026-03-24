@@ -6,7 +6,7 @@ import api from "../../api/axios";
 import { io } from "socket.io-client";
 
 // Setup socket connection
-const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5000");
+const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 const EmployeeNotifications = () => {
     const { user } = useSelector((state) => state.auth);
