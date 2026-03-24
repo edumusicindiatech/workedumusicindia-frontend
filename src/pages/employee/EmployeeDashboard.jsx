@@ -88,75 +88,86 @@ const EmployeeDashboard = () => {
     };
 
     // Generic GPS wrapper for API calls
-    const executeWithGPS = (actionFn) => {
-        if (!navigator.geolocation) {
-            return toast.error("GPS is not supported by your browser. Cannot verify location.");
-        }
-        setActionLoading(true);
-
-        toast.promise(
-            new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(
-                    async (pos) => {
-                        try {
-                            await actionFn(pos.coords.latitude, pos.coords.longitude);
-                            resolve();
-                        } catch (e) {
-                            reject(e);
-                        }
-                    },
-                    (err) => {
-                        console.error("GPS Error", err);
-                        reject(new Error("Please enable GPS/Location Services to perform this action."));
-                    },
-                    { enableHighAccuracy: true }
-                );
-            }),
-            {
-                loading: 'Verifying your location...',
-                success: 'Location verified successfully!',
-                error: (err) => err.message || 'Action failed.'
+    const getCoordinates = () => {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                return reject(new Error("GPS is not supported by your browser."));
             }
-        ).finally(() => setActionLoading(false));
+            navigator.geolocation.getCurrentPosition(
+                (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                (err) => reject(new Error("Please enable GPS/Location Services. Check your browser permissions.")),
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        });
     };
 
     // --- Specific API Submissions ---
     const submitCheckIn = async (visitId, { lateReason, eventNote }) => {
+        setActionLoading(true);
         const visit = assignments.find(v => v.id === visitId);
+        const toastId = toast.loading('Verifying location and checking in...');
 
-        executeWithGPS(async (lat, lng) => {
-            try {
-                await api.post('/employee/check-in', {
-                    schoolId: visit.schoolId, band: visit.category,
-                    latitude: lat, longitude: lng, lateReason, eventNote
-                });
+        try {
+            // 1. Get location first
+            const { lat, lng } = await getCoordinates();
 
-                setCheckInModal({ isOpen: false, visit: null, isLate: false });
-                toast.success(`Successfully checked in at ${visit.schoolName}!`);
-                fetchSchedule();
-            } catch (err) {
-                throw new Error(err.response?.data?.message || "Check-in failed. Are you within 100 meters?");
-            }
-        });
+            // 2. Fire API request
+            const response = await api.post('/employee/check-in', {
+                schoolId: visit.schoolId, band: visit.category,
+                latitude: lat, longitude: lng, lateReason, eventNote
+            });
+
+            // 3. Handle Success
+            toast.dismiss(toastId); // <-- Explicitly remove loading toast
+            toast.success(response.data?.message || `Checked in at ${visit.schoolName}!`);
+            setCheckInModal({ isOpen: false, visit: null, isLate: false });
+            fetchSchedule();
+
+        } catch (err) {
+            console.error("Check-in Error:", err);
+
+            // 4. Handle Error UI
+            toast.dismiss(toastId); // <-- Explicitly remove loading toast
+
+            const errorMessage = err.response?.data?.message || err.message || "Check-in failed.";
+            toast.error(errorMessage); // <-- Fire a brand new error toast
+
+            // Close the modal so the screen completely un-hangs
+            setCheckInModal({ isOpen: false, visit: null, isLate: false });
+        } finally {
+            setActionLoading(false); // <-- Guarantees the button spinner stops
+        }
     };
 
     const submitCheckOut = async (visitId, { overtimeReason }) => {
+        setActionLoading(true);
         const visit = assignments.find(v => v.id === visitId);
+        const toastId = toast.loading('Verifying location and checking out...');
 
-        executeWithGPS(async (lat, lng) => {
-            try {
-                await api.post('/employee/check-out', {
-                    schoolId: visit.schoolId, band: visit.category,
-                    latitude: lat, longitude: lng, overtimeReason
-                });
+        try {
+            const { lat, lng } = await getCoordinates();
 
-                setCheckOutModal({ isOpen: false, visit: null, overtimeMinutes: 0 });
-                toast.success(`Successfully checked out of ${visit.schoolName}!`);
-                fetchSchedule();
-            } catch (err) {
-                throw new Error(err.response?.data?.message || "Check-out failed. Must be at school.");
-            }
-        });
+            const response = await api.post('/employee/check-out', {
+                schoolId: visit.schoolId, band: visit.category,
+                latitude: lat, longitude: lng, overtimeReason
+            });
+
+            toast.dismiss(toastId);
+            toast.success(response.data?.message || `Checked out of ${visit.schoolName}!`);
+            setCheckOutModal({ isOpen: false, visit: null, overtimeMinutes: 0 });
+            fetchSchedule();
+
+        } catch (err) {
+            console.error("Check-out Error:", err);
+
+            toast.dismiss(toastId);
+            const errorMessage = err.response?.data?.message || err.message || "Check-out failed.";
+            toast.error(errorMessage);
+
+            setCheckOutModal({ isOpen: false, visit: null, overtimeMinutes: 0 });
+        } finally {
+            setActionLoading(false);
+        }
     };
 
     const submitStatus = async (target, statusType, reason) => {

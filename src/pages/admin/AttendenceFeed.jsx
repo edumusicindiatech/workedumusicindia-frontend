@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useSelector } from "react-redux"; // <-- IMPORTED REDUX SELECTOR
 import {
     Radio, Clock, MapPin, School, Users, FileText,
     AlertCircle, CheckCircle2, XCircle, Coffee, Star, X, Timer, Filter, ChevronDown, LogOut
@@ -6,7 +7,14 @@ import {
 import { Button } from "@/components/ui/button";
 import api from "../../api/axios";
 
+// --- SOCKET IMPORT FOR REAL-TIME REFRESH ---
+import { io } from "socket.io-client";
+const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
+
 const AttendanceFeed = () => {
+    // --- GRAB USER FROM REDUX ---
+    const { user } = useSelector((state) => state.auth);
+
     // --- STATE ---
     const [liveData, setLiveData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -16,27 +24,48 @@ const AttendanceFeed = () => {
 
     const filterRef = useRef(null);
 
-    // --- FETCH & POLL DATA ---
-    useEffect(() => {
-        const fetchFeed = async () => {
-            setLoading(true);
-            try {
-                const queryStatus = activeFilter.toLowerCase();
-                const response = await api.get(`/admin/daily-feed?status=${queryStatus}`);
-                if (response.data.success) {
-                    setLiveData(response.data.data);
-                }
-            } catch (error) {
-                console.error("Failed to fetch live feed:", error);
-            } finally {
-                setLoading(false);
+    // --- FETCH DATA FUNCTION ---
+    const fetchFeed = useCallback(async (showLoader = true) => {
+        if (showLoader) setLoading(true);
+        try {
+            const queryStatus = activeFilter.toLowerCase();
+            const response = await api.get(`/admin/daily-feed?status=${queryStatus}`);
+            if (response.data.success) {
+                setLiveData(response.data.data);
             }
+        } catch (error) {
+            console.error("Failed to fetch live feed:", error);
+        } finally {
+            if (showLoader) setLoading(false);
+        }
+    }, [activeFilter]);
+
+    // --- INITIAL LOAD & POLLING ---
+    useEffect(() => {
+        fetchFeed(true); // Show loader on initial load or filter change
+        const interval = setInterval(() => fetchFeed(false), 60000); // Polling (silent)
+        return () => clearInterval(interval);
+    }, [fetchFeed]);
+
+    // --- REAL-TIME SOCKET CONNECTION ---
+    useEffect(() => {
+        if (!user) return;
+
+        // Tell the socket to join this admin's room
+        const currentUserId = user.id || user._id;
+        socket.emit("join_room", currentUserId);
+
+        const handleRealTimeUpdate = (data) => {
+            console.log("Live feed update received!", data);
+            fetchFeed(false); // Fetch new data silently without showing the loader
         };
 
-        fetchFeed();
-        const interval = setInterval(fetchFeed, 60000); // Poll every minute
-        return () => clearInterval(interval);
-    }, [activeFilter]);
+        socket.on("new_notification", handleRealTimeUpdate);
+
+        return () => {
+            socket.off("new_notification", handleRealTimeUpdate);
+        };
+    }, [user, fetchFeed]);
 
     // --- CLICK OUTSIDE HANDLER ---
     useEffect(() => {

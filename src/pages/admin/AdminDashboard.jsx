@@ -1,17 +1,20 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useSelector } from "react-redux"; // <-- 1. ADDED REDUX SELECTOR
 import { Users, UserCheck, UserX, Clock, MapPin, School, BookOpen, RefreshCw } from "lucide-react";
-import { io } from "socket.io-client"; // <-- NEW IMPORT
+import { io } from "socket.io-client";
 import api from "../../api/axios";
 
 const AdminDashboard = () => {
+    // 2. EXTRACT USER FROM REDUX TO GET THE ID
+    const { user } = useSelector((state) => state.auth);
+
     const [dashboardData, setDashboardData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [isRefreshing, setIsRefreshing] = useState(false); // For the spin icon
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // Updated to support "silent" background refreshing
     const fetchDashboardStats = useCallback(async (showFullLoader = true) => {
         if (showFullLoader) setLoading(true);
-        setIsRefreshing(true); // Always spin the little icon
+        setIsRefreshing(true);
 
         try {
             const response = await api.get('/admin/dashboard-stats');
@@ -27,39 +30,45 @@ const AdminDashboard = () => {
     }, []);
 
     useEffect(() => {
-        // 1. Initial Load
         fetchDashboardStats(true);
-
-        // 2. Fallback Polling (Every 1 minute)
         const interval = setInterval(() => fetchDashboardStats(false), 60000);
 
-        // 3. --- REAL-TIME SOCKET CONNECTION ---
-        // Ensure this URL matches your backend domain. If it's running on the same domain, io() works.
-        // If your backend is separate, use io('http://localhost:5000') or your env variable.
         const socket = io(import.meta.env.VITE_BASE_URL || 'http://localhost:5000');
+
+        // 3. TELL SOCKET TO JOIN THIS SPECIFIC ADMIN'S ROOM
+        if (user && (user.id || user._id)) {
+            socket.emit("join_room", user.id || user._id);
+        }
 
         socket.on('new_notification', (data) => {
             console.log("Live update received via socket!", data);
-            // Fetch quietly in the background without blanking the screen
             fetchDashboardStats(false);
         });
 
-        // Cleanup on unmount
         return () => {
             clearInterval(interval);
             socket.disconnect();
         };
-    }, [fetchDashboardStats]);
+    }, [fetchDashboardStats, user]);
 
-    // Custom badge styling
+    // 4. ADDED DEBUGGER LOG FOR RECENT ACTIVITY
+    useEffect(() => {
+        if (dashboardData) {
+            console.log("DASHBOARD DATA FROM BACKEND:", dashboardData);
+        }
+    }, [dashboardData]);
+
     const statusBadge = (status) => {
         const styles = {
             present: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
             absent: "bg-rose-500/10 text-rose-500 border-rose-500/20",
             warning: "bg-amber-500/10 text-amber-500 border-amber-500/20",
             event: "bg-violet-500/10 text-violet-500 border-violet-500/20",
+            // Added capital letter fallbacks just in case
+            Present: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+            Late: "bg-amber-500/10 text-amber-500 border-amber-500/20",
         };
-        return styles[status] || "bg-muted text-muted-foreground border-border";
+        return styles[status] || styles[status?.toLowerCase()] || "bg-muted text-muted-foreground border-border";
     };
 
     if (loading && !dashboardData) {
@@ -72,16 +81,14 @@ const AdminDashboard = () => {
     }
 
     const stats = [
-        { label: "Total Employees", value: dashboardData?.stats.totalEmployees || 0, icon: Users, color: "bg-primary/10 text-primary" },
-        { label: "Present Today", value: dashboardData?.stats.presentToday || 0, icon: UserCheck, color: "bg-emerald-500/10 text-emerald-500" },
-        { label: "Absent", value: dashboardData?.stats.noShow || 0, icon: UserX, color: "bg-rose-500/10 text-rose-500" },
-        { label: "Pending", value: dashboardData?.stats.pending || 0, icon: Clock, color: "bg-amber-500/10 text-amber-500" },
+        { label: "Total Employees", value: dashboardData?.stats?.totalEmployees || 0, icon: Users, color: "bg-primary/10 text-primary" },
+        { label: "Present Today", value: dashboardData?.stats?.presentToday || 0, icon: UserCheck, color: "bg-emerald-500/10 text-emerald-500" },
+        { label: "Absent", value: dashboardData?.stats?.noShow || 0, icon: UserX, color: "bg-rose-500/10 text-rose-500" },
+        { label: "Pending", value: dashboardData?.stats?.pending || 0, icon: Clock, color: "bg-amber-500/10 text-amber-500" },
     ];
 
     return (
         <div className="animate-fade-in p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
-
-            {/* --- Header --- */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-1 text-foreground">Dashboard</h1>
@@ -96,7 +103,6 @@ const AdminDashboard = () => {
                 </button>
             </div>
 
-            {/* --- Stats Grid --- */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-8">
                 {stats.map((stat) => (
                     <div key={stat.label} className="bg-card rounded-2xl p-4 sm:p-5 border border-border shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
@@ -111,7 +117,6 @@ const AdminDashboard = () => {
                 ))}
             </div>
 
-            {/* --- Recent Activity Feed --- */}
             <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
                 <div className="p-5 sm:p-6 border-b border-border bg-muted/10">
                     <h2 className="text-base sm:text-lg font-bold text-foreground">Recent Activity</h2>
@@ -124,44 +129,41 @@ const AdminDashboard = () => {
                                 key={item.id || i}
                                 className="flex flex-col md:flex-row md:items-center justify-between p-5 sm:p-6 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors gap-4 sm:gap-6"
                             >
-                                {/* Left: Profile & Zone */}
                                 <div className="flex items-center gap-3 sm:gap-4 md:w-64 shrink-0">
                                     <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary flex items-center justify-center text-sm sm:text-base font-bold text-primary-foreground shadow-inner">
-                                        {item.name.charAt(0).toUpperCase()}
+                                        {/* 5. ADDED SAFETY OPTIONAL CHAINING SO IT DOESN'T CRASH IF NAME IS MISSING */}
+                                        {item?.name?.charAt(0)?.toUpperCase() || 'U'}
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="text-sm sm:text-base font-bold text-foreground truncate">{item.name}</p>
+                                        <p className="text-sm sm:text-base font-bold text-foreground truncate">{item?.name || 'Unknown User'}</p>
                                         <p className="text-[11px] sm:text-xs text-muted-foreground font-medium flex items-center gap-1 mt-0.5 truncate">
-                                            <MapPin className="w-3 h-3 shrink-0" /> {item.zone}
+                                            <MapPin className="w-3 h-3 shrink-0" /> {item?.zone || 'No Zone'}
                                         </p>
                                     </div>
                                 </div>
 
-                                {/* Middle: School & Category Context */}
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 bg-muted/40 md:bg-transparent rounded-xl p-3.5 md:p-0 flex-1 border border-border/50 md:border-none">
                                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                         <School className="w-4 h-4 text-indigo-500 shrink-0" />
-                                        <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{item.school}</span>
+                                        <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{item?.school || 'N/A'}</span>
                                     </div>
                                     <div className="hidden sm:block md:hidden lg:block w-px h-6 bg-border"></div>
                                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                         <BookOpen className="w-4 h-4 text-violet-500 shrink-0" />
-                                        <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{item.category}</span>
+                                        <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{item?.category || 'N/A'}</span>
                                     </div>
                                 </div>
 
-                                {/* Right: Action Badge & Time */}
                                 <div className="flex flex-col sm:flex-row md:flex-col items-start sm:items-center md:items-end justify-between md:justify-center gap-3 md:gap-2 shrink-0 md:w-48 lg:w-56 mt-1 md:mt-0">
-                                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${statusBadge(item.status)}`}>
-                                        {item.action}
+                                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${statusBadge(item?.status)}`}>
+                                        {item?.action || item?.status || 'Update'}
                                     </span>
                                     <div className="flex items-center gap-1.5">
                                         <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                                        <span className="text-xs font-bold text-foreground">{item.checkInTime}</span>
-                                        <span className="text-[10px] text-muted-foreground font-medium">• {item.timeAgo}</span>
+                                        <span className="text-xs font-bold text-foreground">{item?.checkInTime || 'Just now'}</span>
+                                        {item?.timeAgo && <span className="text-[10px] text-muted-foreground font-medium">• {item.timeAgo}</span>}
                                     </div>
                                 </div>
-
                             </div>
                         ))
                     ) : (
