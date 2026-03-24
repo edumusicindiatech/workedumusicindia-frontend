@@ -385,7 +385,7 @@ const ProgressReport = () => {
                         </div>
                     )}
 
-                    {/* LEVEL 5: OVERVIEW (REDESIGNED METRICS + SMALLER RESPONSIVE SIZES) */}
+                    {/* LEVEL 5: OVERVIEW */}
                     {selectedCategory && !selectedDay && (
                         <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-right-8 duration-300">
 
@@ -468,7 +468,7 @@ const ProgressReport = () => {
                         </div>
                     )}
 
-                    {/* LEVEL 6: DETAIL */}
+                    {/* LEVEL 6: DETAIL (Daily Reports Removed) */}
                     {selectedDay && (
                         <div className="space-y-4 sm:space-y-6 max-w-2xl mx-auto animate-in fade-in slide-in-from-right-8 duration-300">
                             <div className="bg-card rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center border border-border/80 shadow-sm relative overflow-hidden group hover:border-primary/30 transition-colors">
@@ -484,54 +484,6 @@ const ProgressReport = () => {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* --- UPDATED: DAILY REPORT DETAILS --- */}
-                            {selectedDay.dailyReport && typeof selectedDay.dailyReport === 'object' && (
-                                <div className="space-y-1.5 sm:space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
-                                    <div className="flex items-center justify-between pl-1">
-                                        <p className="text-[10px] sm:text-[11px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-1.5 sm:gap-2">
-                                            <ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> EOD Summary
-                                        </p>
-                                        <span className="text-[10px] font-bold bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded uppercase">
-                                            {selectedDay.dailyReport.category}
-                                        </span>
-                                    </div>
-
-                                    <div className="p-4 sm:p-5 bg-blue-500/5 border border-blue-500/20 rounded-xl sm:rounded-2xl text-xs sm:text-sm leading-relaxed text-foreground/90 shadow-sm space-y-4">
-
-                                        {/* Summary */}
-                                        <div>
-                                            <p className="font-semibold text-blue-700/80 dark:text-blue-400 mb-1">Daily Summary</p>
-                                            <p>{selectedDay.dailyReport.summary}</p>
-                                        </div>
-
-                                        {/* Event Details (If Applicable) */}
-                                        {selectedDay.dailyReport.category === 'Event Report' && selectedDay.dailyReport.eventName && (
-                                            <div className="bg-white dark:bg-black/20 p-3 rounded-lg border border-blue-500/20">
-                                                <p className="font-semibold text-blue-700/80 dark:text-blue-400 text-xs uppercase mb-1">Logged Event</p>
-                                                <p className="font-bold">{selectedDay.dailyReport.eventName}</p>
-                                                <p className="text-xs text-muted-foreground mt-0.5">{selectedDay.dailyReport.eventDate}</p>
-                                            </div>
-                                        )}
-
-                                        {/* Action Items */}
-                                        {selectedDay.dailyReport.actionItems && (
-                                            <div className="border-t border-blue-500/20 pt-3">
-                                                <p className="font-semibold text-blue-700/80 dark:text-blue-400 mb-1">Pending Action Items</p>
-                                                <p className="whitespace-pre-wrap">{selectedDay.dailyReport.actionItems}</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Legacy String Support (Just in case) */}
-                            {selectedDay.dailyReport && typeof selectedDay.dailyReport === 'string' && (
-                                <div className="space-y-1.5 sm:space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
-                                    <p className="text-[10px] sm:text-[11px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 pl-1"><ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Daily Report</p>
-                                    <div className="p-4 sm:p-5 bg-blue-500/5 border border-blue-500/20 rounded-xl sm:rounded-2xl text-xs sm:text-sm leading-relaxed text-foreground/90 shadow-sm">{selectedDay.dailyReport}</div>
-                                </div>
-                            )}
 
                             {(selectedDay.teacherNote || selectedDay.lateReason) && (
                                 <div className="space-y-1.5 sm:space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
