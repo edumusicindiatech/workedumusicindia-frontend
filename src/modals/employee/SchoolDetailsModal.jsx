@@ -5,7 +5,7 @@ import api from "../../api/axios";
 import { X, CheckCircle2, Clock, MapPin, UserX, PartyPopper, ChevronRight, ChevronLeft, CalendarDays, Plus, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-import AddEventModal from "../admin/AddEventModal";
+import AddEventModal from "./AddEventModal";
 import MediaUploadModal from "./MediaUploadModal";
 
 const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {

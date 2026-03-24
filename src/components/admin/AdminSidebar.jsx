@@ -10,7 +10,6 @@ import {
 import api from "../../api/axios";
 import { logout } from "../../store/slices/authSlice";
 import AdminSettingsModal from "../../modals/admin/AdminSettingsModal";
-import AdminDailyReport from '../../pages/admin/AdminDailyReport'
 
 // 1. Setup global socket and audio OUTSIDE the component
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
@@ -175,9 +174,9 @@ const AdminSidebar = () => {
                         <TrendingUp className="w-4.5 h-4.5" /> Progress
                     </NavLink>
 
-                    {/* --- NEW DAILY REPORTS LINK --- */}
-                    <NavLink to="/admin/daily-reports" className={desktopNavClasses} title="Daily Reports">
-                        <ClipboardCheck className="w-4.5 h-4.5" /> Daily Reports
+                    {/* --- UPDATED REPORTS LINK --- */}
+                    <NavLink to="/admin/reports" className={desktopNavClasses} title="Reports">
+                        <ClipboardCheck className="w-4.5 h-4.5" /> Reports
                     </NavLink>
 
                     {/* ALERTS LINK WITH BADGE */}
@@ -231,11 +230,11 @@ const AdminSidebar = () => {
                                 <p className="text-[11px] text-muted-foreground truncate">{adminEmail}</p>
                             </div>
 
-                            {/* --- NEW DAILY REPORTS BUTTON --- */}
+                            {/* --- UPDATED REPORTS BUTTON --- */}
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                                onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/daily-reports'); }}
+                                onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/reports'); }}
                             >
-                                <ClipboardCheck className="w-4 h-4 text-primary" /> Daily Reports
+                                <ClipboardCheck className="w-4 h-4 text-primary" /> Reports
                             </button>
 
                             <button onClick={toggleTheme} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">

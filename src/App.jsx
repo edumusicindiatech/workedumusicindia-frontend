@@ -21,9 +21,9 @@ import EmployeeProfile from "./pages/admin/EmployeeProfile";
 import Communication from "./pages/admin/Communication";
 import AttendanceFeed from "./pages/admin/AttendenceFeed";
 import ProgressReport from "./pages/admin/ProgressReport";
-import AdminDailyReport from './pages/admin/AdminDailyReport'
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminResetPassword from "./pages/admin/AdminResetPassword";
+import AdminReports from "./pages/admin/AdminReports";
 
 // Employee Imports
 import EmployeeLayout from "./components/employee/EmployeeLayout";
@@ -134,7 +134,7 @@ function App() {
           <Route path="employees/:id" element={<EmployeeProfile />} />
           <Route path="attendance" element={<AttendanceFeed />} />
           <Route path="progress" element={<ProgressReport />} />
-          <Route path="daily-reports" element={<AdminDailyReport />} /> {/* <-- ADDED ROUTE HERE */}
+          <Route path="reports" element={<AdminReports />} /> 
           <Route path="communication" element={<Communication />} />
           <Route path="notifications" element={<AdminNotifications />} />
         </Route>
