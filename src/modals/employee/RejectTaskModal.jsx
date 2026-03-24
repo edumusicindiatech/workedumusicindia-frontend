@@ -19,15 +19,15 @@ const RejectTaskModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={onClose}>
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={onClose}>
 
             {/* Modal Container */}
             <div
-                className="bg-card w-full max-w-md rounded-[2rem] shadow-2xl border border-border/50 flex flex-col overflow-hidden animate-in zoom-in-95 fade-in duration-300 relative"
+                className="bg-card w-full max-w-md rounded-4xl shadow-2xl border border-border/50 flex flex-col overflow-hidden animate-in zoom-in-95 fade-in duration-300 relative"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Decorative Top Gradient Line */}
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-destructive/40 via-destructive to-destructive/40" />
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-destructive/40 via-destructive to-destructive/40" />
 
                 {/* --- Header Section --- */}
                 <div className="pt-8 px-6 sm:px-8 text-center flex flex-col items-center">
@@ -52,7 +52,7 @@ const RejectTaskModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
                         onChange={(e) => setRejectReason(e.target.value)}
                         placeholder="e.g., Schedule conflict, already assigned to another priority task..."
                         disabled={actionLoading}
-                        className="w-full min-h-[120px] p-4 rounded-2xl border border-border/60 bg-muted/20 text-sm sm:text-base focus:bg-card focus:border-destructive/50 focus:ring-4 focus:ring-destructive/10 outline-none resize-none transition-all duration-300 custom-scrollbar placeholder:text-muted-foreground/50 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full min-h-30 p-4 rounded-2xl border border-border/60 bg-muted/20 text-sm sm:text-base focus:bg-card focus:border-destructive/50 focus:ring-4 focus:ring-destructive/10 outline-none resize-none transition-all duration-300 custom-scrollbar placeholder:text-muted-foreground/50 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     />
 
                     {/* --- Action Buttons --- */}
