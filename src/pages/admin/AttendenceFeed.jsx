@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useSelector } from "react-redux"; // <-- IMPORTED REDUX SELECTOR
+import { useSelector } from "react-redux";
 import {
     Radio, Clock, MapPin, School, Users, FileText,
-    AlertCircle, CheckCircle2, XCircle, Coffee, Star, X, Timer, Filter, ChevronDown, LogOut
+    AlertCircle, CheckCircle2, XCircle, Coffee, Star, X, Timer, Filter, ChevronDown, LogOut, Settings2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import api from "../../api/axios";
@@ -20,7 +20,15 @@ const AttendanceFeed = () => {
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState("All");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+    // Modal State
     const [selectedNoteRecord, setSelectedNoteRecord] = useState(null);
+
+    // Override States
+    const [overrideMode, setOverrideMode] = useState(false);
+    const [overrideAction, setOverrideAction] = useState(""); // CheckIn, CheckOut, Absent, Late, Event, Revoke
+    const [overrideReason, setOverrideReason] = useState("");
+    const [isSubmittingOverride, setIsSubmittingOverride] = useState(false);
 
     const filterRef = useRef(null);
 
@@ -30,8 +38,38 @@ const AttendanceFeed = () => {
         try {
             const queryStatus = activeFilter.toLowerCase();
             const response = await api.get(`/admin/daily-feed?status=${queryStatus}`);
+
             if (response.data.success) {
                 setLiveData(response.data.data);
+
+                // Smarter state update for the modal
+                setSelectedNoteRecord((prevRecord) => {
+                    if (!prevRecord) return null;
+
+                    const freshData = response.data.data;
+
+                    // 1. Try to find by exact ID first
+                    let updatedRecord = freshData.find(r => r._id === prevRecord._id);
+
+                    // 2. Fallback: If the ID changed in EITHER direction 
+                    // (Pending -> Real, OR Real -> Pending after a Revoke), match by employee + school
+                    if (!updatedRecord) {
+                        const prevTeacherId = prevRecord.teacher?._id || prevRecord.teacher;
+                        const prevSchoolId = prevRecord.school?._id || prevRecord.school;
+
+                        updatedRecord = freshData.find(r => {
+                            const currentTeacherId = r.teacher?._id || r.teacher;
+                            const currentSchoolId = r.school?._id || r.school;
+
+                            return currentTeacherId === prevTeacherId &&
+                                currentSchoolId === prevSchoolId &&
+                                r.date === prevRecord.date;
+                        });
+                    }
+
+                    // If it still can't find it, safely close the modal rather than crashing
+                    return updatedRecord || null;
+                });
             }
         } catch (error) {
             console.error("Failed to fetch live feed:", error);
@@ -42,30 +80,26 @@ const AttendanceFeed = () => {
 
     // --- INITIAL LOAD & POLLING ---
     useEffect(() => {
-        fetchFeed(true); // Show loader on initial load or filter change
-        const interval = setInterval(() => fetchFeed(false), 60000); // Polling (silent)
+        fetchFeed(true);
+        const interval = setInterval(() => fetchFeed(false), 60000);
         return () => clearInterval(interval);
     }, [fetchFeed]);
 
     // --- REAL-TIME SOCKET CONNECTION ---
+    const currentUserId = user?.id || user?._id;
     useEffect(() => {
-        if (!user) return;
+        if (!currentUserId) return;
 
-        // Tell the socket to join this admin's room
-        const currentUserId = user.id || user._id;
         socket.emit("join_room", currentUserId);
 
         const handleRealTimeUpdate = (data) => {
             console.log("Live feed update received!", data);
-            fetchFeed(false); // Fetch new data silently without showing the loader
+            fetchFeed(false);
         };
 
         socket.on("new_notification", handleRealTimeUpdate);
-
-        return () => {
-            socket.off("new_notification", handleRealTimeUpdate);
-        };
-    }, [user, fetchFeed]);
+        return () => socket.off("new_notification", handleRealTimeUpdate);
+    }, [currentUserId, fetchFeed]);
 
     // --- CLICK OUTSIDE HANDLER ---
     useEffect(() => {
@@ -115,9 +149,43 @@ const AttendanceFeed = () => {
         return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    // --- OVERRIDE HANDLER ---
+    const handleOverrideSubmit = async () => {
+        if (!overrideAction) return;
+        setIsSubmittingOverride(true);
+        try {
+            const res = await api.put(`/admin/attendance/${selectedNoteRecord._id}/override`, {
+                action: overrideAction,
+                reason: overrideReason,
+                // Pass these explicitly in case it's a "Pending" record that needs to be created
+                teacherId: selectedNoteRecord.teacher?._id,
+                schoolId: selectedNoteRecord.school?._id,
+                band: selectedNoteRecord.band,
+                date: selectedNoteRecord.date || new Date().toISOString().split('T')[0]
+            });
+            if (res.data.success) {
+                setOverrideMode(false);
+                setOverrideAction("");
+                setOverrideReason("");
+                fetchFeed(false);
+            }
+        } catch (error) {
+            console.error("Override failed:", error);
+            alert(error.response?.data?.message || "Failed to override attendance.");
+        } finally {
+            setIsSubmittingOverride(false);
+        }
+    };
+
+    const closeAndResetModal = () => {
+        setSelectedNoteRecord(null);
+        setOverrideMode(false);
+        setOverrideAction("");
+        setOverrideReason("");
+    };
+
     return (
         <div className="p-3 sm:p-6 lg:p-8 max-w-6xl mx-auto animate-fade-in pb-24 md:pb-8">
-
             {/* --- HEADER SECTION --- */}
             <div className="flex items-center justify-between mb-8 relative">
                 <div className="flex items-center gap-3">
@@ -170,11 +238,11 @@ const AttendanceFeed = () => {
                         const uiStatus = getDerivedStatus(record);
                         const statusConfig = getStatusConfig(uiStatus);
 
-                        // LOGIC PRESERVATION: Check for these even if completed
                         const isLate = record.status === 'Late' || !!record.lateReason;
                         const hadEvent = !!record.eventNote;
                         const isAbsent = uiStatus === 'Absent';
-                        const hasDetails = !!record.checkInTime || hadEvent || isLate || !!record.teacherNote || isAbsent;
+                        // Made all cards clickable so admin can override any state
+                        const hasDetails = true;
 
                         return (
                             <div
@@ -239,13 +307,13 @@ const AttendanceFeed = () => {
                 </div>
             )}
 
-            {/* --- HIGH-FIDELITY MODAL --- */}
+            {/* --- HIGH-FIDELITY MODAL & OVERRIDE UI --- */}
             {selectedNoteRecord && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setSelectedNoteRecord(null)}>
-                    <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-border flex flex-col overflow-hidden animate-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={closeAndResetModal}>
+                    <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-border flex flex-col overflow-y-auto max-h-[90vh] animate-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
 
                         {/* Header */}
-                        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/20">
+                        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/20 sticky top-0 z-10">
                             <div className="flex items-center gap-4">
                                 <div className={`w-11 h-11 rounded-full flex items-center justify-center ${!!selectedNoteRecord.eventNote ? 'bg-violet-600' : (selectedNoteRecord.status === 'Absent' ? 'bg-destructive' : 'bg-blue-600')} text-white`}>
                                     {!!selectedNoteRecord.eventNote ? <Star className="w-5 h-5 fill-current" /> : (selectedNoteRecord.status === 'Absent' ? <XCircle className="w-5 h-5" /> : <FileText className="w-5 h-5" />)}
@@ -255,12 +323,12 @@ const AttendanceFeed = () => {
                                     <p className="text-xs text-muted-foreground">{selectedNoteRecord.teacher?.name} • {selectedNoteRecord.school?.schoolName}</p>
                                 </div>
                             </div>
-                            <button onClick={() => setSelectedNoteRecord(null)} className="p-2 hover:bg-muted rounded-full text-muted-foreground"><X className="w-5 h-5" /></button>
+                            <button onClick={closeAndResetModal} className="p-2 hover:bg-muted rounded-full text-muted-foreground"><X className="w-5 h-5" /></button>
                         </div>
 
                         {/* Body */}
                         <div className="p-6 space-y-5">
-                            {/* Event Block */}
+                            {/* Original Intelligence Details */}
                             {selectedNoteRecord.eventNote && (
                                 <div className="p-5 bg-violet-600/10 border border-violet-500/20 rounded-2xl">
                                     <h4 className="text-[10px] font-black uppercase text-violet-600 mb-2 flex items-center gap-2"><Star className="w-3.5 h-3.5 fill-current" /> Event Highlights</h4>
@@ -268,25 +336,21 @@ const AttendanceFeed = () => {
                                 </div>
                             )}
 
-                            {/* Intelligence Blocks */}
                             {(selectedNoteRecord.status === 'Absent' || !!selectedNoteRecord.lateReason || !!selectedNoteRecord.teacherNote) && (
                                 <div className="p-5 bg-muted/20 border border-border rounded-2xl space-y-4">
                                     <h4 className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2"><AlertCircle className="w-4 h-4" /> Operations Intel</h4>
-
                                     {selectedNoteRecord.status === 'Absent' && (
                                         <div className="bg-red-500/5 p-3 rounded-lg border border-red-500/20 border-l-4 border-l-red-500">
                                             <span className="font-bold text-[10px] uppercase text-red-600 block mb-1">Absence Reason</span>
                                             <p className="text-sm italic text-red-900 font-medium">"{selectedNoteRecord.teacherNote || "No reason provided."}"</p>
                                         </div>
                                     )}
-
                                     {selectedNoteRecord.lateReason && (
                                         <div className="bg-amber-500/5 p-3 rounded-lg border border-amber-500/20 border-l-4 border-l-amber-500">
                                             <span className="font-bold text-[10px] uppercase text-amber-600 block mb-1">Delayed Arrival</span>
                                             <p className="text-sm italic text-amber-900 font-medium">"{selectedNoteRecord.lateReason}"</p>
                                         </div>
                                     )}
-
                                     {selectedNoteRecord.teacherNote && selectedNoteRecord.status !== 'Absent' && (
                                         <div>
                                             <span className="font-bold text-[10px] uppercase text-muted-foreground block mb-1">Standard Report</span>
@@ -296,15 +360,70 @@ const AttendanceFeed = () => {
                                 </div>
                             )}
 
-                            {/* Grid Footer */}
                             <div className="grid grid-cols-2 gap-4 p-4 bg-card border border-border rounded-xl">
                                 <div><span className="text-[9px] font-bold text-muted-foreground uppercase flex items-center gap-1"><Clock className="w-2.5 h-2.5" /> Arrived</span><p className="text-sm font-bold">{formatTime(selectedNoteRecord.checkInTime) || "—"}</p></div>
                                 <div><span className="text-[9px] font-bold text-muted-foreground uppercase flex items-center gap-1"><LogOut className="w-2.5 h-2.5" /> Departed</span><p className="text-sm font-bold">{formatTime(selectedNoteRecord.checkOutTime) || (selectedNoteRecord.checkInTime ? "On-site" : "—")}</p></div>
                             </div>
-                        </div>
 
-                        <div className="p-4 border-t border-border flex justify-end bg-muted/10">
-                            <Button variant="outline" className="rounded-xl font-bold" onClick={() => setSelectedNoteRecord(null)}>Close Dashboard</Button>
+                            {/* --- ADMIN OVERRIDE SECTION --- */}
+                            <div className="mt-6 border-t border-border pt-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                                        <Settings2 className="w-4 h-4 text-primary" /> Admin Override Options
+                                    </h4>
+                                    <button
+                                        onClick={() => { setOverrideMode(!overrideMode); setOverrideAction(""); }}
+                                        className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-3 py-1.5 rounded-md hover:bg-primary/20 transition-colors"
+                                    >
+                                        {overrideMode ? "Cancel Override" : "Enable Edit"}
+                                    </button>
+                                </div>
+
+                                {overrideMode && (
+                                    <div className="bg-muted/30 p-4 rounded-xl border border-border space-y-4 animate-in fade-in slide-in-from-top-2">
+
+                                        {/* Action Grid */}
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                            {!selectedNoteRecord.checkInTime && (
+                                                <button onClick={() => setOverrideAction("CheckIn")} className={`px-2 py-2 text-xs font-bold rounded-lg border transition-all ${overrideAction === 'CheckIn' ? 'bg-emerald-500 text-white border-emerald-600 shadow-inner' : 'bg-card text-foreground hover:border-emerald-500'}`}>Check In</button>
+                                            )}
+                                            {selectedNoteRecord.checkInTime && !selectedNoteRecord.checkOutTime && (
+                                                <button onClick={() => setOverrideAction("CheckOut")} className={`px-2 py-2 text-xs font-bold rounded-lg border transition-all ${overrideAction === 'CheckOut' ? 'bg-blue-500 text-white border-blue-600 shadow-inner' : 'bg-card text-foreground hover:border-blue-500'}`}>Check Out</button>
+                                            )}
+                                            <button onClick={() => setOverrideAction("Absent")} className={`px-2 py-2 text-xs font-bold rounded-lg border transition-all ${overrideAction === 'Absent' ? 'bg-destructive text-white border-red-700 shadow-inner' : 'bg-card text-foreground hover:border-destructive'}`}>Absent</button>
+                                            <button onClick={() => setOverrideAction("Late")} className={`px-2 py-2 text-xs font-bold rounded-lg border transition-all ${overrideAction === 'Late' ? 'bg-amber-500 text-white border-amber-600 shadow-inner' : 'bg-card text-foreground hover:border-amber-500'}`}>Late</button>
+                                            <button onClick={() => setOverrideAction("Event")} className={`px-2 py-2 text-xs font-bold rounded-lg border transition-all ${overrideAction === 'Event' ? 'bg-violet-500 text-white border-violet-600 shadow-inner' : 'bg-card text-foreground hover:border-violet-500'}`}>Event</button>
+                                            <button
+                                                onClick={() => setOverrideAction("Revoke")}
+                                                className={`px-2 py-2 text-xs font-bold rounded-lg border transition-all ${overrideAction === 'Revoke' ? 'bg-slate-800 text-white border-slate-900 shadow-inner' : 'bg-card text-foreground hover:border-slate-800'}`}
+                                            >
+                                                {selectedNoteRecord.checkOutTime ? "Undo Check Out" : "Revoke All"}
+                                            </button> </div>
+
+                                        {/* Reason Input */}
+                                        {overrideAction && (
+                                            <div className="space-y-3 animate-in fade-in">
+                                                <div>
+                                                    <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Optional Reason / Note</label>
+                                                    <textarea
+                                                        value={overrideReason}
+                                                        onChange={(e) => setOverrideReason(e.target.value)}
+                                                        placeholder={`Reason for marking as ${overrideAction}...`}
+                                                        className="w-full bg-card border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none resize-none h-20"
+                                                    />
+                                                </div>
+                                                <Button
+                                                    className="w-full font-bold"
+                                                    onClick={handleOverrideSubmit}
+                                                    disabled={isSubmittingOverride}
+                                                >
+                                                    {isSubmittingOverride ? "Applying..." : `Confirm ${overrideAction}`}
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
