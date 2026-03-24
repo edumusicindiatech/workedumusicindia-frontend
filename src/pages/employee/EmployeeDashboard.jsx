@@ -126,10 +126,10 @@ const EmployeeDashboard = () => {
 
         executeWithGPS(async (lat, lng) => {
             try {
-                await axios.post('/api/employee/check-in', {
+                await api.post('/employee/check-in', {
                     schoolId: visit.schoolId, band: visit.category,
                     latitude: lat, longitude: lng, lateReason, eventNote
-                }, { headers: { Authorization: `Bearer ${token}` } });
+                });
 
                 setCheckInModal({ isOpen: false, visit: null, isLate: false });
                 toast.success(`Successfully checked in at ${visit.schoolName}!`);
@@ -145,10 +145,10 @@ const EmployeeDashboard = () => {
 
         executeWithGPS(async (lat, lng) => {
             try {
-                await axios.post('/api/employee/check-out', {
+                await api.post('/employee/check-out', {
                     schoolId: visit.schoolId, band: visit.category,
                     latitude: lat, longitude: lng, overtimeReason
-                }, { headers: { Authorization: `Bearer ${token}` } });
+                });
 
                 setCheckOutModal({ isOpen: false, visit: null, overtimeMinutes: 0 });
                 toast.success(`Successfully checked out of ${visit.schoolName}!`);
@@ -164,13 +164,18 @@ const EmployeeDashboard = () => {
         const loadingId = toast.loading(`Marking as ${statusType}...`);
 
         try {
-            const endpoint = target === 'ALL' ? '/api/employee/mark-day-status' : '/api/employee/mark-status';
+            // 1. Define the endpoint
+            const endpoint = target === 'ALL' ? '/employee/mark-day-status' : '/employee/mark-status';
+
+            // 2. Define the payload
             const payload = target === 'ALL'
                 ? { status: statusType, reason }
                 : { schoolId: target.schoolId, band: target.category, status: statusType, reason };
 
-            await axios.post(endpoint, payload, { headers: { Authorization: `Bearer ${token}` } });
+            // 3. Send the request
+            await api.post(endpoint, payload);
 
+            // 4. Handle success UI states
             if (statusType === 'Absent') setAbsentModal({ isOpen: false, target: null });
             if (statusType === 'Holiday') setHolidayModal({ isOpen: false, target: null });
 
@@ -263,24 +268,36 @@ const EmployeeDashboard = () => {
                 <div className="space-y-5 mt-6">
                     {assignments.map((visit) => {
                         // Safe Time Parsing for the live timer
-                        const [time, modifier] = visit.startTime.split(' ');
-                        let [h, m] = time.split(':');
-                        if (h === '12') h = '00';
-                        if (modifier === 'PM') h = parseInt(h, 10) + 12;
+                        // 1. Sanitize the input to ignore accidental spaces and force uppercase
+                        const [time, rawModifier] = visit.startTime.trim().split(/\s+/);
+                        const modifier = (rawModifier || '').toUpperCase();
+
+                        let [hStr, mStr] = time.split(':');
+                        let h = parseInt(hStr, 10);
+                        const m = parseInt(mStr, 10);
+
+                        // 2. Bulletproof 12-hour to 24-hour conversion
+                        if (h === 12) {
+                            h = modifier === 'AM' ? 0 : 12;
+                        } else if (modifier === 'PM') {
+                            h += 12;
+                        }
 
                         const scheduledTimeDate = new Date();
                         scheduledTimeDate.setHours(h, m, 0, 0);
 
                         const diffMs = scheduledTimeDate - currentTime;
                         const isLateLive = diffMs < 0;
-                        const diffMins = Math.abs(Math.floor(diffMs / 60000));
-                        const diffHours = Math.floor(diffMins / 60);
-                        const remainderMins = diffMins % 60;
+
+                        // 3. Math.abs needs to happen AFTER the division to prevent rounding errors
+                        const totalDiffMins = Math.floor(Math.abs(diffMs) / 60000);
+                        const diffHours = Math.floor(totalDiffMins / 60);
+                        const remainderMins = totalDiffMins % 60;
 
                         // Formatting the timer text
                         let timerText = "";
                         if (diffHours > 0) timerText = `${diffHours}h ${remainderMins}m`;
-                        else timerText = `${diffMins}m`;
+                        else timerText = `${totalDiffMins}m`;
 
                         const isPending = visit.status === 'pending';
                         const isActive = visit.status === 'checked_in';
@@ -289,8 +306,8 @@ const EmployeeDashboard = () => {
                             <div
                                 key={visit.id}
                                 className={`group relative bg-card rounded-3xl p-5 sm:p-7 transition-all duration-300 border ${isActive
-                                        ? 'border-emerald-500/50 shadow-[0_0_30px_-5px_rgba(16,185,129,0.15)] scale-[1.01] dark:bg-emerald-950/10'
-                                        : 'border-border shadow-sm hover:shadow-md hover:border-primary/30'
+                                    ? 'border-emerald-500/50 shadow-[0_0_30px_-5px_rgba(16,185,129,0.15)] scale-[1.01] dark:bg-emerald-950/10'
+                                    : 'border-border shadow-sm hover:shadow-md hover:border-primary/30'
                                     }`}
                             >
 
@@ -337,8 +354,8 @@ const EmployeeDashboard = () => {
                                         {/* Live Running Timer */}
                                         {isPending && (
                                             <div className={`mt-0 lg:mt-2 px-3 py-1.5 rounded-lg flex items-center gap-1.5 border ${isLateLive
-                                                    ? 'bg-destructive/10 text-destructive border-destructive/20'
-                                                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                                ? 'bg-destructive/10 text-destructive border-destructive/20'
+                                                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                                                 }`}>
                                                 <Clock className="w-4 h-4" />
                                                 <span className="text-sm font-bold">

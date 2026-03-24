@@ -170,20 +170,17 @@ const AssignedSchools = () => {
                                 {/* Dynamic Details per Category */}
                                 <div className="space-y-4 mb-6 flex-1 w-full">
                                     {school.categories.map((cat, idx) => {
-                                        const userAssignment = user?.assignments?.find(a =>
-                                            (a.school._id || a.school) === school.id && a.category === cat.name
-                                        );
+                                        // ✅ Read directly from the newly updated API response
+                                        const startTime = cat.startTime || "N/A";
+                                        const endTime = cat.endTime || "N/A";
+                                        const allowedDays = cat.allowedDays || [];
 
-                                        const startTime = userAssignment?.startTime || "N/A";
-                                        const endTime = userAssignment?.endTime || "N/A";
-                                        const allowedDays = userAssignment?.allowedDays || [];
-
-                                        // Calculate Distance
+                                        // Calculate Distance using cat.geofence
                                         let distanceText = null;
-                                        if (userLocation && userAssignment?.geofence) {
+                                        if (userLocation && cat.geofence) {
                                             const dist = calculateDistance(
                                                 userLocation.lat, userLocation.lng,
-                                                userAssignment.geofence.latitude, userAssignment.geofence.longitude
+                                                cat.geofence.latitude, cat.geofence.longitude
                                             );
                                             if (dist) distanceText = `${dist} km away`;
                                         }
@@ -223,8 +220,8 @@ const AssignedSchools = () => {
                                                                     key={day}
                                                                     title={day}
                                                                     className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 flex items-center justify-center rounded-full text-[9px] sm:text-[10px] md:text-xs font-bold transition-all shrink-0 ${isAssigned
-                                                                            ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/30 border border-emerald-400/50'
-                                                                            : 'bg-card border border-border text-muted-foreground/40'
+                                                                        ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/30 border border-emerald-400/50'
+                                                                        : 'bg-card border border-border text-muted-foreground/40'
                                                                         }`}
                                                                 >
                                                                     {day.charAt(0)}
