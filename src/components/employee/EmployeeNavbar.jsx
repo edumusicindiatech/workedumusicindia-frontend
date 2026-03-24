@@ -15,7 +15,7 @@ import {
 import EmployeeSettingsModal from "../../modals/employee/EmployeeSettingsModal";
 
 // 1. Setup global socket and audio OUTSIDE the component to prevent re-renders
-const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
+const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5000");
 const notificationSound = new Audio('/sounds/notification-ting.mp3');
 
 const EmployeeNavbar = () => {
@@ -34,7 +34,33 @@ const EmployeeNavbar = () => {
     useEffect(() => {
         pathnameRef.current = location.pathname;
     }, [location.pathname]);
+    useEffect(() => {
+        // Unlock the ACTUAL global audio instance on first interaction
+        const unlockAudio = () => {
+            notificationSound.volume = 0; // Mute it so the user doesn't hear the unlock
 
+            notificationSound.play().then(() => {
+                // It worked! Instantly pause and reset it for the real notifications
+                notificationSound.pause();
+                notificationSound.currentTime = 0;
+                notificationSound.volume = 1; // Turn volume back up to 100%
+
+                // Cleanup listeners so this only runs once
+                document.removeEventListener('click', unlockAudio);
+                document.removeEventListener('touchstart', unlockAudio);
+                console.log("Audio successfully unlocked!");
+            }).catch(e => console.log("Still waiting for user interaction..."));
+        };
+
+        // Attach to the whole document
+        document.addEventListener('click', unlockAudio);
+        document.addEventListener('touchstart', unlockAudio);
+
+        return () => {
+            document.removeEventListener('click', unlockAudio);
+            document.removeEventListener('touchstart', unlockAudio);
+        };
+    }, []);
     const { user, token } = useSelector((state) => state.auth);
     const themeMode = useSelector((state) => state.theme.mode);
 

@@ -1,12 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Send, Users, Bell, UserCheck, Search, CheckCircle2, Clock, Loader2, AlertCircle, Megaphone } from "lucide-react";
-import { toast, Toaster } from "sonner"; // <-- Imported Toaster here
+import { toast, Toaster } from "sonner";
 import api from "../../api/axios";
 
+// --- 1. SOCKET & AUDIO SETUP OUTSIDE COMPONENT ---
+import { io } from "socket.io-client";
+const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
+const notificationSound = new Audio('/sounds/notification-ting.mp3'); // <-- Added Audio Instance
+
 const Communication = () => {
+    const { user } = useSelector((state) => state.auth);
+
     // --- FORM STATES ---
     const [message, setMessage] = useState("");
     const [target, setTarget] = useState("All Employees");
@@ -21,26 +29,86 @@ const Communication = () => {
     const [isSending, setIsSending] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
 
-    // --- FETCH INITIAL DATA ---
+    // --- 2. AUDIO UNLOCKER ---
     useEffect(() => {
-        const fetchInitialData = async () => {
-            try {
-                const [empRes, broadcastsRes] = await Promise.all([
-                    api.get('/admin/communication/employees'),
-                    api.get('/admin/communication/recent')
-                ]);
-                if (empRes.data.success) setEmployees(empRes.data.data);
-                if (broadcastsRes.data.success) setRecentBroadcasts(broadcastsRes.data.data);
-            } catch (error) {
-                console.error("Fetch Error:", error);
+        const unlockAudio = () => {
+            notificationSound.volume = 0; // Mute it so the user doesn't hear the unlock
+
+            notificationSound.play().then(() => {
+                notificationSound.pause();
+                notificationSound.currentTime = 0;
+                notificationSound.volume = 1; // Turn volume back up to 100%
+
+                document.removeEventListener('click', unlockAudio);
+                document.removeEventListener('touchstart', unlockAudio);
+            }).catch(e => console.log("Still waiting for user interaction..."));
+        };
+
+        document.addEventListener('click', unlockAudio);
+        document.addEventListener('touchstart', unlockAudio);
+
+        return () => {
+            document.removeEventListener('click', unlockAudio);
+            document.removeEventListener('touchstart', unlockAudio);
+        };
+    }, []);
+
+    // --- EXTRACTED FETCH FUNCTION FOR SILENT UPDATES ---
+    const fetchData = useCallback(async (showLoader = true) => {
+        if (showLoader) setIsFetching(true);
+        try {
+            const [empRes, broadcastsRes] = await Promise.all([
+                api.get('/admin/communication/employees'),
+                api.get('/admin/communication/recent')
+            ]);
+            if (empRes.data.success) setEmployees(empRes.data.data);
+            if (broadcastsRes.data.success) setRecentBroadcasts(broadcastsRes.data.data);
+            setErrorMsg("");
+        } catch (error) {
+            console.error("Fetch Error:", error);
+            if (showLoader) {
                 setErrorMsg("Failed to load communication hub data.");
                 toast.error("Failed to load communication data.");
-            } finally {
-                setIsFetching(false);
             }
-        };
-        fetchInitialData();
+        } finally {
+            if (showLoader) setIsFetching(false);
+        }
     }, []);
+
+    // --- INITIAL LOAD ---
+    useEffect(() => {
+        fetchData(true);
+    }, [fetchData]);
+
+    // --- 3. REAL-TIME SOCKET CONNECTION & SOUND ---
+    useEffect(() => {
+        if (!user) return;
+
+        const currentUserId = user.id || user._id;
+        socket.emit("join_room", currentUserId);
+
+        const handleRealTimeUpdate = (data) => {
+            console.log("Communication update received!", data);
+
+            // 👉 PLAY THE SUCCESS/NOTIFICATION SOUND
+            try {
+                notificationSound.currentTime = 0;
+                notificationSound.play().catch(err => {
+                    console.warn("🔇 BROWSER BLOCKED AUDIO! Click anywhere first.", err);
+                });
+            } catch (e) {
+                console.error("Error playing sound:", e);
+            }
+
+            fetchData(false);
+        };
+
+        socket.on("new_notification", handleRealTimeUpdate);
+
+        return () => {
+            socket.off("new_notification", handleRealTimeUpdate);
+        };
+    }, [user, fetchData]);
 
     // --- SEND BROADCAST LOGIC ---
     const handleSendBroadcast = async () => {
@@ -72,7 +140,6 @@ const Communication = () => {
             if (response.data.success) {
                 toast.success(`Broadcast delivered to ${response.data.data.reachCount} users!`);
 
-                // Add to recent list and keep ONLY the 3 most recent
                 setRecentBroadcasts(prev => [response.data.data, ...prev].slice(0, 3));
                 setMessage("");
                 setSelectedCity("");
@@ -134,7 +201,6 @@ const Communication = () => {
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24 md:pb-10 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
 
-            {/* Added Toaster here so notifications render correctly */}
             <Toaster richColors position="top-right" />
 
             {/* Header */}
@@ -153,7 +219,6 @@ const Communication = () => {
                 {/* --- MAIN FORM AREA --- */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="bg-card rounded-2xl shadow-sm p-5 sm:p-7 border border-border/60 relative overflow-hidden">
-                        {/* Decorative background accent */}
                         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
 
                         <h3 className="text-lg sm:text-xl font-semibold mb-6 flex items-center gap-2 text-foreground relative z-10">
