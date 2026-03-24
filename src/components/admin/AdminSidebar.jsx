@@ -4,12 +4,13 @@ import { useDispatch, useSelector } from "react-redux";
 import { io } from "socket.io-client";
 import {
     LayoutDashboard, Users, Radio, MessageSquare, Shield,
-    Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle
+    Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle, ClipboardCheck
 } from "lucide-react";
 
 import api from "../../api/axios";
 import { logout } from "../../store/slices/authSlice";
 import AdminSettingsModal from "../../modals/admin/AdminSettingsModal";
+import AdminDailyReport from '../../pages/admin/AdminDailyReport'
 
 // 1. Setup global socket and audio OUTSIDE the component
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
@@ -174,6 +175,11 @@ const AdminSidebar = () => {
                         <TrendingUp className="w-4.5 h-4.5" /> Progress
                     </NavLink>
 
+                    {/* --- NEW DAILY REPORTS LINK --- */}
+                    <NavLink to="/admin/daily-reports" className={desktopNavClasses} title="Daily Reports">
+                        <ClipboardCheck className="w-4.5 h-4.5" /> Daily Reports
+                    </NavLink>
+
                     {/* ALERTS LINK WITH BADGE */}
                     <NavLink to="/admin/notifications" className={desktopNavClasses} title="Alerts">
                         <div className="relative flex items-center justify-center">
@@ -224,6 +230,14 @@ const AdminSidebar = () => {
                                 <p className="text-sm font-bold text-foreground truncate">{adminName}</p>
                                 <p className="text-[11px] text-muted-foreground truncate">{adminEmail}</p>
                             </div>
+
+                            {/* --- NEW DAILY REPORTS BUTTON --- */}
+                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/daily-reports'); }}
+                            >
+                                <ClipboardCheck className="w-4 h-4 text-primary" /> Daily Reports
+                            </button>
+
                             <button onClick={toggleTheme} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                                 <div className="flex items-center gap-3">
                                     {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}

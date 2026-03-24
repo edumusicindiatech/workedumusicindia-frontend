@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSelector } from "react-redux";
 import {
     ChevronRight, ArrowLeft, Search, CalendarDays,
     ClipboardCheck, FileText, Loader2
@@ -6,8 +7,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import api from "../../api/axios";
+import { io } from "socket.io-client";
 
-const DailyReport = () => {
+// Setup socket connection
+const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
+
+const AdminDailyReport = () => {
+    const { user } = useSelector((state) => state.auth);
+    
     const [employees, setEmployees] = useState([]);
     const [records, setRecords] = useState([]);
     const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
@@ -17,13 +24,41 @@ const DailyReport = () => {
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [selectedMonth, setSelectedMonth] = useState(null);
 
-    // Fetch employee list on mount
+    // --- REAL-TIME SOCKET LOGIC ---
+    useEffect(() => {
+        if (!user) return;
+        const currentUserId = user.id || user._id;
+        socket.emit("join_room", currentUserId);
+
+        const handleNewReport = (newReport) => {
+            if (selectedEmployee && newReport.teacher === selectedEmployee.id) {
+                setRecords(prevRecords => {
+                    const existsIndex = prevRecords.findIndex(r => r.date === newReport.date);
+                    if (existsIndex >= 0) {
+                        const updated = [...prevRecords];
+                        updated[existsIndex] = newReport;
+                        return updated;
+                    } else {
+                        return [newReport, ...prevRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
+                    }
+                });
+                toast.success(`New report received from ${selectedEmployee.name}!`);
+            }
+        };
+
+        socket.on("new_daily_report", handleNewReport);
+        return () => socket.off("new_daily_report", handleNewReport);
+    }, [user, selectedEmployee]);
+
+    // --- FETCH EMPLOYEE ROSTER ---
     useEffect(() => {
         const fetchEmployees = async () => {
             try {
-                // Utilizing the existing progress endpoint to get employees
-                const res = await api.get('/admin/progress/employees');
-                if (res.data.success) setEmployees(res.data.data);
+                const res = await api.get('/admin/roster');
+                if (res.data.success) {
+                    const onlyEmployees = res.data.data.filter(emp => emp.systemRole === 'Employee');
+                    setEmployees(onlyEmployees);
+                }
             } catch (error) {
                 toast.error("Failed to load employees list.");
             } finally {
@@ -33,11 +68,12 @@ const DailyReport = () => {
         fetchEmployees();
     }, []);
 
+    // --- FETCH REPORTS FOR SELECTED EMPLOYEE ---
     const handleSelectEmployee = async (employee) => {
         setSelectedEmployee(employee);
         setIsLoadingRecords(true);
         try {
-            const res = await api.get(`/admin/progress/${employee._id}/records`);
+            const res = await api.get(`/admin/daily-reports/${employee.id}`);
             if (res.data.success) {
                 setRecords(res.data.data);
             }
@@ -49,24 +85,21 @@ const DailyReport = () => {
         }
     };
 
-    // Extract all unique months where the employee submitted a report
     const monthsAvailable = useMemo(() => {
         if (!records || records.length === 0) return [];
         const months = new Set();
         records.forEach(r => {
-            // Only add the month if there is an actual daily report
-            if (r.date && typeof r.date === 'string' && r.dailyReport) {
-                months.add(r.date.substring(0, 7)); // "YYYY-MM"
+            if (r.date && typeof r.date === 'string') {
+                months.add(r.date.substring(0, 7));
             }
         });
         return Array.from(months).sort((a, b) => b.localeCompare(a));
     }, [records]);
 
-    // Extract daily reports for the selected month, sorted by newest first
     const reportsInMonth = useMemo(() => {
         if (!selectedMonth || !records) return [];
         return records
-            .filter(r => typeof r.date === 'string' && r.date.startsWith(selectedMonth) && r.dailyReport)
+            .filter(r => typeof r.date === 'string' && r.date.startsWith(selectedMonth))
             .sort((a, b) => new Date(b.date) - new Date(a.date));
     }, [records, selectedMonth]);
 
@@ -126,7 +159,7 @@ const DailyReport = () => {
                 </div>
 
                 <div className="p-3 sm:p-4 md:p-6 flex-1 bg-background/50 relative overflow-hidden">
-
+                    
                     {/* LEVEL 1: EMPLOYEES LIST */}
                     {!selectedEmployee && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -147,7 +180,7 @@ const DailyReport = () => {
                                 <div className="space-y-2.5 sm:space-y-3">
                                     {filteredEmployees.map((e) => (
                                         <div
-                                            key={e._id}
+                                            key={e.id}
                                             onClick={() => handleSelectEmployee(e)}
                                             className="flex items-center justify-between p-3 sm:p-4 bg-card border border-border/80 rounded-xl sm:rounded-2xl hover:border-blue-500/40 hover:shadow-md cursor-pointer transition-all duration-300 active:scale-[0.99] group"
                                         >
@@ -157,7 +190,7 @@ const DailyReport = () => {
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="font-bold text-xs sm:text-sm text-foreground group-hover:text-blue-500 transition-colors truncate">{e.name}</p>
-                                                    <p className="text-[9px] sm:text-[11px] text-muted-foreground uppercase font-semibold mt-0.5 truncate">{e.zone || 'Unassigned'}</p>
+                                                    <p className="text-[9px] sm:text-[11px] text-muted-foreground uppercase font-semibold mt-0.5 truncate">{e.location || 'Unassigned'}</p>
                                                 </div>
                                             </div>
                                             <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground/40 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-300 shrink-0" />
@@ -217,41 +250,26 @@ const DailyReport = () => {
 
                                     {/* Report Content */}
                                     <div className="p-4 sm:p-5">
-                                        {/* Structured Object Layout */}
-                                        {typeof r.dailyReport === 'object' ? (
-                                            <div className="space-y-4 text-sm text-foreground/90">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[10px] font-bold bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded uppercase">
-                                                        {r.dailyReport.category}
-                                                    </span>
-                                                </div>
-
-                                                <div>
-                                                    <p className="font-semibold text-blue-700/80 dark:text-blue-400 mb-1 text-xs uppercase tracking-wider">Summary</p>
-                                                    <p className="leading-relaxed">{r.dailyReport.summary}</p>
-                                                </div>
-
-                                                {r.dailyReport.category === 'Event Report' && r.dailyReport.eventName && (
-                                                    <div className="bg-muted/20 p-3 rounded-lg border border-border/50">
-                                                        <p className="font-semibold text-blue-700/80 dark:text-blue-400 text-xs uppercase mb-1">Logged Event</p>
-                                                        <p className="font-bold">{r.dailyReport.eventName}</p>
-                                                        <p className="text-xs text-muted-foreground mt-0.5">{r.dailyReport.eventDate}</p>
-                                                    </div>
-                                                )}
-
-                                                {r.dailyReport.actionItems && (
-                                                    <div className="border-t border-border pt-3 mt-3">
-                                                        <p className="font-semibold text-blue-700/80 dark:text-blue-400 mb-1 text-xs uppercase tracking-wider">Pending Action Items</p>
-                                                        <p className="whitespace-pre-wrap leading-relaxed">{r.dailyReport.actionItems}</p>
-                                                    </div>
-                                                )}
+                                        <div className="space-y-4 text-sm text-foreground/90">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-bold bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded uppercase">
+                                                    {r.category || 'Daily Report'}
+                                                </span>
                                             </div>
-                                        ) : (
-                                            /* Legacy String Layout */
-                                            <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
-                                                {r.dailyReport}
+
+                                            <div>
+                                                <p className="font-semibold text-blue-700/80 dark:text-blue-400 mb-1 text-xs uppercase tracking-wider">Summary</p>
+                                                <p className="leading-relaxed">{r.summary}</p>
                                             </div>
-                                        )}
+
+                                            {r.category === 'Event Report' && r.eventName && (
+                                                <div className="bg-muted/20 p-3 rounded-lg border border-border/50">
+                                                    <p className="font-semibold text-blue-700/80 dark:text-blue-400 text-xs uppercase mb-1">Logged Event</p>
+                                                    <p className="font-bold">{r.eventName}</p>
+                                                    <p className="text-xs text-muted-foreground mt-0.5">{r.eventDate}</p>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -268,4 +286,4 @@ const DailyReport = () => {
     );
 };
 
-export default DailyReport;
+export default AdminDailyReport;

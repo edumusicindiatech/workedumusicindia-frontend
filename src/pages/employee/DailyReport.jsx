@@ -1,15 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-// 1. Import your custom api instance
 import api from "../../api/axios";
 import {
     FileText, Calendar, MapPin,
-    CheckCircle, Tag, ChevronDown, Check, ChevronRight
+    CheckCircle, Tag, ChevronDown, Check, Send, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-
-// --- Import Modal ---
-import ActionItemsModal from "../../modals/employee/ActionItemsModal";
 
 const DailyReport = () => {
     // Auto-generate today's date in YYYY-MM-DD format
@@ -28,8 +24,7 @@ const DailyReport = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
 
-    // Modal & Submission State
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    // Submission State
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [successMsg, setSuccessMsg] = useState("");
 
@@ -55,8 +50,8 @@ const DailyReport = () => {
         return true;
     };
 
-    // 2. Updated final submit logic
-    const handleFinalSubmit = async (actionItems) => {
+    // DIRECT SUBMIT LOGIC (No Action Items)
+    const handleSubmit = async () => {
         setIsSubmitting(true);
 
         const payload = {
@@ -65,16 +60,12 @@ const DailyReport = () => {
             summary: summary.trim(),
             eventName: category === "Event Report" ? eventName.trim() : null,
             eventDate: category === "Event Report" ? eventDate : null,
-            actionItems: actionItems.trim() || null
         };
 
         try {
-            // Use 'api' and remove manual headers
             await api.post('/employee/daily-report', payload);
 
             setIsSubmitting(false);
-            setIsModalOpen(false);
-
             setSuccessMsg("Daily report submitted successfully!");
 
             // Reset Form
@@ -87,7 +78,7 @@ const DailyReport = () => {
         } catch (error) {
             console.error("Failed to submit report", error);
             const errorMsg = error.response?.data?.message || "Failed to submit report.";
-            alert(errorMsg);
+            toast.error(errorMsg);
             setIsSubmitting(false);
         }
     };
@@ -207,22 +198,19 @@ const DailyReport = () => {
                     <div className="pt-4 border-t border-border/50 flex justify-end z-10">
                         <Button
                             type="button"
-                            onClick={() => setIsModalOpen(true)}
-                            disabled={!isFormValid()}
+                            onClick={handleSubmit}
+                            disabled={!isFormValid() || isSubmitting}
                             className="w-full sm:w-auto h-12 px-8 rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground text-base shadow-glow flex items-center justify-center transition-all"
                         >
-                            Continue to Review <ChevronRight className="w-5 h-5 ml-1" />
+                            {isSubmitting ? (
+                                <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting...</>
+                            ) : (
+                                <>Submit Report <Send className="w-4 h-4 ml-2" /></>
+                            )}
                         </Button>
                     </div>
                 </div>
             </div>
-
-            <ActionItemsModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSubmit={handleFinalSubmit}
-                actionLoading={isSubmitting}
-            />
         </div>
     );
 };

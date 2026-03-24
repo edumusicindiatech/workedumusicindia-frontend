@@ -21,8 +21,9 @@ import EmployeeProfile from "./pages/admin/EmployeeProfile";
 import Communication from "./pages/admin/Communication";
 import AttendanceFeed from "./pages/admin/AttendenceFeed";
 import ProgressReport from "./pages/admin/ProgressReport";
+import AdminDailyReport from './pages/admin/AdminDailyReport'
 import AdminNotifications from "./pages/admin/AdminNotifications";
-import AdminResetPassword from "./pages/admin/AdminResetPassword"; // <-- ADDED
+import AdminResetPassword from "./pages/admin/AdminResetPassword";
 
 // Employee Imports
 import EmployeeLayout from "./components/employee/EmployeeLayout";
@@ -32,7 +33,7 @@ import AssignedSchools from "./pages/employee/AssignedSchools";
 import OptionalTasks from "./pages/employee/Tasks";
 import DailyReport from "./pages/employee/DailyReport";
 import EmployeeNotifications from "./pages/employee/EmployeeNotifications";
-import EmployeeResetPassword from "./pages/employee/EmployeeResetPassword"; // <-- ADDED
+import EmployeeResetPassword from "./pages/employee/EmployeeResetPassword";
 import { Toaster } from "react-hot-toast";
 
 function App() {
@@ -78,8 +79,8 @@ function App() {
       <Toaster position="top-right"
         toastOptions={{
           style: {
-            background: 'hsl(var(--card))', // Matches your Tailwind bg-card
-            color: 'hsl(var(--foreground))', // Matches your text color
+            background: 'hsl(var(--card))',
+            color: 'hsl(var(--foreground))',
             border: '1px solid hsl(var(--border))',
             borderRadius: '12px',
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
@@ -87,10 +88,10 @@ function App() {
             fontWeight: '500',
           },
           success: {
-            iconTheme: { primary: '#10b981', secondary: '#ffffff' }, // Emerald green
+            iconTheme: { primary: '#10b981', secondary: '#ffffff' },
           },
           error: {
-            iconTheme: { primary: '#ef4444', secondary: '#ffffff' }, // Destructive red
+            iconTheme: { primary: '#ef4444', secondary: '#ffffff' },
           },
         }}
       />
@@ -133,6 +134,7 @@ function App() {
           <Route path="employees/:id" element={<EmployeeProfile />} />
           <Route path="attendance" element={<AttendanceFeed />} />
           <Route path="progress" element={<ProgressReport />} />
+          <Route path="daily-reports" element={<AdminDailyReport />} /> {/* <-- ADDED ROUTE HERE */}
           <Route path="communication" element={<Communication />} />
           <Route path="notifications" element={<AdminNotifications />} />
         </Route>
