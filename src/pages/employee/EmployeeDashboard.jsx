@@ -49,6 +49,16 @@ const EmployeeDashboard = () => {
         }
     }, []);
 
+    // Helper Function
+    const formatOvertime = (totalMinutes) => {
+        if (!totalMinutes || totalMinutes <= 0) return "";
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+
+        if (h > 0) return `${h}h ${m}m`;
+        return `${m}m`;
+    };
+
     // Initialize & Timer
     useEffect(() => {
         fetchSchedule();
@@ -376,7 +386,7 @@ const EmployeeDashboard = () => {
                                         {isActive && visit.overtimeMinutes > 0 && (
                                             <div className="mt-0 lg:mt-2 px-3 py-1.5 rounded-lg flex items-center gap-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                                                 <Clock className="w-4 h-4 animate-pulse" />
-                                                <span className="text-sm font-bold">Overtime: {visit.overtimeMinutes}m</span>
+                                                <span className="text-sm font-bold">Overtime: {formatOvertime(visit.overtimeMinutes)}</span>
                                             </div>
                                         )}
                                     </div>
