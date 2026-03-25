@@ -178,11 +178,71 @@ const Communication = () => {
     // --- LOADING & ERROR UI ---
     if (isFetching) {
         return (
-            <div className="h-[60vh] flex flex-col items-center justify-center text-muted-foreground animate-pulse">
-                <div className="p-4 bg-primary/10 rounded-full mb-4">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <div className="animate-pulse max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-24 md:pb-10">
+                {/* Header Skeleton */}
+                <div className="mb-6 sm:mb-8 flex items-center gap-4">
+                    <div className="w-11 h-11 bg-muted rounded-xl hidden sm:block shrink-0"></div>
+                    <div className="space-y-2 w-full max-w-md">
+                        <div className="h-8 bg-muted rounded-lg w-3/4"></div>
+                        <div className="h-4 bg-muted rounded w-2/3"></div>
+                    </div>
                 </div>
-                <p className="font-medium text-lg">Loading Communication Hub...</p>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                    {/* Main Form Skeleton */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <div className="bg-card rounded-2xl shadow-sm p-5 sm:p-7 border border-border/60">
+                            <div className="h-6 bg-muted rounded w-40 mb-6 flex items-center gap-2"></div>
+
+                            <div className="space-y-6">
+                                {/* Target Group Skeleton */}
+                                <div className="space-y-3">
+                                    <div className="h-4 bg-muted rounded w-32"></div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                        <div className="h-10 bg-muted rounded-xl"></div>
+                                        <div className="h-10 bg-muted rounded-xl"></div>
+                                        <div className="h-10 bg-muted rounded-xl"></div>
+                                        <div className="h-10 bg-muted rounded-xl"></div>
+                                    </div>
+                                </div>
+
+                                {/* Message Skeleton */}
+                                <div className="space-y-3">
+                                    <div className="h-4 bg-muted rounded w-32"></div>
+                                    <div className="h-32 bg-muted rounded-xl w-full"></div>
+                                </div>
+
+                                {/* Button Skeleton */}
+                                <div className="pt-2">
+                                    <div className="h-10 bg-muted rounded-lg w-full sm:w-48"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Sidebar Skeleton */}
+                    <div className="bg-card rounded-2xl shadow-sm p-5 sm:p-6 border border-border/60 h-fit flex flex-col">
+                        <div className="flex items-center justify-between mb-5 pb-3 border-b border-border/50 shrink-0">
+                            <div className="h-5 bg-muted rounded w-24"></div>
+                            <div className="h-5 bg-muted rounded w-16"></div>
+                        </div>
+                        <div className="space-y-3">
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className="p-3.5 border border-border/60 rounded-xl space-y-3">
+                                    <div className="space-y-2">
+                                        <div className="h-3 bg-muted rounded w-full"></div>
+                                        <div className="h-3 bg-muted rounded w-5/6"></div>
+                                        <div className="h-3 bg-muted rounded w-2/3"></div>
+                                    </div>
+                                    <div className="flex justify-between pt-2.5 border-t border-border/40">
+                                        <div className="h-3 bg-muted rounded w-16"></div>
+                                        <div className="h-3 bg-muted rounded w-16"></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }

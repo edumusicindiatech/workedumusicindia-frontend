@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { Bell, CheckCircle2, AlertCircle, Info, Clock, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import toast from "react-hot-toast"; // <-- Added toast import
+import toast from "react-hot-toast";
 import api from "../../api/axios";
 import { io } from "socket.io-client";
 
@@ -29,7 +29,7 @@ const AdminNotifications = () => {
                 }
             } catch (error) {
                 console.error("Failed to fetch notifications:", error);
-                toast.error("Failed to load notifications."); // <-- Added error toast
+                toast.error("Failed to load notifications.");
             } finally {
                 setLoading(false);
             }
@@ -87,25 +87,25 @@ const AdminNotifications = () => {
     const markAllAsRead = async () => {
         // Optimistic UI update
         setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-        const toastId = toast.loading("Marking all as read..."); // <-- Added loading toast
+        const toastId = toast.loading("Marking all as read...");
         try {
             await api.put('/admin/notifications/mark-read');
-            toast.success("All notifications marked as read!", { id: toastId }); // <-- Added success toast
+            toast.success("All notifications marked as read!", { id: toastId });
         } catch (error) {
             console.error("Failed to mark as read:", error);
-            toast.error("Failed to mark as read.", { id: toastId }); // <-- Added error toast
+            toast.error("Failed to mark as read.", { id: toastId });
         }
     };
 
     const clearAll = async () => {
         setNotifications([]);
-        const toastId = toast.loading("Clearing notifications..."); // <-- Added loading toast
+        const toastId = toast.loading("Clearing notifications...");
         try {
             await api.delete('/admin/notifications/clear');
-            toast.success("Notifications cleared successfully!", { id: toastId }); // <-- Added success toast
+            toast.success("Notifications cleared successfully!", { id: toastId });
         } catch (error) {
             console.error("Failed to clear notifications:", error);
-            toast.error("Failed to clear notifications.", { id: toastId }); // <-- Added error toast
+            toast.error("Failed to clear notifications.", { id: toastId });
         }
     };
 
@@ -141,10 +141,6 @@ const AdminNotifications = () => {
         }
     };
 
-    if (loading) {
-        return <div className="p-8 text-center animate-pulse text-muted-foreground">Loading notifications...</div>;
-    }
-
     return (
         <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-4xl mx-auto animate-in fade-in duration-300 pb-24 md:pb-8">
             {/* --- HEADER --- */}
@@ -165,7 +161,7 @@ const AdminNotifications = () => {
                     <p className="text-muted-foreground text-xs sm:text-sm">Stay updated on alerts, messages, and workforce activity.</p>
                 </div>
 
-                {notifications.length > 0 && (
+                {notifications.length > 0 && !loading && (
                     <div className="flex items-center gap-2 self-start md:self-auto w-full md:w-auto">
                         <Button variant="outline" size="sm" onClick={markAllAsRead} disabled={unreadCount === 0} className="gap-1.5 sm:gap-2 flex-1 md:flex-none text-xs sm:text-sm h-8 sm:h-9">
                             <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Mark all read
@@ -181,7 +177,24 @@ const AdminNotifications = () => {
             <div className="bg-card rounded-xl sm:rounded-2xl shadow-card border border-border min-h-100 sm:min-h-125 overflow-hidden flex flex-col">
                 <div className="p-3 sm:p-4 md:p-6 flex-1 bg-muted/5 flex flex-col gap-2.5 sm:gap-3">
 
-                    {notifications.length === 0 ? (
+                    {loading ? (
+                        /* Shimmer Skeletons for Notifications */
+                        <>
+                            {[...Array(6)].map((_, idx) => (
+                                <div key={idx} className="relative p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl border bg-card border-border animate-pulse">
+                                    <div className="flex gap-3 sm:gap-4 pr-4 sm:pr-6">
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted shrink-0"></div>
+                                        <div className="flex flex-col gap-1.5 sm:gap-2 w-full">
+                                            <div className="h-4 sm:h-5 bg-muted rounded w-1/3"></div>
+                                            <div className="h-3 sm:h-4 bg-muted rounded w-3/4"></div>
+                                            <div className="h-3 sm:h-4 bg-muted rounded w-1/2"></div>
+                                            <div className="h-3 bg-muted rounded w-20 mt-1"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </>
+                    ) : notifications.length === 0 ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-center p-6 sm:p-8">
                             <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-muted/50 flex items-center justify-center mb-3 sm:mb-4">
                                 <Bell className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground/50" />

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useSelector } from "react-redux";
 import {
     ChevronRight, ArrowLeft, Search, CalendarDays,
-    ClipboardCheck, FileText, Loader2, PartyPopper, School, MapPin, Clock
+    ClipboardCheck, FileText, PartyPopper, School, MapPin, Clock
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import toast from "react-hot-toast";
@@ -242,7 +242,22 @@ const AdminReports = () => {
                                             className="pl-9 h-11 bg-card rounded-xl shadow-sm text-sm focus-visible:ring-blue-500/30"
                                         />
                                     </div>
-                                    {isLoadingEmployees ? <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div> : (
+                                    {isLoadingEmployees ? (
+                                        <div className="space-y-3">
+                                            {[...Array(5)].map((_, idx) => (
+                                                <div key={idx} className="flex items-center justify-between p-4 bg-card border border-border/80 rounded-2xl animate-pulse">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 rounded-full bg-muted shrink-0"></div>
+                                                        <div className="space-y-2">
+                                                            <div className="h-4 bg-muted rounded w-32"></div>
+                                                            <div className="h-3 bg-muted rounded w-20"></div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="w-5 h-5 bg-muted rounded shrink-0"></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
                                         <div className="space-y-3">
                                             {employees.filter(e => e.name.toLowerCase().includes(searchTerm.toLowerCase())).map((e) => (
                                                 <div key={e.id} onClick={() => handleSelectEmployee(e)} className="flex items-center justify-between p-4 bg-card border border-border/80 rounded-2xl hover:border-blue-500/40 cursor-pointer transition-all group">
@@ -264,7 +279,19 @@ const AdminReports = () => {
                             {/* LEVEL 2: MONTHS */}
                             {selectedEmployee && !selectedMonth && (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-right-8">
-                                    {isLoadingDaily ? <div className="col-span-full flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div> : monthsAvailable.length === 0 ? (
+                                    {isLoadingDaily ? (
+                                        <>
+                                            {[...Array(4)].map((_, idx) => (
+                                                <div key={idx} className="p-5 border border-border/80 rounded-2xl flex items-center justify-between bg-card animate-pulse">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 bg-muted rounded-xl shrink-0"></div>
+                                                        <div className="h-5 bg-muted rounded w-32"></div>
+                                                    </div>
+                                                    <div className="w-5 h-5 bg-muted rounded shrink-0"></div>
+                                                </div>
+                                            ))}
+                                        </>
+                                    ) : monthsAvailable.length === 0 ? (
                                         <div className="col-span-full text-center py-10 text-muted-foreground bg-muted/10 rounded-2xl border border-dashed text-sm">No reports submitted yet.</div>
                                     ) : monthsAvailable.map(m => (
                                         <div key={m} onClick={() => setSelectedMonth(m)} className="p-5 border border-border/80 rounded-2xl flex items-center justify-between hover:bg-muted/30 cursor-pointer group bg-card transition-all">
@@ -318,7 +345,29 @@ const AdminReports = () => {
                             {/* LEVEL 1: SCHOOLS WITH EVENTS */}
                             {!selectedSchoolEvents && (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-bottom-4">
-                                    {isLoadingEvents ? <div className="col-span-full flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div> : eventsBySchool.length === 0 ? (
+                                    {isLoadingEvents ? (
+                                        <>
+                                            {[...Array(4)].map((_, idx) => (
+                                                <div key={idx} className="bg-card border border-border/80 rounded-2xl p-5 flex flex-col h-45 animate-pulse">
+                                                    <div className="flex items-start gap-3 mb-4">
+                                                        <div className="w-10 h-10 bg-muted rounded-xl shrink-0"></div>
+                                                        <div className="space-y-2 flex-1">
+                                                            <div className="h-5 bg-muted rounded w-3/4"></div>
+                                                            <div className="h-3 bg-muted rounded w-1/2"></div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-auto flex gap-2">
+                                                        <div className="h-4 bg-muted rounded w-12"></div>
+                                                        <div className="h-4 bg-muted rounded w-16"></div>
+                                                    </div>
+                                                    <div className="mt-4 pt-3 border-t border-border/50 flex justify-between items-center">
+                                                        <div className="h-4 bg-muted rounded w-20"></div>
+                                                        <div className="w-4 h-4 bg-muted rounded"></div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </>
+                                    ) : eventsBySchool.length === 0 ? (
                                         <div className="col-span-full text-center py-10 text-muted-foreground bg-muted/10 rounded-2xl border border-dashed text-sm">No upcoming events scheduled.</div>
                                     ) : eventsBySchool.map((school, idx) => (
                                         <div key={idx} onClick={() => setSelectedSchoolEvents(school)} className="bg-card border border-border/80 rounded-2xl p-5 hover:border-blue-500/40 hover:shadow-md cursor-pointer transition-all group flex flex-col h-full">

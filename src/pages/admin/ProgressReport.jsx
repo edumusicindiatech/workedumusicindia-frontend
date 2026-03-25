@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import {
     ChevronRight, ArrowLeft, TrendingUp, Search,
     CheckCircle2, AlertCircle, XCircle, Star, Coffee, Film, CalendarDays,
-    Clock, FileText, MessageSquareDashed, School, Download, Trophy, LogOut, ClipboardCheck, Users, Loader2
+    Clock, FileText, MessageSquareDashed, School, Download, Trophy, LogOut, ClipboardCheck, Users
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -272,8 +272,24 @@ const ProgressReport = () => {
                                 />
                             </div>
                             {isLoadingTeachers ? (
-                                <div className="py-12 flex justify-center">
-                                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                                <div className="space-y-2.5 sm:space-y-3">
+                                    {/* Shimmer Effect for Teachers */}
+                                    {[...Array(5)].map((_, idx) => (
+                                        <div key={idx} className="flex items-center justify-between p-3 sm:p-4 bg-card border border-border/80 rounded-xl sm:rounded-2xl animate-pulse">
+                                            <div className="flex items-center gap-2.5 sm:gap-4 w-full">
+                                                <div className="w-4 h-4 sm:w-6 bg-muted rounded shrink-0"></div>
+                                                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-muted shrink-0"></div>
+                                                <div className="flex-1 space-y-2">
+                                                    <div className="h-4 bg-muted rounded w-32 max-w-[50%]"></div>
+                                                    <div className="h-3 bg-muted rounded w-20 max-w-[30%]"></div>
+                                                </div>
+                                            </div>
+                                            <div className="shrink-0 flex items-center gap-2">
+                                                <div className="h-5 w-12 bg-muted rounded"></div>
+                                                <div className="w-4 h-4 sm:w-5 sm:h-5 bg-muted rounded-full ml-1.5 sm:ml-3"></div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             ) : (
                                 <div className="space-y-2.5 sm:space-y-3">
@@ -335,9 +351,18 @@ const ProgressReport = () => {
                                 </div>
                             )}
                             {isLoadingRecords && (
-                                <div className="col-span-1 sm:col-span-2 py-12 flex justify-center">
-                                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                                </div>
+                                /* Shimmer Effect for Months */
+                                <>
+                                    {[...Array(4)].map((_, idx) => (
+                                        <div key={idx} className="p-4 sm:p-5 border border-border/80 rounded-xl sm:rounded-2xl flex items-center justify-between bg-card animate-pulse">
+                                            <div className="flex items-center gap-3 sm:gap-4 w-full">
+                                                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-lg sm:rounded-xl shrink-0"></div>
+                                                <div className="h-5 bg-muted rounded w-32"></div>
+                                            </div>
+                                            <div className="w-4 h-4 sm:w-5 sm:h-5 bg-muted rounded-full shrink-0"></div>
+                                        </div>
+                                    ))}
+                                </>
                             )}
                         </div>
                     )}

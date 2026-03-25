@@ -5,7 +5,7 @@ import {
     AlertCircle, CheckCircle2, XCircle, Coffee, Star, X, Timer, Filter, ChevronDown, LogOut, Settings2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import toast from "react-hot-toast"; // <-- Added toast import
+import toast from "react-hot-toast";
 import api from "../../api/axios";
 
 // --- SOCKET IMPORT FOR REAL-TIME REFRESH ---
@@ -27,7 +27,7 @@ const AttendanceFeed = () => {
 
     // Override States
     const [overrideMode, setOverrideMode] = useState(false);
-    const [overrideAction, setOverrideAction] = useState(""); // CheckIn, CheckOut, Absent, Late, Event, Revoke
+    const [overrideAction, setOverrideAction] = useState("");
     const [overrideReason, setOverrideReason] = useState("");
     const [isSubmittingOverride, setIsSubmittingOverride] = useState(false);
 
@@ -46,14 +46,12 @@ const AttendanceFeed = () => {
                 // Smarter state update for the modal
                 setSelectedNoteRecord((prevRecord) => {
                     if (!prevRecord) return null;
-
                     const freshData = response.data.data;
 
                     // 1. Try to find by exact ID first
                     let updatedRecord = freshData.find(r => r._id === prevRecord._id);
 
-                    // 2. Fallback: If the ID changed in EITHER direction 
-                    // (Pending -> Real, OR Real -> Pending after a Revoke), match by employee + school
+                    // 2. Fallback: Match by employee + school
                     if (!updatedRecord) {
                         const prevTeacherId = prevRecord.teacher?._id || prevRecord.teacher;
                         const prevSchoolId = prevRecord.school?._id || prevRecord.school;
@@ -67,14 +65,12 @@ const AttendanceFeed = () => {
                                 r.date === prevRecord.date;
                         });
                     }
-
-                    // If it still can't find it, safely close the modal rather than crashing
                     return updatedRecord || null;
                 });
             }
         } catch (error) {
             console.error("Failed to fetch live feed:", error);
-            toast.error("Failed to load live feed."); // <-- Added error toast
+            toast.error("Failed to load live feed.");
         } finally {
             if (showLoader) setLoading(false);
         }
@@ -163,13 +159,12 @@ const AttendanceFeed = () => {
     const handleOverrideSubmit = async () => {
         if (!overrideAction) return;
         setIsSubmittingOverride(true);
-        const toastId = toast.loading("Applying override..."); // <-- Added loading toast
+        const toastId = toast.loading("Applying override...");
 
         try {
             const res = await api.put(`/admin/attendance/${selectedNoteRecord._id}/override`, {
                 action: overrideAction,
                 reason: overrideReason,
-                // Pass these explicitly in case it's a "Pending" record that needs to be created
                 teacherId: selectedNoteRecord.teacher?._id,
                 schoolId: selectedNoteRecord.school?._id,
                 band: selectedNoteRecord.band,
@@ -179,12 +174,12 @@ const AttendanceFeed = () => {
                 setOverrideMode(false);
                 setOverrideAction("");
                 setOverrideReason("");
-                toast.success(`Override applied successfully!`, { id: toastId }); // <-- Replaced with success toast
+                toast.success(`Override applied successfully!`, { id: toastId });
                 fetchFeed(false);
             }
         } catch (error) {
             console.error("Override failed:", error);
-            toast.error(error.response?.data?.message || "Failed to override attendance.", { id: toastId }); // <-- Replaced alert with error toast
+            toast.error(error.response?.data?.message || "Failed to override attendance.", { id: toastId });
         } finally {
             setIsSubmittingOverride(false);
         }
@@ -198,7 +193,7 @@ const AttendanceFeed = () => {
     };
 
     return (
-        <div className="p-3 sm:p-6 lg:p-8 max-w-6xl mx-auto animate-fade-in pb-24 md:pb-8">
+        <div className="p-3 sm:p-6 lg:p-8 max-w-6xl mx-auto animate-fade-in pb-24 md:pb-8 h-full">
             {/* --- HEADER SECTION --- */}
             <div className="flex items-center justify-between mb-8 relative">
                 <div className="flex items-center gap-3">
@@ -206,14 +201,14 @@ const AttendanceFeed = () => {
                         <div className="absolute w-4 h-4 rounded-full bg-emerald-500/20 animate-ping" />
                         <div className="relative w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
                     </div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">Live Operations</h1>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">Live Operations</h1>
                 </div>
 
                 {/* --- FLOATING FILTER BOX --- */}
-                <div className="relative" ref={filterRef}>
+                <div className="relative z-40" ref={filterRef}>
                     <button
                         onClick={() => setIsFilterOpen(!isFilterOpen)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground shadow-lg hover:opacity-90 transition-all active:scale-95"
+                        className="flex items-center gap-2 px-4 py-2 sm:py-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:scale-105 transition-all active:scale-95"
                     >
                         <Filter className="w-4 h-4" />
                         <span className="text-sm font-bold hidden sm:inline">{activeFilter}</span>
@@ -221,13 +216,15 @@ const AttendanceFeed = () => {
                     </button>
 
                     {isFilterOpen && (
-                        <div className="absolute right-0 mt-3 w-64 sm:w-80 bg-card border border-border shadow-2xl rounded-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="absolute right-0 mt-3 w-64 sm:w-80 bg-card border border-border shadow-2xl rounded-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                             <div className="p-4 grid grid-cols-2 gap-2">
                                 {["All", "Pending", "Running", "Completed", "Exceptions"].map((f) => (
                                     <button
                                         key={f}
                                         onClick={() => { setActiveFilter(f); setIsFilterOpen(false); }}
-                                        className={`px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all border text-center ${activeFilter === f ? "bg-primary/10 text-primary border-primary" : "bg-muted/30 text-muted-foreground border-transparent hover:bg-muted"
+                                        className={`px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all border text-center ${activeFilter === f
+                                                ? "bg-primary/10 text-primary border-primary"
+                                                : "bg-muted/30 text-muted-foreground border-transparent hover:bg-muted"
                                             } ${f === 'Exceptions' ? 'col-span-2' : ''}`}
                                     >
                                         {f}
@@ -239,11 +236,43 @@ const AttendanceFeed = () => {
                 </div>
             </div>
 
-            {/* --- FEED CARDS --- */}
+            {/* --- FEED CARDS & SHIMMER --- */}
             {loading ? (
-                <div className="p-12 text-center animate-pulse flex flex-col items-center border border-dashed border-border rounded-3xl">
-                    <Clock className="w-10 h-10 mb-4 opacity-20" />
-                    <h3 className="text-base font-bold text-muted-foreground">Syncing Field Data...</h3>
+                <div className="space-y-4 animate-in fade-in duration-500">
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="bg-card rounded-2xl border border-border/40 p-4 sm:p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
+
+                            {/* 1. Teacher Info Skeleton */}
+                            <div className="flex items-center gap-3 sm:gap-4 md:w-56 shrink-0">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted/60 animate-pulse shrink-0"></div>
+                                <div className="flex flex-col gap-2 w-full">
+                                    <div className="h-4 bg-muted/60 rounded-md w-3/4 animate-pulse"></div>
+                                    <div className="h-3 bg-muted/40 rounded-md w-1/2 animate-pulse"></div>
+                                </div>
+                            </div>
+
+                            {/* 2. School & Band Skeleton */}
+                            <div className="flex-1 grid grid-cols-2 gap-3 bg-muted/10 p-3 rounded-xl border border-border/30">
+                                <div className="space-y-2">
+                                    <div className="h-2 bg-muted/40 rounded w-1/3 animate-pulse"></div>
+                                    <div className="h-3 bg-muted/60 rounded w-3/4 animate-pulse"></div>
+                                </div>
+                                <div className="border-l border-border/30 pl-3 space-y-2">
+                                    <div className="h-2 bg-muted/40 rounded w-1/3 animate-pulse"></div>
+                                    <div className="h-3 bg-muted/60 rounded w-1/2 animate-pulse"></div>
+                                </div>
+                            </div>
+
+                            {/* 3. Status & Actions Skeleton */}
+                            <div className="flex items-center justify-between md:justify-end gap-4 lg:gap-6 md:w-64 shrink-0">
+                                <div className="flex flex-col items-start md:items-end gap-2 w-full">
+                                    <div className="h-5 bg-muted/60 rounded-md w-20 animate-pulse"></div>
+                                    <div className="h-3 bg-muted/40 rounded-md w-32 animate-pulse"></div>
+                                </div>
+                                <div className="w-9 h-9 rounded-full bg-muted/50 animate-pulse shrink-0"></div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -254,26 +283,28 @@ const AttendanceFeed = () => {
                         const isLate = record.status === 'Late' || !!record.lateReason;
                         const hadEvent = !!record.eventNote;
                         const isAbsent = uiStatus === 'Absent';
-                        // Made all cards clickable so admin can override any state
                         const hasDetails = true;
 
                         return (
                             <div
                                 key={record._id}
                                 onClick={() => hasDetails && setSelectedNoteRecord(record)}
-                                className={`bg-card rounded-2xl border p-3 sm:p-5 shadow-sm transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 
-                  ${hasDetails ? 'cursor-pointer hover:shadow-md group active:scale-[0.99]' : 'cursor-default opacity-80'} 
-                  ${hadEvent ? 'border-violet-500/40 bg-violet-500/2' : 'border-border'}
-                  ${isAbsent ? 'border-destructive/30 bg-destructive/1' : ''}
-                `}
+                                className={`bg-card rounded-2xl border p-4 sm:p-5 shadow-sm transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 
+                                    ${hasDetails ? 'cursor-pointer hover:shadow-md hover:border-primary/30 group active:scale-[0.99]' : 'cursor-default opacity-80'} 
+                                    ${hadEvent ? 'border-violet-500/40 bg-violet-500/5' : 'border-border'}
+                                    ${isAbsent ? 'border-destructive/30 bg-destructive/5' : ''}
+                                `}
                             >
                                 {/* 1. TEACHER INFO */}
                                 <div className="flex items-center gap-3 sm:gap-4 md:w-56 shrink-0">
-                                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-inner ${hadEvent ? 'bg-violet-600' : (isAbsent ? 'bg-destructive' : 'bg-blue-600')}`}>
+                                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-inner ${hadEvent ? 'bg-violet-600' : (isAbsent ? 'bg-destructive' : 'bg-primary')
+                                        }`}>
                                         {(record.teacher?.name || "U").charAt(0).toUpperCase()}
                                     </div>
                                     <div className="flex flex-col min-w-0">
-                                        <span className="font-bold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors truncate">{record.teacher?.name || "Unknown"}</span>
+                                        <span className="font-bold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors truncate">
+                                            {record.teacher?.name || "Unknown"}
+                                        </span>
                                         <span className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1 mt-0.5">
                                             <MapPin className="w-3 h-3" /> {record.teacher?.zone || "Unassigned"}
                                         </span>
@@ -281,13 +312,13 @@ const AttendanceFeed = () => {
                                 </div>
 
                                 {/* 2. SCHOOL & BAND GRID */}
-                                <div className="flex-1 grid grid-cols-2 gap-3 bg-muted/20 p-3 rounded-xl border border-border/50">
+                                <div className="flex-1 grid grid-cols-2 gap-3 bg-muted/30 p-3 rounded-xl border border-border/50 group-hover:bg-muted/50 transition-colors">
                                     <div className="min-w-0">
-                                        <span className="text-[8px] font-bold uppercase text-muted-foreground block mb-0.5 opacity-70">Location</span>
-                                        <span className="text-[11px] sm:text-xs font-bold text-foreground truncate block italic">{record.school?.schoolName || "Unknown"}</span>
+                                        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5 opacity-70">Location</span>
+                                        <span className="text-[11px] sm:text-xs font-bold text-foreground truncate block">{record.school?.schoolName || "Unknown"}</span>
                                     </div>
                                     <div className="min-w-0 border-l border-border/50 pl-3">
-                                        <span className="text-[8px] font-bold uppercase text-muted-foreground block mb-0.5 opacity-70">Category</span>
+                                        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5 opacity-70">Category</span>
                                         <span className="text-[11px] sm:text-xs font-bold text-foreground truncate block">{record.band}</span>
                                     </div>
                                 </div>
@@ -296,7 +327,7 @@ const AttendanceFeed = () => {
                                 <div className="flex items-center justify-between md:justify-end gap-4 lg:gap-6 md:w-64 shrink-0">
                                     <div className="flex flex-col items-start md:items-end gap-1.5">
                                         <div className="flex gap-2 items-center">
-                                            <span className={`px-2 py-0.5 sm:py-1 rounded-md text-[8px] sm:text-[10px] font-bold uppercase tracking-widest border flex items-center gap-1 sm:gap-1.5 ${statusConfig.color}`}>
+                                            <span className={`px-2.5 py-1 rounded-md text-[9px] sm:text-[10px] font-bold uppercase tracking-widest border flex items-center gap-1.5 ${statusConfig.color}`}>
                                                 {statusConfig.icon} {statusConfig.label}
                                             </span>
                                             {isLate && <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-amber-500 text-white animate-pulse">LATE</span>}
@@ -309,7 +340,8 @@ const AttendanceFeed = () => {
                                     </div>
 
                                     {hasDetails && (
-                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${hadEvent ? 'bg-violet-500/20 text-violet-500' : (isAbsent ? 'bg-red-500/10 text-red-500' : 'bg-primary/10 text-blue-500')}`}>
+                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${hadEvent ? 'bg-violet-500/20 text-violet-500' : (isAbsent ? 'bg-red-500/10 text-red-500' : 'bg-primary/10 text-primary')
+                                            }`}>
                                             {hadEvent ? <Star className="w-4 h-4 fill-current" /> : (isAbsent ? <XCircle className="w-4 h-4" /> : <FileText className="w-4 h-4" />)}
                                         </div>
                                     )}
@@ -317,120 +349,154 @@ const AttendanceFeed = () => {
                             </div>
                         );
                     })}
+
+                    {filteredAndSortedData.length === 0 && (
+                        <div className="py-16 flex flex-col items-center justify-center text-center px-4 border border-dashed border-border rounded-3xl bg-muted/10">
+                            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                                <Clock className="w-8 h-8 text-muted-foreground/50" />
+                            </div>
+                            <h3 className="text-lg font-bold text-foreground mb-1">No Records Found</h3>
+                            <p className="text-sm text-muted-foreground max-w-sm">
+                                There are no attendance records matching your current filter.
+                            </p>
+                        </div>
+                    )}
                 </div>
             )}
 
             {/* --- HIGH-FIDELITY MODAL & OVERRIDE UI --- */}
             {selectedNoteRecord && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={closeAndResetModal}>
-                    <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-border flex flex-col overflow-y-auto max-h-[90vh] animate-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={closeAndResetModal}>
+                    <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-border flex flex-col overflow-y-auto max-h-[90vh] animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
 
                         {/* Header */}
-                        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/20 sticky top-0 z-10">
+                        <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-muted/30 sticky top-0 z-10 backdrop-blur-md">
                             <div className="flex items-center gap-4">
-                                <div className={`w-11 h-11 rounded-full flex items-center justify-center ${!!selectedNoteRecord.eventNote ? 'bg-violet-600' : (selectedNoteRecord.status === 'Absent' ? 'bg-destructive' : 'bg-blue-600')} text-white`}>
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${!!selectedNoteRecord.eventNote ? 'bg-violet-600' : (selectedNoteRecord.status === 'Absent' ? 'bg-destructive' : 'bg-primary')
+                                    } text-primary-foreground shadow-sm`}>
                                     {!!selectedNoteRecord.eventNote ? <Star className="w-5 h-5 fill-current" /> : (selectedNoteRecord.status === 'Absent' ? <XCircle className="w-5 h-5" /> : <FileText className="w-5 h-5" />)}
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-lg leading-tight">Field Intelligence</h3>
-                                    <p className="text-xs text-muted-foreground">{selectedNoteRecord.teacher?.name} • {selectedNoteRecord.school?.schoolName}</p>
+                                    <h3 className="font-extrabold text-lg leading-tight text-foreground">Field Intelligence</h3>
+                                    <p className="text-xs font-medium text-muted-foreground mt-0.5 truncate max-w-50 sm:max-w-xs">
+                                        {selectedNoteRecord.teacher?.name} • {selectedNoteRecord.school?.schoolName}
+                                    </p>
                                 </div>
                             </div>
-                            <button onClick={closeAndResetModal} className="p-2 hover:bg-muted rounded-full text-muted-foreground"><X className="w-5 h-5" /></button>
+                            <button onClick={closeAndResetModal} className="p-2.5 hover:bg-muted rounded-full text-muted-foreground transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         {/* Body */}
-                        <div className="p-6 space-y-5">
+                        <div className="p-6 space-y-6">
                             {/* Original Intelligence Details */}
                             {selectedNoteRecord.eventNote && (
-                                <div className="p-5 bg-violet-600/10 border border-violet-500/20 rounded-2xl">
-                                    <h4 className="text-[10px] font-black uppercase text-violet-600 mb-2 flex items-center gap-2"><Star className="w-3.5 h-3.5 fill-current" /> Event Highlights</h4>
-                                    <p className="text-sm italic font-medium leading-relaxed">"{selectedNoteRecord.eventNote}"</p>
+                                <div className="p-5 bg-violet-500/10 border border-violet-500/20 rounded-2xl shadow-sm">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-2.5 flex items-center gap-2">
+                                        <Star className="w-3.5 h-3.5 fill-current" /> Event Highlights
+                                    </h4>
+                                    <p className="text-sm font-medium leading-relaxed text-foreground">"{selectedNoteRecord.eventNote}"</p>
                                 </div>
                             )}
 
                             {(selectedNoteRecord.status === 'Absent' || !!selectedNoteRecord.lateReason || !!selectedNoteRecord.teacherNote) && (
-                                <div className="p-5 bg-muted/20 border border-border rounded-2xl space-y-4">
-                                    <h4 className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2"><AlertCircle className="w-4 h-4" /> Operations Intel</h4>
+                                <div className="p-5 bg-muted/30 border border-border rounded-2xl space-y-4">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                        <AlertCircle className="w-4 h-4" /> Operations Intel
+                                    </h4>
+
                                     {selectedNoteRecord.status === 'Absent' && (
-                                        <div className="bg-red-500/5 p-3 rounded-lg border border-red-500/20 border-l-4 border-l-red-500">
-                                            <span className="font-bold text-[10px] uppercase text-red-600 block mb-1">Absence Reason</span>
-                                            <p className="text-sm italic text-red-900 font-medium">"{selectedNoteRecord.teacherNote || "No reason provided."}"</p>
+                                        <div className="bg-destructive/5 p-4 rounded-xl border border-destructive/10 border-l-4 border-l-destructive">
+                                            <span className="font-bold text-[10px] uppercase tracking-wider text-destructive block mb-1">Absence Reason</span>
+                                            <p className="text-sm font-medium text-foreground">"{selectedNoteRecord.teacherNote || "No reason provided."}"</p>
                                         </div>
                                     )}
+
                                     {selectedNoteRecord.lateReason && (
-                                        <div className="bg-amber-500/5 p-3 rounded-lg border border-amber-500/20 border-l-4 border-l-amber-500">
-                                            <span className="font-bold text-[10px] uppercase text-amber-600 block mb-1">Delayed Arrival</span>
-                                            <p className="text-sm italic text-amber-900 font-medium">"{selectedNoteRecord.lateReason}"</p>
+                                        <div className="bg-amber-500/5 p-4 rounded-xl border border-amber-500/10 border-l-4 border-l-amber-500">
+                                            <span className="font-bold text-[10px] uppercase tracking-wider text-amber-600 dark:text-amber-500 block mb-1">Delayed Arrival</span>
+                                            <p className="text-sm font-medium text-foreground">"{selectedNoteRecord.lateReason}"</p>
                                         </div>
                                     )}
+
                                     {selectedNoteRecord.teacherNote && selectedNoteRecord.status !== 'Absent' && (
-                                        <div>
-                                            <span className="font-bold text-[10px] uppercase text-muted-foreground block mb-1">Standard Report</span>
-                                            <p className="text-sm italic text-foreground/80 leading-relaxed">"{selectedNoteRecord.teacherNote}"</p>
+                                        <div className="p-1">
+                                            <span className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground block mb-1.5">Standard Report</span>
+                                            <p className="text-sm font-medium text-foreground leading-relaxed">"{selectedNoteRecord.teacherNote}"</p>
                                         </div>
                                     )}
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-2 gap-4 p-4 bg-card border border-border rounded-xl">
-                                <div><span className="text-[9px] font-bold text-muted-foreground uppercase flex items-center gap-1"><Clock className="w-2.5 h-2.5" /> Arrived</span><p className="text-sm font-bold">{formatTime(selectedNoteRecord.checkInTime) || "—"}</p></div>
-                                <div><span className="text-[9px] font-bold text-muted-foreground uppercase flex items-center gap-1"><LogOut className="w-2.5 h-2.5" /> Departed</span><p className="text-sm font-bold">{formatTime(selectedNoteRecord.checkOutTime) || (selectedNoteRecord.checkInTime ? "On-site" : "—")}</p></div>
+                            <div className="grid grid-cols-2 gap-4 p-5 bg-card border border-border rounded-2xl shadow-sm">
+                                <div>
+                                    <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase flex items-center gap-1.5 mb-1">
+                                        <Clock className="w-3 h-3" /> Arrived
+                                    </span>
+                                    <p className="text-base font-bold text-foreground">{formatTime(selectedNoteRecord.checkInTime) || "—"}</p>
+                                </div>
+                                <div className="border-l border-border pl-4">
+                                    <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase flex items-center gap-1.5 mb-1">
+                                        <LogOut className="w-3 h-3" /> Departed
+                                    </span>
+                                    <p className="text-base font-bold text-foreground">{formatTime(selectedNoteRecord.checkOutTime) || (selectedNoteRecord.checkInTime ? "On-site" : "—")}</p>
+                                </div>
                             </div>
 
                             {/* --- ADMIN OVERRIDE SECTION --- */}
-                            <div className="mt-6 border-t border-border pt-6">
-                                <div className="flex items-center justify-between mb-4">
+                            <div className="mt-6 pt-6 border-t border-border border-dashed">
+                                <div className="flex items-center justify-between mb-5">
                                     <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
                                         <Settings2 className="w-4 h-4 text-primary" /> Admin Override Options
                                     </h4>
                                     <button
                                         onClick={() => { setOverrideMode(!overrideMode); setOverrideAction(""); }}
-                                        className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-3 py-1.5 rounded-md hover:bg-primary/20 transition-colors"
+                                        className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors"
                                     >
                                         {overrideMode ? "Cancel Override" : "Enable Edit"}
                                     </button>
                                 </div>
 
                                 {overrideMode && (
-                                    <div className="bg-muted/30 p-4 rounded-xl border border-border space-y-4 animate-in fade-in slide-in-from-top-2">
-
+                                    <div className="bg-muted/40 p-5 rounded-2xl border border-border space-y-5 animate-in fade-in slide-in-from-top-2">
                                         {/* Action Grid */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                                             {!selectedNoteRecord.checkInTime && (
-                                                <button onClick={() => setOverrideAction("CheckIn")} className={`px-2 py-2 text-xs font-bold rounded-lg border transition-all ${overrideAction === 'CheckIn' ? 'bg-emerald-500 text-white border-emerald-600 shadow-inner' : 'bg-card text-foreground hover:border-emerald-500'}`}>Check In</button>
+                                                <button onClick={() => setOverrideAction("CheckIn")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'CheckIn' ? 'bg-emerald-500 text-white border-emerald-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-emerald-500'}`}>Check In</button>
                                             )}
                                             {selectedNoteRecord.checkInTime && !selectedNoteRecord.checkOutTime && (
-                                                <button onClick={() => setOverrideAction("CheckOut")} className={`px-2 py-2 text-xs font-bold rounded-lg border transition-all ${overrideAction === 'CheckOut' ? 'bg-blue-500 text-white border-blue-600 shadow-inner' : 'bg-card text-foreground hover:border-blue-500'}`}>Check Out</button>
+                                                <button onClick={() => setOverrideAction("CheckOut")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'CheckOut' ? 'bg-blue-500 text-white border-blue-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-blue-500'}`}>Check Out</button>
                                             )}
-                                            <button onClick={() => setOverrideAction("Absent")} className={`px-2 py-2 text-xs font-bold rounded-lg border transition-all ${overrideAction === 'Absent' ? 'bg-destructive text-white border-red-700 shadow-inner' : 'bg-card text-foreground hover:border-destructive'}`}>Absent</button>
-                                            <button onClick={() => setOverrideAction("Late")} className={`px-2 py-2 text-xs font-bold rounded-lg border transition-all ${overrideAction === 'Late' ? 'bg-amber-500 text-white border-amber-600 shadow-inner' : 'bg-card text-foreground hover:border-amber-500'}`}>Late</button>
-                                            <button onClick={() => setOverrideAction("Event")} className={`px-2 py-2 text-xs font-bold rounded-lg border transition-all ${overrideAction === 'Event' ? 'bg-violet-500 text-white border-violet-600 shadow-inner' : 'bg-card text-foreground hover:border-violet-500'}`}>Event</button>
+                                            <button onClick={() => setOverrideAction("Absent")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Absent' ? 'bg-destructive text-white border-red-700 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-destructive'}`}>Absent</button>
+                                            <button onClick={() => setOverrideAction("Late")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Late' ? 'bg-amber-500 text-white border-amber-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-amber-500'}`}>Late</button>
+                                            <button onClick={() => setOverrideAction("Event")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Event' ? 'bg-violet-500 text-white border-violet-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-violet-500'}`}>Event</button>
                                             <button
                                                 onClick={() => setOverrideAction("Revoke")}
-                                                className={`px-2 py-2 text-xs font-bold rounded-lg border transition-all ${overrideAction === 'Revoke' ? 'bg-slate-800 text-white border-slate-900 shadow-inner' : 'bg-card text-foreground hover:border-slate-800'}`}
+                                                className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Revoke' ? 'bg-slate-800 text-white border-slate-900 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-slate-500'}`}
                                             >
                                                 {selectedNoteRecord.checkOutTime ? "Undo Check Out" : "Revoke All"}
-                                            </button> </div>
+                                            </button>
+                                        </div>
 
                                         {/* Reason Input */}
                                         {overrideAction && (
-                                            <div className="space-y-3 animate-in fade-in">
+                                            <div className="space-y-4 animate-in fade-in">
                                                 <div>
-                                                    <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Optional Reason / Note</label>
+                                                    <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-2">Optional Reason / Note</label>
                                                     <textarea
                                                         value={overrideReason}
                                                         onChange={(e) => setOverrideReason(e.target.value)}
                                                         placeholder={`Reason for marking as ${overrideAction}...`}
-                                                        className="w-full bg-card border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none resize-none h-20"
+                                                        className="w-full bg-card border border-border rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary outline-none resize-none h-24 placeholder:text-muted-foreground/50 transition-all shadow-sm"
                                                     />
                                                 </div>
                                                 <Button
-                                                    className="w-full font-bold"
+                                                    className="w-full font-bold h-12 rounded-xl text-base shadow-lg shadow-primary/20"
                                                     onClick={handleOverrideSubmit}
                                                     disabled={isSubmittingOverride}
                                                 >
-                                                    {isSubmittingOverride ? "Applying..." : `Confirm ${overrideAction}`}
+                                                    {isSubmittingOverride ? "Applying Override..." : `Confirm ${overrideAction}`}
                                                 </Button>
                                             </div>
                                         )}
