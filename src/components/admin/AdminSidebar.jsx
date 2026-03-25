@@ -6,10 +6,12 @@ import {
     LayoutDashboard, Users, Radio, MessageSquare, Shield,
     Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle, ClipboardCheck
 } from "lucide-react";
-import toast from "react-hot-toast"; // <-- Added react-hot-toast import
+import toast from "react-hot-toast";
 
 import api from "../../api/axios";
 import { logout } from "../../store/slices/authSlice";
+// ADDED: Import your Redux theme action
+import { toggleTheme } from "../../store/slices/themeSlice";
 import AdminSettingsModal from "../../modals/admin/AdminSettingsModal";
 
 // 1. Setup global socket and audio OUTSIDE the component
@@ -22,10 +24,12 @@ const AdminSidebar = () => {
     const location = useLocation();
 
     const { user } = useSelector((state) => state.auth);
+    // UPDATED: Now reading the theme directly from Redux!
+    const theme = useSelector((state) => state.theme?.mode || 'light');
+
     const adminName = user?.name || "Admin User";
     const adminEmail = user?.email || "admin@workforce.com";
 
-    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [userPreferences, setUserPreferences] = useState(user?.preferences || null);
@@ -59,7 +63,7 @@ const AdminSidebar = () => {
                 }
             } catch (error) {
                 console.error("Failed to fetch global notifications count", error);
-                toast.error("Failed to sync notifications."); // <-- Added error toast
+                toast.error("Failed to sync notifications.");
             }
         };
 
@@ -85,7 +89,7 @@ const AdminSidebar = () => {
             // B. Increment badge checking the REF
             if (pathnameRef.current !== '/admin/notifications') {
                 setUnreadCount(prev => prev + 1);
-                toast("New admin alert received!", { icon: '🛡️' }); // <-- Added system toast
+                toast("New admin alert received!", { icon: '🛡️' });
             }
         };
 
@@ -94,7 +98,7 @@ const AdminSidebar = () => {
         return () => {
             socket.off("new_notification", handleNewNotification);
         };
-    }, [user]); // Only re-run if auth state changes!
+    }, [user]);
 
     // Auto-Clear Badge when navigating to the alerts page
     useEffect(() => {
@@ -102,17 +106,6 @@ const AdminSidebar = () => {
             setUnreadCount(0);
         }
     }, [location.pathname]);
-
-    useEffect(() => {
-        if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-        localStorage.setItem('theme', theme);
-    }, [theme]);
-
-    const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -130,13 +123,13 @@ const AdminSidebar = () => {
         localStorage.removeItem("access_token");
         localStorage.removeItem("user");
 
-        const toastId = toast.loading("Logging out..."); // <-- Added loading toast
+        const toastId = toast.loading("Logging out...");
         try {
             await api.post('/auth/logout');
-            toast.success("Session ended successfully!", { id: toastId }); // <-- Added success toast
+            toast.success("Session ended successfully!", { id: toastId });
         } catch (error) {
             console.error("Backend logout cleanup failed:", error);
-            toast.error("Logout issue, session cleared locally.", { id: toastId }); // <-- Added error toast
+            toast.error("Logout issue, session cleared locally.", { id: toastId });
         }
 
         navigate("/", { replace: true });
@@ -204,7 +197,8 @@ const AdminSidebar = () => {
                 </div>
 
                 <div className="flex items-center justify-end gap-3 w-64 shrink-0 border-l border-border pl-6">
-                    <button onClick={toggleTheme} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title="Theme">
+                    {/* UPDATED: Desktop theme toggle dispatches Redux action */}
+                    <button onClick={() => dispatch(toggleTheme())} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title="Theme">
                         {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-500" />}
                     </button>
                     <button onClick={() => setIsSettingsModalOpen(true)} className="p-2 text-muted-foreground md:cursor-pointer hover:text-foreground hover:bg-muted rounded-full transition-colors" title="Settings">
@@ -236,19 +230,20 @@ const AdminSidebar = () => {
                                 <p className="text-[11px] text-muted-foreground truncate">{adminEmail}</p>
                             </div>
 
-                            {/* --- UPDATED REPORTS BUTTON --- */}
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                 onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/reports'); }}
                             >
                                 <ClipboardCheck className="w-4 h-4 text-primary" /> Reports
                             </button>
 
-                            <button onClick={toggleTheme} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                            {/* UPDATED: Mobile menu theme toggle dispatches Redux action */}
+                            <button onClick={() => dispatch(toggleTheme())} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                                 <div className="flex items-center gap-3">
                                     {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}
-                                    <span>{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
+                                    <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
                                 </div>
                             </button>
+
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                 onClick={() => { setIsMobileMenuOpen(false); setIsSettingsModalOpen(true); }}
                             >

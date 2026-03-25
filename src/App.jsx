@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { useDispatch, useSelector } from "react-redux";
 import { setCredentials, logout } from "./store/slices/authSlice";
 import api, { setAxiosToken } from "./api/axios";
-import { Loader2 } from "lucide-react";
 
 // Route Guards
 import ProtectedRoute from "./components/routing/ProtectedRoute";
@@ -40,6 +39,20 @@ function App() {
   const dispatch = useDispatch();
   const { isHydrating } = useSelector((state) => state.auth);
 
+  // 1. Grab the current theme from Redux (fallback to 'light' just in case)
+  const currentTheme = useSelector((state) => state.theme?.mode || 'light');
+
+  // 2. Reactively apply the theme to the DOM whenever it changes in Redux
+  useEffect(() => {
+    localStorage.setItem('themeMode', currentTheme);
+
+    if (currentTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [currentTheme]);
+
   // --- BACKGROUND SYNC ON REFRESH ---
   useEffect(() => {
     const hydrateApp = async () => {
@@ -66,12 +79,9 @@ function App() {
     hydrateApp();
   }, [dispatch]);
 
+  // --- BLANK SCREEN DURING HYDRATION ---
   if (isHydrating) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
-        <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-      </div>
-    );
+    return <div className="min-h-screen w-full bg-[#f8f9fa] dark:bg-[#12161f]"></div>;
   }
 
   return (
@@ -134,7 +144,7 @@ function App() {
           <Route path="employees/:id" element={<EmployeeProfile />} />
           <Route path="attendance" element={<AttendanceFeed />} />
           <Route path="progress" element={<ProgressReport />} />
-          <Route path="reports" element={<AdminReports />} /> 
+          <Route path="reports" element={<AdminReports />} />
           <Route path="communication" element={<Communication />} />
           <Route path="notifications" element={<AdminNotifications />} />
         </Route>

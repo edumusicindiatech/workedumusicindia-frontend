@@ -1,15 +1,16 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-// 1. INSTANT THEME APPLY (Fixes the 2-click bug & prevents white screen flash)
-const savedTheme = localStorage.getItem('themeMode') || 'light';
-if (savedTheme === 'dark') {
-    document.documentElement.classList.add('dark');
-} else {
-    document.documentElement.classList.remove('dark');
-}
+// Get initial theme cleanly
+const getInitialTheme = () => {
+    const savedTheme = localStorage.getItem('themeMode');
+    if (savedTheme) return savedTheme;
+
+    // Optional: Default to system preference if they've never visited before
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+};
 
 const initialState = {
-    mode: savedTheme,
+    mode: getInitialTheme(),
 };
 
 const themeSlice = createSlice({
@@ -18,23 +19,9 @@ const themeSlice = createSlice({
     reducers: {
         toggleTheme: (state) => {
             state.mode = state.mode === 'light' ? 'dark' : 'light';
-            localStorage.setItem('themeMode', state.mode);
-
-            if (state.mode === 'dark') {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
         },
         setTheme: (state, action) => {
             state.mode = action.payload;
-            localStorage.setItem('themeMode', action.payload);
-
-            if (action.payload === 'dark') {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
         }
     }
 });
