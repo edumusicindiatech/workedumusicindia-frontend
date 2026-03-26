@@ -35,12 +35,12 @@ const AdminContact = () => {
                     </a>
 
                     {/* Phone Card */}
-                    <a href="tel:+919876543210" className="group bg-card border border-border/60 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col items-center text-center">
+                    <a href="tel:+917836953282" className="group bg-card border border-border/60 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col items-center text-center">
                         <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                             <Phone className="w-6 h-6 text-emerald-600" />
                         </div>
                         <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">IT Helpdesk</h3>
-                        <p className="text-foreground font-bold text-lg">+91 7860274508</p>
+                        <p className="text-foreground font-bold text-lg">+91 7836953282</p>
                     </a>
                 </div>
 
