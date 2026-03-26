@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import api from "../../api/axios"; // Adjust path to your axios instance
+import { useSelector } from "react-redux"; // Added to get user ID for socket
+import api from "../../api/axios";
 import {
     CalendarDays, Mail, User, CheckCircle2, XCircle,
     Clock, Loader2, AlertCircle, FileText, Search
@@ -7,19 +8,23 @@ import {
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 
+// --- SOCKET IMPORT ---
+import { io } from "socket.io-client";
+const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
+
 const AdminLeaveRequests = () => {
+    const { user } = useSelector((state) => state.auth); // Get admin info
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("pending");
 
-    // Modal state for Approve/Reject action with remarks
     const [actionModal, setActionModal] = useState({ isOpen: false, request: null, type: null });
     const [remarks, setRemarks] = useState("");
     const [actionLoading, setActionLoading] = useState(false);
 
-    // Fetch all leave requests
     const fetchRequests = useCallback(async () => {
-        setLoading(true);
+        // Only show loading spinner on initial load, not on real-time refreshes 
+        // to prevent UI flickering
         try {
             const res = await api.get('/admin/leave-requests');
             if (res.data.success) {
@@ -37,6 +42,36 @@ const AdminLeaveRequests = () => {
         fetchRequests();
     }, [fetchRequests]);
 
+    // ==========================================
+    // REAL-TIME DATA REFRESH logic
+    // ==========================================
+    useEffect(() => {
+        if (!user) return;
+        const currentUserId = user.id || user._id;
+
+        const joinRoom = () => {
+            console.log("🔌 Admin Leave Page: Joining Socket Room");
+            socket.emit("join_room", currentUserId);
+        };
+
+        if (socket.connected) joinRoom();
+        socket.on("connect", joinRoom);
+
+        // Listen for new notifications
+        const handleRealTimeUpdate = () => {
+            // Silently refresh the list in the background
+            console.log("🔔 Refreshing leave requests list...");
+            fetchRequests();
+        };
+
+        socket.on("new_notification", handleRealTimeUpdate);
+
+        return () => {
+            socket.off("connect", joinRoom);
+            socket.off("new_notification", handleRealTimeUpdate);
+        };
+    }, [user, fetchRequests]);
+
     // Handle Approve / Reject submission
     const handleStatusUpdate = async (e) => {
         e.preventDefault();
@@ -53,7 +88,7 @@ const AdminLeaveRequests = () => {
             toast.success(`Leave request ${type}!`, { id: toastId });
             setActionModal({ isOpen: false, request: null, type: null });
             setRemarks("");
-            fetchRequests(); // Refresh the list
+            fetchRequests();
         } catch (err) {
             toast.error(err.response?.data?.message || `Failed to ${type} request.`, { id: toastId });
         } finally {
@@ -61,7 +96,6 @@ const AdminLeaveRequests = () => {
         }
     };
 
-    // Filter requests based on active tab
     const filteredRequests = requests.filter(req => req.status === activeTab);
 
     if (loading) {
@@ -74,7 +108,7 @@ const AdminLeaveRequests = () => {
     }
 
     return (
-        <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+        <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 p-4 sm:p-6 lg:p-8">
             {/* Header & Tabs */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border/50 pb-6">
                 <div>
@@ -85,15 +119,14 @@ const AdminLeaveRequests = () => {
                     <p className="text-muted-foreground mt-2">Manage employee time-off and vacations.</p>
                 </div>
 
-                {/* Status Tabs */}
                 <div className="flex p-1 bg-muted/50 rounded-xl border border-border/50 w-full md:w-auto">
                     {['pending', 'approved', 'rejected'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold capitalize transition-all duration-200 ${activeTab === tab
-                                    ? 'bg-background shadow-sm text-foreground border border-border/50'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                                ? 'bg-background shadow-sm text-foreground border border-border/50'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                                 }`}
                         >
                             {tab}
@@ -119,8 +152,7 @@ const AdminLeaveRequests = () => {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {filteredRequests.map((req) => (
-                        <div key={req.id} className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col">
-
+                        <div key={req.id} className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300">
                             {/* Card Header */}
                             <div className="p-5 border-b border-border/50 bg-muted/20 flex justify-between items-start">
                                 <div className="space-y-1">
@@ -133,8 +165,6 @@ const AdminLeaveRequests = () => {
                                         {req.employeeEmail}
                                     </p>
                                 </div>
-
-                                {/* Status Badge */}
                                 {req.status === 'pending' && <span className="px-3 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded-full text-xs font-bold uppercase flex items-center gap-1"><Clock className="w-3 h-3" /> Pending</span>}
                                 {req.status === 'approved' && <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 rounded-full text-xs font-bold uppercase flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Approved</span>}
                                 {req.status === 'rejected' && <span className="px-3 py-1 bg-destructive/10 text-destructive border border-destructive/20 rounded-full text-xs font-bold uppercase flex items-center gap-1"><XCircle className="w-3 h-3" /> Rejected</span>}
@@ -145,7 +175,7 @@ const AdminLeaveRequests = () => {
                                 <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 flex items-center justify-between">
                                     <div>
                                         <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-1">Duration</p>
-                                        <p className="font-bold text-foreground">{req.fromDate} <span className="text-muted-foreground font-normal mx-1">to</span> {req.toDate}</p>
+                                        <p className="font-bold text-foreground">{new Date(req.fromDate).toLocaleDateString()} <span className="text-muted-foreground font-normal mx-1">to</span> {new Date(req.toDate).toLocaleDateString()}</p>
                                     </div>
                                     <CalendarDays className="w-6 h-6 text-primary/60" />
                                 </div>
@@ -170,17 +200,10 @@ const AdminLeaveRequests = () => {
                             {/* Card Footer Actions (Only for Pending) */}
                             {req.status === 'pending' && (
                                 <div className="p-5 border-t border-border bg-muted/10 flex gap-3">
-                                    <Button
-                                        variant="outline"
-                                        className="flex-1 h-11 text-destructive hover:bg-destructive hover:text-white border-destructive/20"
-                                        onClick={() => setActionModal({ isOpen: true, request: req, type: 'rejected' })}
-                                    >
+                                    <Button variant="outline" className="flex-1 h-11 text-destructive hover:bg-destructive hover:text-white border-destructive/20" onClick={() => setActionModal({ isOpen: true, request: req, type: 'rejected' })}>
                                         <XCircle className="w-4 h-4 mr-2" /> Reject
                                     </Button>
-                                    <Button
-                                        className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20"
-                                        onClick={() => setActionModal({ isOpen: true, request: req, type: 'approved' })}
-                                    >
+                                    <Button className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20" onClick={() => setActionModal({ isOpen: true, request: req, type: 'approved' })}>
                                         <CheckCircle2 className="w-4 h-4 mr-2" /> Approve
                                     </Button>
                                 </div>
@@ -190,7 +213,7 @@ const AdminLeaveRequests = () => {
                 </div>
             )}
 
-            {/* Action Modal (For adding optional remarks) */}
+            {/* Action Modal */}
             {actionModal.isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-card w-full max-w-md rounded-3xl shadow-xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
@@ -203,32 +226,18 @@ const AdminLeaveRequests = () => {
                             <p className="text-sm text-muted-foreground">
                                 You are about to <strong className={actionModal.type === 'approved' ? 'text-emerald-600' : 'text-destructive'}>{actionModal.type === 'approved' ? 'approve' : 'reject'}</strong> the leave request for <strong>{actionModal.request?.employeeName}</strong>.
                             </p>
-
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-foreground">Add Remarks (Optional)</label>
                                 <textarea
                                     value={remarks}
                                     onChange={(e) => setRemarks(e.target.value)}
-                                    placeholder={`E.g., "Enjoy your trip!" or "Insufficient staffing..."`}
+                                    placeholder={`E.g., "Enjoy your trip!"`}
                                     className="flex min-h-25 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary resize-none"
                                 />
-                                <p className="text-xs text-muted-foreground">This note will be sent to the employee via email.</p>
                             </div>
-
                             <div className="flex justify-end gap-3 pt-4">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    onClick={() => { setActionModal({ isOpen: false, request: null, type: null }); setRemarks(""); }}
-                                    disabled={actionLoading}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={actionLoading}
-                                    className={actionModal.type === 'approved' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-destructive hover:bg-destructive/90 text-white'}
-                                >
+                                <Button type="button" variant="ghost" onClick={() => { setActionModal({ isOpen: false, request: null, type: null }); setRemarks(""); }} disabled={actionLoading}>Cancel</Button>
+                                <Button type="submit" disabled={actionLoading} className={actionModal.type === 'approved' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-destructive hover:bg-destructive/90 text-white'}>
                                     {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                                     Confirm {actionModal.type}
                                 </Button>
