@@ -1,29 +1,25 @@
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import api from "../../api/axios";
-import { X, CheckCircle2, Clock, MapPin, UserX, PartyPopper, ChevronRight, ChevronLeft, CalendarDays, Plus, Camera } from "lucide-react";
+import { X, CheckCircle2, Clock, MapPin, UserX, PartyPopper, ChevronRight, ChevronLeft, CalendarDays, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 
 import AddEventModal from "./AddEventModal";
-import MediaUploadModal from "./MediaUploadModal";
 
 const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation();
     const [activeCategory, setActiveCategory] = useState(null);
 
     // Modal States
     const [eventModalData, setEventModalData] = useState({ isOpen: false, categoryName: null });
-    const [mediaModalData, setMediaModalData] = useState({ isOpen: false, categoryName: null });
     const [isSavingEvent, setIsSavingEvent] = useState(false);
-    const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
             setActiveCategory(null);
             setEventModalData({ isOpen: false, categoryName: null });
-            setMediaModalData({ isOpen: false, categoryName: null });
         }
     }, [isOpen, school]);
 
@@ -49,28 +45,6 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
             toast.error(t('school_details.toast_event_error') + (error.response?.data?.message || ""), { id: toastId });
         } finally {
             setIsSavingEvent(false);
-        }
-    };
-
-    const handleUploadMedia = async (mediaData) => {
-        setIsUploadingMedia(true);
-        const toastId = toast.loading(t('school_details.toast_uploading_media'));
-        try {
-            const payload = {
-                ...mediaData,
-                schoolId: school.id,
-                band: mediaModalData.categoryName
-            };
-
-            await api.post('/employee/media', payload);
-
-            toast.success(t('school_details.toast_media_success'), { id: toastId });
-            setMediaModalData({ isOpen: false, categoryName: null });
-        } catch (error) {
-            console.error("Media upload error:", error);
-            toast.error(t('school_details.toast_media_error') + (error.response?.data?.message || ""), { id: toastId });
-        } finally {
-            setIsUploadingMedia(false);
         }
     };
 
@@ -124,12 +98,6 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                                         </div>
 
                                         <div className="flex items-center gap-2 mt-4 sm:mt-0 shrink-0">
-                                            <Button variant="outline" size="sm" className="h-9 rounded-lg"
-                                                onClick={(e) => { e.stopPropagation(); setMediaModalData({ isOpen: true, categoryName: category.name }); }}>
-                                                <Camera className="w-4 h-4 sm:mr-1.5" />
-                                                <span className="hidden sm:inline">{t('school_details.btn_upload')}</span>
-                                            </Button>
-
                                             <Button variant="outline" size="sm" className="h-9 rounded-lg border-blue-500/30 text-blue-600 hover:bg-blue-500/10 hover:border-blue-500/50"
                                                 onClick={(e) => { e.stopPropagation(); setEventModalData({ isOpen: true, categoryName: category.name }); }}>
                                                 <Plus className="w-4 h-4 mr-1.5" /> {t('school_details.btn_event')}
@@ -156,9 +124,6 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                                     <span className="text-sm font-medium text-muted-foreground hidden sm:inline">{t('school_details.last_30_days')}</span>
                                 </div>
                                 <div className="flex gap-2">
-                                    <Button size="sm" variant="outline" onClick={() => setMediaModalData({ isOpen: true, categoryName: activeCategory.name })} className="h-8 rounded-lg text-xs">
-                                        <Camera className="w-3.5 h-3.5 mr-1.5" /> {t('school_details.btn_media')}
-                                    </Button>
                                     <Button size="sm" onClick={() => setEventModalData({ isOpen: true, categoryName: activeCategory.name })} className="h-8 rounded-lg bg-blue-500 hover:bg-blue-600 text-white shadow-sm text-xs">
                                         <Plus className="w-3.5 h-3.5 mr-1.5" /> {t('school_details.btn_log_event')}
                                     </Button>
@@ -231,7 +196,6 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                 </div>
             </div>
 
-            {/* Modals rendered on top (z-[60]) */}
             <AddEventModal
                 isOpen={eventModalData.isOpen}
                 onClose={() => setEventModalData({ isOpen: false, categoryName: null })}
@@ -240,16 +204,6 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                 onSubmit={handleSaveEvent}
                 actionLoading={isSavingEvent}
             />
-
-            <MediaUploadModal
-                isOpen={mediaModalData.isOpen}
-                onClose={() => setMediaModalData({ isOpen: false, categoryName: null })}
-                targetSchool={school.name}
-                targetCategory={mediaModalData.categoryName}
-                onSubmit={handleUploadMedia}
-                actionLoading={isUploadingMedia}
-            />
-
         </div>
     );
 };

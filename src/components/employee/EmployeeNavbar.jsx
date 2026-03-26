@@ -7,11 +7,11 @@ import api from "../../api/axios";
 import { setAxiosToken } from "../../api/axios";
 import { io } from "socket.io-client";
 import toast from "react-hot-toast";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 
 import {
     LayoutDashboard, User, Calendar, BellRing, FileText,
-    Moon, Sun, LogOut, UserCircle, Settings, ClipboardList
+    Moon, Sun, LogOut, UserCircle, Settings, ClipboardList, Film // <-- Added Film icon
 } from "lucide-react";
 
 import EmployeeSettingsModal from "../../modals/employee/EmployeeSettingsModal";
@@ -20,7 +20,7 @@ const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 const notificationSound = new Audio('/sounds/notification-ting.mp3');
 
 const EmployeeNavbar = () => {
-    const { t } = useTranslation(); // <-- Initialize translation hook
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const dispatch = useDispatch();
@@ -95,7 +95,7 @@ const EmployeeNavbar = () => {
 
             if (pathnameRef.current !== '/employee/notifications') {
                 setNotifCount(prev => prev + 1);
-                toast(t('navbar.new_notif_toast'), { icon: '🔔' }); // <-- Translated
+                toast(t('navbar.new_notif_toast'), { icon: '🔔' });
             }
         };
 
@@ -123,13 +123,13 @@ const EmployeeNavbar = () => {
     }, []);
 
     const handleLogout = async () => {
-        const toastId = toast.loading(t('navbar.logging_out')); // <-- Translated
+        const toastId = toast.loading(t('navbar.logging_out'));
         try {
             await api.post('/auth/logout');
-            toast.success(t('navbar.logout_success'), { id: toastId }); // <-- Translated
+            toast.success(t('navbar.logout_success'), { id: toastId });
         } catch (error) {
             console.error("Backend logout failed, forcing local logout:", error);
-            toast.error(t('navbar.logout_error'), { id: toastId }); // <-- Translated
+            toast.error(t('navbar.logout_error'), { id: toastId });
         } finally {
             setAxiosToken(null);
             dispatch(logout());
@@ -153,6 +153,7 @@ const EmployeeNavbar = () => {
         { path: "/employee/dashboard", icon: <LayoutDashboard className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.dashboard') },
         { path: "/employee/assignments", icon: <Calendar className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.assignments') },
         { path: "/employee/optional", icon: <ClipboardList className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.tasks') },
+        { path: "/employee/media", icon: <Film className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: "Media" }, // <-- Added Media Item Here
         { path: "/employee/report", icon: <FileText className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.report') },
         {
             path: "/employee/notifications",

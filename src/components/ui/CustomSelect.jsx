@@ -28,7 +28,7 @@ const CustomSelect = ({ value, onChange, options = ["Teacher", "Admin"] }) => {
                 onClick={() => setIsOpen(!isOpen)}
             >
                 <span className={`truncate ${value ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                    {value || "Select Role"}
+                    {value || "Select"}
                 </span>
 
                 <ChevronDown

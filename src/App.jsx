@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { useDispatch, useSelector } from "react-redux";
 import { setCredentials, logout } from "./store/slices/authSlice";
 import api, { setAxiosToken } from "./api/axios";
-import { useTranslation } from "react-i18next"; // <-- 1. Import useTranslation
+import { useTranslation } from "react-i18next";
 
 // Route Guards
 import ProtectedRoute from "./components/routing/ProtectedRoute";
@@ -33,21 +33,22 @@ import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import MyProfile from "./pages/employee/MyProfile";
 import AssignedSchools from "./pages/employee/AssignedSchools";
 import OptionalTasks from "./pages/employee/Tasks";
+import EmployeeMedia from "./pages/employee/EmployeeMedia";
 import DailyReport from "./pages/employee/DailyReport";
 import EmployeeNotifications from "./pages/employee/EmployeeNotifications";
 import EmployeeResetPassword from "./pages/employee/EmployeeResetPassword";
 import { Toaster } from "react-hot-toast";
 
+// ---> ADD YOUR MANAGER HERE <---
+import GlobalUploadManager from "./components/GlobalUploadManager";
+
 function App() {
   const dispatch = useDispatch();
-  // 👇 2. Extract user along with isHydrating
   const { user, isHydrating } = useSelector((state) => state.auth);
-  const { i18n } = useTranslation(); // <-- 3. Initialize i18n hook
+  const { i18n } = useTranslation();
 
-  // 1. Grab the current theme from Redux (fallback to 'light' just in case)
   const currentTheme = useSelector((state) => state.theme?.mode || 'light');
 
-  // 2. Reactively apply the theme to the DOM whenever it changes in Redux
   useEffect(() => {
     localStorage.setItem('themeMode', currentTheme);
 
@@ -84,13 +85,39 @@ function App() {
     hydrateApp();
   }, [dispatch]);
 
-  // 👇 4. --- LANGUAGE SYNC ---
+  useEffect(() => {
+    const handleOnline = async () => {
+      const offlineQueue = JSON.parse(localStorage.getItem('offlineEmailQueue') || '[]');
+
+      if (offlineQueue.length > 0) {
+        console.log("Internet restored. Sending queued failure emails...");
+
+        for (const payload of offlineQueue) {
+          try {
+            await api.post('/employee/media/send-failure-email', payload);
+          } catch (err) {
+            console.error("Failed to send queued email", err);
+            return; // Stop and keep in queue if it fails again
+          }
+        }
+
+        // If all succeeded, clear the queue!
+        localStorage.removeItem('offlineEmailQueue');
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+
+    // Also run once on app mount just in case they refreshed the page while offline
+    if (navigator.onLine) handleOnline();
+
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
+
+  // --- LANGUAGE SYNC ---
   useEffect(() => {
     if (user?.preferences?.systemLanguage) {
-      // Map the database string to the i18n code
       const langCode = user.preferences.systemLanguage === "हिन्दी (Hindi)" ? "hi" : "en";
-
-      // Switch language if it doesn't match the current one
       if (i18n.language !== langCode) {
         i18n.changeLanguage(langCode);
       }
@@ -123,16 +150,16 @@ function App() {
           },
         }}
       />
-      <Routes>
-        {/* Public Routes (Traffic Controller) */}
-        <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
 
-        {/* <-- ADDED ROUTE HERE --> */}
+      {/* ---> MOUNT MANAGER SECURELY HERE <--- */}
+      <GlobalUploadManager />
+
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/contact-admin" element={<PublicRoute><AdminContact /></PublicRoute>} />
 
-        {/* ========================================== */}
-        {/* SECURE RESET PASSWORD ROUTES (No Layouts)  */}
-        {/* ========================================== */}
+        {/* SECURE RESET PASSWORD ROUTES */}
         <Route
           path="/admin/reset-password"
           element={<ProtectedRoute requireAdmin={true}><AdminResetPassword /></ProtectedRoute>}
@@ -142,22 +169,19 @@ function App() {
           element={<ProtectedRoute requireAdmin={false}><EmployeeResetPassword /></ProtectedRoute>}
         />
 
-        {/* ========================================== */}
-        {/* Employee Routes (Inside Layout)            */}
-        {/* ========================================== */}
+        {/* Employee Routes */}
         <Route path="/employee" element={<ProtectedRoute requireAdmin={false}><EmployeeLayout /></ProtectedRoute>}>
           <Route index element={<Navigate to="/employee/dashboard" replace />} />
           <Route path="dashboard" element={<EmployeeDashboard />} />
           <Route path="profile" element={<MyProfile />} />
           <Route path="assignments" element={<AssignedSchools />} />
           <Route path="optional" element={<OptionalTasks />} />
+          <Route path="media" element={<EmployeeMedia />} />
           <Route path="report" element={<DailyReport />} />
           <Route path="notifications" element={<EmployeeNotifications />} />
         </Route>
 
-        {/* ========================================== */}
-        {/* Admin Routes (Inside Layout)               */}
-        {/* ========================================== */}
+        {/* Admin Routes */}
         <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminLayout /></ProtectedRoute>}>
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
