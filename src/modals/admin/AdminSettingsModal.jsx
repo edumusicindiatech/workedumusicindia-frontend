@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
+import { useSelector } from "react-redux"; // <-- Imported useSelector
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Settings, X, Globe, Mail, Loader2 } from "lucide-react";
+import { Settings, X, Globe, Mail, Loader2, ShieldAlert } from "lucide-react"; // <-- Added ShieldAlert icon
 import CustomSelect from "../../components/ui/CustomSelect";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
 
-// Notice the new 'onSaveSuccess' prop
 const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess }) => {
+    // 👇 Get the logged-in user's role to enforce SuperAdmin rules
+    const { user } = useSelector((state) => state.auth);
+    const isSuperAdmin = user?.role === 'SuperAdmin';
+
     const [settings, setSettings] = useState({
         language: "English",
         adminEmailNotifications: true,
@@ -16,13 +20,13 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
     });
     const [isSaving, setIsSaving] = useState(false);
 
-    // Load actual DB preferences when the modal opens
     useEffect(() => {
         if (isOpen && currentPreferences) {
             setSettings({
                 language: currentPreferences.systemLanguage || "English",
-                adminEmailNotifications: currentPreferences.adminNotifications ?? true,
-                employeeEmailNotifications: currentPreferences.employeeNotifications ?? true,
+                // Map the incoming props to the state
+                adminEmailNotifications: currentPreferences.globalAdminNotifications ?? true,
+                employeeEmailNotifications: currentPreferences.globalEmployeeNotifications ?? true,
             });
         }
     }, [isOpen, currentPreferences]);
@@ -32,19 +36,24 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
     const handleSave = async () => {
         setIsSaving(true);
         try {
+            // 👇 1. Build the base payload that ALL admins are allowed to send
             const payload = {
                 systemLanguage: settings.language,
-                adminNotifications: settings.adminEmailNotifications,
-                employeeNotifications: settings.employeeEmailNotifications
+                globalEmployeeNotifications: settings.employeeEmailNotifications
             };
 
-            const response = await api.put('/admin/settings/preferences', payload);
+            // 👇 2. Only attach the Admin switch if they are a SuperAdmin
+            if (isSuperAdmin) {
+                payload.globalAdminNotifications = settings.adminEmailNotifications;
+            }
+
+            // Send the smart payload
+            const response = await api.put('/admin/settings/global', payload);
 
             if (response.data.success) {
-                toast.success("Preferences updated successfully!");
-                // 1. Tell the parent component about the new settings so it updates its state
+                toast.success("Global preferences updated successfully!");
                 if (onSaveSuccess) {
-                    onSaveSuccess(response.data.preferences);
+                    onSaveSuccess(response.data.data);
                 }
                 onClose();
             }
@@ -63,7 +72,7 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
                 {/* Header */}
                 <div className="bg-card flex items-center justify-between p-6 border-b border-border">
                     <h2 className="text-xl font-bold flex items-center gap-2 text-foreground">
-                        <Settings className="w-5 h-5 text-primary" /> Account Settings
+                        <Settings className="w-5 h-5 text-primary" /> Global Settings
                     </h2>
                     <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors">
                         <X className="w-5 h-5 text-muted-foreground hover:text-foreground" />
@@ -79,12 +88,7 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
                             <Globe className="w-4 h-4 text-muted-foreground" /> System Language
                         </Label>
                         <CustomSelect
-                            options={[
-                                "English",
-                                "हिन्दी (Hindi)",
-                                "Español (Spanish)",
-                                "Français (French)"
-                            ]}
+                            options={["English", "हिन्दी (Hindi)"]}
                             value={settings.language}
                             onChange={(selectedValue) => setSettings({ ...settings, language: selectedValue })}
                         />
@@ -93,28 +97,34 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
 
                     <div className="border-t border-border/60" />
 
-                    {/* Admin Notifications */}
+                    {/* Admin Notifications (LOCKED FOR REGULAR ADMINS) */}
                     <div className="space-y-4">
-                        <Label className="text-base font-semibold">Admin Notifications</Label>
+                        <Label className="text-base font-semibold flex items-center gap-2">
+                            Admin Notifications
+                            {!isSuperAdmin && <ShieldAlert className="w-4 h-4 text-destructive" />}
+                        </Label>
 
-                        <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/20 hover:bg-muted/40 transition-colors">
+                        <div className={`flex items-center justify-between p-4 rounded-xl border border-border transition-colors ${!isSuperAdmin ? 'bg-muted/50 opacity-70' : 'bg-muted/20 hover:bg-muted/40'}`}>
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                                     <Mail className="w-4 h-4 text-primary" />
                                 </div>
                                 <div>
                                     <p className="font-semibold text-sm text-foreground">Email Notifications</p>
-                                    <p className="text-xs text-muted-foreground font-medium mt-0.5">Receive daily summaries and critical alerts</p>
+                                    <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                                        {isSuperAdmin ? "Receive daily summaries and critical alerts" : "Locked: Only SuperAdmins can toggle this."}
+                                    </p>
                                 </div>
                             </div>
                             <Switch
                                 checked={settings.adminEmailNotifications}
                                 onCheckedChange={(checked) => setSettings({ ...settings, adminEmailNotifications: checked })}
+                                disabled={!isSuperAdmin} // 👇 Disables the switch if they aren't SuperAdmin
                             />
                         </div>
                     </div>
 
-                    {/* Employee Notifications */}
+                    {/* Employee Notifications (OPEN TO ALL ADMINS) */}
                     <div className="space-y-4">
                         <Label className="text-base font-semibold">Employee Notifications</Label>
 

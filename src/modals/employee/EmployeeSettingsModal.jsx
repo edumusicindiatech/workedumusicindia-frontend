@@ -6,11 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Settings, X, Globe, Mail, Loader2 } from "lucide-react";
 import CustomSelect from "../../components/ui/CustomSelect";
 import toast from "react-hot-toast"; // <-- Swapped to react-hot-toast
-// 1. Import your custom api instance
 import api from "../../api/axios";
 
 const EmployeeSettingsModal = ({ isOpen, onClose }) => {
-    // We no longer need 'token' here because 'api' handles it automatically
     const { user } = useSelector((state) => state.auth);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -36,7 +34,6 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
         const toastId = toast.loading("Saving preferences...");
 
         try {
-            // 2. Use 'api' instance, remove /api prefix and manual headers
             await api.put('/employee/settings/preferences', {
                 systemLanguage: settings.language,
                 employeeNotifications: settings.emailNotifications
@@ -77,9 +74,7 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
                         <CustomSelect
                             options={[
                                 "English",
-                                "हिन्दी (Hindi)",
-                                "Español (Spanish)",
-                                "Français (French)"
+                                "हिन्दी (Hindi)"
                             ]}
                             value={settings.language}
                             onChange={(selectedValue) => setSettings({ ...settings, language: selectedValue })}
