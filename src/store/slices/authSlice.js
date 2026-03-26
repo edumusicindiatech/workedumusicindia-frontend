@@ -1,11 +1,10 @@
-// src/store/slices/authSlice.js
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
     user: null,
     token: null,
     isAuthenticated: false,
-    isHydrating: true, // <-- NEW: Tells the app we are checking auth on boot
+    isHydrating: true,
 };
 
 const authSlice = createSlice({
@@ -17,13 +16,19 @@ const authSlice = createSlice({
             if (user) state.user = user;
             if (access_token) state.token = access_token;
             state.isAuthenticated = true;
-            state.isHydrating = false; // Hydration complete!
+            state.isHydrating = false;
+        },
+        // NEW REDUCER: Updates only the preferences inside the user object
+        updateUserPreferences: (state, action) => {
+            if (state.user) {
+                state.user.preferences = action.payload;
+            }
         },
         logout: (state) => {
             state.user = null;
             state.token = null;
             state.isAuthenticated = false;
-            state.isHydrating = false; // Hydration complete (as guest)
+            state.isHydrating = false;
         },
         setHydrationComplete: (state) => {
             state.isHydrating = false;
@@ -31,5 +36,5 @@ const authSlice = createSlice({
     }
 });
 
-export const { setCredentials, logout, setHydrationComplete } = authSlice.actions;
+export const { setCredentials, updateUserPreferences, logout, setHydrationComplete } = authSlice.actions;
 export default authSlice.reducer;

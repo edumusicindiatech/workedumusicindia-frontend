@@ -8,7 +8,7 @@ import CustomSelect from "../../components/ui/CustomSelect";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
 import { useTranslation } from "react-i18next"; // <-- Already imported, maintaining it
-import { setCredentials } from "../../store/slices/authSlice";
+import { setCredentials, updateUserPreferences } from "../../store/slices/authSlice";
 
 const EmployeeSettingsModal = ({ isOpen, onClose }) => {
     const { user } = useSelector((state) => state.auth);
@@ -43,10 +43,7 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
             });
 
             if (response.data.success) {
-                dispatch(setCredentials({
-                    ...user,
-                    preferences: response.data.preferences
-                }));
+                dispatch(updateUserPreferences(personalResponse.data.preferences));
 
                 const langCode = settings.language === "हिन्दी (Hindi)" ? "hi" : "en";
                 i18n.changeLanguage(langCode);

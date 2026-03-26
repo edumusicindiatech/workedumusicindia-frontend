@@ -8,7 +8,7 @@ import CustomSelect from "../../components/ui/CustomSelect";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
 import { useTranslation } from "react-i18next";
-import { setCredentials } from "../../store/slices/authSlice";
+import { setCredentials, updateUserPreferences } from "../../store/slices/authSlice";
 
 const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess }) => {
     const { t, i18n } = useTranslation();
@@ -52,10 +52,7 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
             ]);
 
             if (globalResponse.data.success && personalResponse.data.success) {
-                dispatch(setCredentials({
-                    ...user,
-                    preferences: personalResponse.data.preferences
-                }));
+                dispatch(updateUserPreferences(personalResponse.data.preferences));
                 toast.success(t('admin_settings_modal.success_msg'));
 
                 const langCode = settings.language === "हिन्दी (Hindi)" ? "hi" : "en";
