@@ -129,7 +129,7 @@ const Login = () => {
                         <div className="w-16 h-16 rounded-[1.25rem] bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-5 shadow-sm">
                             <Shield className="w-8 h-8 text-primary" />
                         </div>
-                        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">WorkForce Pro</h1>
+                        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">WorkEduMusic</h1>
                     </div>
 
                     {/* Form Header */}
