@@ -87,18 +87,61 @@ const AssignedSchools = () => {
     }, [fetchSchools, user]);
 
     // ==========================================
-    // RENDER: LOADING STATE
+    // RENDER: LOADING STATE (SHIMMER)
     // ==========================================
     if (loading) {
         return (
-            <div className="h-[70vh] flex flex-col items-center justify-center gap-5">
-                <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 w-16 h-16 bg-primary/20 rounded-full animate-ping" />
-                    <div className="w-16 h-16 bg-card border border-border rounded-2xl shadow-xl flex items-center justify-center relative z-10">
-                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <div className="max-w-6xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
+                {/* Shimmer Header */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 pb-6 border-b border-border/40">
+                    <div className="space-y-3 w-full max-w-sm">
+                        <div className="h-10 w-3/4 md:w-64 bg-muted rounded-lg animate-pulse" />
+                        <div className="h-5 w-full md:w-80 bg-muted/60 rounded-md animate-pulse" />
                     </div>
                 </div>
-                <p className="text-muted-foreground font-medium animate-pulse tracking-wide">Loading your assignments...</p>
+
+                {/* Shimmer Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="bg-card rounded-[1.4rem] p-5 sm:p-7 border border-border/60 shadow-sm flex flex-col h-full relative overflow-hidden">
+                            {/* Header Area */}
+                            <div className="flex items-start gap-4 mb-6">
+                                <div className="w-12 h-12 bg-muted rounded-2xl shrink-0 animate-pulse" />
+                                <div className="flex-1 space-y-3 mt-1">
+                                    <div className="h-6 w-3/4 bg-muted rounded-lg animate-pulse" />
+                                    <div className="h-4 w-1/2 bg-muted/60 rounded-md animate-pulse" />
+                                </div>
+                            </div>
+
+                            {/* Category Area */}
+                            <div className="space-y-4 mb-6 flex-1 w-full">
+                                <div className="bg-muted/20 border border-border/50 rounded-2xl p-4 w-full">
+                                    {/* Top Row: Category Pill & Distance */}
+                                    <div className="flex items-center justify-between gap-3 mb-4">
+                                        <div className="h-6 w-20 bg-muted rounded-full animate-pulse" />
+                                        <div className="h-6 w-24 bg-muted rounded-full animate-pulse" />
+                                    </div>
+
+                                    {/* Bottom Row: Time and Days */}
+                                    <div className="flex flex-wrap items-center justify-between gap-4">
+                                        <div className="h-10 w-32 bg-muted rounded-xl animate-pulse" />
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            {[1, 2, 3, 4, 5, 6, 7].map((day) => (
+                                                <div key={day} className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-muted rounded-full animate-pulse" />
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Footer Action */}
+                            <div className="mt-auto pt-4 border-t border-border/60 flex items-center justify-between">
+                                <div className="h-5 w-40 bg-muted rounded-md animate-pulse" />
+                                <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }

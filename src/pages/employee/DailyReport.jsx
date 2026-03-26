@@ -15,6 +15,7 @@ const DailyReport = () => {
     };
 
     // State Management
+    const [loading, setLoading] = useState(false); // <-- Added for consistency. Set to true if you fetch data later!
     const [category, setCategory] = useState("Regular Report");
     const [summary, setSummary] = useState("");
     const [eventName, setEventName] = useState("");
@@ -82,6 +83,52 @@ const DailyReport = () => {
             setIsSubmitting(false);
         }
     };
+
+    // ==========================================
+    // RENDER: LOADING STATE (SHIMMER)
+    // ==========================================
+    if (loading) {
+        return (
+            <div className="space-y-6 md:space-y-8 animate-fade-in p-4 md:p-8 max-w-4xl mx-auto pb-20">
+                {/* Shimmer Header */}
+                <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-muted rounded-xl animate-pulse shrink-0" />
+                        <div className="h-8 w-48 sm:w-64 bg-muted rounded-lg animate-pulse" />
+                    </div>
+                    <div className="h-5 w-3/4 sm:w-96 bg-muted/60 rounded-md animate-pulse" />
+                </div>
+
+                {/* Shimmer Form Card */}
+                <div className="bg-card border border-border/60 rounded-2xl shadow-sm overflow-hidden relative">
+                    {/* Top Banner */}
+                    <div className="bg-muted/20 border-b border-border/50 p-4 sm:px-6 flex flex-col sm:flex-row gap-4 justify-between">
+                        <div className="h-5 w-40 bg-muted rounded animate-pulse" />
+                        <div className="h-5 w-48 bg-muted rounded animate-pulse" />
+                    </div>
+
+                    <div className="p-4 sm:p-6 space-y-6">
+                        {/* Category Selector Shimmer */}
+                        <div className="space-y-2">
+                            <div className="h-4 w-32 bg-muted/80 rounded animate-pulse" />
+                            <div className="w-full h-12 rounded-xl bg-muted animate-pulse" />
+                        </div>
+
+                        {/* Summary Textarea Shimmer */}
+                        <div className="space-y-2">
+                            <div className="h-4 w-32 bg-muted/80 rounded animate-pulse" />
+                            <div className="w-full h-40 rounded-xl bg-muted animate-pulse" />
+                        </div>
+
+                        {/* Submit Button Shimmer */}
+                        <div className="pt-4 border-t border-border/50 flex justify-end">
+                            <div className="w-full sm:w-40 h-12 rounded-xl bg-muted animate-pulse" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 md:space-y-8 animate-fade-in p-4 md:p-8 max-w-4xl mx-auto pb-20">

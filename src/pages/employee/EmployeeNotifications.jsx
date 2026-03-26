@@ -130,8 +130,47 @@ const EmployeeNotifications = () => {
         }
     };
 
+    // ==========================================
+    // RENDER: LOADING STATE (SHIMMER)
+    // ==========================================
     if (loading) {
-        return <div className="p-8 text-center animate-pulse text-muted-foreground">Loading notifications...</div>;
+        return (
+            <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-4xl mx-auto animate-in fade-in duration-300 pb-24 md:pb-8">
+                {/* Header Shimmer */}
+                <div className="mb-4 sm:mb-6 md:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+                    <div>
+                        <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-muted animate-pulse shrink-0" />
+                            <div className="h-8 sm:h-10 w-48 sm:w-64 bg-muted rounded-lg animate-pulse" />
+                        </div>
+                        <div className="h-4 sm:h-5 w-64 sm:w-80 bg-muted/60 rounded-md animate-pulse mt-1" />
+                    </div>
+                    {/* Buttons Shimmer */}
+                    <div className="flex items-center gap-2 self-start md:self-auto w-full md:w-auto">
+                        <div className="h-8 sm:h-9 w-28 sm:w-32 bg-muted rounded-md animate-pulse" />
+                        <div className="h-8 sm:h-9 w-24 sm:w-28 bg-muted rounded-md animate-pulse" />
+                    </div>
+                </div>
+
+                {/* Notifications Card Shimmer */}
+                <div className="bg-card rounded-xl sm:rounded-2xl shadow-card border border-border min-h-100 sm:min-h-125 overflow-hidden flex flex-col">
+                    <div className="p-3 sm:p-4 md:p-6 flex-1 bg-muted/5 flex flex-col gap-2.5 sm:gap-3">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                            <div key={i} className="relative p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl border border-border bg-card/50">
+                                <div className="flex gap-3 sm:gap-4 pr-4 sm:pr-6">
+                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted animate-pulse shrink-0" />
+                                    <div className="flex flex-col gap-2 w-full mt-1">
+                                        <div className="h-5 w-1/3 sm:w-1/4 bg-muted rounded animate-pulse" />
+                                        <div className="h-4 w-3/4 sm:w-2/3 bg-muted/60 rounded animate-pulse" />
+                                        <div className="h-3 w-16 sm:w-20 bg-muted/40 rounded mt-1 animate-pulse" />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (

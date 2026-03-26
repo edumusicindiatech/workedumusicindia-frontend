@@ -223,14 +223,42 @@ const EmployeeDashboard = () => {
     // ==========================================
     if (loading) {
         return (
-            <div className="h-[70vh] flex flex-col items-center justify-center gap-5">
-                <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 w-16 h-16 bg-primary/20 rounded-full animate-ping" />
-                    <div className="w-16 h-16 bg-card border border-border rounded-2xl shadow-xl flex items-center justify-center relative z-10">
-                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <div className="max-w-5xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
+                {/* Shimmer Header */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 pb-6 border-b border-border/40">
+                    <div className="space-y-3 w-full max-w-sm">
+                        <div className="h-10 w-3/4 md:w-64 bg-muted rounded-lg animate-pulse" />
+                        <div className="h-5 w-full md:w-80 bg-muted/60 rounded-md animate-pulse" />
+                    </div>
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <div className="flex-1 md:flex-none h-11 w-full md:w-36 bg-muted rounded-xl animate-pulse" />
+                        <div className="flex-1 md:flex-none h-11 w-full md:w-36 bg-muted rounded-xl animate-pulse" />
                     </div>
                 </div>
-                <p className="text-muted-foreground font-medium animate-pulse tracking-wide">Syncing live schedule...</p>
+
+                {/* Shimmer Cards List */}
+                <div className="mt-6 space-y-5">
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="bg-card rounded-3xl p-5 sm:p-7 border border-border/60 shadow-sm relative overflow-hidden">
+                            <div className="flex flex-col lg:flex-row justify-between gap-6">
+                                <div className="flex-1 space-y-4">
+                                    <div className="h-7 w-24 bg-muted rounded-full animate-pulse" />
+                                    <div className="h-8 w-3/4 sm:w-1/2 bg-muted rounded-xl animate-pulse" />
+                                    <div className="h-5 w-1/2 sm:w-1/3 bg-muted/60 rounded-lg mt-3 animate-pulse" />
+                                </div>
+                                <div className="hidden lg:block h-20 w-48 bg-muted/50 rounded-2xl animate-pulse" />
+                            </div>
+                            <div className="flex flex-col sm:flex-row items-center gap-3 mt-6 pt-5 border-t border-border/60">
+                                <div className="h-12 w-full sm:w-40 bg-muted rounded-xl animate-pulse" />
+                                <div className="flex flex-col sm:flex-row gap-3 w-full sm:flex-1 sm:justify-end">
+                                    <div className="h-12 w-full sm:w-24 bg-muted rounded-xl animate-pulse" />
+                                    <div className="h-12 w-full sm:w-28 bg-muted rounded-xl animate-pulse" />
+                                    <div className="h-12 w-full sm:w-36 bg-muted rounded-xl animate-pulse" />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }

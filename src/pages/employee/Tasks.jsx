@@ -115,16 +115,65 @@ const Tasks = () => {
         }
     };
 
+    // ==========================================
+    // RENDER: LOADING STATE (SHIMMER)
+    // ==========================================
     if (loading) {
         return (
-            <div className="h-[70vh] flex flex-col items-center justify-center gap-5">
-                <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 w-16 h-16 bg-primary/20 rounded-full animate-ping" />
-                    <div className="w-16 h-16 bg-card border border-border rounded-2xl shadow-xl flex items-center justify-center relative z-10">
-                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <div className="max-w-6xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
+                {/* Shimmer Header */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 pb-6 border-b border-border/40">
+                    <div className="space-y-3 w-full max-w-sm">
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-48 bg-muted rounded-lg animate-pulse" />
+                            <div className="h-6 w-24 bg-muted/60 rounded-full animate-pulse" />
+                        </div>
+                        <div className="h-5 w-full md:w-80 bg-muted/60 rounded-md animate-pulse" />
                     </div>
                 </div>
-                <p className="text-muted-foreground font-medium animate-pulse tracking-wide">Checking for new assignments...</p>
+
+                {/* Shimmer Cards Grid */}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="bg-card rounded-3xl border border-border/60 p-5 sm:p-7 flex flex-col h-full overflow-hidden shadow-sm relative">
+                            {/* Header Area */}
+                            <div className="flex items-start justify-between gap-4 mb-5">
+                                <div className="flex-1 min-w-0 flex items-start gap-4">
+                                    <div className="w-12 h-12 bg-muted rounded-2xl shrink-0 animate-pulse" />
+                                    <div className="flex-1 space-y-3 mt-1">
+                                        <div className="h-7 w-3/4 sm:w-1/2 bg-muted rounded-lg animate-pulse" />
+                                        <div className="h-5 w-1/2 sm:w-1/3 bg-muted/60 rounded-md animate-pulse" />
+                                    </div>
+                                </div>
+                                <div className="h-6 w-20 bg-muted rounded-full animate-pulse shrink-0" />
+                            </div>
+
+                            {/* Schedule Info Box */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5 bg-muted/20 p-4 sm:p-5 rounded-2xl border border-border/50">
+                                <div className="space-y-2">
+                                    <div className="h-4 w-16 bg-muted/80 rounded animate-pulse" />
+                                    <div className="h-6 w-32 bg-muted rounded animate-pulse" />
+                                </div>
+                                <div className="space-y-2 sm:border-l border-border/60 sm:pl-4">
+                                    <div className="h-4 w-16 bg-muted/80 rounded animate-pulse" />
+                                    <div className="h-6 w-24 bg-muted rounded animate-pulse" />
+                                </div>
+                            </div>
+
+                            {/* Description */}
+                            <div className="mb-6 flex-1 space-y-3">
+                                <div className="h-5 w-32 bg-muted rounded animate-pulse mb-3" />
+                                <div className="h-20 w-full bg-card border border-border/50 rounded-xl animate-pulse" />
+                            </div>
+
+                            {/* Actions / Footer */}
+                            <div className="pt-5 border-t border-border/60 mt-auto flex flex-col sm:flex-row items-center gap-3">
+                                <div className="h-12 w-full sm:flex-1 bg-muted rounded-xl animate-pulse" />
+                                <div className="h-12 w-full sm:flex-[2] bg-muted rounded-xl animate-pulse" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }
@@ -269,7 +318,7 @@ const Tasks = () => {
                                             <Button
                                                 onClick={() => handleAccept(task.id)}
                                                 disabled={actionLoading}
-                                                className="w-full sm:flex-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
+                                                className="w-full sm:flex-[2] bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
                                             >
                                                 {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CheckCircle className="w-5 h-5 mr-2" /> Accept & Schedule Task</>}
                                             </Button>
