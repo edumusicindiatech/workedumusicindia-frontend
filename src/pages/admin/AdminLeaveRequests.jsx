@@ -68,12 +68,9 @@ const AdminLeaveRequests = () => {
     // THE FIX: GLOBAL OVERLAP DETECTION
     // ==========================================
     const uniqueAllRequests = useMemo(() => {
-        // 1. Sort ALL requests by newest update first
         const allSorted = [...requests].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-
         const uniqueAll = [];
 
-        // 2. Keep only the absolute latest request for any overlapping period per user
         allSorted.forEach(current => {
             const hasOverlap = uniqueAll.find(existing => {
                 const sameEmployee = existing.employeeEmail === current.employeeEmail;
@@ -95,14 +92,11 @@ const AdminLeaveRequests = () => {
         return uniqueAll;
     }, [requests]);
 
-    // 3. Filter the absolute unique list by the active tab
     const uniqueFilteredRequests = uniqueAllRequests.filter(req => req.status === activeTab);
-
-    // Accurate badge counting
     const pendingCount = uniqueAllRequests.filter(req => req.status === 'pending').length;
 
     // ==========================================
-    // THE FIX: OPTIMISTIC UI UPDATES
+    // OPTIMISTIC UI UPDATES
     // ==========================================
     const handleStatusUpdate = async (e) => {
         e.preventDefault();
@@ -110,12 +104,10 @@ const AdminLeaveRequests = () => {
         const { request, type } = actionModal;
         const toastId = toast.loading(`${type === 'pending' ? 'Revoking decision' : 'Marking as ' + type}...`);
 
-        // 1. Optimistic Update: Vanish the card instantly before server responds
         setRequests(prev => prev.map(r =>
             r.id === request.id ? { ...r, status: type, updatedAt: new Date().toISOString() } : r
         ));
 
-        // Close modal instantly
         setActionModal({ isOpen: false, request: null, type: null });
         setRemarks("");
 
@@ -126,20 +118,64 @@ const AdminLeaveRequests = () => {
             });
 
             toast.success(type === 'pending' ? 'Decision revoked!' : `Leave request ${type}!`, { id: toastId });
-            fetchRequests(); // Background sync to ensure total accuracy
+            fetchRequests();
         } catch (err) {
             toast.error(err.response?.data?.message || `Failed to update request.`, { id: toastId });
-            fetchRequests(); // If it fails, revert UI to actual server state
+            fetchRequests();
         } finally {
             setActionLoading(false);
         }
     };
 
+    // ==========================================
+    // HIGH-FIDELITY SHIMMER LOADER
+    // ==========================================
     if (loading) {
         return (
-            <div className="h-[70vh] flex flex-col items-center justify-center gap-4">
-                <Loader2 className="w-10 h-10 animate-spin text-primary" />
-                <p className="text-muted-foreground animate-pulse font-medium">Syncing requests...</p>
+            <div className="max-w-7xl mx-auto space-y-8 p-4 sm:p-6 lg:p-8">
+                {/* Header Skeleton */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border/50 pb-6">
+                    <div className="space-y-3">
+                        <div className="h-8 w-56 sm:w-72 bg-muted rounded-lg animate-pulse" />
+                        <div className="h-4 w-40 sm:w-56 bg-muted rounded-lg animate-pulse" />
+                    </div>
+                    <div className="flex gap-2 p-1.5 bg-muted/30 rounded-xl w-full md:w-auto h-[52px] animate-pulse">
+                        <div className="flex-1 md:w-28 bg-muted rounded-lg" />
+                        <div className="flex-1 md:w-28 bg-muted rounded-lg" />
+                        <div className="flex-1 md:w-28 bg-muted rounded-lg" />
+                    </div>
+                </div>
+
+                {/* Grid Cards Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm flex flex-col">
+                            {/* Card Header Skeleton */}
+                            <div className="p-5 border-b border-border/50 bg-muted/10 flex justify-between items-start">
+                                <div className="space-y-2.5 w-full">
+                                    <div className="h-5 w-3/5 bg-muted rounded-md animate-pulse" />
+                                    <div className="h-3.5 w-4/5 bg-muted rounded-md animate-pulse" />
+                                </div>
+                                <div className="h-6 w-20 bg-muted rounded-full animate-pulse shrink-0 ml-4" />
+                            </div>
+
+                            {/* Card Body Skeleton */}
+                            <div className="p-5 space-y-5 flex-1">
+                                <div className="h-[76px] w-full bg-muted/60 rounded-2xl animate-pulse" />
+                                <div className="space-y-2.5">
+                                    <div className="h-3 w-24 bg-muted rounded-md animate-pulse" />
+                                    <div className="h-20 w-full bg-muted/50 rounded-xl animate-pulse" />
+                                </div>
+                            </div>
+
+                            {/* Card Footer Skeleton */}
+                            <div className="p-5 border-t border-border bg-muted/5 flex gap-3">
+                                <div className="h-11 flex-1 bg-muted rounded-xl animate-pulse" />
+                                <div className="h-11 flex-1 bg-muted rounded-xl animate-pulse" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }

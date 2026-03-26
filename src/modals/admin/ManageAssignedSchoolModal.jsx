@@ -60,7 +60,17 @@ const ManageAssignedSchoolModal = ({ isOpen, onClose, assignment, employeeId, on
             setIsEditing(false);
             if (onSuccess) onSuccess(); // Refresh UI
         } catch (error) {
-            toast.error(error.response?.data?.message || "Failed to update.", { id: loadingToast });
+            // BEAUITFUL LONG TEXT FORMATTING FOR REACT-HOT-TOAST
+            toast.error(error.response?.data?.message || "Failed to update.", {
+                id: loadingToast,
+                duration: 6000,
+                style: {
+                    maxWidth: '500px',
+                    padding: '16px',
+                    lineHeight: '1.5',
+                    textAlign: 'center'
+                }
+            });
         } finally {
             setIsLoading(false);
         }
@@ -76,7 +86,11 @@ const ManageAssignedSchoolModal = ({ isOpen, onClose, assignment, employeeId, on
             onClose(); // Close main modal completely
             if (onSuccess) onSuccess(); // Refresh UI
         } catch (error) {
-            toast.error(error.response?.data?.message || "Failed to revoke.", { id: loadingToast });
+            toast.error(error.response?.data?.message || "Failed to revoke.", {
+                id: loadingToast,
+                duration: 6000,
+                style: { maxWidth: '500px', padding: '16px', lineHeight: '1.5', textAlign: 'center' }
+            });
         } finally {
             setIsLoading(false);
         }

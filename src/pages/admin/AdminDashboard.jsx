@@ -147,7 +147,8 @@ const AdminDashboard = () => {
 
                 <div className="flex flex-col">
                     {dashboardData?.recentActivity?.length > 0 ? (
-                        dashboardData.recentActivity.slice(0, 8).map((item, i) => (
+                        // ONLY CHANGED LINE BELOW: .slice(0, 8) -> .slice(0, 5)
+                        dashboardData.recentActivity.slice(0, 5).map((item, i) => (
                             <div
                                 key={item.id || i}
                                 className="group flex flex-col lg:flex-row lg:items-center justify-between p-4 sm:p-6 border-b border-border/40 last:border-0 hover:bg-muted/40 transition-all gap-4 sm:gap-6"

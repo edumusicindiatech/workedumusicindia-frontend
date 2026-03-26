@@ -3,7 +3,7 @@ import { ClipboardList, X, MapPin, Calendar, Clock, Edit2, Trash2, Save, AlertTr
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import toast from "react-hot-toast"; // <-- Ensure you are using Sonner here as well!
+import toast from "react-hot-toast";
 import api from "../../api/axios";
 
 const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
@@ -105,7 +105,12 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
             setIsEditing(false);
             if (onSuccess) onSuccess();
         } catch (error) {
-            toast.error(error.response?.data?.message || "Failed to update task.", { id: loadingToast });
+            // BEAUITFUL LONG TEXT FORMATTING FOR REACT-HOT-TOAST
+            toast.error(error.response?.data?.message || "Failed to update task.", {
+                id: loadingToast,
+                duration: 6000,
+                style: { maxWidth: '500px', padding: '16px', lineHeight: '1.5', textAlign: 'center' }
+            });
         } finally {
             setIsLoading(false);
         }
@@ -121,7 +126,11 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
             handleClose();
             if (onSuccess) onSuccess();
         } catch (error) {
-            toast.error(error.response?.data?.message || "Failed to revoke task.", { id: loadingToast });
+            toast.error(error.response?.data?.message || "Failed to revoke task.", {
+                id: loadingToast,
+                duration: 6000,
+                style: { maxWidth: '500px', padding: '16px', lineHeight: '1.5', textAlign: 'center' }
+            });
         } finally {
             setIsLoading(false);
         }
