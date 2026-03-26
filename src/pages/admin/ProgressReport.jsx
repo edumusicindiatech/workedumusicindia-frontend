@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 
 const ProgressReport = () => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation();
     const [teachers, setTeachers] = useState([]);
     const [records, setRecords] = useState([]);
     const [isLoadingTeachers, setIsLoadingTeachers] = useState(true);
@@ -186,8 +186,8 @@ const ProgressReport = () => {
         }
     };
 
-    const filteredTeachers = teachers.filter(t =>
-        t.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredTeachers = teachers.filter(teacher =>
+        teacher.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -246,19 +246,19 @@ const ProgressReport = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-3">
-                                    {filteredTeachers.map((t, idx) => (
-                                        <div key={t._id} onClick={() => handleSelectTeacher(t)} className="flex items-center justify-between p-3 sm:p-4 bg-card border border-border/80 rounded-xl hover:border-primary/40 hover:shadow-md cursor-pointer transition-all duration-300 group">
+                                    {filteredTeachers.map((teacher, idx) => (
+                                        <div key={teacher._id} onClick={() => handleSelectTeacher(teacher)} className="flex items-center justify-between p-3 sm:p-4 bg-card border border-border/80 rounded-xl hover:border-primary/40 hover:shadow-md cursor-pointer transition-all duration-300 group">
                                             <div className="flex items-center gap-3 sm:gap-4">
                                                 <span className="text-[10px] sm:text-xs font-bold text-muted-foreground w-4">#{idx + 1}</span>
-                                                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full gradient-primary flex items-center justify-center text-white font-bold">{t.name[0]}</div>
+                                                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full gradient-primary flex items-center justify-center text-white font-bold">{teacher.name[0]}</div>
                                                 <div>
-                                                    <p className="font-bold text-sm text-foreground group-hover:text-primary">{t.name}</p>
-                                                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">{t.zone || t('progress_report.unassigned')}</p>
+                                                    <p className="font-bold text-sm text-foreground group-hover:text-primary">{teacher.name}</p>
+                                                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">{teacher.zone || t('progress_report.unassigned')}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center">
                                                 <span className="text-[10px] font-black text-emerald-500 uppercase flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 rounded-md">
-                                                    <Trophy className="w-3 h-3" /> {t('progress_report.score_out_of', { score: t.score })}
+                                                    <Trophy className="w-3 h-3" /> {t('progress_report.score_out_of', { score: teacher.score })}
                                                 </span>
                                                 <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary ml-3" />
                                             </div>
