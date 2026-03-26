@@ -158,7 +158,7 @@ const AdminNotifications = () => {
                         </div>
                         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground tracking-tight">Notifications</h1>
                     </div>
-                    <p className="text-muted-foreground text-xs sm:text-sm">Stay updated on alerts, messages, and workforce activity.</p>
+                    <p className="text-muted-foreground text-xs sm:text-sm">Stay updated on alerts, messages, and WorkEduMusic activity.</p>
                 </div>
 
                 {notifications.length > 0 && !loading && (

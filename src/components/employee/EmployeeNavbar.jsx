@@ -185,7 +185,7 @@ const EmployeeNavbar = () => {
                         <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
                             <span className="text-primary-foreground font-bold text-base">W</span>
                         </div>
-                        <h1 className="font-display font-bold text-lg text-foreground tracking-tight hidden sm:block">WorkForce</h1>
+                        <h1 className="font-display font-bold text-lg text-foreground tracking-tight hidden sm:block">WorkEduMusic</h1>
                     </div>
 
                     <nav className="hidden xl:flex items-center gap-1.5 flex-1 justify-center">
@@ -222,7 +222,7 @@ const EmployeeNavbar = () => {
                                 <div className="absolute top-12 right-0 w-56 bg-card border border-border rounded-2xl shadow-2xl p-2 animate-in slide-in-from-top-2 fade-in duration-200 z-50">
                                     <div className="px-3 py-2 mb-1 border-b border-border">
                                         <p className="text-sm font-bold text-foreground truncate">{user?.name || "Employee"}</p>
-                                        <p className="text-[11px] text-muted-foreground truncate">{user?.email || "employee@workforce.com"}</p>
+                                        <p className="text-[11px] text-muted-foreground truncate">{user?.email || "employee@workedumusicindia.com"}</p>
                                     </div>
 
                                     <NavLink to="/employee/profile" onClick={() => setIsMobileMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">

@@ -105,7 +105,7 @@ const Login = () => {
                     <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-6">
                         <Shield className="w-8 h-8 text-primary-foreground" />
                     </div>
-                    <h1 className="text-3xl font-bold text-primary-foreground mb-3">WorkForce Pro</h1>
+                    <h1 className="text-3xl font-bold text-primary-foreground mb-3">WorkEduMusicIndia</h1>
                     <p className="text-primary-foreground/80 text-lg">
                         Workforce Management & Compliance System
                     </p>

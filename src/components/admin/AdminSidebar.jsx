@@ -27,7 +27,7 @@ const AdminSidebar = () => {
     const theme = useSelector((state) => state.theme?.mode || 'light');
 
     const adminName = user?.name || "Admin User";
-    const adminEmail = user?.email || "admin@workforce.com";
+    const adminEmail = user?.email || "edumusicindia.tech@gmail.com";
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -161,7 +161,7 @@ const AdminSidebar = () => {
                         <Shield className="w-5 h-5 text-primary-foreground" />
                     </div>
                     <div>
-                        <h1 className="font-bold text-lg text-foreground tracking-tight leading-none">WorkForce</h1>
+                        <h1 className="font-bold text-lg text-foreground tracking-tight leading-none">WorkEduMusic</h1>
                     </div>
                 </div>
 
@@ -223,7 +223,7 @@ const AdminSidebar = () => {
                     <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
                         <Shield className="w-4 h-4 text-primary-foreground" />
                     </div>
-                    <h1 className="font-bold text-lg text-foreground tracking-tight">WorkForce</h1>
+                    <h1 className="font-bold text-lg text-foreground tracking-tight">WorkEduMusic</h1>
                 </div>
 
                 <div className="relative" ref={mobileMenuRef}>

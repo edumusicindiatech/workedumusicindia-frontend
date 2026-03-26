@@ -271,7 +271,7 @@ const Communication = () => {
                 </div>
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold mb-1 text-foreground tracking-tight">Communication Hub</h1>
-                    <p className="text-muted-foreground text-sm sm:text-base font-normal">Instantly broadcast announcements and alerts to your workforce.</p>
+                    <p className="text-muted-foreground text-sm sm:text-base font-normal">Instantly broadcast announcements and alerts to your WorkEduMusic Team.</p>
                 </div>
             </div>
 

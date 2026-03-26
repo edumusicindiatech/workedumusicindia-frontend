@@ -222,7 +222,7 @@ const ProgressReport = () => {
                 </div>
                 <div className="min-w-0">
                     <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">Progress Reports</h1>
-                    <p className="text-muted-foreground text-xs sm:text-sm truncate">Monthly workforce activity metrics.</p>
+                    <p className="text-muted-foreground text-xs sm:text-sm truncate">Monthly WorkEduMusic activity metrics.</p>
                 </div>
             </div>
 
@@ -241,7 +241,7 @@ const ProgressReport = () => {
             <div className="bg-card rounded-2xl sm:rounded-3xl border border-border shadow-lg shadow-slate-200/40 dark:shadow-none overflow-hidden flex flex-col min-h-100 transition-all duration-300">
                 <div className="p-4 sm:p-5 border-b border-border bg-muted/30 flex items-center justify-between gap-3 sm:gap-4">
                     <h3 className="font-bold text-sm sm:text-base text-foreground truncate">
-                        {!selectedTeacher ? "Workforce Rankings" : !selectedMonth ? `${selectedTeacher.name}'s Reports` : formatMonth(selectedMonth)}
+                        {!selectedTeacher ? "WorkEduMusic Rankings" : !selectedMonth ? `${selectedTeacher.name}'s Reports` : formatMonth(selectedMonth)}
                     </h3>
                     {selectedMonth && !selectedSchool && (
                         <Button onClick={handleExportExcel} variant="outline" size="sm" className="gap-1.5 border-primary/20 text-primary font-bold hover:bg-primary hover:text-primary-foreground h-8 sm:h-9 px-3 shrink-0">
