@@ -23,6 +23,7 @@ import ProgressReport from "./pages/admin/ProgressReport";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminResetPassword from "./pages/admin/AdminResetPassword";
 import AdminReports from "./pages/admin/AdminReports";
+import AdminLeaveRequests from "./pages/admin/AdminLeaveRequests"; // <-- Added Import
 
 // Employee Imports
 import EmployeeLayout from "./components/employee/EmployeeLayout";
@@ -145,6 +146,7 @@ function App() {
           <Route path="attendance" element={<AttendanceFeed />} />
           <Route path="progress" element={<ProgressReport />} />
           <Route path="reports" element={<AdminReports />} />
+          <Route path="leave-requests" element={<AdminLeaveRequests />} /> {/* <-- ADDED ROUTE */}
           <Route path="communication" element={<Communication />} />
           <Route path="notifications" element={<AdminNotifications />} />
         </Route>

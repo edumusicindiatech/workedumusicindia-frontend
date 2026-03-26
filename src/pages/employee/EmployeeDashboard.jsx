@@ -3,22 +3,23 @@ import { useDispatch, useSelector } from "react-redux";
 import api from "../../api/axios";
 import {
     MapPin, LogOut, Navigation, Clock, UserX,
-    CalendarX, Loader2, School, PartyPopper, Sparkles, CheckCircle2
+    CalendarX, Loader2, School, PartyPopper, Sparkles, CheckCircle2,
+    CalendarPlus // <-- Added for Request Leave Button
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import toast from "react-hot-toast"; // <-- Premium Toasts Added
+import toast from "react-hot-toast";
 
 import CheckInModal from "../../modals/employee/CheckInModal";
 import CheckOutModal from "../../modals/employee/CheckOutModal";
 import AbsentModal from "../../modals/employee/AbsentModal";
 import HolidayModal from "../../modals/employee/HolidayModal";
+import LeaveRequestModal from "../../modals/employee/LeaveRequestModal"; // <-- Added Import
 
 // --- SOCKET IMPORT FOR REAL-TIME REFRESH ---
 import { io } from "socket.io-client";
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 const EmployeeDashboard = () => {
-    // Fixed: Added 'token' extraction to prevent undefined errors in your axios calls!
     const { user, token } = useSelector((state) => state.auth);
 
     const [assignments, setAssignments] = useState([]);
@@ -31,6 +32,7 @@ const EmployeeDashboard = () => {
     const [checkOutModal, setCheckOutModal] = useState({ isOpen: false, visit: null, overtimeMinutes: 0 });
     const [absentModal, setAbsentModal] = useState({ isOpen: false, target: null });
     const [holidayModal, setHolidayModal] = useState({ isOpen: false, target: null });
+    const [leaveModal, setLeaveModal] = useState({ isOpen: false }); // <-- Added Leave Modal State
 
     // ==========================================
     // 1. FETCH LIVE SCHEDULE
@@ -73,17 +75,30 @@ const EmployeeDashboard = () => {
         if (!user) return;
         const currentUserId = user.id || user._id;
 
-        // Join the room to listen for Admin updates
-        socket.emit("join_room", currentUserId);
+        const joinUserRoom = () => {
+            console.log(`🔌 Employee Socket Connected! Joining room: ${currentUserId}`);
+            socket.emit("join_room", currentUserId);
+        };
 
+        // 1. If the socket is already connected when this component mounts, join immediately
+        if (socket.connected) {
+            joinUserRoom();
+        }
+
+        // 2. If it connects a millisecond late, or if the user's WiFi drops and reconnects, force it to rejoin
+        socket.on("connect", joinUserRoom);
+
+        // 3. Listen for the backend trigger
         const handleRealTimeUpdate = () => {
-            console.log("Schedule updated by Admin! Refreshing dashboard...");
+            console.log("🔔 Ping received from Admin! Refreshing dashboard...");
             fetchSchedule();
         };
 
         socket.on("new_notification", handleRealTimeUpdate);
 
+        // 4. Cleanup to prevent duplicate listeners
         return () => {
+            socket.off("connect", joinUserRoom);
             socket.off("new_notification", handleRealTimeUpdate);
         };
     }, [fetchSchedule, user]);
@@ -96,7 +111,6 @@ const EmployeeDashboard = () => {
         window.open(`http://googleusercontent.com/maps.google.com/maps?q=${lat},${lng}`, '_blank');
     };
 
-    // Generic GPS wrapper for API calls
     const getCoordinates = () => {
         return new Promise((resolve, reject) => {
             if (!navigator.geolocation) {
@@ -117,34 +131,25 @@ const EmployeeDashboard = () => {
         const toastId = toast.loading('Verifying location and checking in...');
 
         try {
-            // 1. Get location first
             const { lat, lng } = await getCoordinates();
-
-            // 2. Fire API request
             const response = await api.post('/employee/check-in', {
                 schoolId: visit.schoolId, band: visit.category,
                 latitude: lat, longitude: lng, lateReason, eventNote
             });
 
-            // 3. Handle Success
-            toast.dismiss(toastId); // <-- Explicitly remove loading toast
+            toast.dismiss(toastId);
             toast.success(response.data?.message || `Checked in at ${visit.schoolName}!`);
             setCheckInModal({ isOpen: false, visit: null, isLate: false });
             fetchSchedule();
 
         } catch (err) {
             console.error("Check-in Error:", err);
-
-            // 4. Handle Error UI
-            toast.dismiss(toastId); // <-- Explicitly remove loading toast
-
+            toast.dismiss(toastId);
             const errorMessage = err.response?.data?.message || err.message || "Check-in failed.";
-            toast.error(errorMessage); // <-- Fire a brand new error toast
-
-            // Close the modal so the screen completely un-hangs
+            toast.error(errorMessage);
             setCheckInModal({ isOpen: false, visit: null, isLate: false });
         } finally {
-            setActionLoading(false); // <-- Guarantees the button spinner stops
+            setActionLoading(false);
         }
     };
 
@@ -155,7 +160,6 @@ const EmployeeDashboard = () => {
 
         try {
             const { lat, lng } = await getCoordinates();
-
             const response = await api.post('/employee/check-out', {
                 schoolId: visit.schoolId, band: visit.category,
                 latitude: lat, longitude: lng, overtimeReason
@@ -168,11 +172,9 @@ const EmployeeDashboard = () => {
 
         } catch (err) {
             console.error("Check-out Error:", err);
-
             toast.dismiss(toastId);
             const errorMessage = err.response?.data?.message || err.message || "Check-out failed.";
             toast.error(errorMessage);
-
             setCheckOutModal({ isOpen: false, visit: null, overtimeMinutes: 0 });
         } finally {
             setActionLoading(false);
@@ -184,18 +186,13 @@ const EmployeeDashboard = () => {
         const loadingId = toast.loading(`Marking as ${statusType}...`);
 
         try {
-            // 1. Define the endpoint
             const endpoint = target === 'ALL' ? '/employee/mark-day-status' : '/employee/mark-status';
-
-            // 2. Define the payload
             const payload = target === 'ALL'
                 ? { status: statusType, reason }
                 : { schoolId: target.schoolId, band: target.category, status: statusType, reason };
 
-            // 3. Send the request
             await api.post(endpoint, payload);
 
-            // 4. Handle success UI states
             if (statusType === 'Absent') setAbsentModal({ isOpen: false, target: null });
             if (statusType === 'Holiday') setHolidayModal({ isOpen: false, target: null });
 
@@ -239,24 +236,37 @@ const EmployeeDashboard = () => {
                     </p>
                 </div>
 
-                {assignments.length > 0 && (
-                    <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    {/* --- ADDED: Request Leave Button (Only when no assignments) --- */}
+                    {assignments.length === 0 && (
                         <Button
                             variant="outline"
-                            className="flex-1 md:flex-none h-11 bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 rounded-xl font-semibold transition-all"
-                            onClick={() => setHolidayModal({ isOpen: true, target: 'ALL' })}
+                            className="flex-1 md:flex-none h-11 bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 rounded-xl font-semibold transition-all"
+                            onClick={() => setLeaveModal({ isOpen: true })}
                         >
-                            <CalendarX className="w-4 h-4 mr-2" /> Day Holiday
+                            <CalendarPlus className="w-4 h-4 mr-2" /> Request Leave
                         </Button>
-                        <Button
-                            variant="outline"
-                            className="flex-1 md:flex-none h-11 bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20 hover:text-destructive rounded-xl font-semibold transition-all"
-                            onClick={() => setAbsentModal({ isOpen: true, target: 'ALL' })}
-                        >
-                            <UserX className="w-4 h-4 mr-2" /> Day Absent
-                        </Button>
-                    </div>
-                )}
+                    )}
+
+                    {assignments.length > 0 && (
+                        <>
+                            <Button
+                                variant="outline"
+                                className="flex-1 md:flex-none h-11 bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 rounded-xl font-semibold transition-all"
+                                onClick={() => setHolidayModal({ isOpen: true, target: 'ALL' })}
+                            >
+                                <CalendarX className="w-4 h-4 mr-2" /> Day Holiday
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="flex-1 md:flex-none h-11 bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20 hover:text-destructive rounded-xl font-semibold transition-all"
+                                onClick={() => setAbsentModal({ isOpen: true, target: 'ALL' })}
+                            >
+                                <UserX className="w-4 h-4 mr-2" /> Day Absent
+                            </Button>
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Assignments List */}
@@ -287,8 +297,6 @@ const EmployeeDashboard = () => {
             ) : (
                 <div className="space-y-5 mt-6">
                     {assignments.map((visit) => {
-                        // Safe Time Parsing for the live timer
-                        // 1. Sanitize the input to ignore accidental spaces and force uppercase
                         const [time, rawModifier] = visit.startTime.trim().split(/\s+/);
                         const modifier = (rawModifier || '').toUpperCase();
 
@@ -296,7 +304,6 @@ const EmployeeDashboard = () => {
                         let h = parseInt(hStr, 10);
                         const m = parseInt(mStr, 10);
 
-                        // 2. Bulletproof 12-hour to 24-hour conversion
                         if (h === 12) {
                             h = modifier === 'AM' ? 0 : 12;
                         } else if (modifier === 'PM') {
@@ -309,12 +316,10 @@ const EmployeeDashboard = () => {
                         const diffMs = scheduledTimeDate - currentTime;
                         const isLateLive = diffMs < 0;
 
-                        // 3. Math.abs needs to happen AFTER the division to prevent rounding errors
                         const totalDiffMins = Math.floor(Math.abs(diffMs) / 60000);
                         const diffHours = Math.floor(totalDiffMins / 60);
                         const remainderMins = totalDiffMins % 60;
 
-                        // Formatting the timer text
                         let timerText = "";
                         if (diffHours > 0) timerText = `${diffHours}h ${remainderMins}m`;
                         else timerText = `${totalDiffMins}m`;
@@ -371,7 +376,6 @@ const EmployeeDashboard = () => {
                                             <p className="text-lg sm:text-xl font-extrabold text-foreground">{visit.startTime} - {visit.endTime}</p>
                                         </div>
 
-                                        {/* Live Running Timer */}
                                         {isPending && (
                                             <div className={`mt-0 lg:mt-2 px-3 py-1.5 rounded-lg flex items-center gap-1.5 border ${isLateLive
                                                 ? 'bg-destructive/10 text-destructive border-destructive/20'
@@ -478,6 +482,12 @@ const EmployeeDashboard = () => {
                 target={holidayModal.target}
                 onSubmit={(target, reason) => submitStatus(target, 'Holiday', reason)}
                 actionLoading={actionLoading}
+            />
+
+            {/* --- ADDED: Leave Request Modal --- */}
+            <LeaveRequestModal
+                isOpen={leaveModal.isOpen}
+                onClose={() => setLeaveModal({ isOpen: false })}
             />
         </div>
     );

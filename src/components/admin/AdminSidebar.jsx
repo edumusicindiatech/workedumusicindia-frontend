@@ -4,13 +4,13 @@ import { useDispatch, useSelector } from "react-redux";
 import { io } from "socket.io-client";
 import {
     LayoutDashboard, Users, Radio, MessageSquare, Shield,
-    Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle, ClipboardCheck
+    Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle, ClipboardCheck,
+    CalendarDays // <-- Added CalendarDays icon
 } from "lucide-react";
 import toast from "react-hot-toast";
 
 import api from "../../api/axios";
 import { logout } from "../../store/slices/authSlice";
-// ADDED: Import your Redux theme action
 import { toggleTheme } from "../../store/slices/themeSlice";
 import AdminSettingsModal from "../../modals/admin/AdminSettingsModal";
 
@@ -24,7 +24,6 @@ const AdminSidebar = () => {
     const location = useLocation();
 
     const { user } = useSelector((state) => state.auth);
-    // UPDATED: Now reading the theme directly from Redux!
     const theme = useSelector((state) => state.theme?.mode || 'light');
 
     const adminName = user?.name || "Admin User";
@@ -73,7 +72,14 @@ const AdminSidebar = () => {
 
         // Setup Socket
         const currentUserId = user.id || user._id;
-        socket.emit("join_room", currentUserId);
+        const joinUserRoom = () => {
+            console.log(`🔌 Socket Connected! Joining room: ${currentUserId}`);
+            socket.emit("join_room", currentUserId);
+        };
+        if (socket.connected) {
+            joinUserRoom();
+        }
+        socket.on("connect", joinUserRoom);
 
         const handleNewNotification = () => {
             // A. Play Audio
@@ -172,10 +178,13 @@ const AdminSidebar = () => {
                     <NavLink to="/admin/progress" className={desktopNavClasses} title="Progress">
                         <TrendingUp className="w-4.5 h-4.5" /> Progress
                     </NavLink>
-
-                    {/* --- UPDATED REPORTS LINK --- */}
                     <NavLink to="/admin/reports" className={desktopNavClasses} title="Reports">
                         <ClipboardCheck className="w-4.5 h-4.5" /> Reports
+                    </NavLink>
+
+                    {/* --- ADDED LEAVE REQUESTS DESKTOP LINK --- */}
+                    <NavLink to="/admin/leave-requests" className={desktopNavClasses} title="Leave Requests">
+                        <CalendarDays className="w-4.5 h-4.5" /> Leave
                     </NavLink>
 
                     {/* ALERTS LINK WITH BADGE */}
@@ -197,7 +206,6 @@ const AdminSidebar = () => {
                 </div>
 
                 <div className="flex items-center justify-end gap-3 w-64 shrink-0 border-l border-border pl-6">
-                    {/* UPDATED: Desktop theme toggle dispatches Redux action */}
                     <button onClick={() => dispatch(toggleTheme())} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title="Theme">
                         {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-500" />}
                     </button>
@@ -236,7 +244,13 @@ const AdminSidebar = () => {
                                 <ClipboardCheck className="w-4 h-4 text-primary" /> Reports
                             </button>
 
-                            {/* UPDATED: Mobile menu theme toggle dispatches Redux action */}
+                            {/* --- ADDED LEAVE REQUESTS MOBILE LINK --- */}
+                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leave-requests'); }}
+                            >
+                                <CalendarDays className="w-4 h-4 text-primary" /> Leave Requests
+                            </button>
+
                             <button onClick={() => dispatch(toggleTheme())} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                                 <div className="flex items-center gap-3">
                                     {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}
@@ -271,8 +285,6 @@ const AdminSidebar = () => {
                 <NavLink to="/admin/progress" className={mobileNavClasses}>
                     <TrendingUp className="w-6 h-6" />
                 </NavLink>
-
-                {/* MOBILE ALERTS LINK WITH BADGE */}
                 <NavLink to="/admin/notifications" className={mobileNavClasses}>
                     <div className="relative flex items-center justify-center">
                         <Bell className="w-6 h-6" />
