@@ -133,8 +133,13 @@ const EmployeeDashboard = () => {
     // 3. HELPERS & ACTIONS
     // ==========================================
     const openGoogleMaps = (coords) => {
+        // Standard GeoJSON format is [longitude, latitude]
         const [lng, lat] = coords;
-        window.open(`http://googleusercontent.com/maps.google.com/maps?q=${lat},${lng}`, '_blank');
+
+        // Use the official maps.google.com domain
+        const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+        window.open(url, '_blank');
     };
 
     const getCoordinates = () => {
