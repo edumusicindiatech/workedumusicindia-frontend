@@ -2,13 +2,12 @@ import { useState, useEffect, useMemo } from "react";
 import {
     ChevronRight, ArrowLeft, TrendingUp, Search,
     CheckCircle2, AlertCircle, XCircle, Star, Coffee, Film, CalendarDays,
-    Clock, FileText, MessageSquareDashed, School, Download, Trophy, LogOut, ClipboardCheck, Users
+    Clock, FileText, School, Download, Trophy, LogOut, Users, FolderOpen, CalendarOff
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import  toast  from "react-hot-toast";
+import toast from "react-hot-toast";
 import api from "../../api/axios";
-import * as XLSX from 'xlsx-js-style';
 
 const ProgressReport = () => {
     const [teachers, setTeachers] = useState([]);
@@ -53,34 +52,42 @@ const ProgressReport = () => {
         }
     };
 
-    // --- UPDATED GROUPING LOGIC (DB String Safe) ---
     const monthsAvailable = useMemo(() => {
         if (!records || records.length === 0) return [];
         const months = new Set();
         records.forEach(r => {
             if (r.date && typeof r.date === 'string') {
-                months.add(r.date.substring(0, 7)); // Extracts "2026-03"
+                months.add(r.date.substring(0, 7));
             }
         });
         return Array.from(months).sort((a, b) => b.localeCompare(a));
     }, [records]);
 
     const schoolsInMonth = useMemo(() => {
-        if (!selectedMonth || !records) return [];
-        const monthRecords = records.filter(r =>
-            typeof r.date === 'string' && r.date.startsWith(selectedMonth)
-        );
+        if (!selectedMonth || !records) return { schools: [], hasLeaves: false };
+        const monthRecords = records.filter(r => typeof r.date === 'string' && r.date.startsWith(selectedMonth));
+
+        let hasLeaves = false;
         const schoolsMap = new Map();
+
         monthRecords.forEach(r => {
-            if (r.school && r.school._id) schoolsMap.set(r.school._id.toString(), r.school);
+            if (r.type === 'leave') {
+                hasLeaves = true;
+            } else if (r.school && r.school._id) {
+                schoolsMap.set(r.school._id.toString(), r.school);
+            }
         });
-        return Array.from(schoolsMap.values());
+
+        return {
+            schools: Array.from(schoolsMap.values()),
+            hasLeaves
+        };
     }, [records, selectedMonth]);
 
     const categoriesData = useMemo(() => {
-        if (!selectedMonth || !selectedSchool) return [];
+        if (!selectedMonth || !selectedSchool || selectedSchool._id === 'LEAVES_GENERAL') return [];
         const relevantRecords = records.filter(r =>
-            r.date.startsWith(selectedMonth) && r.school?._id === selectedSchool._id
+            r.date.startsWith(selectedMonth) && r.school?._id === selectedSchool._id && r.type !== 'leave'
         );
 
         const getStats = (band) => {
@@ -92,12 +99,17 @@ const ProgressReport = () => {
                 if (r.status === 'Absent') stats.absent++;
                 if (r.status === 'Event') stats.events++;
                 if (r.status === 'Holiday') stats.holidays++;
-                stats.mediaSent += (r.mediaFilesCount || 0); // Use file count
+                stats.mediaSent += (r.mediaFilesCount || 0);
             });
             return { name: band, count: bandRecords.length, stats, records: bandRecords };
         };
         return [getStats("Junior Band"), getStats("Senior Band")];
     }, [records, selectedMonth, selectedSchool]);
+
+    const leavesData = useMemo(() => {
+        if (!selectedMonth) return [];
+        return records.filter(r => r.type === 'leave' && r.date.startsWith(selectedMonth));
+    }, [records, selectedMonth]);
 
     const activeCategoryInfo = useMemo(() => {
         return categoriesData.find(c => c.name === selectedCategory) || null;
@@ -139,7 +151,6 @@ const ProgressReport = () => {
         return `px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${styles[status] || styles.Holiday}`;
     };
 
-    // --- STYLED EXPORT LOGIC ---
     const handleExportExcel = async () => {
         if (!selectedMonth || !selectedTeacher) return;
         const toastId = toast.loading("Preparing Excel report...");
@@ -149,47 +160,38 @@ const ProgressReport = () => {
                 responseType: 'blob'
             });
 
-            if (response.data.type === 'application/json') {
-                const text = await response.data.text();
+            // Handle custom Axios setups where response.data might be extracted automatically
+            const fileData = response.data || response;
+
+            // Check if the backend sent a JSON error message instead of a file
+            if (fileData.type === 'application/json') {
+                const text = await fileData.text();
                 const json = JSON.parse(text);
                 throw new Error(json.message || "Failed to generate report.");
             }
 
-            const arrayBuffer = await response.data.arrayBuffer();
-            const workbook = XLSX.read(arrayBuffer, { type: 'array', cellStyles: true });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
+            // Create the Blob
+            const blob = new Blob([fileData], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
 
-            const headerColors = [
-                "2563EB", "0D9488", "4F46E5", "7C3AED", "DB2777", "D97706", "059669", "DC2626", "475569"
-            ];
+            // Create a temporary URL
+            const url = window.URL.createObjectURL(blob);
 
-            if (worksheet['!ref']) {
-                const headerRange = XLSX.utils.decode_range(worksheet['!ref']);
-                for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
-                    const headerAddress = XLSX.utils.encode_col(C) + "1";
-                    if (!worksheet[headerAddress]) continue;
-
-                    const bgColor = headerColors[C % headerColors.length];
-
-                    worksheet[headerAddress].s = {
-                        font: { bold: true, color: { rgb: "FFFFFF" } },
-                        fill: { fgColor: { rgb: bgColor } },
-                        alignment: { horizontal: "center", vertical: "center" },
-                        border: {
-                            top: { style: "thin", color: { auto: 1 } },
-                            bottom: { style: "thin", color: { auto: 1 } },
-                            left: { style: "thin", color: { auto: 1 } },
-                            right: { style: "thin", color: { auto: 1 } }
-                        }
-                    };
-                }
-            }
+            // THE FIX: Create an ANCHOR tag ('a'), not a 'link' tag
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.style.display = 'none';
 
             const safeName = selectedTeacher.name.replace(/[^a-z0-9]/gi, '_');
-            const fileName = `${safeName}_${selectedMonth}_Report.xlsx`;
+            anchor.setAttribute('download', `${safeName}_${selectedMonth}_Report.xlsx`);
 
-            XLSX.writeFile(workbook, fileName);
+            // Append, Click, and Cleanup
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            window.URL.revokeObjectURL(url);
+
             toast.success("Excel report downloaded!", { id: toastId });
         } catch (err) {
             console.error("Export error:", err);
@@ -214,7 +216,6 @@ const ProgressReport = () => {
 
     return (
         <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto animate-in fade-in duration-500 pb-20">
-            {/* Header */}
             <div className="mb-6 sm:mb-8 flex items-center gap-3">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm shrink-0">
                     <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -225,7 +226,6 @@ const ProgressReport = () => {
                 </div>
             </div>
 
-            {/* Breadcrumb */}
             {(selectedTeacher || selectedMonth) && (
                 <button
                     onClick={handleBackNavigation}
@@ -239,21 +239,13 @@ const ProgressReport = () => {
             )}
 
             <div className="bg-card rounded-2xl sm:rounded-3xl border border-border shadow-lg shadow-slate-200/40 dark:shadow-none overflow-hidden flex flex-col min-h-100 transition-all duration-300">
-                {/* Dynamic Title Bar */}
                 <div className="p-4 sm:p-5 border-b border-border bg-muted/30 flex items-center justify-between gap-3 sm:gap-4">
                     <h3 className="font-bold text-sm sm:text-base text-foreground truncate">
                         {!selectedTeacher ? "Workforce Rankings" : !selectedMonth ? `${selectedTeacher.name}'s Reports` : formatMonth(selectedMonth)}
                     </h3>
                     {selectedMonth && !selectedSchool && (
-                        <Button
-                            onClick={handleExportExcel}
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5 sm:gap-2 border-primary/20 text-primary font-bold hover:bg-primary hover:text-primary-foreground transition-all duration-300 h-8 sm:h-9 px-2.5 sm:px-4 shrink-0"
-                        >
-                            <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                            <span className="hidden sm:inline">Export Excel</span>
-                            <span className="sm:hidden">Export</span>
+                        <Button onClick={handleExportExcel} variant="outline" size="sm" className="gap-1.5 border-primary/20 text-primary font-bold hover:bg-primary hover:text-primary-foreground h-8 sm:h-9 px-3 shrink-0">
+                            <Download className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Export Excel</span>
                         </Button>
                     )}
                 </div>
@@ -264,64 +256,34 @@ const ProgressReport = () => {
                         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="relative mb-4 sm:mb-6">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search teacher..."
-                                    value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)}
-                                    className="pl-9 h-11 sm:h-12 bg-card border-border/60 focus-visible:ring-primary/30 rounded-xl shadow-sm text-sm"
-                                />
+                                <Input placeholder="Search teacher..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 h-11 bg-card border-border/60 focus-visible:ring-primary/30 rounded-xl shadow-sm text-sm" />
                             </div>
                             {isLoadingTeachers ? (
-                                <div className="space-y-2.5 sm:space-y-3">
-                                    {/* Shimmer Effect for Teachers */}
+                                <div className="space-y-3">
                                     {[...Array(5)].map((_, idx) => (
-                                        <div key={idx} className="flex items-center justify-between p-3 sm:p-4 bg-card border border-border/80 rounded-xl sm:rounded-2xl animate-pulse">
-                                            <div className="flex items-center gap-2.5 sm:gap-4 w-full">
-                                                <div className="w-4 h-4 sm:w-6 bg-muted rounded shrink-0"></div>
-                                                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-muted shrink-0"></div>
-                                                <div className="flex-1 space-y-2">
-                                                    <div className="h-4 bg-muted rounded w-32 max-w-[50%]"></div>
-                                                    <div className="h-3 bg-muted rounded w-20 max-w-[30%]"></div>
-                                                </div>
-                                            </div>
-                                            <div className="shrink-0 flex items-center gap-2">
-                                                <div className="h-5 w-12 bg-muted rounded"></div>
-                                                <div className="w-4 h-4 sm:w-5 sm:h-5 bg-muted rounded-full ml-1.5 sm:ml-3"></div>
-                                            </div>
-                                        </div>
+                                        <div key={idx} className="h-16 bg-card border border-border/80 rounded-2xl animate-pulse" />
                                     ))}
                                 </div>
                             ) : (
-                                <div className="space-y-2.5 sm:space-y-3">
+                                <div className="space-y-3">
                                     {filteredTeachers.map((t, idx) => (
-                                        <div
-                                            key={t._id}
-                                            onClick={() => handleSelectTeacher(t)}
-                                            className="flex items-center justify-between p-3 sm:p-4 bg-card border border-border/80 rounded-xl sm:rounded-2xl hover:border-primary/40 hover:shadow-md cursor-pointer transition-all duration-300 active:scale-[0.99] group"
-                                        >
-                                            <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
-                                                <span className="text-[10px] sm:text-xs font-bold text-muted-foreground w-4 sm:w-6 shrink-0">#{idx + 1}</span>
-                                                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full gradient-primary flex items-center justify-center text-white font-bold shadow-inner shrink-0 text-sm sm:text-base">
-                                                    {t.name[0]}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="font-bold text-xs sm:text-sm text-foreground group-hover:text-primary transition-colors truncate">{t.name}</p>
-                                                    <p className="text-[9px] sm:text-[11px] text-muted-foreground uppercase font-semibold mt-0.5 truncate">{t.zone || 'Unassigned'}</p>
+                                        <div key={t._id} onClick={() => handleSelectTeacher(t)} className="flex items-center justify-between p-3 sm:p-4 bg-card border border-border/80 rounded-xl hover:border-primary/40 hover:shadow-md cursor-pointer transition-all duration-300 group">
+                                            <div className="flex items-center gap-3 sm:gap-4">
+                                                <span className="text-[10px] sm:text-xs font-bold text-muted-foreground w-4">#{idx + 1}</span>
+                                                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full gradient-primary flex items-center justify-center text-white font-bold">{t.name[0]}</div>
+                                                <div>
+                                                    <p className="font-bold text-sm text-foreground group-hover:text-primary">{t.name}</p>
+                                                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">{t.zone || 'Unassigned'}</p>
                                                 </div>
                                             </div>
-                                            <div className="text-right flex items-center shrink-0 pl-2">
-                                                <span className="text-[9px] sm:text-[10px] font-black text-emerald-500 uppercase flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 bg-emerald-500/10 rounded-md">
-                                                    <Trophy className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> {t.score}/100
+                                            <div className="flex items-center">
+                                                <span className="text-[10px] font-black text-emerald-500 uppercase flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 rounded-md">
+                                                    <Trophy className="w-3 h-3" /> {t.score}/100
                                                 </span>
-                                                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 ml-1.5 sm:ml-3" />
+                                                <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary ml-3" />
                                             </div>
                                         </div>
                                     ))}
-                                    {filteredTeachers.length === 0 && (
-                                        <div className="text-center py-10 text-muted-foreground text-sm font-medium bg-muted/10 rounded-2xl border border-dashed">
-                                            No teachers found matching your search.
-                                        </div>
-                                    )}
                                 </div>
                             )}
                         </div>
@@ -331,189 +293,195 @@ const ProgressReport = () => {
                     {selectedTeacher && !selectedMonth && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-right-8 duration-300">
                             {monthsAvailable.map(m => (
-                                <div
-                                    key={m}
-                                    onClick={() => setSelectedMonth(m)}
-                                    className="p-4 sm:p-5 border border-border/80 rounded-xl sm:rounded-2xl flex items-center justify-between hover:bg-muted/30 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 cursor-pointer transition-all duration-300 group bg-card"
-                                >
-                                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                                        <div className="p-2 sm:p-2.5 bg-primary/10 rounded-lg sm:rounded-xl text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300 shrink-0">
-                                            <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5" />
+                                <div key={m} onClick={() => setSelectedMonth(m)} className="p-4 sm:p-5 border border-border/80 rounded-xl flex items-center justify-between hover:bg-muted/30 hover:border-primary/40 hover:shadow-md cursor-pointer transition-all group bg-card">
+                                    <div className="flex items-center gap-3 sm:gap-4">
+                                        <div className="p-2.5 bg-primary/10 rounded-xl text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
+                                            <CalendarDays className="w-5 h-5" />
                                         </div>
-                                        <span className="font-bold text-sm sm:text-base text-foreground truncate">{formatMonth(m)}</span>
+                                        <span className="font-bold text-sm sm:text-base text-foreground">{formatMonth(m)}</span>
                                     </div>
-                                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 shrink-0" />
+                                    <ChevronRight className="w-5 h-5 text-muted-foreground/40 group-hover:text-primary" />
                                 </div>
                             ))}
-                            {monthsAvailable.length === 0 && !isLoadingRecords && (
-                                <div className="col-span-1 sm:col-span-2 text-center py-12 text-sm text-muted-foreground font-medium bg-muted/10 rounded-2xl border border-dashed">
-                                    No records available for this teacher.
-                                </div>
-                            )}
-                            {isLoadingRecords && (
-                                /* Shimmer Effect for Months */
-                                <>
-                                    {[...Array(4)].map((_, idx) => (
-                                        <div key={idx} className="p-4 sm:p-5 border border-border/80 rounded-xl sm:rounded-2xl flex items-center justify-between bg-card animate-pulse">
-                                            <div className="flex items-center gap-3 sm:gap-4 w-full">
-                                                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-lg sm:rounded-xl shrink-0"></div>
-                                                <div className="h-5 bg-muted rounded w-32"></div>
-                                            </div>
-                                            <div className="w-4 h-4 sm:w-5 sm:h-5 bg-muted rounded-full shrink-0"></div>
-                                        </div>
-                                    ))}
-                                </>
-                            )}
                         </div>
                     )}
 
-                    {/* LEVEL 3: SCHOOLS */}
+                    {/* LEVEL 3: SCHOOLS & GENERAL LEAVES */}
                     {selectedMonth && !selectedSchool && (
-                        <div className="space-y-2.5 sm:space-y-3 animate-in fade-in slide-in-from-right-8 duration-300">
-                            {schoolsInMonth.map(s => (
-                                <div
-                                    key={s._id}
-                                    onClick={() => setSelectedSchool(s)}
-                                    className="p-3.5 sm:p-4 md:p-5 border border-border/80 rounded-xl sm:rounded-2xl flex items-center justify-between hover:bg-muted/30 hover:border-indigo-500/40 hover:shadow-md cursor-pointer bg-card transition-all duration-300 group"
-                                >
-                                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                                        <div className="p-2 sm:p-2.5 bg-indigo-500/10 rounded-lg sm:rounded-xl text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors duration-300 shrink-0">
-                                            <School className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <div className="space-y-3 animate-in fade-in slide-in-from-right-8 duration-300">
+                            {schoolsInMonth.schools.map(s => (
+                                <div key={s._id} onClick={() => setSelectedSchool(s)} className="p-4 border border-border/80 rounded-xl flex items-center justify-between hover:bg-muted/30 hover:border-indigo-500/40 hover:shadow-md cursor-pointer bg-card transition-all group">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                                            <School className="w-5 h-5" />
                                         </div>
-                                        <span className="font-bold text-foreground text-sm md:text-base truncate">{s.schoolName}</span>
+                                        <span className="font-bold text-foreground text-sm sm:text-base">{s.schoolName}</span>
                                     </div>
-                                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground/40 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all duration-300 shrink-0" />
+                                    <ChevronRight className="w-5 h-5 text-muted-foreground/40 group-hover:text-indigo-500" />
                                 </div>
                             ))}
+
+                            {schoolsInMonth.hasLeaves && (
+                                <div onClick={() => setSelectedSchool({ _id: 'LEAVES_GENERAL', schoolName: 'General Leaves' })} className="p-4 border border-cyan-500/30 rounded-xl flex items-center justify-between hover:bg-cyan-500/5 hover:border-cyan-500/60 hover:shadow-md cursor-pointer bg-cyan-500/5 transition-all group">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2.5 bg-cyan-500/10 rounded-xl text-cyan-600 group-hover:bg-cyan-500 group-hover:text-white transition-colors">
+                                            <FolderOpen className="w-5 h-5" />
+                                        </div>
+                                        <span className="font-bold text-foreground text-sm sm:text-base">General Leaves</span>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-muted-foreground/40 group-hover:text-cyan-500" />
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    {/* LEVEL 4: CATEGORIES */}
+                    {/* LEVEL 4: CATEGORIES OR "LEAVES FOLDER" */}
                     {selectedSchool && !selectedCategory && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-right-8 duration-300">
-                            {categoriesData.map(c => (
-                                <div
-                                    key={c.name}
-                                    onClick={() => c.count > 0 && setSelectedCategory(c.name)}
-                                    className={`p-5 sm:p-6 md:p-8 border border-border/80 rounded-xl sm:rounded-2xl text-center flex flex-col items-center transition-all duration-300 bg-card ${c.count > 0
-                                        ? 'hover:bg-muted/20 hover:border-violet-500/40 hover:shadow-md hover:-translate-y-1 cursor-pointer group'
-                                        : 'opacity-50 grayscale cursor-not-allowed'
-                                        }`}
-                                >
-                                    <div className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl mb-3 sm:mb-4 transition-colors duration-300 ${c.count > 0 ? 'bg-violet-500/10 text-violet-500 group-hover:bg-violet-500 group-hover:text-white' : 'bg-muted text-muted-foreground'}`}>
-                                        <Users className="w-6 h-6 sm:w-8 sm:h-8" />
+                            {selectedSchool._id !== 'LEAVES_GENERAL' ? (
+                                categoriesData.map(c => (
+                                    <div key={c.name} onClick={() => c.count > 0 && setSelectedCategory(c.name)} className={`p-6 md:p-8 border border-border/80 rounded-2xl text-center flex flex-col items-center transition-all bg-card ${c.count > 0 ? 'hover:bg-muted/20 hover:border-violet-500/40 hover:shadow-md hover:-translate-y-1 cursor-pointer group' : 'opacity-50 grayscale cursor-not-allowed'}`}>
+                                        <div className={`p-3 rounded-2xl mb-4 transition-colors ${c.count > 0 ? 'bg-violet-500/10 text-violet-500 group-hover:bg-violet-500 group-hover:text-white' : 'bg-muted text-muted-foreground'}`}>
+                                            <Users className="w-8 h-8" />
+                                        </div>
+                                        <p className="font-bold text-base text-foreground mb-1">{c.name}</p>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-muted px-2.5 py-1 rounded-full">{c.count} records</p>
                                     </div>
-                                    <p className="font-bold text-sm md:text-base text-foreground mb-1">{c.name}</p>
-                                    <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-muted px-2.5 py-1 rounded-full">{c.count} records</p>
+                                ))
+                            ) : (
+                                <div onClick={() => setSelectedCategory('LEAVES_DETAIL')} className="p-6 md:p-8 border border-cyan-500/30 rounded-2xl text-center flex flex-col items-center transition-all bg-cyan-500/5 hover:bg-cyan-500/10 hover:border-cyan-500/50 hover:shadow-md hover:-translate-y-1 cursor-pointer group">
+                                    <div className="p-3 rounded-2xl mb-4 transition-colors bg-cyan-500/20 text-cyan-600 group-hover:bg-cyan-500 group-hover:text-white">
+                                        <CalendarOff className="w-8 h-8" />
+                                    </div>
+                                    <p className="font-bold text-base text-foreground mb-1">Approved Leaves</p>
+                                    <p className="text-[10px] font-bold text-cyan-700 uppercase tracking-widest bg-cyan-500/20 px-2.5 py-1 rounded-full">
+                                        {leavesData.length} {leavesData.length === 1 ? 'Request' : 'Requests'}
+                                    </p>
                                 </div>
-                            ))}
+                            )}
                         </div>
                     )}
 
-                    {/* LEVEL 5: OVERVIEW */}
+                    {/* LEVEL 5: OVERVIEW / DAILY / LEAVE RECORDS */}
                     {selectedCategory && !selectedDay && (
                         <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-right-8 duration-300">
-
-                            <div>
-                                <h4 className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-3 sm:mb-4">Summary Metrics</h4>
-                                <div className="grid grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3 md:gap-4">
-                                    {Object.entries(activeCategoryInfo.stats).map(([key, val]) => {
-                                        let icon, colorClass, borderClass, bgClass, label;
-                                        switch (key) {
-                                            case 'present':
-                                                icon = <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 mb-1.5 sm:mb-2 text-emerald-500" />;
-                                                colorClass = "text-emerald-500"; borderClass = "border-emerald-500/30 hover:border-emerald-500/60"; bgClass = "bg-emerald-500/5"; label = "Present";
-                                                break;
-                                            case 'late':
-                                                icon = <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 mb-1.5 sm:mb-2 text-amber-500" />;
-                                                colorClass = "text-amber-500"; borderClass = "border-amber-500/30 hover:border-amber-500/60"; bgClass = "bg-amber-500/5"; label = "Late";
-                                                break;
-                                            case 'absent':
-                                                icon = <XCircle className="w-4 h-4 sm:w-5 sm:h-5 mb-1.5 sm:mb-2 text-destructive" />;
-                                                colorClass = "text-destructive"; borderClass = "border-destructive/30 hover:border-destructive/60"; bgClass = "bg-destructive/5"; label = "Absent";
-                                                break;
-                                            case 'events':
-                                                icon = <Star className="w-4 h-4 sm:w-5 sm:h-5 mb-1.5 sm:mb-2 text-violet-500" />;
-                                                colorClass = "text-violet-500"; borderClass = "border-violet-500/30 hover:border-violet-500/60"; bgClass = "bg-violet-500/5"; label = "Events";
-                                                break;
-                                            case 'holidays':
-                                                icon = <Coffee className="w-4 h-4 sm:w-5 sm:h-5 mb-1.5 sm:mb-2 text-slate-400" />;
-                                                colorClass = "text-slate-400"; borderClass = "border-slate-400/30 hover:border-slate-400/60"; bgClass = "bg-slate-400/5"; label = "Holidays";
-                                                break;
-                                            case 'mediaSent':
-                                                icon = <Film className="w-4 h-4 sm:w-5 sm:h-5 mb-1.5 sm:mb-2 text-blue-500" />;
-                                                colorClass = "text-blue-500"; borderClass = "border-blue-500/30 hover:border-blue-500/60"; bgClass = "bg-blue-500/5"; label = "Media";
-                                                break;
-                                            default:
-                                                icon = <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 mb-1.5 sm:mb-2 text-muted-foreground" />;
-                                                colorClass = "text-foreground"; borderClass = "border-border"; bgClass = "bg-card"; label = key;
-                                        }
-
-                                        return (
-                                            <div
-                                                key={key}
-                                                className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border flex flex-col items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1 cursor-default ${bgClass} ${borderClass}`}
-                                            >
-                                                {icon}
-                                                <span className={`text-2xl sm:text-3xl font-black mb-1 sm:mb-1.5 ${colorClass}`}>{val}</span>
-                                                <span className={`text-[8px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest ${colorClass} opacity-80`}>{label}</span>
+                            {selectedCategory !== 'LEAVES_DETAIL' ? (
+                                <>
+                                    <div>
+                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-4">Summary Metrics</h4>
+                                        <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
+                                            <div className="p-3 rounded-xl border flex flex-col items-center justify-center shadow-sm bg-emerald-500/5 border-emerald-500/30">
+                                                <CheckCircle2 className="w-4 h-4 mb-1.5 text-emerald-500" />
+                                                <span className="text-2xl font-black mb-1 text-emerald-500">{activeCategoryInfo.stats.present}</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-500 opacity-80">Present</span>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            <div>
-                                <h4 className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-3 sm:mb-4">Daily Breakdown</h4>
-                                <div className="space-y-2.5 sm:space-y-3">
-                                    {activeCategoryInfo.records.map(r => (
-                                        <div
-                                            key={r._id}
-                                            onClick={() => setSelectedDay(r)}
-                                            className="p-3.5 sm:p-4 border border-border/80 rounded-xl sm:rounded-2xl flex items-center justify-between hover:bg-muted/30 hover:border-primary/30 hover:shadow-sm cursor-pointer bg-card transition-all duration-200 group"
-                                        >
-                                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 min-w-0">
-                                                <span className="text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate">{formatFullDate(r.date)}</span>
-                                                <span className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1.5 shrink-0"><Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> {r.time}</span>
+                                            <div className="p-3 rounded-xl border flex flex-col items-center justify-center shadow-sm bg-amber-500/5 border-amber-500/30">
+                                                <AlertCircle className="w-4 h-4 mb-1.5 text-amber-500" />
+                                                <span className="text-2xl font-black mb-1 text-amber-500">{activeCategoryInfo.stats.late}</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-500 opacity-80">Late</span>
                                             </div>
-                                            <div className="flex items-center gap-3 sm:gap-4 shrink-0 pl-2">
-                                                {r.mediaFilesCount > 0 && <Film className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 opacity-80 group-hover:opacity-100 transition-opacity" />}
-                                                <span className={getStatusBadge(r.status)}>{r.status}</span>
-                                                <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 hidden sm:block" />
+                                            <div className="p-3 rounded-xl border flex flex-col items-center justify-center shadow-sm bg-destructive/5 border-destructive/30">
+                                                <XCircle className="w-4 h-4 mb-1.5 text-destructive" />
+                                                <span className="text-2xl font-black mb-1 text-destructive">{activeCategoryInfo.stats.absent}</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-destructive opacity-80">Absent</span>
+                                            </div>
+                                            <div className="p-3 rounded-xl border flex flex-col items-center justify-center shadow-sm bg-violet-500/5 border-violet-500/30">
+                                                <Star className="w-4 h-4 mb-1.5 text-violet-500" />
+                                                <span className="text-2xl font-black mb-1 text-violet-500">{activeCategoryInfo.stats.events}</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-violet-500 opacity-80">Events</span>
+                                            </div>
+                                            <div className="p-3 rounded-xl border flex flex-col items-center justify-center shadow-sm bg-slate-400/5 border-slate-400/30">
+                                                <Coffee className="w-4 h-4 mb-1.5 text-slate-400" />
+                                                <span className="text-2xl font-black mb-1 text-slate-400">{activeCategoryInfo.stats.holidays}</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 opacity-80">Holidays</span>
+                                            </div>
+                                            <div className="p-3 rounded-xl border flex flex-col items-center justify-center shadow-sm bg-blue-500/5 border-blue-500/30">
+                                                <Film className="w-4 h-4 mb-1.5 text-blue-500" />
+                                                <span className="text-2xl font-black mb-1 text-blue-500">{activeCategoryInfo.stats.mediaSent}</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-blue-500 opacity-80">Media</span>
                                             </div>
                                         </div>
-                                    ))}
-                                    {activeCategoryInfo.records.length === 0 && (
-                                        <div className="p-8 text-center text-muted-foreground bg-muted/10 border border-dashed border-border/80 rounded-2xl text-sm font-medium">
-                                            No records found for this category.
+                                    </div>
+                                    <div>
+                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-4">Daily Breakdown</h4>
+                                        <div className="space-y-3">
+                                            {activeCategoryInfo.records.map(r => (
+                                                <div key={r._id} onClick={() => setSelectedDay(r)} className="p-4 border border-border/80 rounded-2xl flex items-center justify-between hover:bg-muted/30 hover:border-primary/30 hover:shadow-sm cursor-pointer bg-card transition-all group">
+                                                    <div className="flex sm:items-center gap-1 sm:gap-4">
+                                                        <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{formatFullDate(r.date)}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-4 shrink-0 pl-2">
+                                                        {r.mediaFilesCount > 0 && <Film className="w-4 h-4 text-blue-500 opacity-80 group-hover:opacity-100" />}
+                                                        <span className={getStatusBadge(r.status)}>{r.status}</span>
+                                                        <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-all hidden sm:block" />
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    )}
+                                    </div>
+                                </>
+                            ) : (
+                                <div>
+                                    <h4 className="text-[11px] font-black uppercase tracking-widest text-cyan-600 mb-4 flex items-center gap-2">
+                                        <CalendarOff className="w-4 h-4" /> Official Leave Records
+                                    </h4>
+                                    <div className="space-y-4">
+                                        {leavesData.map(leave => (
+                                            <div key={leave._id} className="p-5 border border-cyan-500/20 bg-cyan-500/5 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+                                                    <div className="flex items-center gap-2 text-sm font-bold text-foreground bg-background px-3 py-1.5 rounded-lg border border-border">
+                                                        <CalendarDays className="w-4 h-4 text-cyan-600" />
+                                                        {new Date(leave.fromDate).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}
+                                                        {leave.fromDate !== leave.toDate && (
+                                                            <>
+                                                                <span className="text-muted-foreground mx-1 text-xs">to</span>
+                                                                {new Date(leave.toDate).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    <span className="px-2.5 py-1 bg-cyan-500 text-white rounded font-bold uppercase text-[10px] tracking-wider">Approved Leave</span>
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Reason Provided</p>
+                                                        <p className="text-sm italic text-muted-foreground bg-background p-3 rounded-xl border border-border mt-1">"{leave.reason}"</p>
+                                                    </div>
+
+                                                    {leave.adminRemarks && (
+                                                        <div className="border-t border-dashed border-cyan-500/30 pt-3">
+                                                            <p className="text-[10px] font-bold text-cyan-700 uppercase tracking-widest mb-1">Admin Approval Note</p>
+                                                            <p className="text-xs text-cyan-800 font-medium">"{leave.adminRemarks}"</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     )}
 
-                    {/* LEVEL 6: DETAIL (Daily Reports Removed) */}
+                    {/* LEVEL 6: DETAIL (Daily Reports) */}
                     {selectedDay && (
                         <div className="space-y-4 sm:space-y-6 max-w-2xl mx-auto animate-in fade-in slide-in-from-right-8 duration-300">
-                            <div className="bg-card rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center border border-border/80 shadow-sm relative overflow-hidden group hover:border-primary/30 transition-colors">
-                                <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <div className="bg-card rounded-2xl p-6 sm:p-8 text-center border border-border/80 shadow-sm relative overflow-hidden group">
                                 <span className={getStatusBadge(selectedDay.status)}>{selectedDay.status}</span>
-                                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mt-4 sm:mt-5 mb-5 sm:mb-6 text-foreground tracking-tight px-2">{formatFullDate(selectedDay.date)}</h2>
-                                <div className="flex flex-row justify-center gap-3 sm:gap-6">
-                                    <div className="flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold text-emerald-600 bg-emerald-500/10 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border border-emerald-500/20 w-full sm:w-auto shadow-sm">
-                                        <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> In: {formatTime(selectedDay.checkInTime) || '--:--'}
+                                <h2 className="text-xl sm:text-2xl font-bold mt-4 mb-5 text-foreground">{formatFullDate(selectedDay.date)}</h2>
+                                <div className="flex justify-center gap-4">
+                                    <div className="text-xs font-bold text-emerald-600 bg-emerald-500/10 px-4 py-2 rounded-xl border border-emerald-500/20">
+                                        In: {formatTime(selectedDay.checkInTime) || '--:--'}
                                     </div>
-                                    <div className="flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold text-rose-600 bg-rose-500/10 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border border-rose-500/20 w-full sm:w-auto shadow-sm">
-                                        <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Out: {formatTime(selectedDay.checkOutTime) || '--:--'}
+                                    <div className="text-xs font-bold text-rose-600 bg-rose-500/10 px-4 py-2 rounded-xl border border-rose-500/20">
+                                        Out: {formatTime(selectedDay.checkOutTime) || '--:--'}
                                     </div>
                                 </div>
                             </div>
-
                             {(selectedDay.teacherNote || selectedDay.lateReason) && (
-                                <div className="space-y-1.5 sm:space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
-                                    <p className="text-[10px] sm:text-[11px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 pl-1"><FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Exception Note</p>
-                                    <div className="p-4 sm:p-5 bg-muted/30 border border-border/80 rounded-xl sm:rounded-2xl text-xs sm:text-sm italic text-muted-foreground shadow-sm">"{selectedDay.teacherNote || selectedDay.lateReason}"</div>
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest"><FileText className="w-3.5 h-3.5 inline mr-1" /> Exception Note</p>
+                                    <div className="p-4 bg-muted/30 border border-border/80 rounded-2xl text-sm italic text-muted-foreground">"{selectedDay.teacherNote || selectedDay.lateReason}"</div>
                                 </div>
                             )}
                         </div>
