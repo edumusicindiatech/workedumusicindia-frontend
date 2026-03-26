@@ -11,6 +11,7 @@ import PublicRoute from "./components/routing/PublicRoute";
 // Auth & Shared
 import Login from "./pages/Login";
 import NotFound from "./pages/Notfound";
+import AdminContact from "./pages/admin/AdminContact";
 
 // Admin Imports
 import AdminLayout from "./components/admin/AdminLayout";
@@ -23,7 +24,7 @@ import ProgressReport from "./pages/admin/ProgressReport";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminResetPassword from "./pages/admin/AdminResetPassword";
 import AdminReports from "./pages/admin/AdminReports";
-import AdminLeaveRequests from "./pages/admin/AdminLeaveRequests"; // <-- Added Import
+import AdminLeaveRequests from "./pages/admin/AdminLeaveRequests";
 
 // Employee Imports
 import EmployeeLayout from "./components/employee/EmployeeLayout";
@@ -110,6 +111,9 @@ function App() {
         {/* Public Routes (Traffic Controller) */}
         <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
 
+        {/* <-- ADDED ROUTE HERE --> */}
+        <Route path="/contact-admin" element={<PublicRoute><AdminContact /></PublicRoute>} />
+
         {/* ========================================== */}
         {/* SECURE RESET PASSWORD ROUTES (No Layouts)  */}
         {/* ========================================== */}
@@ -146,7 +150,7 @@ function App() {
           <Route path="attendance" element={<AttendanceFeed />} />
           <Route path="progress" element={<ProgressReport />} />
           <Route path="reports" element={<AdminReports />} />
-          <Route path="leave-requests" element={<AdminLeaveRequests />} /> {/* <-- ADDED ROUTE */}
+          <Route path="leave-requests" element={<AdminLeaveRequests />} />
           <Route path="communication" element={<Communication />} />
           <Route path="notifications" element={<AdminNotifications />} />
         </Route>

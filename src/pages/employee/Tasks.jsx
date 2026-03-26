@@ -169,7 +169,7 @@ const Tasks = () => {
                             {/* Actions / Footer */}
                             <div className="pt-5 border-t border-border/60 mt-auto flex flex-col sm:flex-row items-center gap-3">
                                 <div className="h-12 w-full sm:flex-1 bg-muted rounded-xl animate-pulse" />
-                                <div className="h-12 w-full sm:flex-[2] bg-muted rounded-xl animate-pulse" />
+                                <div className="h-12 w-full sm:flex-2 bg-muted rounded-xl animate-pulse" />
                             </div>
                         </div>
                     ))}
@@ -318,7 +318,7 @@ const Tasks = () => {
                                             <Button
                                                 onClick={() => handleAccept(task.id)}
                                                 disabled={actionLoading}
-                                                className="w-full sm:flex-[2] bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
+                                                className="w-full sm:flex-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
                                             >
                                                 {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CheckCircle className="w-5 h-5 mr-2" /> Accept & Schedule Task</>}
                                             </Button>

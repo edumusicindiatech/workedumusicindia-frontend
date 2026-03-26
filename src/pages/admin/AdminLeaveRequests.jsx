@@ -139,7 +139,7 @@ const AdminLeaveRequests = () => {
                         <div className="h-7 sm:h-8 w-48 sm:w-72 bg-muted rounded-lg animate-pulse" />
                         <div className="h-3 sm:h-4 w-36 sm:w-56 bg-muted rounded-lg animate-pulse" />
                     </div>
-                    <div className="flex gap-2 p-1.5 bg-muted/30 rounded-xl w-full lg:w-auto h-[44px] sm:h-[52px] animate-pulse">
+                    <div className="flex gap-2 p-1.5 bg-muted/30 rounded-xl w-full lg:w-auto h-11 sm:h-13 animate-pulse">
                         <div className="flex-1 lg:w-28 bg-muted rounded-lg" />
                         <div className="flex-1 lg:w-28 bg-muted rounded-lg" />
                         <div className="flex-1 lg:w-28 bg-muted rounded-lg" />
@@ -161,7 +161,7 @@ const AdminLeaveRequests = () => {
 
                             {/* Card Body Skeleton */}
                             <div className="p-4 sm:p-5 space-y-4 sm:space-y-5 flex-1">
-                                <div className="h-[64px] sm:h-[76px] w-full bg-muted/60 rounded-xl sm:rounded-2xl animate-pulse" />
+                                <div className="h-16 sm:h-19 w-full bg-muted/60 rounded-xl sm:rounded-2xl animate-pulse" />
                                 <div className="space-y-2.5">
                                     <div className="h-3 w-20 sm:w-24 bg-muted rounded-md animate-pulse" />
                                     <div className="h-16 sm:h-20 w-full bg-muted/50 rounded-xl animate-pulse" />

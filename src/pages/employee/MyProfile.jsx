@@ -107,7 +107,7 @@ const MyProfile = () => {
                 </div>
 
                 {/* Card Shimmer */}
-                <div className="bg-card rounded-[1.5rem] shadow-sm border border-border/60 p-6 md:p-8 relative overflow-hidden">
+                <div className="bg-card rounded-3xl shadow-sm border border-border/60 p-6 md:p-8 relative overflow-hidden">
                     {/* Top Section Shimmer */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 mb-8 pb-8 border-b border-border/50">
                         <div className="flex items-center gap-4 w-full">
@@ -171,7 +171,7 @@ const MyProfile = () => {
             </div>
 
             {/* Profile Card */}
-            <div className="bg-card rounded-[1.5rem] shadow-sm border border-border/60 p-6 md:p-8 relative overflow-hidden h-full group">
+            <div className="bg-card rounded-3xl shadow-sm border border-border/60 p-6 md:p-8 relative overflow-hidden h-full group">
 
                 {/* Decorative background blur */}
                 <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/10 transition-colors duration-700"></div>
@@ -179,7 +179,7 @@ const MyProfile = () => {
                 {/* Avatar & Edit Button */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 mb-8 pb-8 relative z-10 border-b border-border/60">
                     <div className="flex items-center gap-4 sm:gap-5 w-full sm:w-auto">
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-primary-foreground text-2xl sm:text-3xl font-extrabold shadow-lg shadow-primary/20 shrink-0 border-4 border-background">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-linear-to-br from-primary to-primary/80 flex items-center justify-center text-primary-foreground text-2xl sm:text-3xl font-extrabold shadow-lg shadow-primary/20 shrink-0 border-4 border-background">
                             {localUser.name?.charAt(0).toUpperCase() || "U"}
                         </div>
                         <div className="min-w-0 flex-1">
