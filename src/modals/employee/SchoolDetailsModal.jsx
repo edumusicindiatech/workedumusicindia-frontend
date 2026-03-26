@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-// 1. Import your custom api instance
 import api from "../../api/axios";
 import { X, CheckCircle2, Clock, MapPin, UserX, PartyPopper, ChevronRight, ChevronLeft, CalendarDays, Plus, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import toast from "react-hot-toast"; // <-- Added react-hot-toast import
+import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 import AddEventModal from "./AddEventModal";
 import MediaUploadModal from "./MediaUploadModal";
 
 const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
-    // Note: We no longer need 'token' here because 'api' handles headers automatically
+    const { t } = useTranslation(); // <-- Initialize hook
     const [activeCategory, setActiveCategory] = useState(null);
 
     // Modal States
@@ -29,12 +29,9 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
 
     if (!isOpen || !school) return null;
 
-    // --- API HANDLERS ---
-
-    // 2. Updated Event Handler
     const handleSaveEvent = async (eventData) => {
         setIsSavingEvent(true);
-        const toastId = toast.loading("Saving event..."); // Added loading toast
+        const toastId = toast.loading(t('school_details.toast_saving_event'));
         try {
             const payload = {
                 ...eventData,
@@ -42,25 +39,22 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                 band: eventModalData.categoryName
             };
 
-            // Use 'api' and remove /api prefix + manual headers
             await api.post('/employee/events', payload);
 
-            toast.success("Event saved successfully!", { id: toastId }); // Added success toast
+            toast.success(t('school_details.toast_event_success'), { id: toastId });
             setEventModalData({ isOpen: false, categoryName: null });
             if (onRefresh) onRefresh();
         } catch (error) {
             console.error("Event save error:", error);
-            // Replaced alert with error toast
-            toast.error("Failed to save event. " + (error.response?.data?.message || ""), { id: toastId });
+            toast.error(t('school_details.toast_event_error') + (error.response?.data?.message || ""), { id: toastId });
         } finally {
             setIsSavingEvent(false);
         }
     };
 
-    // 3. Updated Media Handler
     const handleUploadMedia = async (mediaData) => {
         setIsUploadingMedia(true);
-        const toastId = toast.loading("Uploading media..."); // Added loading toast
+        const toastId = toast.loading(t('school_details.toast_uploading_media'));
         try {
             const payload = {
                 ...mediaData,
@@ -68,15 +62,13 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                 band: mediaModalData.categoryName
             };
 
-            // Use 'api' and remove /api prefix + manual headers
             await api.post('/employee/media', payload);
 
-            toast.success("Media uploaded successfully!", { id: toastId }); // Added success toast
+            toast.success(t('school_details.toast_media_success'), { id: toastId });
             setMediaModalData({ isOpen: false, categoryName: null });
         } catch (error) {
             console.error("Media upload error:", error);
-            // Replaced alert with error toast
-            toast.error("Failed to upload media. " + (error.response?.data?.message || ""), { id: toastId });
+            toast.error(t('school_details.toast_media_error') + (error.response?.data?.message || ""), { id: toastId });
         } finally {
             setIsUploadingMedia(false);
         }
@@ -104,7 +96,7 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                         </div>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors bg-background border border-border shrink-0">
-                        <X className="w-5 h-5 text-muted-foreground" />
+                        <X className="w-4 h-4 text-muted-foreground" />
                     </button>
                 </div>
 
@@ -115,7 +107,7 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                     {!activeCategory ? (
                         <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                             <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                                <CalendarDays className="w-4 h-4" /> Assigned Categories
+                                <CalendarDays className="w-4 h-4" /> {t('school_details.assigned_categories')}
                             </h3>
 
                             <div className="grid gap-4">
@@ -127,7 +119,7 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                                                 {category.name}
                                             </span>
                                             <p className="text-sm text-muted-foreground mt-0.5">
-                                                View 30-day attendance record & past events
+                                                {t('school_details.category_subtitle')}
                                             </p>
                                         </div>
 
@@ -135,12 +127,12 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                                             <Button variant="outline" size="sm" className="h-9 rounded-lg"
                                                 onClick={(e) => { e.stopPropagation(); setMediaModalData({ isOpen: true, categoryName: category.name }); }}>
                                                 <Camera className="w-4 h-4 sm:mr-1.5" />
-                                                <span className="hidden sm:inline">Upload</span>
+                                                <span className="hidden sm:inline">{t('school_details.btn_upload')}</span>
                                             </Button>
 
                                             <Button variant="outline" size="sm" className="h-9 rounded-lg border-blue-500/30 text-blue-600 hover:bg-blue-500/10 hover:border-blue-500/50"
                                                 onClick={(e) => { e.stopPropagation(); setEventModalData({ isOpen: true, categoryName: category.name }); }}>
-                                                <Plus className="w-4 h-4 mr-1.5" /> Event
+                                                <Plus className="w-4 h-4 mr-1.5" /> {t('school_details.btn_event')}
                                             </Button>
 
                                             <div onClick={() => setActiveCategory(category)} className="w-9 h-9 rounded-full bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors cursor-pointer ml-1">
@@ -161,14 +153,14 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                                     <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-bold uppercase tracking-wide">
                                         {activeCategory.name}
                                     </span>
-                                    <span className="text-sm font-medium text-muted-foreground hidden sm:inline">Last 30 Days</span>
+                                    <span className="text-sm font-medium text-muted-foreground hidden sm:inline">{t('school_details.last_30_days')}</span>
                                 </div>
                                 <div className="flex gap-2">
                                     <Button size="sm" variant="outline" onClick={() => setMediaModalData({ isOpen: true, categoryName: activeCategory.name })} className="h-8 rounded-lg text-xs">
-                                        <Camera className="w-3.5 h-3.5 mr-1.5" /> Media
+                                        <Camera className="w-3.5 h-3.5 mr-1.5" /> {t('school_details.btn_media')}
                                     </Button>
                                     <Button size="sm" onClick={() => setEventModalData({ isOpen: true, categoryName: activeCategory.name })} className="h-8 rounded-lg bg-blue-500 hover:bg-blue-600 text-white shadow-sm text-xs">
-                                        <Plus className="w-3.5 h-3.5 mr-1.5" /> Log Event
+                                        <Plus className="w-3.5 h-3.5 mr-1.5" /> {t('school_details.btn_log_event')}
                                     </Button>
                                 </div>
                             </div>
@@ -178,28 +170,28 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                                 <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex flex-col items-center justify-center text-center">
                                     <CheckCircle2 className="w-6 h-6 text-emerald-500 mb-2" />
                                     <p className="text-2xl font-bold text-emerald-500 leading-none">{activeCategory.stats.present}</p>
-                                    <p className="text-[10px] uppercase font-bold text-emerald-500/70 mt-1 tracking-wider">Present</p>
+                                    <p className="text-[10px] uppercase font-bold text-emerald-500/70 mt-1 tracking-wider">{t('school_details.stat_present')}</p>
                                 </div>
                                 <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl flex flex-col items-center justify-center text-center">
                                     <Clock className="w-6 h-6 text-amber-500 mb-2" />
                                     <p className="text-2xl font-bold text-amber-500 leading-none">{activeCategory.stats.late}</p>
-                                    <p className="text-[10px] uppercase font-bold text-amber-500/70 mt-1 tracking-wider">Late</p>
+                                    <p className="text-[10px] uppercase font-bold text-amber-500/70 mt-1 tracking-wider">{t('school_details.stat_late')}</p>
                                 </div>
                                 <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-xl flex flex-col items-center justify-center text-center">
                                     <UserX className="w-6 h-6 text-destructive mb-2" />
                                     <p className="text-2xl font-bold text-destructive leading-none">{activeCategory.stats.absent}</p>
-                                    <p className="text-[10px] uppercase font-bold text-destructive/70 mt-1 tracking-wider">Absent</p>
+                                    <p className="text-[10px] uppercase font-bold text-destructive/70 mt-1 tracking-wider">{t('school_details.stat_absent')}</p>
                                 </div>
                                 <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex flex-col items-center justify-center text-center">
                                     <PartyPopper className="w-6 h-6 text-blue-500 mb-2" />
                                     <p className="text-2xl font-bold text-blue-500 leading-none">{activeCategory.stats.events}</p>
-                                    <p className="text-[10px] uppercase font-bold text-blue-500/70 mt-1 tracking-wider">Events</p>
+                                    <p className="text-[10px] uppercase font-bold text-blue-500/70 mt-1 tracking-wider">{t('school_details.stat_events')}</p>
                                 </div>
                             </div>
 
                             {/* Timeline Log */}
                             <div>
-                                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">Timeline</h3>
+                                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">{t('school_details.timeline_title')}</h3>
                                 <div className="space-y-4">
                                     {activeCategory.history.length > 0 ? (
                                         activeCategory.history.map((log, idx) => (
@@ -213,13 +205,13 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                                                         <p className="font-bold text-sm text-foreground">{log.date}</p>
                                                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1 ${log.status === 'Present' ? 'text-emerald-500 bg-emerald-500/10' : log.status === 'Late' ? 'text-amber-500 bg-amber-500/10' : log.status === 'Absent' ? 'text-destructive bg-destructive/10' : 'text-blue-500 bg-blue-500/10'}`}>
                                                             {log.status === 'Event' && <PartyPopper className="w-3 h-3" />}
-                                                            {log.status}
+                                                            {t(`school_details.statuses.${log.status}`)}
                                                         </span>
                                                     </div>
                                                     {log.note && (
                                                         <div className={`p-3 rounded-lg border mt-2 ${log.status === 'Event' ? 'bg-blue-500/5 border-blue-500/20' : 'bg-muted/50 border-border/50'}`}>
                                                             <p className={`text-sm flex items-start gap-2 ${log.status === 'Event' ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-muted-foreground italic'}`}>
-                                                                {log.status === 'Event' ? <strong className="shrink-0">Description:</strong> : null}
+                                                                {log.status === 'Event' ? <strong className="shrink-0">{t('school_details.timeline_description')}</strong> : null}
                                                                 {log.note}
                                                             </p>
                                                         </div>
@@ -229,7 +221,7 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                                         ))
                                     ) : (
                                         <p className="text-sm text-muted-foreground text-center py-4 bg-muted/30 rounded-xl border border-border border-dashed">
-                                            No attendance records found for the last 30 days.
+                                            {t('school_details.no_records')}
                                         </p>
                                     )}
                                 </div>

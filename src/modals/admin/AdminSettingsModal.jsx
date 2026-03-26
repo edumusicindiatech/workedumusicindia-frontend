@@ -1,17 +1,20 @@
 import { useState, useEffect } from "react";
-import { useSelector } from "react-redux"; // <-- Imported useSelector
+import { useDispatch, useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Settings, X, Globe, Mail, Loader2, ShieldAlert } from "lucide-react"; // <-- Added ShieldAlert icon
+import { Settings, X, Globe, Mail, Loader2, ShieldAlert } from "lucide-react";
 import CustomSelect from "../../components/ui/CustomSelect";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
+import { useTranslation } from "react-i18next";
+import { setCredentials } from "../../store/slices/authSlice";
 
 const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess }) => {
-    // 👇 Get the logged-in user's role to enforce SuperAdmin rules
+    const { t, i18n } = useTranslation();
     const { user } = useSelector((state) => state.auth);
     const isSuperAdmin = user?.role === 'SuperAdmin';
+    const dispatch = useDispatch();
 
     const [settings, setSettings] = useState({
         language: "English",
@@ -24,7 +27,6 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
         if (isOpen && currentPreferences) {
             setSettings({
                 language: currentPreferences.systemLanguage || "English",
-                // Map the incoming props to the state
                 adminEmailNotifications: currentPreferences.globalAdminNotifications ?? true,
                 employeeEmailNotifications: currentPreferences.globalEmployeeNotifications ?? true,
             });
@@ -36,30 +38,38 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            // 👇 1. Build the base payload that ALL admins are allowed to send
-            const payload = {
-                systemLanguage: settings.language,
+            const globalPayload = {
                 globalEmployeeNotifications: settings.employeeEmailNotifications
             };
 
-            // 👇 2. Only attach the Admin switch if they are a SuperAdmin
             if (isSuperAdmin) {
-                payload.globalAdminNotifications = settings.adminEmailNotifications;
+                globalPayload.globalAdminNotifications = settings.adminEmailNotifications;
             }
 
-            // Send the smart payload
-            const response = await api.put('/admin/settings/global', payload);
+            const [globalResponse, personalResponse] = await Promise.all([
+                api.put('/admin/settings/global', globalPayload),
+                api.put('/employee/settings/preferences', { systemLanguage: settings.language })
+            ]);
 
-            if (response.data.success) {
-                toast.success("Global preferences updated successfully!");
+            if (globalResponse.data.success && personalResponse.data.success) {
+                dispatch(setCredentials({
+                    ...user,
+                    preferences: personalResponse.data.preferences
+                }));
+                toast.success(t('admin_settings_modal.success_msg'));
+
+                const langCode = settings.language === "हिन्दी (Hindi)" ? "hi" : "en";
+                i18n.changeLanguage(langCode);
+
                 if (onSaveSuccess) {
-                    onSaveSuccess(response.data.data);
+                    onSaveSuccess(globalResponse.data.data);
                 }
+
                 onClose();
             }
         } catch (error) {
             console.error("Save Settings Error:", error);
-            toast.error(error.response?.data?.message || "Failed to save settings.");
+            toast.error(error.response?.data?.message || t('admin_settings_modal.error_msg'));
         } finally {
             setIsSaving(false);
         }
@@ -72,7 +82,7 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
                 {/* Header */}
                 <div className="bg-card flex items-center justify-between p-6 border-b border-border">
                     <h2 className="text-xl font-bold flex items-center gap-2 text-foreground">
-                        <Settings className="w-5 h-5 text-primary" /> Global Settings
+                        <Settings className="w-5 h-5 text-primary" /> {t('admin_settings_modal.title')}
                     </h2>
                     <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors">
                         <X className="w-5 h-5 text-muted-foreground hover:text-foreground" />
@@ -85,14 +95,14 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
                     {/* Language Preference */}
                     <div className="space-y-3">
                         <Label className="text-base font-semibold flex items-center gap-2">
-                            <Globe className="w-4 h-4 text-muted-foreground" /> System Language
+                            <Globe className="w-4 h-4 text-muted-foreground" /> {t('admin_settings_modal.language_label')}
                         </Label>
                         <CustomSelect
                             options={["English", "हिन्दी (Hindi)"]}
                             value={settings.language}
                             onChange={(selectedValue) => setSettings({ ...settings, language: selectedValue })}
                         />
-                        <p className="text-xs text-muted-foreground font-medium mt-1">This changes the language of the admin dashboard interface.</p>
+                        <p className="text-xs text-muted-foreground font-medium mt-1">{t('admin_settings_modal.language_help')}</p>
                     </div>
 
                     <div className="border-t border-border/60" />
@@ -100,7 +110,7 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
                     {/* Admin Notifications (LOCKED FOR REGULAR ADMINS) */}
                     <div className="space-y-4">
                         <Label className="text-base font-semibold flex items-center gap-2">
-                            Admin Notifications
+                            {t('admin_settings_modal.admin_notif_section')}
                             {!isSuperAdmin && <ShieldAlert className="w-4 h-4 text-destructive" />}
                         </Label>
 
@@ -110,23 +120,23 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
                                     <Mail className="w-4 h-4 text-primary" />
                                 </div>
                                 <div>
-                                    <p className="font-semibold text-sm text-foreground">Email Notifications</p>
+                                    <p className="font-semibold text-sm text-foreground">{t('admin_settings_modal.email_notif_label')}</p>
                                     <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                                        {isSuperAdmin ? "Receive daily summaries and critical alerts" : "Locked: Only SuperAdmins can toggle this."}
+                                        {isSuperAdmin ? t('admin_settings_modal.admin_notif_help') : t('admin_settings_modal.admin_notif_locked')}
                                     </p>
                                 </div>
                             </div>
                             <Switch
                                 checked={settings.adminEmailNotifications}
                                 onCheckedChange={(checked) => setSettings({ ...settings, adminEmailNotifications: checked })}
-                                disabled={!isSuperAdmin} // 👇 Disables the switch if they aren't SuperAdmin
+                                disabled={!isSuperAdmin}
                             />
                         </div>
                     </div>
 
                     {/* Employee Notifications (OPEN TO ALL ADMINS) */}
                     <div className="space-y-4">
-                        <Label className="text-base font-semibold">Employee Notifications</Label>
+                        <Label className="text-base font-semibold">{t('admin_settings_modal.emp_notif_section')}</Label>
 
                         <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/20 hover:bg-muted/40 transition-colors">
                             <div className="flex items-center gap-3">
@@ -134,8 +144,8 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
                                     <Mail className="w-4 h-4 text-primary" />
                                 </div>
                                 <div>
-                                    <p className="font-semibold text-sm text-foreground">Email Notifications</p>
-                                    <p className="text-xs text-muted-foreground font-medium mt-0.5">Employees receive updates and assignments via email</p>
+                                    <p className="font-semibold text-sm text-foreground">{t('admin_settings_modal.email_notif_label')}</p>
+                                    <p className="text-xs text-muted-foreground font-medium mt-0.5">{t('admin_settings_modal.emp_notif_help')}</p>
                                 </div>
                             </div>
                             <Switch
@@ -148,13 +158,13 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
 
                 {/* Footer */}
                 <div className="bg-muted/20 p-5 border-t border-border flex justify-end gap-3 shrink-0">
-                    <Button variant="ghost" onClick={onClose} disabled={isSaving} className="font-semibold">Cancel</Button>
+                    <Button variant="ghost" onClick={onClose} disabled={isSaving} className="font-semibold">{t('admin_settings_modal.cancel')}</Button>
                     <Button
                         className="gap-2 shadow-md shadow-primary/20 hover:shadow-primary/40 font-semibold w-36 transition-all"
                         onClick={handleSave}
                         disabled={isSaving}
                     >
-                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Changes"}
+                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : t('admin_settings_modal.save_changes')}
                     </Button>
                 </div>
             </div>

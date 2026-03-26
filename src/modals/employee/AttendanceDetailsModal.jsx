@@ -7,14 +7,15 @@ import {
     LogOut, ClipboardCheck, Users,
     Film
 } from "lucide-react";
-import toast from "react-hot-toast"; // <-- Added toast import
+import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const [selectedSchool, setSelectedSchool] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedDay, setSelectedDay] = useState(null);
 
-    // Reset selections if the month changes
     useEffect(() => {
         if (!selectedMonth) {
             setSelectedSchool(null);
@@ -53,19 +54,24 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
         return `px-2 sm:px-2.5 py-0.5 sm:py-1 rounded text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider border ${styles[status] || styles.Holiday}`;
     };
 
-    // --- EXCEL EXPORT LOGIC ---
     const handleExportExcel = () => {
         if (!selectedMonth || !selectedMonth.schools) return;
 
-        const headers = ["Month", "School Name", "Category", "Address", "Date", "Time In", "Time Out", "Status", "Teacher Note"];
-        let rowsHtml = "";
+        const headers = [
+            t('attendance_details.excel_headers.month'), t('attendance_details.excel_headers.school'),
+            t('attendance_details.excel_headers.category'), t('attendance_details.excel_headers.address'),
+            t('attendance_details.excel_headers.date'), t('attendance_details.excel_headers.in'),
+            t('attendance_details.excel_headers.out'), t('attendance_details.excel_headers.status'),
+            t('attendance_details.excel_headers.note')
+        ];
 
+        let rowsHtml = "";
         const escapeHtml = (text) => text?.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") || '';
 
         selectedMonth.schools.forEach(school => {
             const categories = school.categories || [
-                { name: "Junior Band", records: school.records || [] },
-                { name: "Senior Band", records: [] }
+                { name: t('attendance_details.junior_band'), records: school.records || [] },
+                { name: t('attendance_details.senior_band'), records: [] }
             ];
 
             categories.forEach(category => {
@@ -90,7 +96,7 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
         });
 
         if (rowsHtml === "") {
-            toast.error("No daily records found to export for this month."); // <-- Replaced alert with error toast
+            toast.error(t('attendance_details.export_error'));
             return;
         }
 
@@ -118,27 +124,25 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
 
         const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
         const url = URL.createObjectURL(blob);
-
         const link = document.createElement("a");
         link.setAttribute("href", url);
         link.setAttribute("download", `${selectedMonth.month}_Attendance_Report.xls`);
         document.body.appendChild(link);
         link.click();
-
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
-        toast.success("Excel report downloaded!"); // <-- Added success toast
+        toast.success(t('attendance_details.export_success'));
     };
 
     const displayCategories = selectedSchool?.categories || [
         {
-            id: 'cat-1', name: 'Junior Band',
+            id: 'cat-1', name: t('attendance_details.junior_band'),
             stats: selectedSchool?.stats || { present: 0, late: 0, absent: 0, events: 0, holidays: 0, mediaSent: 0 },
             records: selectedSchool?.records || []
         },
         {
-            id: 'cat-2', name: 'Senior Band',
+            id: 'cat-2', name: t('attendance_details.senior_band'),
             stats: { present: 0, late: 0, absent: 0, events: 0, holidays: 0, mediaSent: 0 },
             records: []
         }
@@ -165,16 +169,16 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
                         )}
                         <div className="min-w-0 pr-2">
                             <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground truncate">
-                                {selectedDay ? "Daily Record Details"
+                                {selectedDay ? t('attendance_details.daily_record_title')
                                     : selectedCategory ? selectedCategory.name
                                         : selectedSchool ? selectedSchool.name
                                             : selectedMonth.month}
                             </h2>
                             <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 font-medium truncate">
-                                {selectedDay ? `Viewing details for ${selectedDay.date}`
+                                {selectedDay ? t('attendance_details.viewing_details', { date: selectedDay.date })
                                     : selectedCategory ? selectedSchool.name
-                                        : selectedSchool ? "Select a band category"
-                                            : "Select a school to view records"}
+                                        : selectedSchool ? t('attendance_details.select_category_msg')
+                                            : t('attendance_details.select_school_msg')}
                             </p>
                         </div>
                     </div>
@@ -186,7 +190,6 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
                 {/* --- BODY CONTENT --- */}
                 <div className="p-3 sm:p-4 md:p-6 overflow-y-auto flex-1 bg-muted/5 space-y-4 sm:space-y-6">
 
-                    {/* VIEW 1: Schools Visited This Month */}
                     {!selectedSchool ? (
                         <div className="space-y-2.5 sm:space-y-3">
                             {selectedMonth.schools && selectedMonth.schools.length > 0 ? (
@@ -203,7 +206,7 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
                                             <div className="flex flex-col min-w-0">
                                                 <span className="font-bold text-sm sm:text-base text-foreground truncate">{school.name}</span>
                                                 <span className="text-[10px] sm:text-xs font-medium text-muted-foreground mt-0.5 truncate">
-                                                    Tap to select a category
+                                                    {t('attendance_details.tap_category')}
                                                 </span>
                                             </div>
                                         </div>
@@ -212,13 +215,12 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
                                 ))
                             ) : (
                                 <div className="text-center py-8 text-muted-foreground bg-card rounded-xl border border-dashed border-border text-sm">
-                                    No schools visited this month.
+                                    {t('attendance_details.no_schools')}
                                 </div>
                             )}
                         </div>
                     ) :
 
-                        /* VIEW 2: Select Category (Junior / Senior Band) */
                         !selectedCategory ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-in slide-in-from-right-4 duration-300">
                                 {displayCategories.map((category) => {
@@ -235,7 +237,7 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
                                             </div>
                                             <h4 className="font-bold text-sm sm:text-base md:text-lg text-foreground mb-1.5">{category.name}</h4>
                                             <span className="text-[10px] sm:text-[11px] md:text-xs font-medium text-muted-foreground bg-muted/50 px-2.5 sm:px-3 py-1 rounded-full">
-                                                {totalRecords} Records
+                                                {totalRecords} {t('attendance_details.records_count')}
                                             </span>
                                         </div>
                                     );
@@ -243,47 +245,43 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
                             </div>
                         ) :
 
-                            /* VIEW 3: Specific Category Stats & Daily Log */
                             !selectedDay ? (
                                 <div className="space-y-5 sm:space-y-6 animate-in slide-in-from-right-4 duration-300">
-
-                                    {/* Stats Grid */}
                                     <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
                                         <div className="bg-card border border-emerald-500/20 rounded-xl p-2 sm:p-3 flex flex-col items-center justify-center text-center shadow-sm">
                                             <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500 mb-1" />
                                             <span className="text-lg sm:text-xl font-bold text-emerald-500">{selectedCategory.stats?.present || 0}</span>
-                                            <span className="text-[8px] sm:text-[9px] font-bold text-emerald-600/80 uppercase tracking-wider mt-1 truncate w-full">Present</span>
+                                            <span className="text-[8px] sm:text-[9px] font-bold text-emerald-600/80 uppercase tracking-wider mt-1 truncate w-full">{t('attendance_details.statuses.present')}</span>
                                         </div>
                                         <div className="bg-card border border-warning/20 rounded-xl p-2 sm:p-3 flex flex-col items-center justify-center text-center shadow-sm">
                                             <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-warning mb-1" />
                                             <span className="text-lg sm:text-xl font-bold text-warning">{selectedCategory.stats?.late || 0}</span>
-                                            <span className="text-[8px] sm:text-[9px] font-bold text-warning/80 uppercase tracking-wider mt-1 truncate w-full">Late</span>
+                                            <span className="text-[8px] sm:text-[9px] font-bold text-warning/80 uppercase tracking-wider mt-1 truncate w-full">{t('attendance_details.statuses.late')}</span>
                                         </div>
                                         <div className="bg-card border border-destructive/20 rounded-xl p-2 sm:p-3 flex flex-col items-center justify-center text-center shadow-sm">
                                             <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-destructive mb-1" />
                                             <span className="text-lg sm:text-xl font-bold text-destructive">{selectedCategory.stats?.absent || 0}</span>
-                                            <span className="text-[8px] sm:text-[9px] font-bold text-destructive/80 uppercase tracking-wider mt-1 truncate w-full">Absent</span>
+                                            <span className="text-[8px] sm:text-[9px] font-bold text-destructive/80 uppercase tracking-wider mt-1 truncate w-full">{t('attendance_details.statuses.absent')}</span>
                                         </div>
                                         <div className="bg-card border border-violet-500/20 rounded-xl p-2 sm:p-3 flex flex-col items-center justify-center text-center shadow-sm">
                                             <Star className="w-4 h-4 sm:w-5 sm:h-5 text-violet-500 mb-1" />
                                             <span className="text-lg sm:text-xl font-bold text-violet-500">{selectedCategory.stats?.events || 0}</span>
-                                            <span className="text-[8px] sm:text-[9px] font-bold text-violet-500/80 uppercase tracking-wider mt-1 truncate w-full">Event</span>
+                                            <span className="text-[8px] sm:text-[9px] font-bold text-violet-500/80 uppercase tracking-wider mt-1 truncate w-full">{t('attendance_details.statuses.event')}</span>
                                         </div>
                                         <div className="bg-card border border-slate-500/20 rounded-xl p-2 sm:p-3 flex flex-col items-center justify-center text-center shadow-sm">
                                             <Coffee className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 mb-1" />
                                             <span className="text-lg sm:text-xl font-bold text-slate-500">{selectedCategory.stats?.holidays || 0}</span>
-                                            <span className="text-[8px] sm:text-[9px] font-bold text-slate-500/80 uppercase tracking-wider mt-1 truncate w-full">Holiday</span>
+                                            <span className="text-[8px] sm:text-[9px] font-bold text-slate-500/80 uppercase tracking-wider mt-1 truncate w-full">{t('attendance_details.statuses.holiday')}</span>
                                         </div>
                                         <div className="bg-card border border-blue-500/20 rounded-xl p-2 sm:p-3 flex flex-col items-center justify-center text-center shadow-sm">
                                             <Film className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 mb-1" />
                                             <span className="text-lg sm:text-xl font-bold text-blue-500">{selectedCategory.stats?.mediaSent || 0}</span>
-                                            <span className="text-[8px] sm:text-[9px] font-bold text-blue-500/80 uppercase tracking-wider mt-1 truncate w-full">Media</span>
+                                            <span className="text-[8px] sm:text-[9px] font-bold text-blue-500/80 uppercase tracking-wider mt-1 truncate w-full">{t('attendance_details.statuses.media')}</span>
                                         </div>
                                     </div>
 
-                                    {/* Daily Records List */}
                                     <div className="space-y-2.5 sm:space-y-3">
-                                        <h3 className="text-xs sm:text-sm font-bold text-foreground mb-1.5 sm:mb-2 px-1 uppercase tracking-wider">Log History</h3>
+                                        <h3 className="text-xs sm:text-sm font-bold text-foreground mb-1.5 sm:mb-2 px-1 uppercase tracking-wider">{t('attendance_details.log_history')}</h3>
                                         {selectedCategory.records && selectedCategory.records.length > 0 ? (
                                             selectedCategory.records.map((day, idx) => {
                                                 return (
@@ -301,7 +299,7 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
                                                         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
                                                             {day.dailyReport && (
                                                                 <span className="flex items-center gap-1 text-[9px] text-blue-500 bg-blue-500/10 px-1.5 py-0.5 rounded font-bold border border-blue-500/20 uppercase tracking-wider">
-                                                                    <ClipboardCheck className="w-3 h-3" /> <span className="hidden sm:inline">Report</span>
+                                                                    <ClipboardCheck className="w-3 h-3" /> <span className="hidden sm:inline">{t('attendance_details.report_tag')}</span>
                                                                 </span>
                                                             )}
                                                             <span className={getStatusBadge(day.status)}>
@@ -314,17 +312,14 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
                                             })
                                         ) : (
                                             <div className="text-center py-6 sm:py-8 text-muted-foreground bg-card rounded-xl border border-dashed border-border text-[11px] sm:text-sm">
-                                                No daily records found.
+                                                {t('attendance_details.no_records')}
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             ) : (
 
-                                /* VIEW 4: Day Specific Reason View */
                                 <div className="space-y-4 sm:space-y-6 animate-in slide-in-from-right-4 duration-300 h-full flex flex-col">
-
-                                    {/* Status Card */}
                                     <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-5 sm:p-8 flex flex-col items-center justify-center text-center shadow-sm relative overflow-hidden">
                                         <div className="absolute top-0 w-full h-1 bg-linear-to-r from-transparent via-border to-transparent opacity-50"></div>
                                         <div className="mb-2 sm:mb-4">
@@ -332,27 +327,23 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
                                         </div>
                                         <h3 className="text-lg sm:text-2xl md:text-3xl font-bold text-foreground mb-1.5 sm:mb-2">{selectedDay.date}</h3>
 
-                                        {/* Time In and Time Out Row */}
                                         <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 mt-2 sm:mt-4">
                                             <div className="flex items-center gap-1.5 sm:gap-2 text-emerald-600 bg-emerald-500/10 px-2.5 sm:px-4 py-1 sm:py-2 rounded-full text-[10px] sm:text-sm font-semibold border border-emerald-500/20">
                                                 <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                                                In: {selectedDay.timeIn || "--:--"}
+                                                {t('attendance_details.time_in')}: {selectedDay.timeIn || "--:--"}
                                             </div>
                                             <div className="flex items-center gap-1.5 sm:gap-2 text-rose-600 bg-rose-500/10 px-2.5 sm:px-4 py-1 sm:py-2 rounded-full text-[10px] sm:text-sm font-semibold border border-rose-500/20">
                                                 <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
-                                                Out: {selectedDay.timeOut || "--:--"}
+                                                {t('attendance_details.time_out')}: {selectedDay.timeOut || "--:--"}
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Info Cards Container */}
                                     <div className="space-y-4 sm:space-y-6 flex-1 flex flex-col">
-
-                                        {/* Reason Card */}
                                         {(selectedDay.reason || !selectedDay.dailyReport) && (
                                             <div className="space-y-1.5 sm:space-y-2">
                                                 <h3 className="text-xs sm:text-sm font-bold text-foreground px-1 uppercase tracking-wider flex items-center gap-1.5 sm:gap-2">
-                                                    <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Teacher's Note
+                                                    <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {t('attendance_details.teachers_note')}
                                                 </h3>
 
                                                 <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col justify-center min-h-25 sm:min-h-35">
@@ -365,18 +356,17 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
                                                             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted/50 flex items-center justify-center mb-1">
                                                                 <MessageSquareDashed className="w-5 h-5 sm:w-6 sm:h-6 opacity-50" />
                                                             </div>
-                                                            <p className="text-[11px] sm:text-sm font-medium text-center leading-snug">No additional notes or reasons<br />provided for this date.</p>
+                                                            <p className="text-[11px] sm:text-sm font-medium text-center leading-snug">{t('attendance_details.no_note_provided')}</p>
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
                                         )}
 
-                                        {/* Daily Report Card */}
                                         {selectedDay.dailyReport && (
                                             <div className="space-y-1.5 sm:space-y-2">
                                                 <h3 className="text-xs sm:text-sm font-bold text-blue-500 px-1 uppercase tracking-wider flex items-center gap-1.5 sm:gap-2">
-                                                    <ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Daily Report
+                                                    <ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {t('attendance_details.daily_report')}
                                                 </h3>
 
                                                 <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col">
@@ -387,14 +377,12 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
                                             </div>
                                         )}
                                     </div>
-
                                 </div>
                             )}
                 </div>
 
                 {/* --- FOOTER --- */}
                 <div className="bg-card p-3 sm:p-4 md:p-6 border-t border-border flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 rounded-b-2xl shrink-0">
-                    {/* Show Export only at the Schools List Level (Month Selected, no School Selected) */}
                     {!selectedSchool && (
                         <Button
                             onClick={handleExportExcel}
@@ -402,11 +390,11 @@ const AttendanceDetailsModal = ({ selectedMonth, onClose }) => {
                             className="rounded-lg sm:rounded-xl w-full sm:w-auto font-bold tracking-wide flex items-center justify-center gap-2 border-primary/20 hover:bg-primary/5 text-primary text-xs sm:text-sm h-9 sm:h-11"
                         >
                             <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                            Export Excel
+                            {t('attendance_details.export_btn')}
                         </Button>
                     )}
                     <Button onClick={handleClose} className="rounded-lg sm:rounded-xl w-full sm:w-auto font-bold tracking-wide text-xs sm:text-sm h-9 sm:h-11">
-                        Close
+                        {t('attendance_details.close_btn')}
                     </Button>
                 </div>
             </div>

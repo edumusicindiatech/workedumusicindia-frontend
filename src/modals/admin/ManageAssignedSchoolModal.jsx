@@ -5,14 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
+import { useTranslation, Trans } from "react-i18next"; // <-- Added imports
 
 const ManageAssignedSchoolModal = ({ isOpen, onClose, assignment, employeeId, onSuccess }) => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState({});
     const [isLoading, setIsLoading] = useState(false);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false });
 
-    // Initialize form when modal opens
     useEffect(() => {
         if (isOpen && assignment) {
             setIsEditing(false);
@@ -30,10 +31,9 @@ const ManageAssignedSchoolModal = ({ isOpen, onClose, assignment, employeeId, on
 
     if (!isOpen || !assignment) return null;
 
-    const schoolName = assignment.school?.schoolName || "Unknown School";
-    const schoolAddress = assignment.school?.address || "No address provided";
+    const schoolName = assignment.school?.schoolName || t('manage_assigned_school.unknown_school');
+    const schoolAddress = assignment.school?.address || t('manage_assigned_school.no_address');
 
-    // --- HANDLERS ---
     const toggleEditDay = (day) => {
         setEditForm(prev => ({
             ...prev,
@@ -43,7 +43,7 @@ const ManageAssignedSchoolModal = ({ isOpen, onClose, assignment, employeeId, on
 
     const handleSaveEdit = async () => {
         setIsLoading(true);
-        const loadingToast = toast.loading("Updating assignment...");
+        const loadingToast = toast.loading(t('manage_assigned_school.updating_toast'));
         try {
             const payload = {
                 category: editForm.category,
@@ -55,13 +55,12 @@ const ManageAssignedSchoolModal = ({ isOpen, onClose, assignment, employeeId, on
             };
 
             await api.put(`/admin/employees/${employeeId}/assignments/${assignment._id}`, payload);
-            toast.success("Assignment updated successfully!", { id: loadingToast });
+            toast.success(t('manage_assigned_school.update_success'), { id: loadingToast });
 
             setIsEditing(false);
-            if (onSuccess) onSuccess(); // Refresh UI
+            if (onSuccess) onSuccess();
         } catch (error) {
-            // BEAUITFUL LONG TEXT FORMATTING FOR REACT-HOT-TOAST
-            toast.error(error.response?.data?.message || "Failed to update.", {
+            toast.error(error.response?.data?.message || t('manage_assigned_school.update_error'), {
                 id: loadingToast,
                 duration: 6000,
                 style: {
@@ -78,15 +77,15 @@ const ManageAssignedSchoolModal = ({ isOpen, onClose, assignment, employeeId, on
 
     const confirmDelete = async () => {
         setIsLoading(true);
-        const loadingToast = toast.loading("Revoking assignment...");
+        const loadingToast = toast.loading(t('manage_assigned_school.revoking_toast'));
         try {
             await api.delete(`/admin/employees/${employeeId}/assignments/${assignment._id}`);
-            toast.success("Assignment revoked.", { id: loadingToast });
+            toast.success(t('manage_assigned_school.revoke_success'), { id: loadingToast });
             setDeleteModal({ isOpen: false });
-            onClose(); // Close main modal completely
-            if (onSuccess) onSuccess(); // Refresh UI
+            onClose();
+            if (onSuccess) onSuccess();
         } catch (error) {
-            toast.error(error.response?.data?.message || "Failed to revoke.", {
+            toast.error(error.response?.data?.message || t('manage_assigned_school.revoke_error'), {
                 id: loadingToast,
                 duration: 6000,
                 style: { maxWidth: '500px', padding: '16px', lineHeight: '1.5', textAlign: 'center' }
@@ -123,90 +122,88 @@ const ManageAssignedSchoolModal = ({ isOpen, onClose, assignment, employeeId, on
                 <div className="p-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
 
                     {!isEditing ? (
-                        /* READ-ONLY VIEW */
                         <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Category</p>
+                                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">{t('manage_assigned_school.category')}</p>
                                     <span className="px-2.5 py-1 bg-primary/10 text-primary rounded border border-primary/20 text-sm font-bold">{assignment.category}</span>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Status</p>
-                                    <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-600 rounded border border-emerald-500/20 text-sm font-bold">Active</span>
+                                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">{t('manage_assigned_school.status')}</p>
+                                    <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-600 rounded border border-emerald-500/20 text-sm font-bold">{t('manage_assigned_school.active')}</span>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
                                 <div>
-                                    <p className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5 uppercase tracking-wider mb-1"><Calendar className="w-3.5 h-3.5" /> Start Date</p>
-                                    <p className="text-sm font-bold">{assignment.startDate ? assignment.startDate.split('T')[0] : "Not set"}</p>
+                                    <p className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5 uppercase tracking-wider mb-1"><Calendar className="w-3.5 h-3.5" /> {t('manage_assigned_school.start_date')}</p>
+                                    <p className="text-sm font-bold">{assignment.startDate ? assignment.startDate.split('T')[0] : t('manage_assigned_school.not_set')}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5 uppercase tracking-wider mb-1"><Calendar className="w-3.5 h-3.5" /> End Date</p>
-                                    <p className="text-sm font-bold">{assignment.endDate ? assignment.endDate.split('T')[0] : "Ongoing"}</p>
+                                    <p className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5 uppercase tracking-wider mb-1"><Calendar className="w-3.5 h-3.5" /> {t('manage_assigned_school.end_date')}</p>
+                                    <p className="text-sm font-bold">{assignment.endDate ? assignment.endDate.split('T')[0] : t('manage_assigned_school.ongoing')}</p>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
                                 <div>
-                                    <p className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5 uppercase tracking-wider mb-1"><Clock className="w-3.5 h-3.5" /> Timings</p>
+                                    <p className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5 uppercase tracking-wider mb-1"><Clock className="w-3.5 h-3.5" /> {t('manage_assigned_school.timings')}</p>
                                     <p className="text-sm font-bold">{assignment.startTime} - {assignment.endTime}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Days</p>
+                                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">{t('manage_assigned_school.days')}</p>
                                     <div className="flex flex-wrap gap-1.5">
                                         {assignment.allowedDays?.map(day => (
-                                            <span key={day} className="px-2 py-0.5 bg-muted border border-border text-[10px] font-bold rounded">{day}</span>
+                                            <span key={day} className="px-2 py-0.5 bg-muted border border-border text-[10px] font-bold rounded">{t(`manage_assigned_school.days_short.${day}`)}</span>
                                         ))}
                                     </div>
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        /* EDIT FORM VIEW */
                         <div className="space-y-5 animate-in slide-in-from-right-4 duration-200">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Category</Label>
+                                    <Label className="text-xs">{t('manage_assigned_school.category')}</Label>
                                     <select
                                         className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm"
                                         value={editForm.category}
                                         onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
                                     >
-                                        <option value="Junior Band">Junior Band</option>
-                                        <option value="Senior Band">Senior Band</option>
+                                        <option value="Junior Band">{t('manage_assigned_school.junior_band')}</option>
+                                        <option value="Senior Band">{t('manage_assigned_school.senior_band')}</option>
                                     </select>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Start Date</Label>
+                                    <Label className="text-xs">{t('manage_assigned_school.start_date')}</Label>
                                     <Input type="date" value={editForm.startDate} onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })} className="h-10 rounded-lg" />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-xs">End Date (Opt)</Label>
+                                    <Label className="text-xs">{t('manage_assigned_school.end_date_opt')}</Label>
                                     <Input type="date" value={editForm.endDate} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} className="h-10 rounded-lg" />
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Start Time</Label>
+                                    <Label className="text-xs">{t('manage_assigned_school.start_time')}</Label>
                                     <Input type="time" value={editForm.timeFrom} onChange={(e) => setEditForm({ ...editForm, timeFrom: e.target.value })} className="h-10 rounded-lg" />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-xs">End Time</Label>
+                                    <Label className="text-xs">{t('manage_assigned_school.end_time')}</Label>
                                     <Input type="time" value={editForm.timeTo} onChange={(e) => setEditForm({ ...editForm, timeTo: e.target.value })} className="h-10 rounded-lg" />
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-xs">Allowed Days</Label>
+                                <Label className="text-xs">{t('manage_assigned_school.allowed_days')}</Label>
                                 <div className="flex flex-wrap gap-2">
                                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
                                         <button key={day} type="button" onClick={() => toggleEditDay(day)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border ${editForm.days?.includes(day) ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border hover:bg-muted'}`}>
-                                            {day}
+                                            {t(`manage_assigned_school.days_short.${day}`)}
                                         </button>
                                     ))}
                                 </div>
@@ -220,18 +217,18 @@ const ManageAssignedSchoolModal = ({ isOpen, onClose, assignment, employeeId, on
                     {!isEditing ? (
                         <>
                             <Button variant="outline" className="w-full sm:w-auto h-11 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setDeleteModal({ isOpen: true })}>
-                                <Trash2 className="w-4 h-4 mr-2" /> Revoke Assignment
+                                <Trash2 className="w-4 h-4 mr-2" /> {t('manage_assigned_school.revoke_btn')}
                             </Button>
                             <Button className="w-full sm:w-auto h-11 px-8 font-bold shadow-sm" onClick={() => setIsEditing(true)}>
-                                <Edit2 className="w-4 h-4 mr-2" /> Edit Details
+                                <Edit2 className="w-4 h-4 mr-2" /> {t('manage_assigned_school.edit_btn')}
                             </Button>
                         </>
                     ) : (
                         <>
-                            <Button variant="ghost" disabled={isLoading} className="w-full sm:w-auto h-11" onClick={() => setIsEditing(false)}>Cancel Edit</Button>
+                            <Button variant="ghost" disabled={isLoading} className="w-full sm:w-auto h-11" onClick={() => setIsEditing(false)}>{t('manage_assigned_school.cancel_edit')}</Button>
                             <Button className="w-full sm:w-auto h-11 px-8 font-bold shadow-glow" disabled={isLoading} onClick={handleSaveEdit}>
                                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                                Save Changes
+                                {t('manage_assigned_school.save_changes')}
                             </Button>
                         </>
                     )}
@@ -245,14 +242,18 @@ const ManageAssignedSchoolModal = ({ isOpen, onClose, assignment, employeeId, on
                         <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
                             <AlertTriangle className="w-8 h-8 text-destructive" />
                         </div>
-                        <h3 className="font-bold text-xl mb-2">Revoke Assignment?</h3>
+                        <h3 className="font-bold text-xl mb-2">{t('manage_assigned_school.delete_title')}</h3>
                         <p className="text-muted-foreground text-sm mb-6">
-                            Are you sure you want to remove this employee from <strong>{schoolName}</strong>? This will notify them immediately.
+                            <Trans
+                                i18nKey="manage_assigned_school.delete_desc"
+                                values={{ name: schoolName }}
+                                components={[<span key="0" />, <strong key="1" />]}
+                            />
                         </p>
                         <div className="flex gap-3">
-                            <Button variant="outline" disabled={isLoading} className="flex-1 h-11 rounded-xl" onClick={() => setDeleteModal({ isOpen: false })}>Cancel</Button>
+                            <Button variant="outline" disabled={isLoading} className="flex-1 h-11 rounded-xl" onClick={() => setDeleteModal({ isOpen: false })}>{t('manage_assigned_school.cancel')}</Button>
                             <Button variant="destructive" disabled={isLoading} className="flex-1 h-11 rounded-xl font-bold" onClick={confirmDelete}>
-                                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Yes, Revoke"}
+                                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('manage_assigned_school.confirm_revoke')}
                             </Button>
                         </div>
                     </div>

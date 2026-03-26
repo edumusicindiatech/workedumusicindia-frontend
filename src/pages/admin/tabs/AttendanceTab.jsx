@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { CalendarDays, ChevronRight, Clock, School } from "lucide-react";
 import AdminAttendanceDetailsModal from "../../../modals/admin/AdminAttendanceDetailsModal";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 const AttendanceTab = ({ attendanceData = [], employeeName = "Employee", assignments = [] }) => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const [selectedMonthData, setSelectedMonthData] = useState(null);
 
     return (
@@ -10,10 +12,10 @@ const AttendanceTab = ({ attendanceData = [], employeeName = "Employee", assignm
 
             <div className="mb-6">
                 <h3 className="text-xl font-bold text-foreground">
-                    {employeeName}'s Monthly Reports
+                    {t('attendance_tab.title', { name: employeeName })}
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                    Select a month to view visited schools.
+                    {t('attendance_tab.subtitle')}
                 </p>
             </div>
 
@@ -31,33 +33,33 @@ const AttendanceTab = ({ attendanceData = [], employeeName = "Employee", assignm
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="font-bold text-base text-foreground">{data.month}</span>
-                                    <span className="text-xs font-medium text-muted-foreground mt-0.5">Tap to view schools</span>
+                                    <span className="text-xs font-medium text-muted-foreground mt-0.5">{t('attendance_tab.tap_to_view')}</span>
                                 </div>
                             </div>
                             <ChevronRight className="w-5 h-5 text-muted-foreground/50 group-hover:text-foreground transition-colors" />
                         </div>
                     ))
                 ) : (
-                    /* --- NEW PROACTIVE EMPTY STATE --- */
+                    /* --- EMPTY STATE --- */
                     <div className="col-span-1 md:col-span-2 flex flex-col items-center justify-center p-8 sm:p-12 text-center border border-dashed border-border rounded-xl bg-muted/10">
                         <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4">
                             <CalendarDays className="w-8 h-8 opacity-80" />
                         </div>
 
                         <h4 className="text-lg font-bold text-foreground mb-2">
-                            No Attendance History Yet
+                            {t('attendance_tab.empty_title')}
                         </h4>
 
                         {assignments && assignments.length > 0 ? (
                             <div className="max-w-lg w-full mt-2">
                                 <p className="text-sm text-muted-foreground mb-6">
-                                    {employeeName} hasn't completed any shifts yet. Once they clock in, their reports will appear here. In the meantime, here is their expected schedule:
+                                    {t('attendance_tab.empty_desc', { name: employeeName })}
                                 </p>
 
                                 <div className="bg-background border border-border rounded-xl overflow-hidden text-left shadow-sm">
                                     <div className="bg-muted/30 px-4 py-3 border-b border-border flex items-center gap-2">
                                         <Clock className="w-4 h-4 text-primary" />
-                                        <span className="text-sm font-bold text-foreground">Upcoming Assignments</span>
+                                        <span className="text-sm font-bold text-foreground">{t('attendance_tab.upcoming_assignments')}</span>
                                     </div>
                                     <div className="divide-y divide-border">
                                         {assignments.map((assignment) => (
@@ -65,7 +67,7 @@ const AttendanceTab = ({ attendanceData = [], employeeName = "Employee", assignm
                                                 <div>
                                                     <p className="font-semibold text-foreground flex items-center gap-1.5">
                                                         <School className="w-3.5 h-3.5 text-muted-foreground" />
-                                                        {assignment.school?.schoolName || "Unknown School"}
+                                                        {assignment.school?.schoolName || t('attendance_tab.unknown_school')}
                                                     </p>
                                                     <p className="text-xs text-muted-foreground mt-1 ml-5">
                                                         {assignment.category}
@@ -88,7 +90,7 @@ const AttendanceTab = ({ attendanceData = [], employeeName = "Employee", assignm
                             </div>
                         ) : (
                             <p className="text-sm text-muted-foreground max-w-sm mt-1">
-                                This employee doesn't have any attendance records or active school assignments yet.
+                                {t('attendance_tab.totally_empty_msg')}
                             </p>
                         )}
                     </div>

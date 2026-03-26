@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { useDispatch, useSelector } from "react-redux";
 import { setCredentials, logout } from "./store/slices/authSlice";
 import api, { setAxiosToken } from "./api/axios";
+import { useTranslation } from "react-i18next"; // <-- 1. Import useTranslation
 
 // Route Guards
 import ProtectedRoute from "./components/routing/ProtectedRoute";
@@ -39,7 +40,9 @@ import { Toaster } from "react-hot-toast";
 
 function App() {
   const dispatch = useDispatch();
-  const { isHydrating } = useSelector((state) => state.auth);
+  // 👇 2. Extract user along with isHydrating
+  const { user, isHydrating } = useSelector((state) => state.auth);
+  const { i18n } = useTranslation(); // <-- 3. Initialize i18n hook
 
   // 1. Grab the current theme from Redux (fallback to 'light' just in case)
   const currentTheme = useSelector((state) => state.theme?.mode || 'light');
@@ -80,6 +83,19 @@ function App() {
 
     hydrateApp();
   }, [dispatch]);
+
+  // 👇 4. --- LANGUAGE SYNC ---
+  useEffect(() => {
+    if (user?.preferences?.systemLanguage) {
+      // Map the database string to the i18n code
+      const langCode = user.preferences.systemLanguage === "हिन्दी (Hindi)" ? "hi" : "en";
+
+      // Switch language if it doesn't match the current one
+      if (i18n.language !== langCode) {
+        i18n.changeLanguage(langCode);
+      }
+    }
+  }, [user?.preferences?.systemLanguage, i18n]);
 
   // --- BLANK SCREEN DURING HYDRATION ---
   if (isHydrating) {

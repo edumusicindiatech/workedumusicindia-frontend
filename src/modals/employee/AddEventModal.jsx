@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { PartyPopper, Calendar, Clock, FileText, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 const AddEventModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCategory, actionLoading }) => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [timeFrom, setTimeFrom] = useState("");
@@ -48,7 +50,7 @@ const AddEventModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCategory
                             <PartyPopper className="w-5 h-5 text-blue-500" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold text-foreground">Log New Event</h2>
+                            <h2 className="text-lg font-bold text-foreground">{t('add_event_modal.title')}</h2>
                             <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-62.5">
                                 {targetSchool} • {targetCategory}
                             </p>
@@ -65,7 +67,7 @@ const AddEventModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCategory
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-muted-foreground" /> From Date
+                                <Calendar className="w-4 h-4 text-muted-foreground" /> {t('add_event_modal.from_date')}
                             </label>
                             <input
                                 type="date"
@@ -76,7 +78,7 @@ const AddEventModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCategory
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-muted-foreground" /> To Date <span className="text-[10px] font-normal opacity-70">(Optional)</span>
+                                <Calendar className="w-4 h-4 text-muted-foreground" /> {t('add_event_modal.to_date')} <span className="text-[10px] font-normal opacity-70">{t('add_event_modal.optional')}</span>
                             </label>
                             <input
                                 type="date"
@@ -91,7 +93,7 @@ const AddEventModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCategory
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-muted-foreground" /> Start Time
+                                <Clock className="w-4 h-4 text-muted-foreground" /> {t('add_event_modal.start_time')}
                             </label>
                             <input
                                 type="time"
@@ -102,7 +104,7 @@ const AddEventModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCategory
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-muted-foreground" /> End Time
+                                <Clock className="w-4 h-4 text-muted-foreground" /> {t('add_event_modal.end_time')}
                             </label>
                             <input
                                 type="time"
@@ -115,12 +117,12 @@ const AddEventModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCategory
 
                     <div className="space-y-2">
                         <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-muted-foreground" /> Event Description
+                            <FileText className="w-4 h-4 text-muted-foreground" /> {t('add_event_modal.description_label')}
                         </label>
                         <textarea
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Describe the upcoming event, goals, or requirements..."
+                            placeholder={t('add_event_modal.description_placeholder')}
                             className="w-full min-h-25 rounded-xl border border-input bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow"
                         />
                     </div>
@@ -129,14 +131,14 @@ const AddEventModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCategory
                 {/* Footer */}
                 <div className="p-6 border-t border-border bg-muted/10 shrink-0 flex gap-3">
                     <Button variant="ghost" className="flex-1 h-11 rounded-xl font-semibold" onClick={onClose}>
-                        Cancel
+                        {t('add_event_modal.cancel')}
                     </Button>
                     <Button
                         onClick={handleSubmit}
                         disabled={!isFormValid || actionLoading}
                         className="flex-1 h-11 rounded-xl font-bold bg-blue-500 hover:bg-blue-600 text-white shadow-glow"
                     >
-                        {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Save Event"}
+                        {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('add_event_modal.save_event')}
                     </Button>
                 </div>
             </div>

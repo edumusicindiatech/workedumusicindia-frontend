@@ -1,29 +1,31 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { Mail, Phone, ShieldCheck, MapPin, School, Edit2, User } from "lucide-react";
-import toast, { Toaster } from "react-hot-toast"; // <-- Swapped to react-hot-toast
+import toast, { Toaster } from "react-hot-toast";
 import api from "../../api/axios";
 import ChangePasswordModal from "../../modals/employee/ChangePasswordModal";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 // --- 1. SOCKET SETUP OUTSIDE COMPONENT ---
 import { io } from "socket.io-client";
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 const MyProfile = () => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const { user } = useSelector((state) => state.auth);
 
     // Modal & Action States
-    const [loading, setLoading] = useState(true); // <-- Added for Shimmer State
+    const [loading, setLoading] = useState(true);
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // --- 2. LOCAL DATA STATES ---
     const [localUser, setLocalUser] = useState(user || {});
-    const [allottedLocation, setAllottedLocation] = useState(user?.zone || "Unassigned Zone");
+    const [allottedLocation, setAllottedLocation] = useState(user?.zone || t('my_profile.unassigned_zone'));
     const [assignedSchools, setAssignedSchools] = useState(
         user?.assignments?.length > 0
-            ? [...new Set(user.assignments.map(a => a.school?.schoolName || "Unknown School"))]
-            : ["No assigned schools"]
+            ? [...new Set(user.assignments.map(a => a.school?.schoolName || t('my_profile.unknown_school')))]
+            : [t('my_profile.no_schools')]
     );
 
     // --- 3. FETCH FRESH DATA (Profile + Assignments) ---
@@ -35,21 +37,21 @@ const MyProfile = () => {
             if (profileRes && profileRes.data.success) {
                 const freshUser = profileRes.data.user;
                 setLocalUser(freshUser);
-                setAllottedLocation(freshUser.zone || "Unassigned Zone");
+                setAllottedLocation(freshUser.zone || t('my_profile.unassigned_zone'));
             }
 
             // B. Fetch fresh school assignments
             const schoolsRes = await api.get('/employee/assigned-schools');
             if (schoolsRes.data.success) {
                 const schoolNames = [...new Set(schoolsRes.data.data.map(s => s.name))];
-                setAssignedSchools(schoolNames.length > 0 ? schoolNames : ["No assigned schools"]);
+                setAssignedSchools(schoolNames.length > 0 ? schoolNames : [t('my_profile.no_schools')]);
             }
         } catch (error) {
             console.error("Failed to silently fetch updated profile:", error);
         } finally {
-            setLoading(false); // <-- Stop loading once data is fetched
+            setLoading(false);
         }
-    }, []);
+    }, [t]);
 
     // 👉 ALWAYS FETCH FRESH DATA ON PAGE LOAD 
     useEffect(() => {
@@ -65,7 +67,7 @@ const MyProfile = () => {
 
         const handleRealTimeUpdate = (data) => {
             console.log("Profile update received via socket!", data);
-            fetchFreshData(); // Silently update EVERYTHING on the page
+            fetchFreshData();
         };
 
         socket.on("new_notification", handleRealTimeUpdate);
@@ -80,15 +82,15 @@ const MyProfile = () => {
 
     const handlePasswordChange = async (newPassword) => {
         setIsSubmitting(true);
-        const toastId = toast.loading("Updating password...");
+        const toastId = toast.loading(t('my_profile.toasts.updating'));
 
         try {
             await api.put('/employee/profile/password', { newPassword });
             setIsPasswordModalOpen(false);
-            toast.success("Password updated successfully!", { id: toastId });
+            toast.success(t('my_profile.toasts.success'), { id: toastId });
         } catch (error) {
             console.error("Password change error:", error);
-            toast.error(error.response?.data?.message || "Failed to update password.", { id: toastId });
+            toast.error(error.response?.data?.message || t('my_profile.toasts.error'), { id: toastId });
         } finally {
             setIsSubmitting(false);
         }
@@ -108,7 +110,6 @@ const MyProfile = () => {
 
                 {/* Card Shimmer */}
                 <div className="bg-card rounded-3xl shadow-sm border border-border/60 p-6 md:p-8 relative overflow-hidden">
-                    {/* Top Section Shimmer */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 mb-8 pb-8 border-b border-border/50">
                         <div className="flex items-center gap-4 w-full">
                             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-muted animate-pulse shrink-0" />
@@ -120,9 +121,7 @@ const MyProfile = () => {
                         <div className="h-11 w-full sm:w-40 bg-muted rounded-xl animate-pulse shrink-0" />
                     </div>
 
-                    {/* Details Grid Shimmer */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-                        {/* Col 1 */}
                         <div className="space-y-5">
                             <div className="h-4 w-28 bg-muted/80 rounded animate-pulse mb-2" />
                             {[1, 2, 3].map(i => (
@@ -135,7 +134,6 @@ const MyProfile = () => {
                                 </div>
                             ))}
                         </div>
-                        {/* Col 2 */}
                         <div className="space-y-5">
                             <div className="h-4 w-36 bg-muted/80 rounded animate-pulse mb-2" />
                             {[1, 2].map(i => (
@@ -144,7 +142,6 @@ const MyProfile = () => {
                                     <div className="space-y-2 flex-1 mt-1">
                                         <div className="h-3 w-28 bg-muted/60 rounded animate-pulse" />
                                         <div className="h-4 w-full bg-muted rounded animate-pulse" />
-                                        {i === 2 && <div className="h-4 w-2/3 bg-muted rounded animate-pulse mt-1" />}
                                     </div>
                                 </div>
                             ))}
@@ -163,10 +160,10 @@ const MyProfile = () => {
             <div>
                 <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground flex items-center gap-3">
                     <User className="w-7 h-7 text-primary hidden sm:block" />
-                    My Profile
+                    {t('my_profile.title')}
                 </h1>
                 <p className="text-muted-foreground mt-1.5 sm:ml-10 text-sm sm:text-base">
-                    Manage your personal information and account security.
+                    {t('my_profile.subtitle')}
                 </p>
             </div>
 
@@ -187,7 +184,7 @@ const MyProfile = () => {
                                 {localUser.name}
                             </h2>
                             <p className="text-xs sm:text-sm font-bold text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full w-fit mt-2 uppercase tracking-wide">
-                                {localUser.designation || 'Employee'}
+                                {localUser.designation || t('my_profile.employee_fallback')}
                             </p>
                         </div>
                     </div>
@@ -197,7 +194,7 @@ const MyProfile = () => {
                         className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-background hover:bg-primary/5 text-foreground hover:text-primary border border-border hover:border-primary/30 rounded-xl transition-all font-bold text-sm shadow-sm active:scale-95 shrink-0"
                     >
                         <Edit2 className="w-4 h-4" />
-                        <span>Edit Password</span>
+                        <span>{t('my_profile.btn_edit_password')}</span>
                     </button>
                 </div>
 
@@ -207,7 +204,7 @@ const MyProfile = () => {
                     {/* Column 1: Contact Info */}
                     <div className="space-y-5">
                         <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                            <ShieldCheck className="w-4 h-4 text-primary/70" /> Contact Information
+                            <ShieldCheck className="w-4 h-4 text-primary/70" /> {t('my_profile.contact_info')}
                         </h3>
 
                         <div className="space-y-3">
@@ -217,7 +214,7 @@ const MyProfile = () => {
                                     <ShieldCheck className="w-5 h-5 text-primary/80" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-0.5">Employee ID</p>
+                                    <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-0.5">{t('my_profile.label_id')}</p>
                                     <p className="text-sm sm:text-base font-bold text-foreground truncate">{localUser.employeeId}</p>
                                 </div>
                             </div>
@@ -228,7 +225,7 @@ const MyProfile = () => {
                                     <Mail className="w-5 h-5 text-blue-500/80" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-0.5">Email Address</p>
+                                    <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-0.5">{t('my_profile.label_email')}</p>
                                     <p className="text-sm sm:text-base font-bold text-foreground truncate">{localUser.email}</p>
                                 </div>
                             </div>
@@ -239,8 +236,8 @@ const MyProfile = () => {
                                     <Phone className="w-5 h-5 text-emerald-500/80" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-0.5">Phone Number</p>
-                                    <p className="text-sm sm:text-base font-bold text-foreground truncate">{localUser.mobile || "Not Provided"}</p>
+                                    <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-0.5">{t('my_profile.label_phone')}</p>
+                                    <p className="text-sm sm:text-base font-bold text-foreground truncate">{localUser.mobile || t('my_profile.not_provided')}</p>
                                 </div>
                             </div>
                         </div>
@@ -249,7 +246,7 @@ const MyProfile = () => {
                     {/* Column 2: Assignment Details */}
                     <div className="space-y-5">
                         <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-primary/70" /> Assignment Details
+                            <MapPin className="w-4 h-4 text-primary/70" /> {t('my_profile.assignment_details')}
                         </h3>
 
                         <div className="space-y-3 h-full flex flex-col">
@@ -259,7 +256,7 @@ const MyProfile = () => {
                                     <MapPin className="w-5 h-5 text-amber-500/80" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-0.5">Allotted Zone</p>
+                                    <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-0.5">{t('my_profile.label_zone')}</p>
                                     <p className="text-sm sm:text-base font-bold text-foreground truncate">{allottedLocation}</p>
                                 </div>
                             </div>
@@ -270,7 +267,7 @@ const MyProfile = () => {
                                     <School className="w-5 h-5 text-indigo-500/80" />
                                 </div>
                                 <div className="min-w-0 flex-1 w-full">
-                                    <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-2.5">Allotted Locations</p>
+                                    <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-2.5">{t('my_profile.label_locations')}</p>
                                     <div className="flex flex-wrap gap-2">
                                         {assignedSchools.map((schoolName, index) => (
                                             <span

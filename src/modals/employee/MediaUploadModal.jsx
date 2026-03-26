@@ -5,8 +5,10 @@ import {
     Tag, Calendar, FileText, ChevronDown, Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCategory, actionLoading }) => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const MAX_FILES = 5;
 
     // Wizard State
@@ -68,14 +70,13 @@ const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCateg
         let allowedFiles = incomingFiles;
 
         if (totalFilesCount > MAX_FILES) {
-            triggerError(`Limit exceeded. You can only upload up to ${MAX_FILES} files.`);
+            triggerError(t('media_upload.limit_error', { count: MAX_FILES }));
             const availableSlots = MAX_FILES - selectedFiles.length;
             allowedFiles = incomingFiles.slice(0, availableSlots);
         } else {
             setErrorMsg("");
         }
 
-        // Attach a preview URL for the thumbnail
         const filesWithPreviews = allowedFiles.map(file => Object.assign(file, {
             preview: URL.createObjectURL(file)
         }));
@@ -86,7 +87,7 @@ const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCateg
 
     const removeFile = (indexToRemove) => {
         const fileToRemove = selectedFiles[indexToRemove];
-        URL.revokeObjectURL(fileToRemove.preview); // Memory cleanup
+        URL.revokeObjectURL(fileToRemove.preview);
         setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
     };
 
@@ -123,7 +124,7 @@ const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCateg
                         </div>
                         <div>
                             <h2 className="text-lg font-bold text-foreground">
-                                {step === 1 ? "Upload Media" : "Media Details"}
+                                {step === 1 ? t('media_upload.title_step1') : t('media_upload.title_step2')}
                             </h2>
                             <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-50 sm:max-w-62.5">
                                 {targetSchool} • {targetCategory}
@@ -146,7 +147,6 @@ const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCateg
                             </div>
                         )}
 
-                        {/* Upload Drop Zone */}
                         {selectedFiles.length < MAX_FILES && (
                             <div
                                 onClick={() => fileInputRef.current?.click()}
@@ -163,24 +163,24 @@ const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCateg
                                 <div className="w-12 h-12 rounded-full bg-background text-primary flex items-center justify-center mx-auto mb-3 shadow-sm group-hover:scale-110 transition-transform duration-300">
                                     <Upload className="w-5 h-5" />
                                 </div>
-                                <h3 className="text-sm font-bold text-foreground mb-1">Click to browse files</h3>
+                                <h3 className="text-sm font-bold text-foreground mb-1">{t('media_upload.browse_files')}</h3>
                                 <p className="text-xs text-muted-foreground">
-                                    Upload up to {MAX_FILES - selectedFiles.length} more images or videos
+                                    {t('media_upload.upload_help', { count: MAX_FILES - selectedFiles.length })}
                                 </p>
                             </div>
                         )}
 
-                        {/* File Review Grid */}
                         {selectedFiles.length > 0 && (
                             <div className="space-y-3 pt-2">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-sm font-bold">Selected Files ({selectedFiles.length}/{MAX_FILES})</h3>
+                                    <h3 className="text-sm font-bold">
+                                        {t('media_upload.selected_files', { current: selectedFiles.length, max: MAX_FILES })}
+                                    </h3>
                                 </div>
                                 <div className="grid grid-cols-1 gap-3">
                                     {selectedFiles.map((file, index) => (
                                         <div key={index} className="bg-muted/30 border border-border/50 rounded-xl p-2.5 flex items-center justify-between gap-3">
                                             <div className="flex items-center gap-3 overflow-hidden flex-1">
-                                                {/* THUMBNAIL */}
                                                 <div className="w-12 h-12 rounded-lg bg-background border border-border overflow-hidden shrink-0 flex items-center justify-center relative">
                                                     {file.type.startsWith('video/') ? (
                                                         <>
@@ -193,7 +193,6 @@ const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCateg
                                                         <img src={file.preview} alt="preview" className="w-full h-full object-cover" />
                                                     )}
                                                 </div>
-                                                {/* FILE INFO */}
                                                 <div className="truncate flex-1">
                                                     <p className="font-semibold text-xs text-foreground truncate">{file.name}</p>
                                                     <p className="text-[10px] font-medium text-muted-foreground mt-0.5">
@@ -219,10 +218,9 @@ const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCateg
                 {step === 2 && (
                     <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar animate-in slide-in-from-right-4 fade-in duration-300">
 
-                        {/* CUSTOM SELECT FOR CATEGORY */}
                         <div className="space-y-2" ref={dropdownRef}>
                             <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                                <Tag className="w-4 h-4 text-muted-foreground" /> Media Type
+                                <Tag className="w-4 h-4 text-muted-foreground" /> {t('media_upload.media_type')}
                             </label>
                             <div className="relative">
                                 <button
@@ -231,7 +229,7 @@ const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCateg
                                     className="w-full h-12 rounded-xl border border-input bg-background px-4 text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all hover:bg-muted/30"
                                 >
                                     <span className="text-foreground font-medium">
-                                        {uploadCategory === "Regular" ? "Regular Visit" : "Special Event"}
+                                        {uploadCategory === "Regular" ? t('media_upload.type_regular') : t('media_upload.type_event')}
                                     </span>
                                     <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
                                 </button>
@@ -248,11 +246,11 @@ const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCateg
                                                         setIsDropdownOpen(false);
                                                     }}
                                                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${uploadCategory === option
-                                                            ? "bg-primary/10 text-primary font-bold"
-                                                            : "text-foreground hover:bg-muted font-medium"
+                                                        ? "bg-primary/10 text-primary font-bold"
+                                                        : "text-foreground hover:bg-muted font-medium"
                                                         }`}
                                                 >
-                                                    {option === "Regular" ? "Regular Visit" : "Special Event"}
+                                                    {option === "Regular" ? t('media_upload.type_regular') : t('media_upload.type_event')}
                                                     {uploadCategory === option && <Check className="w-4 h-4" />}
                                                 </button>
                                             ))}
@@ -262,12 +260,11 @@ const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCateg
                             </div>
                         </div>
 
-                        {/* Conditional Event Fields */}
                         {uploadCategory === "Event" && (
                             <div className="space-y-4 pt-4 border-t border-border animate-in fade-in slide-in-from-top-2">
                                 <div className="space-y-2">
                                     <label className="text-sm font-semibold text-primary flex items-center gap-2">
-                                        <Calendar className="w-4 h-4" /> Date of Event
+                                        <Calendar className="w-4 h-4" /> {t('media_upload.event_date')}
                                     </label>
                                     <input
                                         type="date"
@@ -279,12 +276,12 @@ const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCateg
 
                                 <div className="space-y-2">
                                     <label className="text-sm font-semibold text-primary flex items-center gap-2">
-                                        <FileText className="w-4 h-4" /> Event Context
+                                        <FileText className="w-4 h-4" /> {t('media_upload.event_context')}
                                     </label>
                                     <textarea
                                         value={eventDescription}
                                         onChange={(e) => setEventDescription(e.target.value)}
-                                        placeholder="Briefly describe what this media is showing..."
+                                        placeholder={t('media_upload.context_placeholder')}
                                         className="w-full min-h-25 rounded-xl border border-input bg-background p-4 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow custom-scrollbar"
                                     />
                                 </div>
@@ -296,7 +293,7 @@ const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCateg
                 {/* Footer */}
                 <div className="p-6 border-t border-border bg-muted/10 shrink-0 flex gap-3">
                     <Button variant="ghost" className="flex-1 h-11 rounded-xl font-semibold" onClick={onClose}>
-                        Cancel
+                        {t('media_upload.btn_cancel')}
                     </Button>
 
                     {step === 1 ? (
@@ -305,7 +302,7 @@ const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCateg
                             disabled={selectedFiles.length === 0}
                             className="flex-1 h-11 rounded-xl font-bold shadow-sm"
                         >
-                            Continue <ChevronRight className="w-4 h-4 ml-1" />
+                            {t('media_upload.btn_continue')} <ChevronRight className="w-4 h-4 ml-1" />
                         </Button>
                     ) : (
                         <Button
@@ -314,7 +311,7 @@ const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCateg
                             className="flex-1 h-11 rounded-xl font-bold shadow-glow"
                         >
                             {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                                <><Send className="w-4 h-4 mr-2" /> Upload {selectedFiles.length} File{selectedFiles.length !== 1 ? 's' : ''}</>
+                                <><Send className="w-4 h-4 mr-2" /> {selectedFiles.length === 1 ? t('media_upload.btn_upload_one', { count: 1 }) : t('media_upload.btn_upload_other', { count: selectedFiles.length })}</>
                             )}
                         </Button>
                     )}
@@ -324,4 +321,4 @@ const MediaUploadModal = ({ isOpen, onClose, onSubmit, targetSchool, targetCateg
     );
 };
 
-export default MediaUploadModal;
+export default MediaUploadModal;    

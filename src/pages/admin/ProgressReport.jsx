@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 const ProgressReport = () => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const [teachers, setTeachers] = useState([]);
     const [records, setRecords] = useState([]);
     const [isLoadingTeachers, setIsLoadingTeachers] = useState(true);
@@ -28,13 +30,13 @@ const ProgressReport = () => {
                 const res = await api.get('/admin/progress/employees');
                 if (res.data.success) setTeachers(res.data.data);
             } catch (error) {
-                toast.error("Failed to load progress rankings.");
+                toast.error(t('progress_report.toasts.load_error'));
             } finally {
                 setIsLoadingTeachers(false);
             }
         };
         fetchTeachers();
-    }, []);
+    }, [t]);
 
     const handleSelectTeacher = async (teacher) => {
         setSelectedTeacher(teacher);
@@ -45,7 +47,7 @@ const ProgressReport = () => {
                 setRecords(res.data.data);
             }
         } catch (error) {
-            toast.error("Failed to fetch teacher records.");
+            toast.error(t('progress_report.toasts.fetch_records_error'));
             setSelectedTeacher(null);
         } finally {
             setIsLoadingRecords(false);
@@ -153,60 +155,34 @@ const ProgressReport = () => {
 
     const handleExportExcel = async () => {
         if (!selectedMonth || !selectedTeacher) return;
-        const toastId = toast.loading("Preparing Excel report...");
+        const toastId = toast.loading(t('progress_report.toasts.export_preparing'));
 
         try {
             const response = await api.get(`/admin/progress/${selectedTeacher._id}/export/${selectedMonth}`, {
                 responseType: 'blob'
             });
-
-            // Handle custom Axios setups where response.data might be extracted automatically
             const fileData = response.data || response;
 
-            // Check if the backend sent a JSON error message instead of a file
             if (fileData.type === 'application/json') {
                 const text = await fileData.text();
                 const json = JSON.parse(text);
-                throw new Error(json.message || "Failed to generate report.");
+                throw new Error(json.message || t('progress_report.toasts.export_gen_error'));
             }
 
-            // Create the Blob
-            const blob = new Blob([fileData], {
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            });
-
-            // Create a temporary URL
+            const blob = new Blob([fileData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = window.URL.createObjectURL(blob);
-
-            // THE FIX: Create an ANCHOR tag ('a'), not a 'link' tag
             const anchor = document.createElement('a');
             anchor.href = url;
-            anchor.style.display = 'none';
-
             const safeName = selectedTeacher.name.replace(/[^a-z0-9]/gi, '_');
             anchor.setAttribute('download', `${safeName}_${selectedMonth}_Report.xlsx`);
-
-            // Append, Click, and Cleanup
             document.body.appendChild(anchor);
             anchor.click();
             document.body.removeChild(anchor);
             window.URL.revokeObjectURL(url);
 
-            toast.success("Excel report downloaded!", { id: toastId });
+            toast.success(t('progress_report.toasts.export_success'), { id: toastId });
         } catch (err) {
-            console.error("Export error:", err);
-
-            if (err.response && err.response.data instanceof Blob) {
-                const text = await err.response.data.text();
-                try {
-                    const json = JSON.parse(text);
-                    toast.error(json.message || "Could not export file.", { id: toastId });
-                } catch {
-                    toast.error("Could not export file.", { id: toastId });
-                }
-            } else {
-                toast.error(err.message || "Could not export file.", { id: toastId });
-            }
+            toast.error(err.message || t('progress_report.toasts.export_fail'), { id: toastId });
         }
     };
 
@@ -221,8 +197,8 @@ const ProgressReport = () => {
                     <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
                 <div className="min-w-0">
-                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">Progress Reports</h1>
-                    <p className="text-muted-foreground text-xs sm:text-sm truncate">Monthly WorkEduMusic activity metrics.</p>
+                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{t('progress_report.title')}</h1>
+                    <p className="text-muted-foreground text-xs sm:text-sm truncate">{t('progress_report.subtitle')}</p>
                 </div>
             </div>
 
@@ -233,7 +209,10 @@ const ProgressReport = () => {
                 >
                     <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform duration-300 group-hover:-translate-x-1" />
                     <span className="truncate">
-                        {selectedDay ? "Back to Overview" : selectedCategory ? `Back to ${selectedSchool.schoolName}` : selectedSchool ? `Back to Months` : "Back to Rankings"}
+                        {selectedDay ? t('progress_report.nav.back_overview')
+                            : selectedCategory ? t('progress_report.nav.back_school', { name: selectedSchool.schoolName })
+                                : selectedSchool ? t('progress_report.nav.back_months')
+                                    : t('progress_report.nav.back_rankings')}
                     </span>
                 </button>
             )}
@@ -241,22 +220,23 @@ const ProgressReport = () => {
             <div className="bg-card rounded-2xl sm:rounded-3xl border border-border shadow-lg shadow-slate-200/40 dark:shadow-none overflow-hidden flex flex-col min-h-100 transition-all duration-300">
                 <div className="p-4 sm:p-5 border-b border-border bg-muted/30 flex items-center justify-between gap-3 sm:gap-4">
                     <h3 className="font-bold text-sm sm:text-base text-foreground truncate">
-                        {!selectedTeacher ? "WorkEduMusic Rankings" : !selectedMonth ? `${selectedTeacher.name}'s Reports` : formatMonth(selectedMonth)}
+                        {!selectedTeacher ? t('progress_report.headers.rankings')
+                            : !selectedMonth ? t('progress_report.headers.teacher_reports', { name: selectedTeacher.name })
+                                : formatMonth(selectedMonth)}
                     </h3>
                     {selectedMonth && !selectedSchool && (
                         <Button onClick={handleExportExcel} variant="outline" size="sm" className="gap-1.5 border-primary/20 text-primary font-bold hover:bg-primary hover:text-primary-foreground h-8 sm:h-9 px-3 shrink-0">
-                            <Download className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Export Excel</span>
+                            <Download className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t('progress_report.btn.export')}</span>
                         </Button>
                     )}
                 </div>
 
                 <div className="p-3 sm:p-4 md:p-6 flex-1 bg-background/50 relative overflow-hidden">
-                    {/* LEVEL 1: LIST */}
                     {!selectedTeacher && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="relative mb-4 sm:mb-6">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                <Input placeholder="Search teacher..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 h-11 bg-card border-border/60 focus-visible:ring-primary/30 rounded-xl shadow-sm text-sm" />
+                                <Input placeholder={t('progress_report.search_placeholder')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 h-11 bg-card border-border/60 focus-visible:ring-primary/30 rounded-xl shadow-sm text-sm" />
                             </div>
                             {isLoadingTeachers ? (
                                 <div className="space-y-3">
@@ -273,12 +253,12 @@ const ProgressReport = () => {
                                                 <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full gradient-primary flex items-center justify-center text-white font-bold">{t.name[0]}</div>
                                                 <div>
                                                     <p className="font-bold text-sm text-foreground group-hover:text-primary">{t.name}</p>
-                                                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">{t.zone || 'Unassigned'}</p>
+                                                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">{t.zone || t('progress_report.unassigned')}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center">
                                                 <span className="text-[10px] font-black text-emerald-500 uppercase flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 rounded-md">
-                                                    <Trophy className="w-3 h-3" /> {t.score}/100
+                                                    <Trophy className="w-3 h-3" /> {t('progress_report.score_out_of', { score: t.score })}
                                                 </span>
                                                 <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary ml-3" />
                                             </div>
@@ -289,7 +269,6 @@ const ProgressReport = () => {
                         </div>
                     )}
 
-                    {/* LEVEL 2: MONTHS */}
                     {selectedTeacher && !selectedMonth && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-right-8 duration-300">
                             {monthsAvailable.map(m => (
@@ -306,7 +285,6 @@ const ProgressReport = () => {
                         </div>
                     )}
 
-                    {/* LEVEL 3: SCHOOLS & GENERAL LEAVES */}
                     {selectedMonth && !selectedSchool && (
                         <div className="space-y-3 animate-in fade-in slide-in-from-right-8 duration-300">
                             {schoolsInMonth.schools.map(s => (
@@ -322,12 +300,12 @@ const ProgressReport = () => {
                             ))}
 
                             {schoolsInMonth.hasLeaves && (
-                                <div onClick={() => setSelectedSchool({ _id: 'LEAVES_GENERAL', schoolName: 'General Leaves' })} className="p-4 border border-cyan-500/30 rounded-xl flex items-center justify-between hover:bg-cyan-500/5 hover:border-cyan-500/60 hover:shadow-md cursor-pointer bg-cyan-500/5 transition-all group">
+                                <div onClick={() => setSelectedSchool({ _id: 'LEAVES_GENERAL', schoolName: t('progress_report.general_leaves') })} className="p-4 border border-cyan-500/30 rounded-xl flex items-center justify-between hover:bg-cyan-500/5 hover:border-cyan-500/60 hover:shadow-md cursor-pointer bg-cyan-500/5 transition-all group">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2.5 bg-cyan-500/10 rounded-xl text-cyan-600 group-hover:bg-cyan-500 group-hover:text-white transition-colors">
                                             <FolderOpen className="w-5 h-5" />
                                         </div>
-                                        <span className="font-bold text-foreground text-sm sm:text-base">General Leaves</span>
+                                        <span className="font-bold text-foreground text-sm sm:text-base">{t('progress_report.general_leaves')}</span>
                                     </div>
                                     <ChevronRight className="w-5 h-5 text-muted-foreground/40 group-hover:text-cyan-500" />
                                 </div>
@@ -335,7 +313,6 @@ const ProgressReport = () => {
                         </div>
                     )}
 
-                    {/* LEVEL 4: CATEGORIES OR "LEAVES FOLDER" */}
                     {selectedSchool && !selectedCategory && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-right-8 duration-300">
                             {selectedSchool._id !== 'LEAVES_GENERAL' ? (
@@ -345,7 +322,7 @@ const ProgressReport = () => {
                                             <Users className="w-8 h-8" />
                                         </div>
                                         <p className="font-bold text-base text-foreground mb-1">{c.name}</p>
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-muted px-2.5 py-1 rounded-full">{c.count} records</p>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-muted px-2.5 py-1 rounded-full">{t('progress_report.records_count', { count: c.count })}</p>
                                     </div>
                                 ))
                             ) : (
@@ -353,57 +330,56 @@ const ProgressReport = () => {
                                     <div className="p-3 rounded-2xl mb-4 transition-colors bg-cyan-500/20 text-cyan-600 group-hover:bg-cyan-500 group-hover:text-white">
                                         <CalendarOff className="w-8 h-8" />
                                     </div>
-                                    <p className="font-bold text-base text-foreground mb-1">Approved Leaves</p>
+                                    <p className="font-bold text-base text-foreground mb-1">{t('progress_report.approved_leaves')}</p>
                                     <p className="text-[10px] font-bold text-cyan-700 uppercase tracking-widest bg-cyan-500/20 px-2.5 py-1 rounded-full">
-                                        {leavesData.length} {leavesData.length === 1 ? 'Request' : 'Requests'}
+                                        {t('progress_report.request_count', { count: leavesData.length })}
                                     </p>
                                 </div>
                             )}
                         </div>
                     )}
 
-                    {/* LEVEL 5: OVERVIEW / DAILY / LEAVE RECORDS */}
                     {selectedCategory && !selectedDay && (
                         <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-right-8 duration-300">
                             {selectedCategory !== 'LEAVES_DETAIL' ? (
                                 <>
                                     <div>
-                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-4">Summary Metrics</h4>
+                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-4">{t('progress_report.metrics.title')}</h4>
                                         <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
                                             <div className="p-3 rounded-xl border flex flex-col items-center justify-center shadow-sm bg-emerald-500/5 border-emerald-500/30">
                                                 <CheckCircle2 className="w-4 h-4 mb-1.5 text-emerald-500" />
                                                 <span className="text-2xl font-black mb-1 text-emerald-500">{activeCategoryInfo.stats.present}</span>
-                                                <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-500 opacity-80">Present</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-500 opacity-80">{t('progress_report.metrics.present')}</span>
                                             </div>
                                             <div className="p-3 rounded-xl border flex flex-col items-center justify-center shadow-sm bg-amber-500/5 border-amber-500/30">
                                                 <AlertCircle className="w-4 h-4 mb-1.5 text-amber-500" />
                                                 <span className="text-2xl font-black mb-1 text-amber-500">{activeCategoryInfo.stats.late}</span>
-                                                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-500 opacity-80">Late</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-500 opacity-80">{t('progress_report.metrics.late')}</span>
                                             </div>
                                             <div className="p-3 rounded-xl border flex flex-col items-center justify-center shadow-sm bg-destructive/5 border-destructive/30">
                                                 <XCircle className="w-4 h-4 mb-1.5 text-destructive" />
                                                 <span className="text-2xl font-black mb-1 text-destructive">{activeCategoryInfo.stats.absent}</span>
-                                                <span className="text-[9px] font-bold uppercase tracking-wider text-destructive opacity-80">Absent</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-destructive opacity-80">{t('progress_report.metrics.absent')}</span>
                                             </div>
                                             <div className="p-3 rounded-xl border flex flex-col items-center justify-center shadow-sm bg-violet-500/5 border-violet-500/30">
                                                 <Star className="w-4 h-4 mb-1.5 text-violet-500" />
                                                 <span className="text-2xl font-black mb-1 text-violet-500">{activeCategoryInfo.stats.events}</span>
-                                                <span className="text-[9px] font-bold uppercase tracking-wider text-violet-500 opacity-80">Events</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-violet-500 opacity-80">{t('progress_report.metrics.events')}</span>
                                             </div>
                                             <div className="p-3 rounded-xl border flex flex-col items-center justify-center shadow-sm bg-slate-400/5 border-slate-400/30">
                                                 <Coffee className="w-4 h-4 mb-1.5 text-slate-400" />
                                                 <span className="text-2xl font-black mb-1 text-slate-400">{activeCategoryInfo.stats.holidays}</span>
-                                                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 opacity-80">Holidays</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 opacity-80">{t('progress_report.metrics.holidays')}</span>
                                             </div>
                                             <div className="p-3 rounded-xl border flex flex-col items-center justify-center shadow-sm bg-blue-500/5 border-blue-500/30">
                                                 <Film className="w-4 h-4 mb-1.5 text-blue-500" />
                                                 <span className="text-2xl font-black mb-1 text-blue-500">{activeCategoryInfo.stats.mediaSent}</span>
-                                                <span className="text-[9px] font-bold uppercase tracking-wider text-blue-500 opacity-80">Media</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-blue-500 opacity-80">{t('progress_report.metrics.media')}</span>
                                             </div>
                                         </div>
                                     </div>
                                     <div>
-                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-4">Daily Breakdown</h4>
+                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-4">{t('progress_report.breakdown.title')}</h4>
                                         <div className="space-y-3">
                                             {activeCategoryInfo.records.map(r => (
                                                 <div key={r._id} onClick={() => setSelectedDay(r)} className="p-4 border border-border/80 rounded-2xl flex items-center justify-between hover:bg-muted/30 hover:border-primary/30 hover:shadow-sm cursor-pointer bg-card transition-all group">
@@ -423,7 +399,7 @@ const ProgressReport = () => {
                             ) : (
                                 <div>
                                     <h4 className="text-[11px] font-black uppercase tracking-widest text-cyan-600 mb-4 flex items-center gap-2">
-                                        <CalendarOff className="w-4 h-4" /> Official Leave Records
+                                        <CalendarOff className="w-4 h-4" /> {t('progress_report.breakdown.leaves_title')}
                                     </h4>
                                     <div className="space-y-4">
                                         {leavesData.map(leave => (
@@ -439,18 +415,16 @@ const ProgressReport = () => {
                                                             </>
                                                         )}
                                                     </div>
-                                                    <span className="px-2.5 py-1 bg-cyan-500 text-white rounded font-bold uppercase text-[10px] tracking-wider">Approved Leave</span>
+                                                    <span className="px-2.5 py-1 bg-cyan-500 text-white rounded font-bold uppercase text-[10px] tracking-wider">{t('progress_report.breakdown.approved_tag')}</span>
                                                 </div>
-
                                                 <div className="space-y-3">
                                                     <div>
-                                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Reason Provided</p>
+                                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> {t('progress_report.breakdown.reason_provided')}</p>
                                                         <p className="text-sm italic text-muted-foreground bg-background p-3 rounded-xl border border-border mt-1">"{leave.reason}"</p>
                                                     </div>
-
                                                     {leave.adminRemarks && (
                                                         <div className="border-t border-dashed border-cyan-500/30 pt-3">
-                                                            <p className="text-[10px] font-bold text-cyan-700 uppercase tracking-widest mb-1">Admin Approval Note</p>
+                                                            <p className="text-[10px] font-bold text-cyan-700 uppercase tracking-widest mb-1">{t('progress_report.breakdown.admin_note')}</p>
                                                             <p className="text-xs text-cyan-800 font-medium">"{leave.adminRemarks}"</p>
                                                         </div>
                                                     )}
@@ -463,7 +437,6 @@ const ProgressReport = () => {
                         </div>
                     )}
 
-                    {/* LEVEL 6: DETAIL (Daily Reports) */}
                     {selectedDay && (
                         <div className="space-y-4 sm:space-y-6 max-w-2xl mx-auto animate-in fade-in slide-in-from-right-8 duration-300">
                             <div className="bg-card rounded-2xl p-6 sm:p-8 text-center border border-border/80 shadow-sm relative overflow-hidden group">
@@ -471,16 +444,16 @@ const ProgressReport = () => {
                                 <h2 className="text-xl sm:text-2xl font-bold mt-4 mb-5 text-foreground">{formatFullDate(selectedDay.date)}</h2>
                                 <div className="flex justify-center gap-4">
                                     <div className="text-xs font-bold text-emerald-600 bg-emerald-500/10 px-4 py-2 rounded-xl border border-emerald-500/20">
-                                        In: {formatTime(selectedDay.checkInTime) || '--:--'}
+                                        {t('progress_report.detail.in')}: {formatTime(selectedDay.checkInTime) || '--:--'}
                                     </div>
                                     <div className="text-xs font-bold text-rose-600 bg-rose-500/10 px-4 py-2 rounded-xl border border-rose-500/20">
-                                        Out: {formatTime(selectedDay.checkOutTime) || '--:--'}
+                                        {t('progress_report.detail.out')}: {formatTime(selectedDay.checkOutTime) || '--:--'}
                                     </div>
                                 </div>
                             </div>
                             {(selectedDay.teacherNote || selectedDay.lateReason) && (
                                 <div className="space-y-2">
-                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest"><FileText className="w-3.5 h-3.5 inline mr-1" /> Exception Note</p>
+                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest"><FileText className="w-3.5 h-3.5 inline mr-1" /> {t('progress_report.detail.exception_note')}</p>
                                     <div className="p-4 bg-muted/30 border border-border/80 rounded-2xl text-sm italic text-muted-foreground">"{selectedDay.teacherNote || selectedDay.lateReason}"</div>
                                 </div>
                             )}

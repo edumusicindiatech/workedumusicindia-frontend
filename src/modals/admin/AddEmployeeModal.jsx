@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next"; // <-- Added import
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,13 +10,13 @@ import toast from "react-hot-toast";
 import api from "../../api/axios";
 
 const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
+    const { t } = useTranslation(); // <-- Initialize translation hook
     const { user } = useSelector((state) => state.auth);
     const isSuperAdmin = user?.role === 'SuperAdmin';
 
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
 
-    // Swipe & Animation states
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState(0);
     const [isClosing, setIsClosing] = useState(false);
@@ -29,7 +30,6 @@ const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
 
     const isAdminForm = formData.role === "Admin";
 
-    // Smooth Close Logic
     const handleClose = () => {
         setIsClosing(true);
         setDragOffset(window.innerHeight);
@@ -55,20 +55,19 @@ const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
     };
 
     const handleSave = async () => {
-        // Basic frontend validation to prevent unnecessary API calls
         if (!formData.name || !formData.email || !formData.mobile) {
-            toast.error("Please fill out all mandatory fields (Name, Email, Mobile).");
+            toast.error(t('add_user_modal.error_mandatory'));
             return;
         }
 
         if (isAdminForm && (!formData.adminId || !formData.password)) {
-            toast.error("Admin ID and Password are required for Admin accounts.");
+            toast.error(t('add_user_modal.error_admin_req'));
             return;
         }
 
         setIsLoading(true);
         setErrorMsg("");
-        const loadingToast = toast.loading(isAdminForm ? "Creating Admin account..." : "Creating Employee account...");
+        const loadingToast = toast.loading(isAdminForm ? t('add_user_modal.creating_admin') : t('add_user_modal.creating_employee'));
 
         try {
             if (isAdminForm) {
@@ -89,14 +88,14 @@ const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
                 });
             }
 
-            toast.success(isAdminForm ? "Admin created successfully!" : "Employee created successfully!", { id: loadingToast });
+            toast.success(isAdminForm ? t('add_user_modal.success_admin') : t('add_user_modal.success_employee'), { id: loadingToast });
 
             if (onSuccess) onSuccess();
             handleClose();
 
         } catch (error) {
             console.error("Save Error:", error);
-            const errorMessage = error.response?.data?.message || "Failed to create user. Please check your inputs.";
+            const errorMessage = error.response?.data?.message || t('common.error');
             setErrorMsg(errorMessage);
             toast.error(errorMessage, { id: loadingToast });
         } finally {
@@ -108,7 +107,6 @@ const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
         <div className={`fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-sm animate-in fade-in'}`} onClick={!isLoading ? handleClose : undefined}>
             <div className={`bg-card w-full max-w-md rounded-t-3xl md:rounded-2xl shadow-2xl border-t md:border border-border flex flex-col max-h-[90vh] md:max-h-[85vh] ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0' : ''}`} style={{ transform: `translateY(${dragOffset}px)` }} onClick={e => e.stopPropagation()}>
 
-                {/* Header & Mobile Drag Handle */}
                 <div className="sticky top-0 bg-card z-10 rounded-t-3xl md:rounded-t-2xl touch-none border-b border-border" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
                     <div className="w-full flex justify-center pt-3 pb-1 md:hidden">
                         <div className="w-12 h-1.5 bg-muted rounded-full"></div>
@@ -116,7 +114,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
                     <div className="flex items-center justify-between px-6 pb-4 pt-2 md:pt-6">
                         <h2 className="text-xl font-bold flex items-center gap-2">
                             {isAdminForm ? <ShieldAlert className="w-5 h-5 text-primary" /> : <UserPlus className="w-5 h-5 text-primary" />}
-                            {isAdminForm ? "Add New Admin" : "Add New Employee"}
+                            {isAdminForm ? t('add_user_modal.title_admin') : t('add_user_modal.title_employee')}
                         </h2>
                         <button onClick={handleClose} disabled={isLoading} className="p-2 hover:bg-muted rounded-full transition-colors hidden md:block">
                             <X className="w-5 h-5 text-muted-foreground" />
@@ -124,7 +122,6 @@ const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
                     </div>
                 </div>
 
-                {/* Form Content */}
                 <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
 
                     {errorMsg && (
@@ -135,26 +132,26 @@ const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
                     )}
 
                     <div className="space-y-2">
-                        <Label>Full Name</Label>
-                        <Input placeholder="e.g. Rahul Sharma" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="h-11 rounded-xl" />
+                        <Label>{t('add_user_modal.label_name')}</Label>
+                        <Input placeholder={t('add_user_modal.placeholder_name')} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="h-11 rounded-xl" />
                     </div>
                     <div className="space-y-2">
-                        <Label>Email Address</Label>
-                        <Input type="email" placeholder="rahul@example.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="h-11 rounded-xl" />
+                        <Label>{t('add_user_modal.label_email')}</Label>
+                        <Input type="email" placeholder={t('add_user_modal.placeholder_email')} value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="h-11 rounded-xl" />
                     </div>
 
                     <div className={`grid ${isSuperAdmin ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
                         <div className="space-y-2">
-                            <Label>Mobile No.</Label>
-                            <Input type="tel" placeholder="94234XXXXX" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} className="h-11 rounded-xl" />
+                            <Label>{t('add_user_modal.label_mobile')}</Label>
+                            <Input type="tel" placeholder={t('add_user_modal.placeholder_mobile')} value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} className="h-11 rounded-xl" />
                         </div>
                         {isSuperAdmin && (
                             <div className="space-y-2">
-                                <Label>Account Level</Label>
+                                <Label>{t('add_user_modal.label_level')}</Label>
                                 <CustomSelect
-                                    options={["Employee", "Admin"]}
-                                    value={formData.role}
-                                    onChange={(selectedValue) => setFormData({ ...formData, role: selectedValue })}
+                                    options={[t('add_user_modal.level_employee'), t('add_user_modal.level_admin')]}
+                                    value={formData.role === "Admin" ? t('add_user_modal.level_admin') : t('add_user_modal.level_employee')}
+                                    onChange={(selectedValue) => setFormData({ ...formData, role: selectedValue === t('add_user_modal.level_admin') ? "Admin" : "Employee" })}
                                 />
                             </div>
                         )}
@@ -163,12 +160,12 @@ const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
                     {!isAdminForm && (
                         <div className="grid grid-cols-2 gap-4 animate-in fade-in">
                             <div className="space-y-2">
-                                <Label>Designation <span className="text-muted-foreground font-normal">(Opt)</span></Label>
-                                <Input placeholder="Teacher, etc." value={formData.designation} onChange={(e) => setFormData({ ...formData, designation: e.target.value })} className="h-11 rounded-xl" />
+                                <Label>{t('add_user_modal.label_designation')} <span className="text-muted-foreground font-normal">{t('add_user_modal.optional')}</span></Label>
+                                <Input placeholder={t('add_user_modal.placeholder_designation')} value={formData.designation} onChange={(e) => setFormData({ ...formData, designation: e.target.value })} className="h-11 rounded-xl" />
                             </div>
                             <div className="space-y-2">
-                                <Label>Location <span className="text-muted-foreground font-normal">(Opt)</span></Label>
-                                <Input placeholder="e.g., District A" value={formData.zone} onChange={(e) => setFormData({ ...formData, zone: e.target.value })} className="h-11 rounded-xl" />
+                                <Label>{t('add_user_modal.label_location')} <span className="text-muted-foreground font-normal">{t('add_user_modal.optional')}</span></Label>
+                                <Input placeholder={t('add_user_modal.placeholder_location')} value={formData.zone} onChange={(e) => setFormData({ ...formData, zone: e.target.value })} className="h-11 rounded-xl" />
                             </div>
                         </div>
                     )}
@@ -177,24 +174,23 @@ const AddEmployeeModal = ({ isOpen, onClose, onSuccess }) => {
                         <div className="space-y-4 p-4 border border-border rounded-xl bg-muted/20 animate-in slide-in-from-top-2">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Admin ID</Label>
-                                    <Input placeholder="ADM-001" value={formData.adminId} onChange={(e) => setFormData({ ...formData, adminId: e.target.value })} className="h-11 rounded-xl" />
+                                    <Label>{t('add_user_modal.label_admin_id')}</Label>
+                                    <Input placeholder={t('add_user_modal.placeholder_admin_id')} value={formData.adminId} onChange={(e) => setFormData({ ...formData, adminId: e.target.value })} className="h-11 rounded-xl" />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Password</Label>
-                                    <Input type="password" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="h-11 rounded-xl" />
+                                    <Label>{t('add_user_modal.label_password')}</Label>
+                                    <Input type="password" placeholder={t('add_user_modal.placeholder_password')} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="h-11 rounded-xl" />
                                 </div>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* Footer Action */}
                 <div className="sticky bottom-0 bg-muted/10 p-4 md:p-6 border-t border-border flex justify-end gap-3 rounded-b-3xl md:rounded-b-2xl pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
-                    <Button variant="ghost" onClick={handleClose} disabled={isLoading} className="rounded-xl font-medium">Cancel</Button>
+                    <Button variant="ghost" onClick={handleClose} disabled={isLoading} className="rounded-xl font-medium">{t('add_user_modal.btn_cancel')}</Button>
                     <Button className="gap-2 shadow-glow rounded-xl font-semibold" onClick={handleSave} disabled={isLoading}>
                         {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : isAdminForm ? <ShieldAlert className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                        {isLoading ? "Saving..." : isAdminForm ? "Create Admin" : "Create Employee"}
+                        {isLoading ? t('add_user_modal.btn_saving') : isAdminForm ? t('add_user_modal.btn_create_admin') : t('add_user_modal.btn_create_employee')}
                     </Button>
                 </div>
             </div>

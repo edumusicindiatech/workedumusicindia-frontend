@@ -4,9 +4,10 @@ import { Label } from "@/components/ui/label";
 import { AlertTriangle, X, ChevronDown, Check, Send, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
-// NOTE: Add employeeId and onSuccess props!
 const IssueWarningModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const [warningForm, setWarningForm] = useState({ type: "Verbal", reason: "" });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -35,32 +36,37 @@ const IssueWarningModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
 
     const handleSave = async () => {
         if (!warningForm.reason.trim()) {
-            toast.error("Please provide a reason for the warning.");
+            toast.error(t('issue_warning.error_validation'));
             return;
         }
 
         setIsSubmitting(true);
-        const loadingToast = toast.loading("Issuing warning...");
+        const loadingToast = toast.loading(t('issue_warning.issuing'));
 
         try {
-            // API Call mapping 'type' to backend 'level'
             await api.post(`/admin/employees/${employeeId}/warnings`, {
                 level: warningForm.type,
                 reason: warningForm.reason
             });
 
-            toast.success("Warning issued successfully.", { id: loadingToast });
-            if (onSuccess) onSuccess(); // Refresh data
+            toast.success(t('issue_warning.toast_success'), { id: loadingToast });
+            if (onSuccess) onSuccess();
             onClose();
         } catch (error) {
             console.error("Warning Error:", error);
-            toast.error(error.response?.data?.message || "Failed to issue warning.", { id: loadingToast });
+            toast.error(error.response?.data?.message || t('issue_warning.toast_error'), { id: loadingToast });
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const isFormValid = warningForm.reason.trim().length > 0;
+
+    // Helper to translate the type label
+    const getTypeLabel = (type) => {
+        const key = type.toLowerCase();
+        return `${t(`issue_warning.${key}`)} ${t('issue_warning.warning_suffix')}`;
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300" onClick={!isSubmitting ? onClose : undefined}>
@@ -73,8 +79,8 @@ const IssueWarningModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                             <AlertTriangle className="w-5 h-5 text-destructive" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold text-foreground">Issue Warning</h2>
-                            <p className="text-xs text-muted-foreground mt-0.5">Record a formal warning for this employee.</p>
+                            <h2 className="text-lg font-bold text-foreground">{t('issue_warning.title')}</h2>
+                            <p className="text-xs text-muted-foreground mt-0.5">{t('issue_warning.subtitle')}</p>
                         </div>
                     </div>
                     <button onClick={onClose} disabled={isSubmitting} className="p-2 hover:bg-muted rounded-full transition-colors bg-background border border-border shrink-0">
@@ -86,7 +92,7 @@ const IssueWarningModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                 <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
 
                     <div className="space-y-2" ref={dropdownRef}>
-                        <Label className="text-sm font-semibold text-foreground">Warning Level</Label>
+                        <Label className="text-sm font-semibold text-foreground">{t('issue_warning.level_label')}</Label>
                         <div className="relative">
                             <button
                                 type="button"
@@ -94,7 +100,7 @@ const IssueWarningModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                                 className="w-full h-11 rounded-xl border border-input bg-background px-4 text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-destructive/50 transition-all hover:bg-muted/30"
                             >
                                 <span className={`font-semibold ${warningForm.type === "Final" ? "text-destructive" : warningForm.type === "Written" ? "text-orange-500" : "text-amber-500"}`}>
-                                    {warningForm.type} Warning
+                                    {getTypeLabel(warningForm.type)}
                                 </span>
                                 <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
                             </button>
@@ -112,7 +118,7 @@ const IssueWarningModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                                                 }}
                                                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${warningForm.type === option ? "bg-muted font-bold text-foreground" : "text-foreground hover:bg-muted/50 font-medium"}`}
                                             >
-                                                <span>{option} Warning</span>
+                                                <span>{getTypeLabel(option)}</span>
                                                 {warningForm.type === option && <Check className="w-4 h-4" />}
                                             </button>
                                         ))}
@@ -123,9 +129,9 @@ const IssueWarningModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                     </div>
 
                     <div className="space-y-2">
-                        <Label className="text-sm font-semibold text-foreground">Reason / Description</Label>
+                        <Label className="text-sm font-semibold text-foreground">{t('issue_warning.reason_label')}</Label>
                         <textarea
-                            placeholder="Provide detailed context for this warning..."
+                            placeholder={t('issue_warning.reason_placeholder')}
                             value={warningForm.reason}
                             onChange={(e) => setWarningForm({ ...warningForm, reason: e.target.value })}
                             className="w-full min-h-30 rounded-xl border border-input bg-background p-4 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-destructive/50 transition-shadow custom-scrollbar"
@@ -135,9 +141,9 @@ const IssueWarningModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
 
                 {/* Footer */}
                 <div className="p-6 border-t border-border bg-muted/10 flex justify-end gap-3 shrink-0 rounded-b-2xl">
-                    <Button variant="ghost" onClick={onClose} disabled={isSubmitting} className="rounded-xl h-11 px-6 font-semibold">Cancel</Button>
+                    <Button variant="ghost" onClick={onClose} disabled={isSubmitting} className="rounded-xl h-11 px-6 font-semibold">{t('issue_warning.cancel')}</Button>
                     <Button onClick={handleSave} disabled={!isFormValid || isSubmitting} className="rounded-xl h-11 px-8 font-bold bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-glow">
-                        {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-4 h-4 mr-2" /> Issue Warning</>}
+                        {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-4 h-4 mr-2" /> {t('issue_warning.submit')}</>}
                     </Button>
                 </div>
             </div>

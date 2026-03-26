@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { X, ArrowLeft, School, Users, ChevronRight, FileText, CheckCircle2, Clock, AlertCircle, XCircle, Download, Coffee, Star, FolderOpen, CalendarOff, CalendarDays } from "lucide-react";
 import * as XLSX from 'xlsx-js-style';
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName }) => {
+    const { t } = useTranslation(); // <-- Initialize t
     const [viewLevel, setViewLevel] = useState("schools"); // 'schools' | 'categories' | 'overview' | 'detail'
     const [selectedSchool, setSelectedSchool] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -30,7 +32,7 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
     // --- ADVANCED EXCEL EXPORT LOGIC ---
     const handleExportExcel = () => {
         try {
-            const toastId = toast.loading("Generating Detailed Excel report...");
+            const toastId = toast.loading(t('attendance_modal.excel.generating'));
 
             const wsData = [];
             const leaveRowIndices = [];
@@ -38,8 +40,11 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
 
             // 1. Define Headers
             const headers = [
-                "Employee Name", "Month", "School Name", "Category",
-                "Date", "Status", "Check In", "Check Out", "Event / Reason Note", "Daily Report / Admin Note"
+                t('attendance_modal.excel.header_emp_name'), t('attendance_modal.excel.header_month'),
+                t('attendance_modal.excel.header_school'), t('attendance_modal.excel.header_category'),
+                t('attendance_modal.excel.header_date'), t('attendance_modal.excel.header_status'),
+                t('attendance_modal.excel.header_in'), t('attendance_modal.excel.header_out'),
+                t('attendance_modal.excel.header_note'), t('attendance_modal.excel.header_report')
             ];
             wsData.push(headers);
 
@@ -50,24 +55,22 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
                         category.records.forEach(record => {
 
                             if (record.isLeaveRecord) {
-                                // Accumulate Leave Days
                                 stats.leaveDays += (record.leaveDays || 1);
 
                                 wsData.push([
                                     employeeName,
                                     monthData.month,
-                                    "GENERAL LEAVES",
+                                    t('attendance_modal.excel.general_leaves'),
                                     "-",
                                     record.date,
-                                    "ON LEAVE",
+                                    t('attendance_modal.excel.on_leave'),
                                     "-",
                                     "-",
-                                    `Reason: ${record.reason}`,
-                                    `Admin Note: ${record.adminRemarks || 'N/A'}`
+                                    `${t('attendance_modal.reason_provided')}: ${record.reason}`,
+                                    `${t('attendance_modal.admin_approval_note')}: ${record.adminRemarks || 'N/A'}`
                                 ]);
-                                leaveRowIndices.push(wsData.length - 1); // Track this row for styling later
+                                leaveRowIndices.push(wsData.length - 1);
                             } else {
-                                // Tally normal stats
                                 if (record.status === 'PRESENT') stats.present++;
                                 if (record.status === 'LATE') stats.late++;
                                 if (record.status === 'ABSENT') stats.absent++;
@@ -100,29 +103,25 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
             });
 
             if (wsData.length === 1) {
-                toast.error("No records found for this month.", { id: toastId });
+                toast.error(t('attendance_modal.excel.no_records'), { id: toastId });
                 return;
             }
 
-            // 3. Append Summary Block at the bottom
-            wsData.push([]); // Spacer
-            wsData.push([]); // Spacer
+            wsData.push([]);
+            wsData.push([]);
 
             const summaryStartIdx = wsData.length;
-            wsData.push(["MONTHLY SUMMARY", "COUNT"]);
-            wsData.push(["Total Present Days", stats.present]);
-            wsData.push(["Total Late Days", stats.late]);
-            wsData.push(["Total Absent Days", stats.absent]);
-            wsData.push(["Total Event Days", stats.event]);
-            wsData.push(["Total Holidays", stats.holiday]);
-            wsData.push(["Total Approved Leave Days", stats.leaveDays]);
+            wsData.push([t('attendance_modal.excel.summary_title'), t('attendance_modal.excel.summary_count')]);
+            wsData.push([t('attendance_modal.excel.total_present'), stats.present]);
+            wsData.push([t('attendance_modal.excel.total_late'), stats.late]);
+            wsData.push([t('attendance_modal.excel.total_absent'), stats.absent]);
+            wsData.push([t('attendance_modal.excel.total_event'), stats.event]);
+            wsData.push([t('attendance_modal.excel.total_holiday'), stats.holiday]);
+            wsData.push([t('attendance_modal.excel.total_approved_leaves'), stats.leaveDays]);
 
-            // 4. Create Sheet
             const worksheet = XLSX.utils.aoa_to_sheet(wsData);
 
-            // 5. Apply Complex Styling
             const headerColors = ["2563EB", "0D9488", "4F46E5", "7C3AED", "DB2777", "D97706", "059669", "DC2626", "475569", "1E293B"];
-
             const range = XLSX.utils.decode_range(worksheet['!ref']);
 
             for (let R = range.s.r; R <= range.e.r; ++R) {
@@ -130,7 +129,6 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
                     const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
                     if (!worksheet[cellAddress]) continue;
 
-                    // Initialize style object
                     worksheet[cellAddress].s = {
                         alignment: { vertical: "top", wrapText: true },
                         border: {
@@ -141,52 +139,45 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
                         }
                     };
 
-                    // Style Row 0 (Headers)
                     if (R === 0) {
                         worksheet[cellAddress].s.font = { bold: true, color: { rgb: "FFFFFF" } };
                         worksheet[cellAddress].s.fill = { fgColor: { rgb: headerColors[C] || "475569" } };
                         worksheet[cellAddress].s.alignment.horizontal = "center";
                     }
 
-                    // Style Leave Rows (Light Blue)
                     if (leaveRowIndices.includes(R)) {
                         worksheet[cellAddress].s.fill = { fgColor: { rgb: "EFF6FF" } };
                     }
 
-                    // Style Summary Headers
                     if (R === summaryStartIdx && C <= 1) {
                         worksheet[cellAddress].s.font = { bold: true, color: { rgb: "FFFFFF" }, sz: 12 };
                         worksheet[cellAddress].s.fill = { fgColor: { rgb: "1E293B" } };
                     }
 
-                    // Style Summary Data Body
                     if (R > summaryStartIdx && R <= summaryStartIdx + 6 && C <= 1) {
-                        worksheet[cellAddress].s.font = { bold: C === 0 }; // Bold labels
+                        worksheet[cellAddress].s.font = { bold: C === 0 };
                     }
                 }
             }
 
-            // Adjust Column Widths
             worksheet['!cols'] = [
                 { wch: 20 }, { wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 25 },
                 { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 40 }, { wch: 45 }
             ];
 
-            // 6. Generate and Download
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Monthly Record");
 
             const fileName = `${employeeName.replace(' ', '_')}_Records_${monthData.month.replace(' ', '_')}.xlsx`;
             XLSX.writeFile(workbook, fileName);
 
-            toast.success("Excel report downloaded!", { id: toastId });
+            toast.success(t('attendance_modal.excel.success'), { id: toastId });
         } catch (error) {
             console.error("Excel Export Error:", error);
-            toast.error("Failed to generate Excel file.");
+            toast.error(t('attendance_modal.excel.error'));
         }
     };
 
-    // --- UI HELPERS ---
     const getStatusStyle = (status) => {
         switch (status?.toUpperCase()) {
             case "PRESENT": return "text-emerald-500 border-emerald-500/30 bg-emerald-500/10";
@@ -198,16 +189,15 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
         }
     };
 
-    // --- RENDER BLOCKS ---
     const renderSchoolsList = () => (
         <div className="flex flex-col h-full animate-in slide-in-from-right-4 duration-300">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
                 <div>
-                    <h2 className="text-xl md:text-2xl font-bold text-foreground">Records for {monthData.month}</h2>
-                    <p className="text-sm text-muted-foreground mt-1">Select a school or view general leaves.</p>
+                    <h2 className="text-xl md:text-2xl font-bold text-foreground">{t('attendance_modal.records_for', { month: monthData.month })}</h2>
+                    <p className="text-sm text-muted-foreground mt-1">{t('attendance_modal.select_school_msg')}</p>
                 </div>
                 <button onClick={handleExportExcel} className="text-sm font-bold flex items-center justify-center gap-2 border border-primary/20 text-primary bg-primary/5 hover:bg-primary hover:text-white px-4 py-2 rounded-xl transition-all shrink-0 shadow-sm">
-                    <Download className="w-4 h-4" /> Export Excel
+                    <Download className="w-4 h-4" /> {t('attendance_modal.export_excel')}
                 </button>
             </div>
             <div className="space-y-3">
@@ -220,13 +210,13 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
                             </div>
                             <div className="flex flex-col min-w-0">
                                 <span className="font-bold text-base md:text-lg text-foreground truncate">{school.name}</span>
-                                <span className="text-xs font-medium text-muted-foreground mt-0.5">Tap to view details</span>
+                                <span className="text-xs font-medium text-muted-foreground mt-0.5">{t('attendance_modal.tap_to_view')}</span>
                             </div>
                         </div>
                         <ChevronRight className={`w-5 h-5 shrink-0 transition-all duration-300 group-hover:translate-x-1 ${school.isLeaveNode ? 'text-muted-foreground/40 group-hover:text-cyan-500' : 'text-muted-foreground/40 group-hover:text-indigo-500'}`} />
                     </div>
                 ))}
-                {monthData.schools.length === 0 && <div className="p-8 text-center text-muted-foreground border border-dashed border-border rounded-xl text-sm">No records assigned for this month.</div>}
+                {monthData.schools.length === 0 && <div className="p-8 text-center text-muted-foreground border border-dashed border-border rounded-xl text-sm">{t('attendance_modal.no_records_assigned')}</div>}
             </div>
         </div>
     );
@@ -234,8 +224,8 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
     const renderCategoriesList = () => (
         <div className="flex flex-col h-full animate-in slide-in-from-right-4 duration-300">
             <div className="mb-6 md:mb-8">
-                <h2 className="text-xl md:text-2xl font-bold text-foreground">{selectedSchool.name} Options</h2>
-                <p className="text-sm text-muted-foreground mt-1">Select an option to view detailed logs.</p>
+                <h2 className="text-xl md:text-2xl font-bold text-foreground">{t('attendance_modal.options_title', { name: selectedSchool.name })}</h2>
+                <p className="text-sm text-muted-foreground mt-1">{t('attendance_modal.select_option_msg')}</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {selectedSchool.categories.map(cat => (
@@ -253,15 +243,14 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
     );
 
     const renderCategoryOverview = () => {
-        // --- IF LEAVE NODE ---
         if (selectedCategory.isLeaveNode) {
             return (
                 <div className="flex flex-col h-full animate-in slide-in-from-right-4 duration-300">
                     <div className="mb-6 md:mb-8">
                         <h2 className="text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
-                            <CalendarOff className="w-6 h-6 text-cyan-600" /> Approved Leave Records
+                            <CalendarOff className="w-6 h-6 text-cyan-600" /> {t('attendance_modal.leave_records_title')}
                         </h2>
-                        <p className="text-sm text-muted-foreground mt-1">Details of official time off taken in {monthData.month}.</p>
+                        <p className="text-sm text-muted-foreground mt-1">{t('attendance_modal.leave_records_msg', { month: monthData.month })}</p>
                     </div>
 
                     <div className="space-y-4">
@@ -272,16 +261,16 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
                                         <CalendarDays className="w-4 h-4 text-cyan-600" />
                                         {leave.date}
                                     </div>
-                                    <span className="px-2.5 py-1 bg-cyan-500 text-white rounded font-bold uppercase text-[10px] tracking-wider">Approved Leave</span>
+                                    <span className="px-2.5 py-1 bg-cyan-500 text-white rounded font-bold uppercase text-[10px] tracking-wider">{t('attendance_modal.approved_leave')}</span>
                                 </div>
                                 <div className="space-y-3">
                                     <div>
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Reason Provided</p>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> {t('attendance_modal.reason_provided')}</p>
                                         <p className="text-sm italic text-muted-foreground bg-background p-3 rounded-xl border border-border mt-1">"{leave.reason}"</p>
                                     </div>
                                     {leave.adminRemarks && (
                                         <div className="border-t border-dashed border-cyan-500/30 pt-3">
-                                            <p className="text-[10px] font-bold text-cyan-700 uppercase tracking-widest mb-1">Admin Approval Note</p>
+                                            <p className="text-[10px] font-bold text-cyan-700 uppercase tracking-widest mb-1">{t('attendance_modal.admin_approval_note')}</p>
                                             <p className="text-xs text-cyan-800 font-medium">"{leave.adminRemarks}"</p>
                                         </div>
                                     )}
@@ -293,16 +282,15 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
             )
         }
 
-        // --- IF NORMAL CATEGORY NODE ---
         const m = selectedCategory.metrics;
         return (
             <div className="flex flex-col h-full animate-in slide-in-from-right-4 duration-300">
                 <div className="mb-6 md:mb-8">
-                    <h2 className="text-xl md:text-2xl font-bold text-foreground">{selectedCategory.name} Overview</h2>
-                    <p className="text-sm text-muted-foreground mt-1">A comprehensive breakdown of attendance activity.</p>
+                    <h2 className="text-xl md:text-2xl font-bold text-foreground">{t('attendance_modal.overview_title', { name: selectedCategory.name })}</h2>
+                    <p className="text-sm text-muted-foreground mt-1">{t('attendance_modal.overview_msg')}</p>
                 </div>
 
-                <h4 className="text-xs font-bold uppercase tracking-widest text-foreground mb-3">Summary Metrics</h4>
+                <h4 className="text-xs font-bold uppercase tracking-widest text-foreground mb-3">{t('attendance_modal.summary_metrics')}</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8 md:mb-10">
                     <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col items-center justify-center shadow-sm">
                         <CheckCircle2 className="w-5 h-5 text-emerald-500 mb-2" />
@@ -331,7 +319,7 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
                     </div>
                 </div>
 
-                <h4 className="text-xs font-bold uppercase tracking-widest text-foreground mb-3">Daily Breakdown</h4>
+                <h4 className="text-xs font-bold uppercase tracking-widest text-foreground mb-3">{t('attendance_modal.daily_breakdown')}</h4>
                 <div className="space-y-3">
                     {selectedCategory.records.map(record => (
                         <div key={record.id} onClick={() => { setSelectedRecord(record); setViewLevel("detail"); }} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 md:p-5 rounded-xl border border-border bg-card hover:bg-muted/30 cursor-pointer group transition-colors gap-4 sm:gap-0">
@@ -343,7 +331,7 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
                                 <div className="flex items-center gap-3">
                                     {record.hasReport && (
                                         <span className="flex items-center gap-1.5 text-[10px] font-bold text-blue-500 bg-blue-500/10 px-2 py-1 rounded border border-blue-500/20 tracking-wider">
-                                            <FileText className="w-3 h-3" /> REPORT
+                                            <FileText className="w-3 h-3" /> {t('attendance_modal.report_tag')}
                                         </span>
                                     )}
                                     <span className={`px-2.5 py-1 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider border ${getStatusStyle(record.status)}`}>
@@ -354,7 +342,7 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
                             </div>
                         </div>
                     ))}
-                    {selectedCategory.records.length === 0 && <div className="p-8 text-center text-muted-foreground border border-dashed border-border rounded-xl text-sm">No records found.</div>}
+                    {selectedCategory.records.length === 0 && <div className="p-8 text-center text-muted-foreground border border-dashed border-border rounded-xl text-sm">{t('attendance_modal.no_records_found')}</div>}
                 </div>
             </div>
         );
@@ -363,8 +351,8 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
     const renderRecordDetail = () => (
         <div className="flex flex-col h-full max-w-2xl mx-auto w-full animate-in slide-in-from-right-4 duration-300">
             <div className="mb-6 md:mb-8 pb-4 md:pb-6 border-b border-border">
-                <h2 className="text-xl md:text-2xl font-bold text-foreground">Daily Record Details</h2>
-                <p className="text-sm text-muted-foreground mt-1">Viewing details for {selectedRecord.date}</p>
+                <h2 className="text-xl md:text-2xl font-bold text-foreground">{t('attendance_modal.daily_details_title')}</h2>
+                <p className="text-sm text-muted-foreground mt-1">{t('attendance_modal.viewing_details_for', { date: selectedRecord.date })}</p>
             </div>
 
             <div className="flex flex-col items-center justify-center p-8 md:p-12 bg-card border border-border rounded-2xl mb-8 relative shadow-sm">
@@ -386,11 +374,11 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
 
             <div className="space-y-3">
                 <h4 className="text-[11px] font-bold uppercase tracking-widest text-foreground flex items-center gap-2 mb-2">
-                    <FileText className="w-4 h-4 text-muted-foreground" /> Teacher's Note
+                    <FileText className="w-4 h-4 text-muted-foreground" /> {t('attendance_modal.teachers_note')}
                 </h4>
                 <div className="p-5 md:p-6 bg-muted/20 border border-border rounded-xl min-h-25 flex items-center justify-center text-center">
                     <p className={`text-sm md:text-base ${selectedRecord.note ? 'text-foreground font-medium italic' : 'text-muted-foreground'}`}>
-                        {selectedRecord.note || "No note provided for this record."}
+                        {selectedRecord.note || t('attendance_modal.no_note_provided')}
                     </p>
                 </div>
             </div>
@@ -403,10 +391,10 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
                 <div className="px-4 sm:px-6 py-4 border-b border-border flex items-center justify-between bg-card shrink-0">
                     <button onClick={handleBack} className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors group">
                         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                        {viewLevel === "schools" && `Back to ${employeeName}`}
-                        {viewLevel === "categories" && `Back to ${monthData.month} Schools`}
-                        {viewLevel === "overview" && `Back to ${selectedSchool?.name}`}
-                        {viewLevel === "detail" && `Back to ${selectedCategory?.name} Overview`}
+                        {viewLevel === "schools" && t('attendance_modal.back_to', { name: employeeName })}
+                        {viewLevel === "categories" && t('attendance_modal.back_to_month_schools', { month: monthData.month })}
+                        {viewLevel === "overview" && t('attendance_modal.back_to_overview', { name: selectedSchool?.name })}
+                        {viewLevel === "detail" && t('attendance_modal.back_to_overview', { name: selectedCategory?.name })}
                     </button>
 
                     <button onClick={onClose} className="p-1.5 md:p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground shrink-0">

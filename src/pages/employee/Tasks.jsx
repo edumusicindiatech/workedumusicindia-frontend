@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useSelector } from "react-redux"; // <-- Used to get the user ID
+import { useSelector } from "react-redux";
 import api from "../../api/axios";
 import {
     MapPin, Calendar, Clock, ClipboardList,
@@ -7,15 +7,15 @@ import {
     CheckCircle2, Sparkles, CheckSquare, School
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import toast from "react-hot-toast"; // <-- Swapped to react-hot-toast
+import toast from "react-hot-toast";
 import RejectTaskModal from "../../modals/employee/RejectTaskModal";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
-// --- SOCKET IMPORT FOR REAL-TIME REFRESH ---
 import { io } from "socket.io-client";
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 const Tasks = () => {
-    // 1. Grab the user from Redux so we know which room to join
+    const { t } = useTranslation(); // <-- Initialize hook
     const { user } = useSelector((state) => state.auth);
 
     const [tasks, setTasks] = useState([]);
@@ -27,7 +27,6 @@ const Tasks = () => {
 
     const pendingCount = tasks.filter(task => task.status === "pending").length;
 
-    // --- FETCH TASKS ---
     const fetchTasks = useCallback(async () => {
         try {
             const res = await api.get('/employee/tasks');
@@ -36,26 +35,23 @@ const Tasks = () => {
             }
         } catch (error) {
             console.error("Failed to fetch tasks:", error);
-            toast.error("Failed to load tasks.");
+            toast.error(t('tasks.toasts.load_error'));
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [t]);
 
     useEffect(() => {
         fetchTasks();
     }, [fetchTasks]);
 
-    // --- REAL-TIME DATA SYNC (FIXED) ---
     useEffect(() => {
         if (!user) return;
         const currentUserId = user.id || user._id;
 
-        // 2. Tell THIS specific socket connection to join the user's room!
         socket.emit("join_room", currentUserId);
 
         const handleRealTimeUpdate = () => {
-            console.log("New task assigned! Refreshing task list...");
             fetchTasks();
         };
 
@@ -64,12 +60,11 @@ const Tasks = () => {
         return () => {
             socket.off("new_notification", handleRealTimeUpdate);
         };
-    }, [fetchTasks, user]); // Added user to the dependency array
+    }, [fetchTasks, user]);
 
-    // --- HANDLE RESPONSES ---
     const handleResponse = async (taskId, status, reason = null) => {
         setActionLoading(true);
-        const loadingToast = toast.loading(status === 'Accepted' ? "Accepting task..." : "Rejecting task...");
+        const loadingToast = toast.loading(status === 'Accepted' ? t('tasks.toasts.accepting') : t('tasks.toasts.rejecting'));
 
         try {
             await api.put(`/employee/tasks/${taskId}/respond`, {
@@ -77,20 +72,19 @@ const Tasks = () => {
                 rejectReason: reason
             });
 
-            // Update UI Locally for instant feel
             setTasks(prevTasks => prevTasks.map(task =>
                 task.id === taskId ? { ...task, status: status.toLowerCase(), rejectReason: reason } : task
             ));
 
             if (status === 'Accepted') {
-                toast.success("Task accepted and added to your schedule!", { id: loadingToast });
+                toast.success(t('tasks.toasts.accept_success'), { id: loadingToast });
             } else {
-                toast.success("Task rejected successfully.", { id: loadingToast });
+                toast.success(t('tasks.toasts.reject_success'), { id: loadingToast });
             }
 
             closeRejectModal();
         } catch (error) {
-            toast.error(error.response?.data?.message || "Failed to respond to task.", { id: loadingToast });
+            toast.error(error.response?.data?.message || t('tasks.toasts.respond_error'), { id: loadingToast });
         } finally {
             setActionLoading(false);
         }
@@ -115,13 +109,9 @@ const Tasks = () => {
         }
     };
 
-    // ==========================================
-    // RENDER: LOADING STATE (SHIMMER)
-    // ==========================================
     if (loading) {
         return (
             <div className="max-w-6xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
-                {/* Shimmer Header */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 pb-6 border-b border-border/40">
                     <div className="space-y-3 w-full max-w-sm">
                         <div className="flex items-center gap-3">
@@ -132,46 +122,9 @@ const Tasks = () => {
                     </div>
                 </div>
 
-                {/* Shimmer Cards Grid */}
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
                     {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="bg-card rounded-3xl border border-border/60 p-5 sm:p-7 flex flex-col h-full overflow-hidden shadow-sm relative">
-                            {/* Header Area */}
-                            <div className="flex items-start justify-between gap-4 mb-5">
-                                <div className="flex-1 min-w-0 flex items-start gap-4">
-                                    <div className="w-12 h-12 bg-muted rounded-2xl shrink-0 animate-pulse" />
-                                    <div className="flex-1 space-y-3 mt-1">
-                                        <div className="h-7 w-3/4 sm:w-1/2 bg-muted rounded-lg animate-pulse" />
-                                        <div className="h-5 w-1/2 sm:w-1/3 bg-muted/60 rounded-md animate-pulse" />
-                                    </div>
-                                </div>
-                                <div className="h-6 w-20 bg-muted rounded-full animate-pulse shrink-0" />
-                            </div>
-
-                            {/* Schedule Info Box */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5 bg-muted/20 p-4 sm:p-5 rounded-2xl border border-border/50">
-                                <div className="space-y-2">
-                                    <div className="h-4 w-16 bg-muted/80 rounded animate-pulse" />
-                                    <div className="h-6 w-32 bg-muted rounded animate-pulse" />
-                                </div>
-                                <div className="space-y-2 sm:border-l border-border/60 sm:pl-4">
-                                    <div className="h-4 w-16 bg-muted/80 rounded animate-pulse" />
-                                    <div className="h-6 w-24 bg-muted rounded animate-pulse" />
-                                </div>
-                            </div>
-
-                            {/* Description */}
-                            <div className="mb-6 flex-1 space-y-3">
-                                <div className="h-5 w-32 bg-muted rounded animate-pulse mb-3" />
-                                <div className="h-20 w-full bg-card border border-border/50 rounded-xl animate-pulse" />
-                            </div>
-
-                            {/* Actions / Footer */}
-                            <div className="pt-5 border-t border-border/60 mt-auto flex flex-col sm:flex-row items-center gap-3">
-                                <div className="h-12 w-full sm:flex-1 bg-muted rounded-xl animate-pulse" />
-                                <div className="h-12 w-full sm:flex-2 bg-muted rounded-xl animate-pulse" />
-                            </div>
-                        </div>
+                        <div key={i} className="bg-card rounded-3xl border border-border/60 p-5 sm:p-7 flex flex-col h-full overflow-hidden shadow-sm relative animate-pulse" />
                     ))}
                 </div>
             </div>
@@ -181,12 +134,11 @@ const Tasks = () => {
     return (
         <div className="max-w-6xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
 
-            {/* --- PREMIUM HEADER --- */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 pb-6 border-b border-border/40">
                 <div className="space-y-1.5">
                     <div className="flex items-center gap-3">
                         <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-linear-to-r from-primary to-primary/60">
-                            Task Inbox
+                            {t('tasks.title')}
                         </h1>
                         {pendingCount > 0 && (
                             <span className="flex items-center justify-center bg-primary/10 border border-primary/20 text-primary text-xs sm:text-sm px-3 py-1 rounded-full font-bold tracking-wide uppercase shadow-sm">
@@ -194,40 +146,33 @@ const Tasks = () => {
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                                 </span>
-                                {pendingCount} Pending
+                                {pendingCount} {t('tasks.pending_label')}
                             </span>
                         )}
                     </div>
                     <p className="text-muted-foreground font-medium flex items-center gap-2 text-sm sm:text-base">
                         <CheckSquare className="w-4 h-4 text-primary/70" />
-                        Review, accept, or reject your assigned tasks.
+                        {t('tasks.subtitle')}
                     </p>
                 </div>
             </div>
 
-            {/* --- TASK CARDS GRID --- */}
             {tasks.length === 0 ? (
-                /* --- INBOX ZERO STATE --- */
                 <div className="bg-card border border-border rounded-4xl p-10 sm:p-16 mt-8 shadow-sm text-center flex flex-col items-center relative overflow-hidden group hover:shadow-md transition-shadow">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40" />
-                    <div className="absolute -top-32 -right-32 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/10 transition-colors duration-700" />
-                    <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/10 transition-colors duration-700" />
-
                     <div className="relative w-24 h-24 mb-6">
                         <div className="absolute inset-0 bg-primary/10 rounded-full animate-ping opacity-50" />
                         <div className="relative w-full h-full bg-muted dark:bg-muted/30 rounded-full flex items-center justify-center border-4 border-white dark:border-card shadow-sm z-10">
                             <CheckCircle2 className="w-10 h-10 text-primary" />
                         </div>
                     </div>
-
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground mb-3 tracking-tight">Inbox Zero!</h2>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground mb-3 tracking-tight">{t('tasks.empty.title')}</h2>
                     <p className="text-muted-foreground mb-6 max-w-md text-base sm:text-lg leading-relaxed">
-                        You have no assigned tasks at the moment. You're all caught up.
+                        {t('tasks.empty.desc')}
                     </p>
-
                     <div className="flex items-center gap-2 text-sm font-bold text-primary bg-primary/10 px-5 py-2.5 rounded-full z-10 border border-primary/20 backdrop-blur-sm">
                         <Sparkles className="w-4 h-4" />
-                        <span>Enjoy your free time</span>
+                        <span>{t('tasks.empty.badge')}</span>
                     </div>
                 </div>
             ) : (
@@ -245,11 +190,9 @@ const Tasks = () => {
                                         "bg-card/50 border-border opacity-80 grayscale-[0.15] shadow-none hover:grayscale-0"
                                     }`}
                             >
-                                {/* Glowing status strip for Pending */}
                                 {isPending && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-1.5 bg-primary rounded-b-full shadow-[0_0_15px_rgba(var(--primary),0.8)]" />}
                                 {isAccepted && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-1 bg-emerald-500 rounded-b-full" />}
 
-                                {/* --- Header --- */}
                                 <div className="flex items-start justify-between gap-4 mb-5">
                                     <div className="flex-1 min-w-0 flex items-start gap-4">
                                         <div className={`p-3 rounded-2xl shrink-0 mt-0.5 ${isPending ? 'bg-primary/10 dark:bg-primary/20' : 'bg-muted'}`}>
@@ -271,11 +214,10 @@ const Tasks = () => {
                                     </span>
                                 </div>
 
-                                {/* --- Schedule Info Box --- */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5 bg-muted/30 dark:bg-muted/20 p-4 sm:p-5 rounded-2xl border border-border/50">
                                     <div className="space-y-1.5">
                                         <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-bold uppercase tracking-wider">
-                                            <Calendar className="w-4 h-4 text-primary/70" /> Days
+                                            <Calendar className="w-4 h-4 text-primary/70" /> {t('tasks.card.days')}
                                         </div>
                                         <p className="text-sm sm:text-base font-bold text-foreground">
                                             {task.daysAllotted.join(", ")}
@@ -286,24 +228,22 @@ const Tasks = () => {
                                     </div>
                                     <div className="space-y-1.5 sm:border-l border-border/60 sm:pl-4">
                                         <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-bold uppercase tracking-wider">
-                                            <Clock className="w-4 h-4 text-amber-500" /> Timing
+                                            <Clock className="w-4 h-4 text-amber-500" /> {t('tasks.card.timing')}
                                         </div>
                                         <p className="text-sm sm:text-base font-bold text-foreground">{task.timing}</p>
                                     </div>
                                 </div>
 
-                                {/* --- Description --- */}
                                 <div className="mb-6 flex-1">
                                     <div className="flex items-center gap-2 text-foreground font-bold mb-2">
                                         <ClipboardList className="w-4 h-4 text-primary" />
-                                        Task Instructions
+                                        {t('tasks.card.instructions')}
                                     </div>
                                     <p className="text-sm text-muted-foreground leading-relaxed bg-card border border-border/50 p-4 rounded-xl">
                                         {task.taskDescription}
                                     </p>
                                 </div>
 
-                                {/* --- Actions / Footer --- */}
                                 <div className="pt-5 border-t border-border/60 mt-auto">
                                     {isPending && (
                                         <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -313,32 +253,32 @@ const Tasks = () => {
                                                 variant="outline"
                                                 className="w-full sm:flex-1 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive font-bold h-12 rounded-xl transition-colors"
                                             >
-                                                <XCircle className="w-4 h-4 mr-2" /> Reject
+                                                <XCircle className="w-4 h-4 mr-2" /> {t('tasks.card.btn_reject')}
                                             </Button>
                                             <Button
                                                 onClick={() => handleAccept(task.id)}
                                                 disabled={actionLoading}
                                                 className="w-full sm:flex-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
                                             >
-                                                {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CheckCircle className="w-5 h-5 mr-2" /> Accept & Schedule Task</>}
+                                                {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CheckCircle className="w-5 h-5 mr-2" /> {t('tasks.card.btn_accept')}</>}
                                             </Button>
                                         </div>
                                     )}
 
                                     {isAccepted && (
                                         <div className="flex items-center justify-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold py-3.5 rounded-xl shadow-sm">
-                                            <CheckCircle2 className="w-5 h-5" /> Task Accepted & Added to Route
+                                            <CheckCircle2 className="w-5 h-5" /> {t('tasks.card.status_accepted')}
                                         </div>
                                     )}
 
                                     {isRejected && (
                                         <div className="space-y-3">
                                             <div className="flex items-center justify-center gap-2 bg-destructive/10 border border-destructive/20 text-destructive font-bold py-3.5 rounded-xl">
-                                                <XCircle className="w-5 h-5" /> Task Rejected
+                                                <XCircle className="w-5 h-5" /> {t('tasks.card.status_rejected')}
                                             </div>
                                             <div className="text-sm text-destructive/80 bg-destructive/5 dark:bg-destructive/10 p-3.5 rounded-xl border border-destructive/10 flex items-start gap-2.5">
                                                 <Info className="w-5 h-5 shrink-0 mt-0.5" />
-                                                <span><strong>Reason Provided:</strong> {task.rejectReason}</span>
+                                                <span><strong>{t('tasks.card.reason_label')}</strong> {task.rejectReason}</span>
                                             </div>
                                         </div>
                                     )}
@@ -349,7 +289,6 @@ const Tasks = () => {
                 </div>
             )}
 
-            {/* --- Modals --- */}
             <RejectTaskModal
                 isOpen={isRejectModalOpen}
                 onClose={closeRejectModal}

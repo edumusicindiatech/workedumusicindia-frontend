@@ -1,23 +1,26 @@
 import { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Settings, X, Globe, Mail, Loader2 } from "lucide-react";
 import CustomSelect from "../../components/ui/CustomSelect";
-import toast from "react-hot-toast"; // <-- Swapped to react-hot-toast
+import toast from "react-hot-toast";
 import api from "../../api/axios";
+import { useTranslation } from "react-i18next"; // <-- Already imported, maintaining it
+import { setCredentials } from "../../store/slices/authSlice";
 
 const EmployeeSettingsModal = ({ isOpen, onClose }) => {
     const { user } = useSelector((state) => state.auth);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { t, i18n } = useTranslation(); // <-- Added t
+    const dispatch = useDispatch();
 
     const [settings, setSettings] = useState({
         language: "English",
         emailNotifications: true,
     });
 
-    // Populate form with existing user data when modal opens
     useEffect(() => {
         if (isOpen && user?.preferences) {
             setSettings({
@@ -31,20 +34,30 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
 
     const handleSave = async () => {
         setIsSubmitting(true);
-        const toastId = toast.loading("Saving preferences...");
+        const toastId = toast.loading(t('employee_settings.saving_toast'));
 
         try {
-            await api.put('/employee/settings/preferences', {
+            const response = await api.put('/employee/settings/preferences', {
                 systemLanguage: settings.language,
                 employeeNotifications: settings.emailNotifications
             });
 
-            toast.success("Preferences updated successfully!", { id: toastId });
-            onClose();
+            if (response.data.success) {
+                dispatch(setCredentials({
+                    ...user,
+                    preferences: response.data.preferences
+                }));
+
+                const langCode = settings.language === "हिन्दी (Hindi)" ? "hi" : "en";
+                i18n.changeLanguage(langCode);
+
+                toast.success(t('employee_settings.success_toast'), { id: toastId });
+                onClose();
+            }
 
         } catch (error) {
             console.error("Failed to save settings:", error);
-            toast.error(error.response?.data?.message || "Failed to update preferences.", { id: toastId });
+            toast.error(error.response?.data?.message || t('employee_settings.error_toast'), { id: toastId });
         } finally {
             setIsSubmitting(false);
         }
@@ -57,7 +70,7 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
                 {/* Header */}
                 <div className="bg-card flex items-center justify-between p-6 border-b border-border shrink-0">
                     <h2 className="text-xl font-bold flex items-center gap-2 text-foreground">
-                        <Settings className="w-5 h-5 text-primary" /> Account Settings
+                        <Settings className="w-5 h-5 text-primary" /> {t('employee_settings.title')}
                     </h2>
                     <button onClick={onClose} disabled={isSubmitting} className="p-2 hover:bg-muted rounded-full transition-colors bg-background border border-border disabled:opacity-50">
                         <X className="w-4 h-4 text-muted-foreground" />
@@ -69,7 +82,7 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
                     {/* Language Preference */}
                     <div className="space-y-3">
                         <Label className="text-base flex items-center gap-2 font-semibold">
-                            <Globe className="w-4 h-4 text-muted-foreground" /> System Language
+                            <Globe className="w-4 h-4 text-muted-foreground" /> {t('employee_settings.language_label')}
                         </Label>
                         <CustomSelect
                             options={[
@@ -79,14 +92,14 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
                             value={settings.language}
                             onChange={(selectedValue) => setSettings({ ...settings, language: selectedValue })}
                         />
-                        <p className="text-xs text-muted-foreground">This changes the language of your application interface.</p>
+                        <p className="text-xs text-muted-foreground">{t('employee_settings.language_help')}</p>
                     </div>
 
                     <div className="border-t border-border" />
 
                     {/* Notifications Preference */}
                     <div className="space-y-4">
-                        <Label className="text-base font-semibold">Notifications</Label>
+                        <Label className="text-base font-semibold">{t('employee_settings.notifications_section')}</Label>
 
                         <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/20">
                             <div className="flex items-center gap-3">
@@ -94,8 +107,8 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
                                     <Mail className="w-4 h-4 text-primary" />
                                 </div>
                                 <div>
-                                    <p className="font-bold text-sm text-foreground">Email Notifications</p>
-                                    <p className="text-xs text-muted-foreground">Receive updates, tasks, and assignments via email</p>
+                                    <p className="font-bold text-sm text-foreground">{t('employee_settings.email_notifications')}</p>
+                                    <p className="text-xs text-muted-foreground">{t('employee_settings.notifications_help')}</p>
                                 </div>
                             </div>
                             <Switch
@@ -109,14 +122,14 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
                 {/* Footer */}
                 <div className="bg-muted/10 p-6 border-t border-border flex justify-end gap-3 shrink-0">
                     <Button variant="ghost" onClick={onClose} disabled={isSubmitting} className="rounded-xl font-semibold flex-1">
-                        Cancel
+                        {t('employee_settings.cancel')}
                     </Button>
                     <Button
                         onClick={handleSave}
                         disabled={isSubmitting}
                         className="gap-2 shadow-glow rounded-xl font-bold flex-1"
                     >
-                        {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Save Changes"}
+                        {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : t('employee_settings.save_changes')}
                     </Button>
                 </div>
             </div>

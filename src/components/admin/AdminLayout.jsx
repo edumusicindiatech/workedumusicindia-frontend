@@ -1,8 +1,11 @@
 import { Outlet } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
-import { Toaster } from "react-hot-toast"; // <-- Added Toaster import
+import { Toaster } from "react-hot-toast";
+import { useTranslation } from "react-i18next"; // <-- Added hook import
 
 const AdminLayout = () => {
+    const { t } = useTranslation(); // <-- Initialize translation function
+
     return (
         <div className="flex flex-col min-h-screen bg-background text-foreground">
             {/* Added Toaster here so all admin-side toasts render correctly */}

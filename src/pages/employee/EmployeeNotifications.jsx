@@ -2,14 +2,16 @@ import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { Bell, CheckCircle2, AlertCircle, Info, Clock, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import toast from "react-hot-toast"; // <-- Added toast import
+import toast from "react-hot-toast";
 import api from "../../api/axios";
 import { io } from "socket.io-client";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 // Setup socket connection
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 const EmployeeNotifications = () => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const { user } = useSelector((state) => state.auth);
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -26,24 +28,21 @@ const EmployeeNotifications = () => {
                 }
             } catch (error) {
                 console.error("Failed to fetch notifications:", error);
-                toast.error("Failed to load notifications."); // <-- Added error toast
+                toast.error(t('employee_notifications.toasts.load_error'));
             } finally {
                 setLoading(false);
             }
         };
 
         fetchNotifications();
-    }, []);
+    }, [t]);
 
     // --- AUTO-MARK AS READ ON LOAD ---
     useEffect(() => {
-        // If there are unread notifications, automatically mark them as read in the DB
         if (notifications.length > 0 && unreadCount > 0) {
             const autoMarkAsRead = async () => {
                 try {
                     await api.put('/employee/notifications/mark-read');
-
-                    // Update local UI state immediately
                     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
                 } catch (error) {
                     console.error("Failed to auto-mark as read:", error);
@@ -62,7 +61,6 @@ const EmployeeNotifications = () => {
         socket.emit("join_room", currentUserId);
 
         const handleNewNotification = (newNotif) => {
-            // NOTE: Audio 'ting' logic is handled in EmployeeNavbar globally
             setNotifications(prev => [newNotif, ...prev]);
         };
 
@@ -75,27 +73,26 @@ const EmployeeNotifications = () => {
 
     // --- ACTIONS ---
     const markAllAsRead = async () => {
-        // Optimistic UI update
         setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-        const toastId = toast.loading("Marking all as read..."); // <-- Added loading toast
+        const toastId = toast.loading(t('employee_notifications.toasts.marking_read'));
         try {
             await api.put('/employee/notifications/mark-read');
-            toast.success("All notifications marked as read!", { id: toastId }); // <-- Added success toast
+            toast.success(t('employee_notifications.toasts.mark_read_success'), { id: toastId });
         } catch (error) {
             console.error("Failed to mark as read:", error);
-            toast.error("Failed to mark as read.", { id: toastId }); // <-- Added error toast
+            toast.error(t('employee_notifications.toasts.mark_read_error'), { id: toastId });
         }
     };
 
     const clearAll = async () => {
         setNotifications([]);
-        const toastId = toast.loading("Clearing notifications..."); // <-- Added loading toast
+        const toastId = toast.loading(t('employee_notifications.toasts.clearing'));
         try {
             await api.delete('/employee/notifications/clear');
-            toast.success("Notifications cleared successfully!", { id: toastId }); // <-- Added success toast
+            toast.success(t('employee_notifications.toasts.clear_success'), { id: toastId });
         } catch (error) {
             console.error("Failed to clear notifications:", error);
-            toast.error("Failed to clear notifications.", { id: toastId }); // <-- Added error toast
+            toast.error(t('employee_notifications.toasts.clear_error'), { id: toastId });
         }
     };
 
@@ -103,16 +100,16 @@ const EmployeeNotifications = () => {
     const getTimeAgo = (dateString) => {
         const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
         let interval = seconds / 31536000;
-        if (interval > 1) return Math.floor(interval) + " yrs ago";
+        if (interval > 1) return Math.floor(interval) + " " + t('employee_notifications.time.years');
         interval = seconds / 2592000;
-        if (interval > 1) return Math.floor(interval) + " mos ago";
+        if (interval > 1) return Math.floor(interval) + " " + t('employee_notifications.time.months');
         interval = seconds / 86400;
-        if (interval > 1) return Math.floor(interval) + " days ago";
+        if (interval > 1) return Math.floor(interval) + " " + t('employee_notifications.time.days');
         interval = seconds / 3600;
-        if (interval > 1) return Math.floor(interval) + " hrs ago";
+        if (interval > 1) return Math.floor(interval) + " " + t('employee_notifications.time.hours');
         interval = seconds / 60;
-        if (interval > 1) return Math.floor(interval) + " mins ago";
-        return "Just now";
+        if (interval > 1) return Math.floor(interval) + " " + t('employee_notifications.time.mins');
+        return t('employee_notifications.time.just_now');
     };
 
     const getIconInfo = (type) => {
@@ -187,18 +184,18 @@ const EmployeeNotifications = () => {
                                 </span>
                             )}
                         </div>
-                        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground tracking-tight">Notifications</h1>
+                        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground tracking-tight">{t('employee_notifications.title')}</h1>
                     </div>
-                    <p className="text-muted-foreground text-xs sm:text-sm">Stay updated on alerts, assignments, and schedule changes.</p>
+                    <p className="text-muted-foreground text-xs sm:text-sm">{t('employee_notifications.subtitle')}</p>
                 </div>
 
                 {notifications.length > 0 && (
                     <div className="flex items-center gap-2 self-start md:self-auto w-full md:w-auto">
                         <Button variant="outline" size="sm" onClick={markAllAsRead} disabled={unreadCount === 0} className="gap-1.5 sm:gap-2 flex-1 md:flex-none text-xs sm:text-sm h-8 sm:h-9">
-                            <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Mark all read
+                            <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {t('employee_notifications.btn_mark_read')}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={clearAll} className="text-destructive hover:bg-destructive/10 hover:text-destructive gap-1.5 sm:gap-2 flex-1 md:flex-none text-xs sm:text-sm h-8 sm:h-9">
-                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Clear All
+                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {t('employee_notifications.btn_clear_all')}
                         </Button>
                     </div>
                 )}
@@ -211,8 +208,8 @@ const EmployeeNotifications = () => {
                             <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-muted/50 flex items-center justify-center mb-3 sm:mb-4">
                                 <Bell className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground/50" />
                             </div>
-                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">All caught up!</h3>
-                            <p className="text-xs sm:text-sm text-muted-foreground">You don't have any new notifications at the moment.</p>
+                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">{t('employee_notifications.empty_title')}</h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground">{t('employee_notifications.empty_desc')}</p>
                         </div>
                     ) : (
                         notifications.map((notification) => {
@@ -238,7 +235,6 @@ const EmployeeNotifications = () => {
                                                     {notification.title}
                                                 </h4>
 
-                                                {/* Added Conditional Warning Level Badge */}
                                                 {notification.type === 'Warning' && notification.level && (
                                                     <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-md bg-destructive/10 text-destructive border border-destructive/20 shrink-0">
                                                         {notification.level}
@@ -246,14 +242,13 @@ const EmployeeNotifications = () => {
                                                 )}
                                             </div>
 
-                                            {/* Conditionally Display Warning Reason or Fallback to Message */}
                                             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                                                 {notification.type === 'Warning' && notification.reason
                                                     ? notification.reason
                                                     : notification.message}
                                             </p>
 
-                                            <div className="flex items-center gap-1 sm:gap-1.5 mt-1.5 sm:mt-2 text-[10px] sm:text-xs font-medium text-muted-foreground/80">
+                                            <div className="flex items-center gap-1.5 mt-1.5 sm:mt-2 text-[10px] sm:text-xs font-medium text-muted-foreground/80">
                                                 <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                                 {getTimeAgo(notification.createdAt)}
                                             </div>

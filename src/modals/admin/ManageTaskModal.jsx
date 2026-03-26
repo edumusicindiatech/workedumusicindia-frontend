@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
+import { useTranslation, Trans } from "react-i18next"; // <-- Added imports
 
 const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState({});
     const [isLoading, setIsLoading] = useState(false);
@@ -39,7 +41,6 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
                 parsedTimeTo = timeParts[1] || "";
             }
 
-            // Force editing to false, especially if rejected
             setIsEditing(false);
             setEditForm({
                 taskDescription: task.taskDescription || "",
@@ -56,8 +57,8 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
 
     if (!isOpen || !task) return null;
 
-    const schoolName = task.school?.schoolName || task.schoolName || "Unknown School";
-    const schoolAddress = task.school?.address || task.location || "No address provided";
+    const schoolName = task.school?.schoolName || task.schoolName || t('manage_task.unknown_school');
+    const schoolAddress = task.school?.address || task.location || t('manage_task.no_address');
 
     // --- ANIMATION HANDLERS ---
     const handleClose = () => {
@@ -89,7 +90,7 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
     // --- API HANDLERS ---
     const handleSaveEdit = async () => {
         setIsLoading(true);
-        const loadingToast = toast.loading("Updating task...");
+        const loadingToast = toast.loading(t('manage_task.updating_toast'));
         try {
             const payload = {
                 taskDescription: editForm.taskDescription,
@@ -100,13 +101,12 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
             };
 
             await api.put(`/admin/tasks/${task._id || task.id}`, payload);
-            toast.success("Task updated successfully!", { id: loadingToast });
+            toast.success(t('manage_task.update_success'), { id: loadingToast });
 
             setIsEditing(false);
             if (onSuccess) onSuccess();
         } catch (error) {
-            // BEAUITFUL LONG TEXT FORMATTING FOR REACT-HOT-TOAST
-            toast.error(error.response?.data?.message || "Failed to update task.", {
+            toast.error(error.response?.data?.message || t('manage_task.update_error'), {
                 id: loadingToast,
                 duration: 6000,
                 style: { maxWidth: '500px', padding: '16px', lineHeight: '1.5', textAlign: 'center' }
@@ -118,15 +118,15 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
 
     const confirmDelete = async () => {
         setIsLoading(true);
-        const loadingToast = toast.loading("Revoking task...");
+        const loadingToast = toast.loading(t('manage_task.revoking_toast'));
         try {
             await api.delete(`/admin/tasks/${task._id || task.id}`);
-            toast.success("Task revoked successfully!", { id: loadingToast });
+            toast.success(t('manage_task.revoke_success'), { id: loadingToast });
             setDeleteModal({ isOpen: false });
             handleClose();
             if (onSuccess) onSuccess();
         } catch (error) {
-            toast.error(error.response?.data?.message || "Failed to revoke task.", {
+            toast.error(error.response?.data?.message || t('manage_task.revoke_error'), {
                 id: loadingToast,
                 duration: 6000,
                 style: { maxWidth: '500px', padding: '16px', lineHeight: '1.5', textAlign: 'center' }
@@ -147,7 +147,6 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
         <div className={`fixed inset-0 z-100 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={!isLoading ? handleClose : undefined}>
             <div className={`bg-card w-full max-w-xl rounded-t-[2.5rem] md:rounded-4xl shadow-2xl border-t md:border border-border/50 flex flex-col max-h-[90vh] md:max-h-[85vh] relative overflow-hidden ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95' : ''}`} style={{ transform: `translateY(${dragOffset}px)` }} onClick={e => e.stopPropagation()}>
 
-                {/* Decorative Top Line */}
                 <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20" />
 
                 {/* HEADER */}
@@ -179,51 +178,50 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
                         <div className="mb-6 p-4 bg-destructive/5 border border-destructive/20 rounded-2xl text-sm text-destructive flex items-start gap-3 shadow-sm">
                             <Info className="w-5 h-5 shrink-0 mt-0.5" />
                             <div>
-                                <strong className="block text-xs uppercase tracking-wider opacity-80 mb-0.5">Reason for Rejection:</strong>
+                                <strong className="block text-xs uppercase tracking-wider opacity-80 mb-0.5">{t('manage_task.rejection_reason')}</strong>
                                 <span className="font-medium text-base">{task.rejectReason}</span>
                             </div>
                         </div>
                     )}
 
                     {!isEditing ? (
-                        /* READ-ONLY VIEW */
                         <div className="space-y-6">
                             <div className="grid grid-cols-1 gap-4">
                                 <div className="bg-muted/20 p-5 rounded-2xl border border-border/50">
-                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-2">Primary Objective</p>
+                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-2">{t('manage_task.primary_objective')}</p>
                                     <p className="text-base sm:text-lg font-bold text-foreground leading-snug">{task.taskDescription}</p>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-muted/20 p-4 rounded-2xl border border-border/50">
-                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-2">Category</p>
-                                    <span className="px-3 py-1 bg-primary/10 text-primary rounded-lg border border-primary/20 text-sm font-bold">{task.category || "Task"}</span>
+                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-2">{t('manage_task.category')}</p>
+                                    <span className="px-3 py-1 bg-primary/10 text-primary rounded-lg border border-primary/20 text-sm font-bold">{task.category || t('manage_task.task_placeholder')}</span>
                                 </div>
                                 <div className="bg-muted/20 p-4 rounded-2xl border border-border/50">
-                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-2">Status</p>
+                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-2">{t('manage_task.status')}</p>
                                     <span className={`px-3 py-1 rounded-lg border text-sm font-bold capitalize ${getStatusColor(task.status)}`}>{task.status}</span>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-muted/20 p-4 rounded-2xl border border-border/50">
-                                    <p className="text-xs text-muted-foreground font-bold flex items-center gap-1.5 uppercase tracking-wider mb-2"><Calendar className="w-3.5 h-3.5" /> Start Date</p>
-                                    <p className="text-sm font-bold text-foreground">{editForm.startDate || "Not set"}</p>
+                                    <p className="text-xs text-muted-foreground font-bold flex items-center gap-1.5 uppercase tracking-wider mb-2"><Calendar className="w-3.5 h-3.5" /> {t('manage_task.start_date')}</p>
+                                    <p className="text-sm font-bold text-foreground">{editForm.startDate || t('manage_task.not_set')}</p>
                                 </div>
                                 <div className="bg-muted/20 p-4 rounded-2xl border border-border/50">
-                                    <p className="text-xs text-muted-foreground font-bold flex items-center gap-1.5 uppercase tracking-wider mb-2"><Calendar className="w-3.5 h-3.5" /> End Date</p>
-                                    <p className="text-sm font-bold text-foreground">{editForm.endDate || "Ongoing"}</p>
+                                    <p className="text-xs text-muted-foreground font-bold flex items-center gap-1.5 uppercase tracking-wider mb-2"><Calendar className="w-3.5 h-3.5" /> {t('manage_task.end_date')}</p>
+                                    <p className="text-sm font-bold text-foreground">{editForm.endDate || t('manage_task.ongoing')}</p>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="bg-muted/20 p-4 rounded-2xl border border-border/50">
-                                    <p className="text-xs text-muted-foreground font-bold flex items-center gap-1.5 uppercase tracking-wider mb-2"><Clock className="w-3.5 h-3.5" /> Timings</p>
+                                    <p className="text-xs text-muted-foreground font-bold flex items-center gap-1.5 uppercase tracking-wider mb-2"><Clock className="w-3.5 h-3.5" /> {t('manage_task.timings')}</p>
                                     <p className="text-sm font-bold text-foreground">{editForm.timeFrom} - {editForm.timeTo}</p>
                                 </div>
                                 <div className="bg-muted/20 p-4 rounded-2xl border border-border/50">
-                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-2">Days</p>
+                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-2">{t('manage_task.days')}</p>
                                     <div className="flex flex-wrap gap-1.5">
                                         {editForm.days?.map(day => (
                                             <span key={day} className="px-2.5 py-1 bg-card border border-border/80 text-[11px] font-bold rounded-md shadow-sm">{day}</span>
@@ -233,37 +231,36 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
                             </div>
                         </div>
                     ) : (
-                        /* EDIT FORM VIEW */
                         <div className="space-y-6 animate-in slide-in-from-right-4 duration-300 bg-muted/10 p-5 rounded-2xl border border-border/50">
                             <div className="space-y-2.5">
-                                <Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1">Primary Task / Objective</Label>
+                                <Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1">{t('manage_task.primary_objective_label')}</Label>
                                 <Input value={editForm.taskDescription} onChange={(e) => setEditForm({ ...editForm, taskDescription: e.target.value })} className="h-12 rounded-xl bg-card border-border/60 focus:border-primary/50 focus:ring-primary/10" />
                             </div>
 
                             <div className="pt-2">
-                                <Label className="text-xs text-foreground uppercase tracking-wider font-bold mb-3 block ml-1">Task Category</Label>
+                                <Label className="text-xs text-foreground uppercase tracking-wider font-bold mb-3 block ml-1">{t('manage_task.task_category')}</Label>
                                 <div className="flex gap-3">
                                     <button type="button" onClick={() => setEditForm({ ...editForm, category: "Junior Band" })} className={`flex-1 flex items-center justify-center gap-2 h-12 rounded-xl border font-bold text-sm transition-all ${editForm.category === "Junior Band" ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-card border-border/60 text-muted-foreground hover:bg-muted'}`}>
-                                        {editForm.category === "Junior Band" && <Check className="w-4 h-4" />} Junior Band
+                                        {editForm.category === "Junior Band" && <Check className="w-4 h-4" />} {t('manage_task.junior_band')}
                                     </button>
                                     <button type="button" onClick={() => setEditForm({ ...editForm, category: "Senior Band" })} className={`flex-1 flex items-center justify-center gap-2 h-12 rounded-xl border font-bold text-sm transition-all ${editForm.category === "Senior Band" ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-card border-border/60 text-muted-foreground hover:bg-muted'}`}>
-                                        {editForm.category === "Senior Band" && <Check className="w-4 h-4" />} Senior Band
+                                        {editForm.category === "Senior Band" && <Check className="w-4 h-4" />} {t('manage_task.senior_band')}
                                     </button>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2.5"><Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1">Start Date</Label><Input type="date" value={editForm.startDate} onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })} className="h-12 rounded-xl bg-card border-border/60" /></div>
-                                <div className="space-y-2.5"><Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1">End Date (Opt)</Label><Input type="date" value={editForm.endDate} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} className="h-12 rounded-xl bg-card border-border/60" /></div>
+                                <div className="space-y-2.5"><Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1">{t('manage_task.start_date')}</Label><Input type="date" value={editForm.startDate} onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })} className="h-12 rounded-xl bg-card border-border/60" /></div>
+                                <div className="space-y-2.5"><Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1">{t('manage_task.end_date_opt')}</Label><Input type="date" value={editForm.endDate} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} className="h-12 rounded-xl bg-card border-border/60" /></div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2.5"><Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1">Start Time</Label><Input type="time" value={editForm.timeFrom} onChange={(e) => setEditForm({ ...editForm, timeFrom: e.target.value })} className="h-12 rounded-xl bg-card border-border/60" /></div>
-                                <div className="space-y-2.5"><Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1">End Time</Label><Input type="time" value={editForm.timeTo} onChange={(e) => setEditForm({ ...editForm, timeTo: e.target.value })} className="h-12 rounded-xl bg-card border-border/60" /></div>
+                                <div className="space-y-2.5"><Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1">{t('manage_task.start_time')}</Label><Input type="time" value={editForm.timeFrom} onChange={(e) => setEditForm({ ...editForm, timeFrom: e.target.value })} className="h-12 rounded-xl bg-card border-border/60" /></div>
+                                <div className="space-y-2.5"><Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1">{t('manage_task.end_time')}</Label><Input type="time" value={editForm.timeTo} onChange={(e) => setEditForm({ ...editForm, timeTo: e.target.value })} className="h-12 rounded-xl bg-card border-border/60" /></div>
                             </div>
 
                             <div className="space-y-2.5">
-                                <Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1">Allowed Days</Label>
+                                <Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1">{t('manage_task.allowed_days')}</Label>
                                 <div className="flex flex-wrap gap-2">
                                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
                                         <button key={day} type="button" onClick={() => toggleEditDay(day)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${editForm.days?.includes(day) ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'bg-card text-muted-foreground border-border/60 hover:border-border hover:bg-muted/50'}`}>
@@ -280,13 +277,12 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
                 <div className="p-4 sm:p-6 border-t border-border/50 bg-muted/10 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-b-4xl pb-safe">
                     {!isEditing ? (
                         <>
-                            {/* --- THE FIX: Edit button hidden if rejected! --- */}
                             <Button
                                 variant="outline"
                                 className={`h-12 font-bold rounded-xl text-destructive border-destructive/30 hover:bg-destructive hover:text-white hover:border-destructive transition-all ${isRejected ? 'w-full' : 'w-full sm:w-auto'}`}
                                 onClick={() => setDeleteModal({ isOpen: true })}
                             >
-                                <Trash2 className="w-4 h-4 mr-2" /> Revoke Task
+                                <Trash2 className="w-4 h-4 mr-2" /> {t('manage_task.revoke_btn')}
                             </Button>
 
                             {!isRejected && (
@@ -294,18 +290,18 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
                                     className="w-full sm:w-auto h-12 px-10 font-bold shadow-lg shadow-primary/25 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground transition-all active:scale-[0.98]"
                                     onClick={() => setIsEditing(true)}
                                 >
-                                    <Edit2 className="w-4 h-4 mr-2" /> Edit Details
+                                    <Edit2 className="w-4 h-4 mr-2" /> {t('manage_task.edit_btn')}
                                 </Button>
                             )}
                         </>
                     ) : (
                         <div className="flex w-full gap-3">
                             <Button variant="outline" disabled={isLoading} className="flex-1 sm:flex-none h-12 rounded-xl font-bold border-border/80 hover:bg-muted transition-colors" onClick={() => setIsEditing(false)}>
-                                Cancel Edit
+                                {t('manage_task.cancel_edit')}
                             </Button>
                             <Button className="flex-2 sm:flex-none sm:px-10 h-12 font-bold shadow-lg shadow-primary/25 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground transition-all active:scale-[0.98]" disabled={isLoading} onClick={handleSaveEdit}>
                                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
-                                Save Changes
+                                {t('manage_task.save_changes')}
                             </Button>
                         </div>
                     )}
@@ -323,17 +319,21 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
                             <AlertTriangle className="w-10 h-10 text-destructive relative z-10" />
                         </div>
 
-                        <h3 className="font-extrabold text-2xl mb-2 text-foreground">Revoke Task?</h3>
+                        <h3 className="font-extrabold text-2xl mb-2 text-foreground">{t('manage_task.delete_title')}</h3>
                         <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
-                            Are you sure you want to permanently remove this task from <strong>{schoolName}</strong>? The employee will be notified immediately.
+                            <Trans
+                                i18nKey="manage_task.delete_desc"
+                                values={{ name: schoolName }}
+                                components={[<span key="0" />, <strong key="1" />]}
+                            />
                         </p>
 
                         <div className="flex w-full gap-3">
                             <Button variant="outline" disabled={isLoading} className="flex-1 h-12 rounded-xl font-bold border-border/80 hover:bg-muted" onClick={() => setDeleteModal({ isOpen: false })}>
-                                Cancel
+                                {t('manage_task.cancel')}
                             </Button>
                             <Button variant="destructive" disabled={isLoading} className="flex-1 h-12 rounded-xl font-bold shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:shadow-[0_0_25px_rgba(239,68,68,0.35)]" onClick={confirmDelete}>
-                                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Yes, Revoke"}
+                                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('manage_task.confirm_revoke')}
                             </Button>
                         </div>
                     </div>

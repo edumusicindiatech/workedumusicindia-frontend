@@ -2,15 +2,17 @@ import { useState } from "react";
 import { AlertTriangle, Loader2, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
+import { useTranslation, Trans } from "react-i18next"; // <-- Added imports
 
 const DeleteEmployeeModal = ({ isOpen, onClose, employeeId, employeeName, onConfirm }) => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const [isLoading, setIsLoading] = useState(false);
 
     if (!isOpen) return null;
 
     const handleDelete = async () => {
         setIsLoading(true);
-        const loadingToast = toast.loading(`Deleting ${employeeName}...`);
+        const loadingToast = toast.loading(t('delete_employee.toast_loading', { name: employeeName }));
 
         try {
             const response = await api.delete(`/admin/employees/${employeeId}`);
@@ -22,7 +24,7 @@ const DeleteEmployeeModal = ({ isOpen, onClose, employeeId, employeeName, onConf
             }
         } catch (error) {
             console.error("Delete Error:", error);
-            toast.error(error.response?.data?.message || "Failed to delete employee.", { id: loadingToast });
+            toast.error(error.response?.data?.message || t('delete_employee.toast_error'), { id: loadingToast });
         } finally {
             setIsLoading(false);
         }
@@ -36,9 +38,13 @@ const DeleteEmployeeModal = ({ isOpen, onClose, employeeId, employeeName, onConf
                     <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center text-destructive mx-auto mb-4">
                         <AlertTriangle className="w-8 h-8" />
                     </div>
-                    <h2 className="text-xl font-bold text-foreground mb-2">Permanently Delete?</h2>
+                    <h2 className="text-xl font-bold text-foreground mb-2">{t('delete_employee.title')}</h2>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                        Are you sure you want to delete <strong>{employeeName}</strong>? This will remove all their assignments and attendance history. This action cannot be undone.
+                        <Trans
+                            i18nKey="delete_employee.description"
+                            values={{ name: employeeName }}
+                            components={[<span key="0" />, <strong key="1" />]}
+                        />
                     </p>
                 </div>
 
@@ -49,14 +55,14 @@ const DeleteEmployeeModal = ({ isOpen, onClose, employeeId, employeeName, onConf
                         className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl transition-colors shadow-sm disabled:opacity-50"
                     >
                         {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                        {isLoading ? "Deleting..." : "Confirm Delete"}
+                        {isLoading ? t('delete_employee.deleting') : t('delete_employee.confirm')}
                     </button>
                     <button
                         onClick={onClose}
                         disabled={isLoading}
                         className="w-full py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                     >
-                        Keep Employee
+                        {t('delete_employee.cancel')}
                     </button>
                 </div>
             </div>

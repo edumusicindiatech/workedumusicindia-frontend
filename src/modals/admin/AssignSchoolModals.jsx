@@ -5,14 +5,16 @@ import { Label } from "@/components/ui/label";
 import { School, X, Map, MapPin, ExternalLink, Check, Loader2, Calendar, Clock, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const [isLoading, setIsLoading] = useState(false);
 
     // Swipe & Animation states
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState(0);
-    const [isClosing, setIsClosing] = useState(false); // Controls the fade-out
+    const [isClosing, setIsClosing] = useState(false);
     const dragStartY = useRef(0);
 
     const [schoolForm, setSchoolForm] = useState({
@@ -23,21 +25,17 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
 
     if (!isOpen) return null;
 
-    // --- UNIFIED SMOOTH CLOSE LOGIC ---
     const handleClose = () => {
         setIsClosing(true);
-        setDragOffset(window.innerHeight); // Push it completely off the bottom of the screen
+        setDragOffset(window.innerHeight);
 
-        // Wait for the 300ms CSS transition to finish before actually unmounting
         setTimeout(() => {
             onClose();
-            // Reset states invisibly so it's ready for the next time it opens
             setIsClosing(false);
             setDragOffset(0);
         }, 300);
     };
 
-    // --- DRAWER SWIPE LOGIC ---
     const handleTouchStart = (e) => {
         dragStartY.current = e.touches[0].clientY;
         setIsDragging(true);
@@ -47,22 +45,13 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
         if (!isDragging) return;
         const currentY = e.touches[0].clientY;
         const delta = currentY - dragStartY.current;
-
-        // Only allow dragging downwards
-        if (delta > 0) {
-            setDragOffset(delta);
-        }
+        if (delta > 0) setDragOffset(delta);
     };
 
     const handleTouchEnd = () => {
         setIsDragging(false);
-        // If dragged down more than 120px, trigger the smooth close
-        if (dragOffset > 120) {
-            handleClose();
-        } else {
-            // Not dragged enough, snap back to top smoothly
-            setDragOffset(0);
-        }
+        if (dragOffset > 120) handleClose();
+        else setDragOffset(0);
     };
 
     const toggleDay = (day) => {
@@ -73,12 +62,12 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
 
     const handleSave = async () => {
         if (!schoolForm.schoolName || !schoolForm.location || !schoolForm.startDate || !schoolForm.latitude || !schoolForm.longitude) {
-            toast.error("Please fill in all required fields, including GPS coordinates.");
+            toast.error(t('assign_school.error_validation'));
             return;
         }
 
         setIsLoading(true);
-        const loadingToast = toast.loading("Assigning school and sending notifications...");
+        const loadingToast = toast.loading(t('assign_school.toast_loading'));
 
         try {
             const payload = {
@@ -90,13 +79,13 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
             };
 
             await api.post(`/admin/employees/${employeeId}/assign-school`, payload);
-            toast.success("School successfully assigned!", { id: loadingToast });
+            toast.success(t('assign_school.toast_success'), { id: loadingToast });
 
             if (onSuccess) onSuccess();
-            handleClose(); // Use smooth close here too!
+            handleClose();
 
         } catch (error) {
-            toast.error(error.response?.data?.message || "Failed to assign school.", { id: loadingToast });
+            toast.error(error.response?.data?.message || t('assign_school.toast_error'), { id: loadingToast });
         } finally {
             setIsLoading(false);
         }
@@ -104,7 +93,6 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
 
     return (
         <div
-            // IMPROVEMENT: Added dynamic opacity to fade the backdrop smoothly when closing
             className={`fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-sm animate-in fade-in'}`}
             onClick={!isLoading ? handleClose : undefined}
         >
@@ -121,15 +109,13 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                 >
-                    {/* Mobile Pull Handle */}
                     <div className="w-full flex justify-center pt-4 pb-2 md:hidden">
                         <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full"></div>
                     </div>
 
-                    {/* Modal Title */}
                     <div className="flex items-center justify-between px-6 pb-4 pt-1 md:pt-6">
                         <h2 className="text-xl font-bold flex items-center gap-2">
-                            <School className="w-5 h-5 text-primary" /> Assign New School
+                            <School className="w-5 h-5 text-primary" /> {t('assign_school.title')}
                         </h2>
                         <button onClick={handleClose} disabled={isLoading} className="p-2 hover:bg-muted rounded-full transition-colors hidden md:block">
                             <X className="w-5 h-5 text-muted-foreground" />
@@ -143,33 +129,33 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                     {/* Basic Info */}
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label>School Name</Label>
-                            <Input placeholder="e.g. Lincoln High School" value={schoolForm.schoolName} onChange={(e) => setSchoolForm({ ...schoolForm, schoolName: e.target.value })} className="h-11 rounded-xl" />
+                            <Label>{t('assign_school.school_name')}</Label>
+                            <Input placeholder={t('assign_school.school_name_placeholder')} value={schoolForm.schoolName} onChange={(e) => setSchoolForm({ ...schoolForm, schoolName: e.target.value })} className="h-11 rounded-xl" />
                         </div>
 
                         <div className="space-y-2">
-                            <Label>School Address / Location</Label>
-                            <Input placeholder="123 Education Blvd" value={schoolForm.location} onChange={(e) => setSchoolForm({ ...schoolForm, location: e.target.value })} className="h-11 rounded-xl" />
+                            <Label>{t('assign_school.address')}</Label>
+                            <Input placeholder={t('assign_school.address_placeholder')} value={schoolForm.location} onChange={(e) => setSchoolForm({ ...schoolForm, location: e.target.value })} className="h-11 rounded-xl" />
                         </div>
                     </div>
 
                     {/* Category Selection */}
                     <div className="pt-2">
-                        <Label className="text-foreground text-sm font-medium block mb-3">Assignment Category</Label>
+                        <Label className="text-foreground text-sm font-medium block mb-3">{t('assign_school.category')}</Label>
                         <div className="flex gap-3">
                             <button
                                 type="button"
                                 onClick={() => setSchoolForm({ ...schoolForm, category: "Junior Band" })}
                                 className={`flex-1 flex items-center justify-center gap-2 h-12 rounded-xl border font-semibold text-sm transition-all ${schoolForm.category === "Junior Band" ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-background border-border text-muted-foreground hover:bg-muted'}`}
                             >
-                                {schoolForm.category === "Junior Band" && <Check className="w-4 h-4" />} Junior Band
+                                {schoolForm.category === "Junior Band" && <Check className="w-4 h-4" />} {t('assign_school.junior_band')}
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setSchoolForm({ ...schoolForm, category: "Senior Band" })}
                                 className={`flex-1 flex items-center justify-center gap-2 h-12 rounded-xl border font-semibold text-sm transition-all ${schoolForm.category === "Senior Band" ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-background border-border text-muted-foreground hover:bg-muted'}`}
                             >
-                                {schoolForm.category === "Senior Band" && <Check className="w-4 h-4" />} Senior Band
+                                {schoolForm.category === "Senior Band" && <Check className="w-4 h-4" />} {t('assign_school.senior_band')}
                             </button>
                         </div>
                     </div>
@@ -179,7 +165,7 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
 
                         {/* Dates */}
                         <div>
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3 block">Timeline</Label>
+                            <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3 block">{t('assign_school.timeline')}</Label>
                             <div className="flex flex-col md:flex-row items-center gap-3">
                                 <div className="relative w-full">
                                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
@@ -211,7 +197,7 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
 
                         {/* Times */}
                         <div className="pt-2">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3 block">Daily Shift</Label>
+                            <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3 block">{t('assign_school.daily_shift')}</Label>
                             <div className="flex flex-col md:flex-row items-center gap-3">
                                 <div className="relative w-full">
                                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
@@ -225,7 +211,7 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                                     />
                                 </div>
 
-                                <span className="text-sm font-medium text-muted-foreground hidden md:block shrink-0">to</span>
+                                <span className="text-sm font-medium text-muted-foreground hidden md:block shrink-0">{t('assign_school.to')}</span>
 
                                 <div className="relative w-full">
                                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
@@ -243,14 +229,14 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
 
                         {/* Days */}
                         <div className="pt-2">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3 block">Working Days</Label>
+                            <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3 block">{t('assign_school.working_days')}</Label>
                             <div className="flex flex-wrap gap-2">
                                 {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
                                     <button
                                         key={day} type="button" onClick={() => toggleDay(day)}
                                         className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${schoolForm.days.includes(day) ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'bg-background text-muted-foreground border-border hover:bg-muted'}`}
                                     >
-                                        {day}
+                                        {t(`assign_school.days.${day}`)}
                                     </button>
                                 ))}
                             </div>
@@ -263,9 +249,9 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
 
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 relative z-10">
                             <div>
-                                <Label className="flex items-center gap-2 text-base"><Map className="w-4 h-4 text-primary" /> Geofence Coordinates</Label>
+                                <Label className="flex items-center gap-2 text-base"><Map className="w-4 h-4 text-primary" /> {t('assign_school.geofence_title')}</Label>
                                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-62.5">
-                                    Required for GPS check-ins. Copy the coordinates directly from Maps.
+                                    {t('assign_school.geofence_desc')}
                                 </p>
                             </div>
 
@@ -274,18 +260,18 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                                 className="inline-flex items-center justify-center gap-2 text-sm font-medium h-10 px-4 bg-muted hover:bg-muted/80 text-foreground rounded-xl transition-colors shrink-0 border border-border w-full md:w-auto"
                             >
                                 <MapPin className="w-4 h-4 text-primary" />
-                                Open Google Maps
+                                {t('assign_school.open_maps')}
                                 <ExternalLink className="w-3 h-3 text-muted-foreground ml-1" />
                             </a>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 pt-2 relative z-10">
                             <div className="space-y-2">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Latitude</Label>
+                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('assign_school.latitude')}</Label>
                                 <Input placeholder="26.2589" value={schoolForm.latitude} onChange={(e) => setSchoolForm({ ...schoolForm, latitude: e.target.value })} className="h-11 rounded-xl bg-background border-border" />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Longitude</Label>
+                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('assign_school.longitude')}</Label>
                                 <Input placeholder="82.0730" value={schoolForm.longitude} onChange={(e) => setSchoolForm({ ...schoolForm, longitude: e.target.value })} className="h-11 rounded-xl bg-background border-border" />
                             </div>
                         </div>
@@ -295,10 +281,10 @@ const AssignSchoolModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
 
                 {/* --- STICKY FOOTER --- */}
                 <div className="sticky bottom-0 bg-card p-4 md:p-6 border-t border-border flex justify-end gap-3 rounded-b-3xl md:rounded-b-2xl pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
-                    <Button variant="ghost" onClick={handleClose} disabled={isLoading} className="rounded-xl font-medium">Cancel</Button>
+                    <Button variant="ghost" onClick={handleClose} disabled={isLoading} className="rounded-xl font-medium">{t('assign_school.cancel')}</Button>
                     <Button className="gap-2 shadow-glow rounded-xl font-semibold" onClick={handleSave} disabled={isLoading}>
                         {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <School className="w-4 h-4" />}
-                        {isLoading ? "Saving..." : "Save Assignment"}
+                        {isLoading ? t('assign_school.saving') : t('assign_school.save_btn')}
                     </Button>
                 </div>
             </div>

@@ -5,8 +5,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MediaDetailsModal from "../../modals/employee/MediaDetailsModal";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 const MediaUpload = () => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const isUploadAllowed = true;
     const MAX_FILES = 5;
 
@@ -42,7 +44,7 @@ const MediaUpload = () => {
         let allowedFiles = incomingFiles;
 
         if (totalFilesCount > MAX_FILES) {
-            triggerError(`Limit exceeded. You can only upload a maximum of ${MAX_FILES} files at a time.`);
+            triggerError(t('media_upload.error_limit', { count: MAX_FILES }));
             const availableSlots = MAX_FILES - selectedFiles.length;
             allowedFiles = incomingFiles.slice(0, availableSlots);
         } else {
@@ -61,7 +63,7 @@ const MediaUpload = () => {
 
     const handleUploadClick = () => {
         if (!isUploadAllowed) {
-            triggerError("Upload portal is currently locked. The Admin has not granted upload permissions at this time.");
+            triggerError(t('media_upload.error_locked'));
             return;
         }
         fileInputRef.current.click();
@@ -92,10 +94,48 @@ const MediaUpload = () => {
             selectedFiles.forEach(file => URL.revokeObjectURL(file.preview));
             setSelectedFiles([]);
 
-            setSuccessMsg("All media files and details uploaded successfully!");
+            setSuccessMsg(t('media_upload.success_msg'));
             setTimeout(() => setSuccessMsg(""), 5000);
         }, 1500);
     };
+
+    // ==========================================
+    // RENDER: LOADING STATE (SHIMMER)
+    // ==========================================
+    const loading = false; // Setting this based on your original logic provided
+    if (loading) {
+        return (
+            <div className="space-y-6 md:space-y-8 animate-fade-in p-4 md:p-8 max-w-4xl mx-auto pb-20">
+                <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-muted rounded-xl animate-pulse shrink-0" />
+                        <div className="h-8 w-48 sm:w-64 bg-muted rounded-lg animate-pulse" />
+                    </div>
+                    <div className="h-5 w-3/4 sm:w-96 bg-muted/60 rounded-md animate-pulse" />
+                </div>
+
+                <div className="bg-card border border-border/60 rounded-2xl shadow-sm overflow-hidden relative">
+                    <div className="bg-muted/20 border-b border-border/50 p-4 sm:px-6 flex flex-col sm:flex-row gap-4 justify-between">
+                        <div className="h-5 w-40 bg-muted rounded animate-pulse" />
+                        <div className="h-5 w-48 bg-muted rounded animate-pulse" />
+                    </div>
+                    <div className="p-4 sm:p-6 space-y-6">
+                        <div className="space-y-2">
+                            <div className="h-4 w-32 bg-muted/80 rounded animate-pulse" />
+                            <div className="w-full h-12 rounded-xl bg-muted animate-pulse" />
+                        </div>
+                        <div className="space-y-2">
+                            <div className="h-4 w-32 bg-muted/80 rounded animate-pulse" />
+                            <div className="w-full h-40 rounded-xl bg-muted animate-pulse" />
+                        </div>
+                        <div className="pt-4 border-t border-border/50 flex justify-end">
+                            <div className="w-full sm:w-40 h-12 rounded-xl bg-muted animate-pulse" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 md:space-y-8 animate-fade-in p-4 md:p-8 max-w-4xl mx-auto pb-20">
@@ -103,10 +143,10 @@ const MediaUpload = () => {
             {/* Header */}
             <div>
                 <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground flex items-center gap-2">
-                    Site Media Upload
+                    {t('media_upload.title')}
                 </h1>
                 <p className="text-muted-foreground mt-1">
-                    Upload site visit photos and videos.
+                    {t('media_upload.subtitle')}
                 </p>
             </div>
 
@@ -151,12 +191,12 @@ const MediaUpload = () => {
                     </div>
 
                     <h3 className={`text-lg font-bold mb-1 ${isUploadAllowed ? "text-foreground" : "text-muted-foreground"}`}>
-                        {isUploadAllowed ? "Click to select media files" : "Upload Portal Locked"}
+                        {isUploadAllowed ? t('media_upload.dropzone_title') : t('media_upload.dropzone_locked')}
                     </h3>
                     <p className="text-sm text-muted-foreground max-w-xs mx-auto">
                         {isUploadAllowed
-                            ? `You can select ${MAX_FILES - selectedFiles.length} more file(s).`
-                            : "Please contact your admin to enable media uploads for your account."}
+                            ? t('media_upload.dropzone_limit_info', { count: MAX_FILES - selectedFiles.length })
+                            : t('media_upload.dropzone_locked_info')}
                     </p>
                 </div>
             )}
@@ -166,7 +206,9 @@ const MediaUpload = () => {
                 <div className="bg-card border border-border rounded-2xl shadow-card p-6 animate-in zoom-in-95 mt-6">
 
                     <div className="mb-5 flex items-center justify-between">
-                        <h3 className="font-bold text-lg">Selected Media ({selectedFiles.length}/{MAX_FILES})</h3>
+                        <h3 className="font-bold text-lg">
+                            {t('media_upload.selected_title', { current: selectedFiles.length, max: MAX_FILES })}
+                        </h3>
                     </div>
 
                     {/* Rich Media Grid List */}
@@ -204,7 +246,7 @@ const MediaUpload = () => {
                                 <button
                                     onClick={(e) => { e.stopPropagation(); removeFile(index); }}
                                     className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-colors shrink-0"
-                                    title="Remove File"
+                                    title={t('media_upload.remove_file')}
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
@@ -218,7 +260,7 @@ const MediaUpload = () => {
                             onClick={() => setIsModalOpen(true)}
                             className="w-full sm:w-auto h-12 rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground text-base shadow-glow px-8"
                         >
-                            Continue to Details <ChevronRight className="w-5 h-5 ml-1" />
+                            {t('media_upload.btn_continue')} <ChevronRight className="w-5 h-5 ml-1" />
                         </Button>
                     </div>
                 </div>

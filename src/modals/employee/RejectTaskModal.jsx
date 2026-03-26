@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import toast from "react-hot-toast"; // <-- Added react-hot-toast import
+import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 const RejectTaskModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const [rejectReason, setRejectReason] = useState("");
 
     // Reset the reason field every time the modal opens
@@ -16,9 +18,8 @@ const RejectTaskModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
     if (!isOpen) return null;
 
     const handleSubmit = () => {
-        // Validation check for consistency
         if (!rejectReason.trim()) {
-            toast.error("Please provide a reason for rejection.");
+            toast.error(t('reject_task.error_reason'));
             return;
         }
         onSubmit(rejectReason);
@@ -44,10 +45,10 @@ const RejectTaskModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
                     </div>
 
                     <h2 className="text-2xl font-extrabold text-foreground tracking-tight mb-2">
-                        Reject Task
+                        {t('reject_task.title')}
                     </h2>
                     <p className="text-sm font-medium text-muted-foreground">
-                        Why are you declining this optional assignment?
+                        {t('reject_task.subtitle')}
                     </p>
                 </div>
 
@@ -56,7 +57,7 @@ const RejectTaskModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
                     <textarea
                         value={rejectReason}
                         onChange={(e) => setRejectReason(e.target.value)}
-                        placeholder="e.g., Schedule conflict, already assigned to another priority task..."
+                        placeholder={t('reject_task.placeholder')}
                         disabled={actionLoading}
                         className="w-full min-h-30 p-4 rounded-2xl border border-border/60 bg-muted/20 text-sm sm:text-base focus:bg-card focus:border-destructive/50 focus:ring-4 focus:ring-destructive/10 outline-none resize-none transition-all duration-300 custom-scrollbar placeholder:text-muted-foreground/50 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     />
@@ -69,7 +70,7 @@ const RejectTaskModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
                             onClick={onClose}
                             disabled={actionLoading}
                         >
-                            Cancel
+                            {t('reject_task.cancel')}
                         </Button>
                         <Button
                             variant="destructive"
@@ -77,7 +78,7 @@ const RejectTaskModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
                             onClick={handleSubmit}
                             disabled={!rejectReason.trim() || actionLoading}
                         >
-                            {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirm Rejection"}
+                            {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('reject_task.confirm')}
                         </Button>
                     </div>
                 </div>

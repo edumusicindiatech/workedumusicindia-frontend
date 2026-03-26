@@ -1,7 +1,10 @@
 import { Outlet } from "react-router-dom";
 import EmployeeNavbar from "./EmployeeNavbar";
+import { useTranslation } from "react-i18next"; // <-- Added hook import
 
 const EmployeeLayout = () => {
+    const { t } = useTranslation(); // <-- Initialize translation function
+
     return (
         <div className="flex flex-col min-h-screen bg-background text-foreground">
             <EmployeeNavbar />

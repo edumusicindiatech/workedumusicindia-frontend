@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { X, CalendarPlus, Loader2, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
-import api from "../../api/axios"; // Adjust path as needed
+import api from "../../api/axios";
+import { useTranslation, Trans } from "react-i18next"; // <-- Added imports
 
 const LeaveRequestModal = ({ isOpen, onClose }) => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const [loading, setLoading] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
 
-    // Status can be: 'none', 'pending', 'approved', 'rejected'
     const [activeRequest, setActiveRequest] = useState(null);
     const [dismissed, setDismissed] = useState(false);
 
@@ -18,12 +19,10 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
         reason: ""
     });
 
-    // Fetch existing leave request status on open
     useEffect(() => {
         if (isOpen) {
             checkActiveLeaveRequest();
         } else {
-            // Reset state when closed
             setDismissed(false);
             setFormData({ fromDate: "", toDate: "", reason: "" });
         }
@@ -33,8 +32,6 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
         setLoading(true);
         try {
             const res = await api.get('/employee/leave-request/status');
-            // Assuming backend returns { success: true, data: { id, status, fromDate, toDate, reason, adminRemarks } }
-            // If no active request, return data: null
             if (res.data.success && res.data.data) {
                 setActiveRequest(res.data.data);
                 setDismissed(false);
@@ -43,7 +40,6 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
             }
         } catch (err) {
             console.error("Failed to fetch leave status", err);
-            // Optionally handle silently if endpoint doesn't exist yet
         } finally {
             setLoading(false);
         }
@@ -57,18 +53,15 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
     const submitLeaveRequest = async (e) => {
         e.preventDefault();
         setActionLoading(true);
-        const toastId = toast.loading('Submitting leave request...');
+        const toastId = toast.loading(t('leave_request.toast_submitting'));
 
         try {
-            // This API should handle creating the Leave Request schema,
-            // sending email to admin, and sending the in-app notification
             const res = await api.post('/employee/leave-request', formData);
-
-            toast.success(res.data?.message || "Leave request submitted successfully!", { id: toastId });
-            setActiveRequest(res.data.data); // Update to pending state
+            toast.success(res.data?.message || t('leave_request.toast_submit_success'), { id: toastId });
+            setActiveRequest(res.data.data);
             setDismissed(false);
         } catch (err) {
-            toast.error(err.response?.data?.message || "Failed to submit request", { id: toastId });
+            toast.error(err.response?.data?.message || t('leave_request.toast_submit_error'), { id: toastId });
         } finally {
             setActionLoading(false);
         }
@@ -76,15 +69,15 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
 
     const revokeLeaveRequest = async () => {
         setActionLoading(true);
-        const toastId = toast.loading('Revoking leave request...');
+        const toastId = toast.loading(t('leave_request.toast_revoking'));
 
         try {
             await api.delete(`/employee/leave-request/${activeRequest.id || activeRequest._id}`);
-            toast.success("Leave request revoked.", { id: toastId });
+            toast.success(t('leave_request.toast_revoke_success'), { id: toastId });
             setActiveRequest(null);
             setFormData({ fromDate: "", toDate: "", reason: "" });
         } catch (err) {
-            toast.error(err.response?.data?.message || "Failed to revoke request", { id: toastId });
+            toast.error(err.response?.data?.message || t('leave_request.toast_revoke_error'), { id: toastId });
         } finally {
             setActionLoading(false);
         }
@@ -105,7 +98,7 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                 <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
                     <h3 className="text-lg font-bold flex items-center gap-2">
                         <CalendarPlus className="w-5 h-5 text-blue-500" />
-                        Request Leave
+                        {t('leave_request.title')}
                     </h3>
                     <button
                         onClick={onClose}
@@ -120,11 +113,10 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-10 gap-3">
                             <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                            <p className="text-sm text-muted-foreground">Checking status...</p>
+                            <p className="text-sm text-muted-foreground">{t('leave_request.checking_status')}</p>
                         </div>
                     ) : activeRequest && !dismissed ? (
 
-                        /* --- ACTIVE REQUEST STATE VIEWS --- */
                         <div className="space-y-6 text-center py-2">
 
                             {/* STATUS ICONS */}
@@ -150,24 +142,26 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                                 </div>
                             )}
 
-                            {/* TEXT INFO */}
                             <div>
                                 <h4 className="text-xl font-bold mb-2">
-                                    {activeRequest.status === 'pending' && "Leave Request Pending"}
-                                    {activeRequest.status === 'approved' && "Leave Approved!"}
-                                    {activeRequest.status === 'rejected' && "Leave Rejected"}
+                                    {activeRequest.status === 'pending' && t('leave_request.status_pending')}
+                                    {activeRequest.status === 'approved' && t('leave_request.status_approved')}
+                                    {activeRequest.status === 'rejected' && t('leave_request.status_rejected')}
                                 </h4>
                                 <p className="text-sm text-muted-foreground">
-                                    Requested dates: <strong>{activeRequest.fromDate}</strong> to <strong>{activeRequest.toDate}</strong>
+                                    <Trans
+                                        i18nKey="leave_request.requested_dates"
+                                        values={{ from: activeRequest.fromDate, to: activeRequest.toDate }}
+                                        components={[<span key="0" />, <strong key="1" />]}
+                                    />
                                 </p>
                                 {activeRequest.adminRemarks && (
                                     <p className="text-sm mt-3 p-3 bg-muted rounded-xl">
-                                        <strong>Admin Note:</strong> {activeRequest.adminRemarks}
+                                        <strong>{t('leave_request.admin_note')}</strong> {activeRequest.adminRemarks}
                                     </p>
                                 )}
                             </div>
 
-                            {/* ACTIONS DEPENDING ON STATUS */}
                             <div className="flex gap-3 pt-4 border-t border-border mt-4">
                                 {activeRequest.status === 'pending' ? (
                                     <>
@@ -177,7 +171,7 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                                             onClick={handleDismiss}
                                             disabled={actionLoading}
                                         >
-                                            Dismiss
+                                            {t('leave_request.btn_dismiss')}
                                         </Button>
                                         <Button
                                             variant="destructive"
@@ -185,7 +179,7 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                                             onClick={revokeLeaveRequest}
                                             disabled={actionLoading}
                                         >
-                                            {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Revoke Leave"}
+                                            {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('leave_request.btn_revoke')}
                                         </Button>
                                     </>
                                 ) : (
@@ -195,13 +189,13 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                                             className="flex-1"
                                             onClick={onClose}
                                         >
-                                            Dismiss
+                                            {t('leave_request.btn_dismiss')}
                                         </Button>
                                         <Button
                                             className="flex-1"
                                             onClick={handleDismiss}
                                         >
-                                            New Request
+                                            {t('leave_request.btn_new_request')}
                                         </Button>
                                     </>
                                 )}
@@ -210,11 +204,10 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
 
                     ) : (
 
-                        /* --- NEW REQUEST FORM --- */
                         <form onSubmit={submitLeaveRequest} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-sm font-semibold text-foreground">From Date</label>
+                                    <label className="text-sm font-semibold text-foreground">{t('leave_request.label_from')}</label>
                                     <input
                                         type="date"
                                         name="fromDate"
@@ -225,7 +218,7 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-sm font-semibold text-foreground">To Date</label>
+                                    <label className="text-sm font-semibold text-foreground">{t('leave_request.label_to')}</label>
                                     <input
                                         type="date"
                                         name="toDate"
@@ -238,13 +231,13 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-sm font-semibold text-foreground">Reason for Leave</label>
+                                <label className="text-sm font-semibold text-foreground">{t('leave_request.label_reason')}</label>
                                 <textarea
                                     name="reason"
                                     required
                                     value={formData.reason}
                                     onChange={handleInputChange}
-                                    placeholder="Please explain why you need time off..."
+                                    placeholder={t('leave_request.placeholder_reason')}
                                     className="flex min-h-25 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary resize-none"
                                 />
                             </div>
@@ -257,14 +250,14 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                                     className="h-11 px-6 rounded-xl"
                                     disabled={actionLoading}
                                 >
-                                    Cancel
+                                    {t('leave_request.btn_cancel')}
                                 </Button>
                                 <Button
                                     type="submit"
                                     className="h-11 px-8 rounded-xl font-bold"
                                     disabled={actionLoading}
                                 >
-                                    {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit Request"}
+                                    {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('leave_request.btn_submit')}
                                 </Button>
                             </div>
                         </form>

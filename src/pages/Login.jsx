@@ -1,5 +1,4 @@
 import { useState } from "react";
-// Removed useNavigate import since we don't need it here anymore
 import { useDispatch } from "react-redux";
 import { setCredentials } from "../store/slices/authSlice";
 
@@ -10,8 +9,10 @@ import { Eye, EyeOff, Shield, Loader2, AlertCircle } from "lucide-react";
 
 import api, { setAxiosToken } from "../api/axios";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next"; // <-- Added i18n import
 
 const Login = () => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const dispatch = useDispatch();
 
     // UI States
@@ -47,36 +48,32 @@ const Login = () => {
         } catch (error) {
             console.error("Login Error:", error);
 
-            // --- USER-FRIENDLY ERROR MAPPING ---
-            let friendlyMessage = "Unable to sign in. Please try again.";
+            // --- USER-FRIENDLY ERROR MAPPING (Localized) ---
+            let friendlyMessage = t('login.errors.default');
 
             if (!error.response) {
-                // The request was made but no response was received (e.g., no internet, server is completely down)
-                friendlyMessage = "Cannot connect to the server. Please check your internet connection.";
+                friendlyMessage = t('login.errors.no_server');
             } else {
                 const status = error.response.status;
                 const backendMsg = error.response.data?.message?.toLowerCase() || "";
 
-                // Map specific status codes to friendly messages
                 if (status === 400 || status === 401) {
-                    friendlyMessage = "Incorrect Employee ID or password. Please try again.";
+                    friendlyMessage = t('login.errors.invalid_creds');
 
-                    // Catch weird edge cases where a token error leaks through on login
                     if (backendMsg.includes("token") || backendMsg.includes("jwt")) {
-                        friendlyMessage = "Authentication error. Please refresh the page and try again.";
+                        friendlyMessage = t('login.errors.auth_error');
                     }
                 } else if (status === 403) {
-                    friendlyMessage = "Your account has been restricted. Please contact your administrator.";
+                    friendlyMessage = t('login.errors.restricted');
                 } else if (status === 404) {
-                    friendlyMessage = "Account not found. Please double-check your Employee ID.";
+                    friendlyMessage = t('login.errors.not_found');
                 } else if (status === 429) {
-                    friendlyMessage = "Too many failed attempts. Please wait a few minutes and try again.";
+                    friendlyMessage = t('login.errors.too_many_attempts');
                 } else if (status >= 500) {
-                    friendlyMessage = "We're experiencing technical difficulties on our end. Please try again later.";
+                    friendlyMessage = t('login.errors.server_error');
                 }
             }
 
-            // Set the friendly message to your existing UI alert state
             setErrorMsg(friendlyMessage);
         } finally {
             setIsLoading(false);
@@ -97,20 +94,20 @@ const Login = () => {
                     </div>
 
                     <h1 className="text-4xl xl:text-5xl font-extrabold text-foreground tracking-tight mb-4 leading-tight">
-                        WorkEduMusicIndia
+                        {t('login.brand_name')}
                     </h1>
 
                     <p className="text-lg text-muted-foreground mb-10 font-medium">
-                        Workforce Management & Compliance System
+                        {t('login.brand_subtitle')}
                     </p>
 
                     <div className="flex flex-wrap justify-center gap-3">
-                        {["Attendance", "Compliance", "Reports"].map((label) => (
+                        {["attendance", "compliance", "reports"].map((key) => (
                             <span
-                                key={label}
+                                key={key}
                                 className="px-5 py-2.5 rounded-full text-sm font-bold text-foreground bg-background border border-border/60 shadow-sm"
                             >
-                                {label}
+                                {t(`login.feature_${key}`)}
                             </span>
                         ))}
                     </div>
@@ -129,13 +126,13 @@ const Login = () => {
                         <div className="w-16 h-16 rounded-[1.25rem] bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-5 shadow-sm">
                             <Shield className="w-8 h-8 text-primary" />
                         </div>
-                        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">WorkEduMusic</h1>
+                        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{t('login.mobile_brand_name')}</h1>
                     </div>
 
                     {/* Form Header */}
                     <div className="text-center lg:text-left mb-8">
-                        <h2 className="text-3xl font-extrabold text-foreground tracking-tight mb-2">Welcome back</h2>
-                        <p className="text-muted-foreground font-medium">Please enter your credentials to sign in.</p>
+                        <h2 className="text-3xl font-extrabold text-foreground tracking-tight mb-2">{t('login.welcome_back')}</h2>
+                        <p className="text-muted-foreground font-medium">{t('login.credentials_hint')}</p>
                     </div>
 
                     {/* Error Display */}
@@ -149,11 +146,11 @@ const Login = () => {
                     {/* The Form */}
                     <form onSubmit={handleLogin} className="space-y-5">
                         <div className="space-y-2">
-                            <Label htmlFor="employeeId" className="text-sm font-bold text-foreground">Employee ID</Label>
+                            <Label htmlFor="employeeId" className="text-sm font-bold text-foreground">{t('login.label_employee_id')}</Label>
                             <Input
                                 id="employeeId"
                                 type="text"
-                                placeholder="e.g., EMP-2026"
+                                placeholder={t('login.placeholder_employee_id')}
                                 value={employeeId}
                                 onChange={(e) => setEmployeeId(e.target.value)}
                                 className="h-12 rounded-xl px-4 bg-muted/30 border-border/60 focus-visible:ring-primary/50 text-base font-medium shadow-sm transition-all"
@@ -163,12 +160,12 @@ const Login = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="password" className="text-sm font-bold text-foreground">Password</Label>
+                            <Label htmlFor="password" className="text-sm font-bold text-foreground">{t('login.label_password')}</Label>
                             <div className="relative">
                                 <Input
                                     id="password"
                                     type={showPassword ? "text" : "password"}
-                                    placeholder="••••••••"
+                                    placeholder={t('login.placeholder_password')}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="h-12 rounded-xl px-4 pr-12 bg-muted/30 border-border/60 focus-visible:ring-primary/50 text-base font-medium tracking-wide shadow-sm transition-all"
@@ -192,15 +189,15 @@ const Login = () => {
                             className="w-full h-12 mt-4 rounded-xl text-base font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                         >
                             {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-                            {isLoading ? "Authenticating..." : "Login"}
+                            {isLoading ? t('login.btn_authenticating') : t('login.btn_login')}
                         </Button>
                     </form>
 
                     <div className="mt-10 pt-6 border-t border-border/40 text-center">
                         <p className="text-sm font-medium text-muted-foreground">
-                            Having trouble logging in? <br className="sm:hidden" />
+                            {t('login.footer_trouble')} <br className="sm:hidden" />
                             <Link to="/contact-admin" className="text-primary font-bold hover:underline transition-colors ml-1">
-                                Contact Administrator
+                                {t('login.footer_contact')}
                             </Link>
                         </p>
                     </div>

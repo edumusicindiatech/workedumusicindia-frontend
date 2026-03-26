@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { Lock, Eye, EyeOff, Loader2, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 const ChangePasswordModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPasswords, setShowPasswords] = useState(false);
@@ -23,11 +25,11 @@ const ChangePasswordModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
     const handleSubmit = () => {
         setErrorMsg("");
         if (newPassword !== confirmPassword) {
-            setErrorMsg("New passwords do not match.");
+            setErrorMsg(t('change_password_modal.error_mismatch'));
             return;
         }
         if (newPassword.length < 6) {
-            setErrorMsg("Password must be at least 6 characters long.");
+            setErrorMsg(t('change_password_modal.error_length'));
             return;
         }
 
@@ -45,8 +47,8 @@ const ChangePasswordModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
                             <Lock className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold text-foreground">Change Password</h2>
-                            <p className="text-xs text-muted-foreground mt-0.5">Secure your account</p>
+                            <h2 className="text-lg font-bold text-foreground">{t('change_password_modal.title')}</h2>
+                            <p className="text-xs text-muted-foreground mt-0.5">{t('change_password_modal.subtitle')}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors bg-background border border-border shrink-0">
@@ -65,7 +67,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
 
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-semibold text-foreground">New Password</label>
+                            <label className="text-sm font-semibold text-foreground">{t('change_password_modal.label_new')}</label>
                             <input
                                 type={showPasswords ? "text" : "password"}
                                 value={newPassword}
@@ -74,7 +76,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-semibold text-foreground">Confirm New Password</label>
+                            <label className="text-sm font-semibold text-foreground">{t('change_password_modal.label_confirm')}</label>
                             <input
                                 type={showPasswords ? "text" : "password"}
                                 value={confirmPassword}
@@ -90,7 +92,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
                                 className="text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-2 transition-colors"
                             >
                                 {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                {showPasswords ? "Hide Passwords" : "Show Passwords"}
+                                {showPasswords ? t('change_password_modal.hide') : t('change_password_modal.show')}
                             </button>
                         </div>
                     </div>
@@ -99,14 +101,14 @@ const ChangePasswordModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
                 {/* Footer */}
                 <div className="p-6 border-t border-border bg-muted/10 shrink-0 flex gap-3">
                     <Button variant="ghost" className="flex-1 h-11 rounded-xl font-semibold" onClick={onClose}>
-                        Cancel
+                        {t('change_password_modal.cancel')}
                     </Button>
                     <Button
                         onClick={handleSubmit}
                         disabled={!newPassword || !confirmPassword || actionLoading}
                         className="flex-1 h-11 rounded-xl font-bold shadow-glow"
                     >
-                        {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Update Password"}
+                        {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('change_password_modal.update')}
                     </Button>
                 </div>
             </div>

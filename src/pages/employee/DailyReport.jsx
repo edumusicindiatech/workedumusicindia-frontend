@@ -5,17 +5,20 @@ import {
     CheckCircle, Tag, ChevronDown, Check, Send, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import toast from "react-hot-toast"
+import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 const DailyReport = () => {
+    const { t } = useTranslation(); // <-- Initialize hook
+
     // Auto-generate today's date in YYYY-MM-DD format
     const getTodayDateString = () => {
         const now = new Date();
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     };
 
-    // State Management
-    const [loading, setLoading] = useState(false); // <-- Added for consistency. Set to true if you fetch data later!
+    // State Management (Values remain in English for backend compatibility)
+    const [loading, setLoading] = useState(false);
     const [category, setCategory] = useState("Regular Report");
     const [summary, setSummary] = useState("");
     const [eventName, setEventName] = useState("");
@@ -51,7 +54,6 @@ const DailyReport = () => {
         return true;
     };
 
-    // DIRECT SUBMIT LOGIC (No Action Items)
     const handleSubmit = async () => {
         setIsSubmitting(true);
 
@@ -67,7 +69,7 @@ const DailyReport = () => {
             await api.post('/employee/daily-report', payload);
 
             setIsSubmitting(false);
-            setSuccessMsg("Daily report submitted successfully!");
+            setSuccessMsg(t('daily_report.success_msg'));
 
             // Reset Form
             setSummary("");
@@ -78,56 +80,14 @@ const DailyReport = () => {
             setTimeout(() => setSuccessMsg(""), 4000);
         } catch (error) {
             console.error("Failed to submit report", error);
-            const errorMsg = error.response?.data?.message || "Failed to submit report.";
-            toast.error(errorMsg);
+            const errMsg = error.response?.data?.message || t('daily_report.error_msg');
+            toast.error(errMsg);
             setIsSubmitting(false);
         }
     };
 
-    // ==========================================
-    // RENDER: LOADING STATE (SHIMMER)
-    // ==========================================
     if (loading) {
-        return (
-            <div className="space-y-6 md:space-y-8 animate-fade-in p-4 md:p-8 max-w-4xl mx-auto pb-20">
-                {/* Shimmer Header */}
-                <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-muted rounded-xl animate-pulse shrink-0" />
-                        <div className="h-8 w-48 sm:w-64 bg-muted rounded-lg animate-pulse" />
-                    </div>
-                    <div className="h-5 w-3/4 sm:w-96 bg-muted/60 rounded-md animate-pulse" />
-                </div>
-
-                {/* Shimmer Form Card */}
-                <div className="bg-card border border-border/60 rounded-2xl shadow-sm overflow-hidden relative">
-                    {/* Top Banner */}
-                    <div className="bg-muted/20 border-b border-border/50 p-4 sm:px-6 flex flex-col sm:flex-row gap-4 justify-between">
-                        <div className="h-5 w-40 bg-muted rounded animate-pulse" />
-                        <div className="h-5 w-48 bg-muted rounded animate-pulse" />
-                    </div>
-
-                    <div className="p-4 sm:p-6 space-y-6">
-                        {/* Category Selector Shimmer */}
-                        <div className="space-y-2">
-                            <div className="h-4 w-32 bg-muted/80 rounded animate-pulse" />
-                            <div className="w-full h-12 rounded-xl bg-muted animate-pulse" />
-                        </div>
-
-                        {/* Summary Textarea Shimmer */}
-                        <div className="space-y-2">
-                            <div className="h-4 w-32 bg-muted/80 rounded animate-pulse" />
-                            <div className="w-full h-40 rounded-xl bg-muted animate-pulse" />
-                        </div>
-
-                        {/* Submit Button Shimmer */}
-                        <div className="pt-4 border-t border-border/50 flex justify-end">
-                            <div className="w-full sm:w-40 h-12 rounded-xl bg-muted animate-pulse" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
+        return <div className="p-8 h-96 bg-muted/20 animate-pulse rounded-3xl max-w-4xl mx-auto" />;
     }
 
     return (
@@ -138,14 +98,14 @@ const DailyReport = () => {
                     <div className="p-2 bg-primary/10 rounded-xl">
                         <FileText className="w-6 h-6 text-primary" />
                     </div>
-                    End of Day Report
+                    {t('daily_report.title')}
                 </h1>
                 <p className="text-muted-foreground mt-2">
-                    Summarize your field visits, outline challenges, and document events.
+                    {t('daily_report.subtitle')}
                 </p>
             </div>
 
-            {/* Success Toast */}
+            {/* Success Notification */}
             {successMsg && (
                 <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-4 py-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 shadow-sm">
                     <CheckCircle className="w-5 h-5 shrink-0" />
@@ -161,7 +121,7 @@ const DailyReport = () => {
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground font-medium">
                         <MapPin className="w-4 h-4 text-primary shrink-0" />
-                        <span className="truncate max-w-50 sm:max-w-none">Location context active</span>
+                        <span className="truncate max-w-50 sm:max-w-none">{t('daily_report.location_active')}</span>
                     </div>
                 </div>
 
@@ -169,7 +129,7 @@ const DailyReport = () => {
                     {/* Category Selection */}
                     <div className="space-y-2 relative z-20" ref={dropdownRef}>
                         <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                            <Tag className="w-4 h-4 text-primary" /> Report Category
+                            <Tag className="w-4 h-4 text-primary" /> {t('daily_report.label_category')}
                         </label>
 
                         <button
@@ -177,28 +137,33 @@ const DailyReport = () => {
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                             className="w-full h-12 rounded-xl border border-input bg-background px-4 text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all hover:bg-muted/30"
                         >
-                            <span className="text-foreground font-medium">{category}</span>
+                            <span className="text-foreground font-medium">
+                                {category === "Regular Report" ? t('daily_report.categories.regular') : t('daily_report.categories.event')}
+                            </span>
                             <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
                         </button>
 
                         {isDropdownOpen && (
                             <div className="absolute top-full left-0 w-full mt-2 bg-card border border-border rounded-xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                                 <div className="p-1.5 flex flex-col gap-1">
-                                    {["Regular Report", "Event Report"].map((option) => (
+                                    {[
+                                        { label: t('daily_report.categories.regular'), value: "Regular Report" },
+                                        { label: t('daily_report.categories.event'), value: "Event Report" }
+                                    ].map((option) => (
                                         <button
-                                            key={option}
+                                            key={option.value}
                                             type="button"
                                             onClick={() => {
-                                                setCategory(option);
+                                                setCategory(option.value);
                                                 setIsDropdownOpen(false);
                                             }}
-                                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${category === option
+                                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${category === option.value
                                                 ? "bg-primary/10 text-primary font-bold"
                                                 : "text-foreground hover:bg-muted font-medium"
                                                 }`}
                                         >
-                                            {option}
-                                            {category === option && <Check className="w-4 h-4" />}
+                                            {option.label}
+                                            {category === option.value && <Check className="w-4 h-4" />}
                                         </button>
                                     ))}
                                 </div>
@@ -209,17 +174,17 @@ const DailyReport = () => {
                     {category === "Event Report" && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 z-10">
                             <div className="space-y-2">
-                                <label className="text-sm font-semibold text-foreground">Event Name</label>
+                                <label className="text-sm font-semibold text-foreground">{t('daily_report.label_event_name')}</label>
                                 <input
                                     type="text"
-                                    placeholder="e.g., Annual Sports Day"
+                                    placeholder={t('daily_report.placeholder_event_name')}
                                     value={eventName}
                                     onChange={(e) => setEventName(e.target.value)}
                                     className="w-full h-12 rounded-xl border border-input bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-semibold text-foreground">Event Date</label>
+                                <label className="text-sm font-semibold text-foreground">{t('daily_report.label_event_date')}</label>
                                 <input
                                     type="date"
                                     value={eventDate}
@@ -232,12 +197,12 @@ const DailyReport = () => {
 
                     <div className="space-y-2 z-10">
                         <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-primary" /> Daily Summary
+                            <FileText className="w-4 h-4 text-primary" /> {t('daily_report.label_summary')}
                         </label>
                         <textarea
                             value={summary}
                             onChange={(e) => setSummary(e.target.value)}
-                            placeholder="Describe the schools visited, overall progress, and any challenges faced today..."
+                            placeholder={t('daily_report.placeholder_summary')}
                             className="w-full min-h-40 rounded-xl border border-input bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow custom-scrollbar"
                         />
                     </div>
@@ -250,9 +215,9 @@ const DailyReport = () => {
                             className="w-full sm:w-auto h-12 px-8 rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground text-base shadow-glow flex items-center justify-center transition-all"
                         >
                             {isSubmitting ? (
-                                <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting...</>
+                                <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> {t('daily_report.btn_submitting')}</>
                             ) : (
-                                <>Submit Report <Send className="w-4 h-4 ml-2" /></>
+                                <>{t('daily_report.btn_submit')} <Send className="w-4 h-4 ml-2" /></>
                             )}
                         </Button>
                     </div>

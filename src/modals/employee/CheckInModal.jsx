@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { MapPin, AlertCircle, PartyPopper, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import toast from "react-hot-toast"; // <-- Added toast import
+import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 const CheckInModal = ({ isOpen, onClose, visit, isLate, onSubmit, actionLoading }) => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const [lateReason, setLateReason] = useState("");
     const [eventNote, setEventNote] = useState("");
 
@@ -18,19 +20,17 @@ const CheckInModal = ({ isOpen, onClose, visit, isLate, onSubmit, actionLoading 
     if (!isOpen || !visit) return null;
 
     const handleSubmit = () => {
-        // <-- Added toast validation just in case they bypass the disabled button
         if (isLate && !lateReason.trim()) {
-            toast.error("Please provide a reason for being late.");
+            toast.error(t('check_in_modal.error_late_reason'));
             return;
         }
 
-        // Automatically capture the exact date/time if an event note is provided
         const eventDate = eventNote.trim() ? new Date().toISOString() : null;
 
         onSubmit(visit.id, {
             lateReason: lateReason.trim(),
             eventNote: eventNote.trim(),
-            eventDate // <--- Attaching the auto-calculated date here
+            eventDate
         });
     };
 
@@ -43,7 +43,7 @@ const CheckInModal = ({ isOpen, onClose, visit, isLate, onSubmit, actionLoading 
                         <MapPin className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                        <h2 className="text-lg font-bold">Check In</h2>
+                        <h2 className="text-lg font-bold">{t('check_in_modal.title')}</h2>
                         <p className="text-xs text-muted-foreground">{visit.schoolName} ({visit.category})</p>
                     </div>
                 </div>
@@ -53,12 +53,12 @@ const CheckInModal = ({ isOpen, onClose, visit, isLate, onSubmit, actionLoading 
                     {isLate && (
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-destructive flex items-center gap-2">
-                                <AlertCircle className="w-4 h-4 shrink-0" /> Why are you arriving late? <span className="text-xs font-normal opacity-80">(Required)</span>
+                                <AlertCircle className="w-4 h-4 shrink-0" /> {t('check_in_modal.late_reason_label')} <span className="text-xs font-normal opacity-80">{t('check_in_modal.required')}</span>
                             </label>
                             <textarea
                                 value={lateReason}
                                 onChange={(e) => setLateReason(e.target.value)}
-                                placeholder="Traffic, vehicle issue, previous stop delay..."
+                                placeholder={t('check_in_modal.late_reason_placeholder')}
                                 className="w-full p-3 rounded-xl border border-input bg-background text-sm min-h-20 focus:ring-2 focus:ring-destructive/50 outline-none resize-none"
                             />
                         </div>
@@ -67,24 +67,26 @@ const CheckInModal = ({ isOpen, onClose, visit, isLate, onSubmit, actionLoading 
                     {/* Optional Event Note */}
                     <div className="space-y-2">
                         <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                            <PartyPopper className="w-4 h-4 text-primary shrink-0" /> Event Note <span className="text-xs font-normal opacity-60 text-muted-foreground">(Optional)</span>
+                            <PartyPopper className="w-4 h-4 text-primary shrink-0" /> {t('check_in_modal.event_note_label')} <span className="text-xs font-normal opacity-60 text-muted-foreground">{t('check_in_modal.optional')}</span>
                         </label>
                         <textarea
                             value={eventNote}
                             onChange={(e) => setEventNote(e.target.value)}
-                            placeholder="Any special events happening at the school today?"
+                            placeholder={t('check_in_modal.event_note_placeholder')}
                             className="w-full p-3 rounded-xl border border-input bg-background text-sm min-h-20 focus:ring-2 focus:ring-primary/50 outline-none resize-none"
                         />
                     </div>
 
                     <div className="flex gap-3 pt-4">
-                        <Button variant="ghost" className="flex-1 h-11 rounded-xl" onClick={onClose}>Cancel</Button>
+                        <Button variant="ghost" className="flex-1 h-11 rounded-xl" onClick={onClose}>
+                            {t('check_in_modal.cancel')}
+                        </Button>
                         <Button
                             className="flex-1 h-11 rounded-xl shadow-glow"
                             onClick={handleSubmit}
                             disabled={actionLoading || (isLate && !lateReason.trim())}
                         >
-                            {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirm Check In"}
+                            {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('check_in_modal.confirm')}
                         </Button>
                     </div>
                 </div>

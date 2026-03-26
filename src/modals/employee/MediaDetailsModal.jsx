@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { School, MapPin, Tag, Calendar, FileText, Send, Loader2, X, ChevronDown, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 const MediaDetailsModal = ({ isOpen, onClose, onSubmit, fileCount, actionLoading }) => {
+    const { t } = useTranslation(); // <-- Initialize hook
+
     // Form States
     const [schoolName, setSchoolName] = useState("");
     const [location, setLocation] = useState("");
@@ -70,10 +73,10 @@ const MediaDetailsModal = ({ isOpen, onClose, onSubmit, fileCount, actionLoading
                 <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-muted/30 shrink-0">
                     <div>
                         <h2 className="text-xl font-bold flex items-center gap-2 text-foreground">
-                            Upload Details
+                            {t('media_details.title')}
                         </h2>
                         <p className="text-sm text-muted-foreground mt-1">
-                            Provide context for the {fileCount} selected file(s).
+                            {t('media_details.subtitle', { count: fileCount })}
                         </p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors border border-transparent hover:border-border shrink-0">
@@ -88,11 +91,11 @@ const MediaDetailsModal = ({ isOpen, onClose, onSubmit, fileCount, actionLoading
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                                <School className="w-4 h-4 text-muted-foreground" /> School Name
+                                <School className="w-4 h-4 text-muted-foreground" /> {t('media_details.school_name')}
                             </label>
                             <input
                                 type="text"
-                                placeholder="e.g., Ryan International School"
+                                placeholder={t('media_details.school_placeholder')}
                                 value={schoolName}
                                 onChange={(e) => setSchoolName(e.target.value)}
                                 className="w-full h-12 rounded-xl border border-input bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
@@ -101,11 +104,11 @@ const MediaDetailsModal = ({ isOpen, onClose, onSubmit, fileCount, actionLoading
 
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-muted-foreground" /> Location
+                                <MapPin className="w-4 h-4 text-muted-foreground" /> {t('media_details.location')}
                             </label>
                             <input
                                 type="text"
-                                placeholder="Ayodhya"
+                                placeholder={t('media_details.location_placeholder')}
                                 value={location}
                                 onChange={(e) => setLocation(e.target.value)}
                                 className="w-full h-12 rounded-xl border border-input bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
@@ -115,7 +118,7 @@ const MediaDetailsModal = ({ isOpen, onClose, onSubmit, fileCount, actionLoading
                         {/* CUSTOM SELECT FOR CATEGORY */}
                         <div className="space-y-2" ref={dropdownRef}>
                             <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                                <Tag className="w-4 h-4 text-muted-foreground" /> Upload Category
+                                <Tag className="w-4 h-4 text-muted-foreground" /> {t('media_details.category_label')}
                             </label>
                             <div className="relative">
                                 <button
@@ -124,7 +127,7 @@ const MediaDetailsModal = ({ isOpen, onClose, onSubmit, fileCount, actionLoading
                                     className="w-full h-12 rounded-xl border border-input bg-background px-4 text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all hover:bg-muted/30"
                                 >
                                     <span className="text-foreground font-medium">
-                                        {category === "Regular" ? "Regular Visit" : "Special Event"}
+                                        {category === "Regular" ? t('media_details.category_regular') : t('media_details.category_event')}
                                     </span>
                                     <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
                                 </button>
@@ -141,11 +144,11 @@ const MediaDetailsModal = ({ isOpen, onClose, onSubmit, fileCount, actionLoading
                                                         setIsDropdownOpen(false);
                                                     }}
                                                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${category === option
-                                                            ? "bg-primary/10 text-primary font-bold"
-                                                            : "text-foreground hover:bg-muted font-medium"
+                                                        ? "bg-primary/10 text-primary font-bold"
+                                                        : "text-foreground hover:bg-muted font-medium"
                                                         }`}
                                                 >
-                                                    {option === "Regular" ? "Regular Visit" : "Special Event"}
+                                                    {option === "Regular" ? t('media_details.category_regular') : t('media_details.category_event')}
                                                     {category === option && <Check className="w-4 h-4" />}
                                                 </button>
                                             ))}
@@ -161,7 +164,7 @@ const MediaDetailsModal = ({ isOpen, onClose, onSubmit, fileCount, actionLoading
                         <div className="space-y-4 pt-4 border-t border-border animate-in fade-in slide-in-from-top-2">
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-primary flex items-center gap-2">
-                                    <Calendar className="w-4 h-4" /> Date of Event
+                                    <Calendar className="w-4 h-4" /> {t('media_details.event_date')}
                                 </label>
                                 <input
                                     type="date"
@@ -173,12 +176,12 @@ const MediaDetailsModal = ({ isOpen, onClose, onSubmit, fileCount, actionLoading
 
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-primary flex items-center gap-2">
-                                    <FileText className="w-4 h-4" /> Description of Event
+                                    <FileText className="w-4 h-4" /> {t('media_details.event_description')}
                                 </label>
                                 <textarea
                                     value={eventDescription}
                                     onChange={(e) => setEventDescription(e.target.value)}
-                                    placeholder="Briefly describe what the event was about..."
+                                    placeholder={t('media_details.event_placeholder')}
                                     className="w-full min-h-25 rounded-xl border border-input bg-background p-4 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
                                 />
                             </div>
@@ -194,7 +197,7 @@ const MediaDetailsModal = ({ isOpen, onClose, onSubmit, fileCount, actionLoading
                         className="w-full h-12 rounded-xl font-bold shadow-glow text-base"
                     >
                         {actionLoading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
-                        Submit & Upload {fileCount} File{fileCount !== 1 ? 's' : ''}
+                        {t('media_details.submit_btn', { count: fileCount })}
                     </Button>
                 </div>
             </div>

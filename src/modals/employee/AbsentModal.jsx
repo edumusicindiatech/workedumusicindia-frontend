@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { UserX, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next"; // <-- Added import
 
 const AbsentModal = ({ isOpen, onClose, target, onSubmit, actionLoading }) => {
+    const { t } = useTranslation(); // <-- Initialize hook
     const [absentReason, setAbsentReason] = useState("");
 
     // Reset field when modal opens
@@ -25,9 +27,9 @@ const AbsentModal = ({ isOpen, onClose, target, onSubmit, actionLoading }) => {
                         <UserX className="w-5 h-5 text-destructive" />
                     </div>
                     <div>
-                        <h2 className="text-lg font-bold text-destructive">Mark Absent</h2>
+                        <h2 className="text-lg font-bold text-destructive">{t('absent_modal.title')}</h2>
                         <p className="text-xs text-muted-foreground">
-                            {target === 'ALL' ? "Entire Work Day" : `${target.schoolName} (${target.category})`}
+                            {target === 'ALL' ? t('absent_modal.entire_day') : `${target.schoolName} (${target.category})`}
                         </p>
                     </div>
                 </div>
@@ -35,25 +37,27 @@ const AbsentModal = ({ isOpen, onClose, target, onSubmit, actionLoading }) => {
                 <div className="space-y-5">
                     <div className="space-y-2">
                         <label className="text-sm font-semibold flex items-center gap-2">
-                            Reason for Absence <span className="text-xs font-normal opacity-60 text-muted-foreground">(Optional)</span>
+                            {t('absent_modal.reason_label')} <span className="text-xs font-normal opacity-60 text-muted-foreground">{t('absent_modal.optional')}</span>
                         </label>
                         <textarea
                             value={absentReason}
                             onChange={(e) => setAbsentReason(e.target.value)}
-                            placeholder="Sick leave, emergency, school is closed..."
+                            placeholder={t('absent_modal.placeholder')}
                             className="w-full p-3 rounded-xl border border-input bg-background text-sm min-h-25 focus:ring-2 focus:ring-destructive/50 outline-none resize-none"
                         />
                     </div>
 
                     <div className="flex gap-3 pt-4">
-                        <Button variant="ghost" className="flex-1 h-11 rounded-xl" onClick={onClose}>Cancel</Button>
+                        <Button variant="ghost" className="flex-1 h-11 rounded-xl" onClick={onClose}>
+                            {t('absent_modal.cancel')}
+                        </Button>
                         <Button
                             variant="destructive"
                             className="flex-1 h-11 rounded-xl shadow-sm"
                             onClick={handleSubmit}
                             disabled={actionLoading}
                         >
-                            {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirm Absence"}
+                            {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('absent_modal.confirm')}
                         </Button>
                     </div>
                 </div>

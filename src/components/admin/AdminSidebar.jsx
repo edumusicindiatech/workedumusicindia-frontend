@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { io } from "socket.io-client";
+import { useTranslation } from "react-i18next"; // <-- Added import
 import {
     LayoutDashboard, Users, Radio, MessageSquare, Shield,
     Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle, ClipboardCheck,
-    CalendarDays // <-- Added CalendarDays icon
+    CalendarDays
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -14,11 +15,11 @@ import { logout } from "../../store/slices/authSlice";
 import { toggleTheme } from "../../store/slices/themeSlice";
 import AdminSettingsModal from "../../modals/admin/AdminSettingsModal";
 
-// 1. Setup global socket and audio OUTSIDE the component
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 const notificationSound = new Audio('/sounds/notification-ting.mp3');
 
 const AdminSidebar = () => {
+    const { t } = useTranslation(); // <-- Initialize translation
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const location = useLocation();
@@ -36,7 +37,6 @@ const AdminSidebar = () => {
 
     const mobileMenuRef = useRef(null);
 
-    // 2. The Golden Fix: Use a ref to track the path
     const pathnameRef = useRef(location.pathname);
     useEffect(() => {
         pathnameRef.current = location.pathname;
@@ -48,11 +48,9 @@ const AdminSidebar = () => {
         }
     }, [user?.preferences]);
 
-    // 3. --- ONE COMBINED Fetch & Socket useEffect ---
     useEffect(() => {
         if (!user) return;
 
-        // Fetch initial unread count
         const fetchUnreadCount = async () => {
             try {
                 const res = await api.get('/admin/notifications');
@@ -70,10 +68,8 @@ const AdminSidebar = () => {
             fetchUnreadCount();
         }
 
-        // Setup Socket
         const currentUserId = user.id || user._id;
         const joinUserRoom = () => {
-            console.log(`🔌 Socket Connected! Joining room: ${currentUserId}`);
             socket.emit("join_room", currentUserId);
         };
         if (socket.connected) {
@@ -82,20 +78,18 @@ const AdminSidebar = () => {
         socket.on("connect", joinUserRoom);
 
         const handleNewNotification = () => {
-            // A. Play Audio
             try {
                 notificationSound.currentTime = 0;
                 notificationSound.play().catch(err => {
-                    console.warn("🔇 BROWSER BLOCKED AUDIO! Click anywhere on the page first.", err);
+                    console.warn("🔇 BROWSER BLOCKED AUDIO!", err);
                 });
             } catch (e) {
                 console.error("Error playing sound:", e);
             }
 
-            // B. Increment badge checking the REF
             if (pathnameRef.current !== '/admin/notifications') {
                 setUnreadCount(prev => prev + 1);
-                toast("New admin alert received!", { icon: '🛡️' });
+                toast(t('sidebar.new_alert_toast'), { icon: '🛡️' }); // <-- Translated toast
             }
         };
 
@@ -104,9 +98,8 @@ const AdminSidebar = () => {
         return () => {
             socket.off("new_notification", handleNewNotification);
         };
-    }, [user]);
+    }, [user, t]);
 
-    // Auto-Clear Badge when navigating to the alerts page
     useEffect(() => {
         if (location.pathname === '/admin/notifications') {
             setUnreadCount(0);
@@ -129,13 +122,13 @@ const AdminSidebar = () => {
         localStorage.removeItem("access_token");
         localStorage.removeItem("user");
 
-        const toastId = toast.loading("Logging out...");
+        const toastId = toast.loading(t('sidebar.logging_out')); // <-- Translated
         try {
             await api.post('/auth/logout');
-            toast.success("Session ended successfully!", { id: toastId });
+            toast.success(t('sidebar.logout_success'), { id: toastId }); // <-- Translated
         } catch (error) {
             console.error("Backend logout cleanup failed:", error);
-            toast.error("Logout issue, session cleared locally.", { id: toastId });
+            toast.error(t('sidebar.logout_error'), { id: toastId }); // <-- Translated
         }
 
         navigate("/", { replace: true });
@@ -161,34 +154,31 @@ const AdminSidebar = () => {
                         <Shield className="w-5 h-5 text-primary-foreground" />
                     </div>
                     <div>
-                        <h1 className="font-bold text-lg text-foreground tracking-tight leading-none">WorkEduMusic</h1>
+                        <h1 className="font-bold text-lg text-foreground tracking-tight leading-none">{t('sidebar.brand')}</h1>
                     </div>
                 </div>
 
                 <div className="flex items-center justify-center flex-1 gap-2">
-                    <NavLink to="/admin/dashboard" className={desktopNavClasses} title="Dashboard">
-                        <LayoutDashboard className="w-4.5 h-4.5" /> Dashboard
+                    <NavLink to="/admin/dashboard" className={desktopNavClasses} title={t('sidebar.dashboard')}>
+                        <LayoutDashboard className="w-4.5 h-4.5" /> {t('sidebar.dashboard')}
                     </NavLink>
-                    <NavLink to="/admin/employees" className={desktopNavClasses} title="Roster">
-                        <Users className="w-4.5 h-4.5" /> Roster
+                    <NavLink to="/admin/employees" className={desktopNavClasses} title={t('sidebar.roster')}>
+                        <Users className="w-4.5 h-4.5" /> {t('sidebar.roster')}
                     </NavLink>
-                    <NavLink to="/admin/attendance" className={desktopNavClasses} title="Live Attendance">
-                        <Radio className="w-4.5 h-4.5" /> Live Attendance
+                    <NavLink to="/admin/attendance" className={desktopNavClasses} title={t('sidebar.attendance')}>
+                        <Radio className="w-4.5 h-4.5" /> {t('sidebar.attendance')}
                     </NavLink>
-                    <NavLink to="/admin/progress" className={desktopNavClasses} title="Progress">
-                        <TrendingUp className="w-4.5 h-4.5" /> Progress
+                    <NavLink to="/admin/progress" className={desktopNavClasses} title={t('sidebar.progress')}>
+                        <TrendingUp className="w-4.5 h-4.5" /> {t('sidebar.progress')}
                     </NavLink>
-                    <NavLink to="/admin/reports" className={desktopNavClasses} title="Reports">
-                        <ClipboardCheck className="w-4.5 h-4.5" /> Reports
+                    <NavLink to="/admin/reports" className={desktopNavClasses} title={t('sidebar.reports')}>
+                        <ClipboardCheck className="w-4.5 h-4.5" /> {t('sidebar.reports')}
                     </NavLink>
-
-                    {/* --- ADDED LEAVE REQUESTS DESKTOP LINK --- */}
-                    <NavLink to="/admin/leave-requests" className={desktopNavClasses} title="Leave Requests">
-                        <CalendarDays className="w-4.5 h-4.5" /> Leave
+                    <NavLink to="/admin/leave-requests" className={desktopNavClasses} title={t('sidebar.leave')}>
+                        <CalendarDays className="w-4.5 h-4.5" /> {t('sidebar.leave')}
                     </NavLink>
 
-                    {/* ALERTS LINK WITH BADGE */}
-                    <NavLink to="/admin/notifications" className={desktopNavClasses} title="Alerts">
+                    <NavLink to="/admin/notifications" className={desktopNavClasses} title={t('sidebar.alerts')}>
                         <div className="relative flex items-center justify-center">
                             <Bell className="w-4.5 h-4.5" />
                             {unreadCount > 0 && (
@@ -197,22 +187,22 @@ const AdminSidebar = () => {
                                 </span>
                             )}
                         </div>
-                        Alerts
+                        {t('sidebar.alerts')}
                     </NavLink>
 
-                    <NavLink to="/admin/communication" className={desktopNavClasses} title="Broadcast">
-                        <MessageSquare className="w-4.5 h-4.5" /> Broadcast
+                    <NavLink to="/admin/communication" className={desktopNavClasses} title={t('sidebar.broadcast')}>
+                        <MessageSquare className="w-4.5 h-4.5" /> {t('sidebar.broadcast')}
                     </NavLink>
                 </div>
 
                 <div className="flex items-center justify-end gap-3 w-64 shrink-0 border-l border-border pl-6">
-                    <button onClick={() => dispatch(toggleTheme())} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title="Theme">
+                    <button onClick={() => dispatch(toggleTheme())} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title={t('sidebar.theme')}>
                         {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-500" />}
                     </button>
-                    <button onClick={() => setIsSettingsModalOpen(true)} className="p-2 text-muted-foreground md:cursor-pointer hover:text-foreground hover:bg-muted rounded-full transition-colors" title="Settings">
+                    <button onClick={() => setIsSettingsModalOpen(true)} className="p-2 text-muted-foreground md:cursor-pointer hover:text-foreground hover:bg-muted rounded-full transition-colors" title={t('sidebar.settings')}>
                         <Settings className="w-5 h-5" />
                     </button>
-                    <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-destructive md:cursor-pointer hover:bg-destructive/10 rounded-full transition-colors" title="Log Out">
+                    <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-destructive md:cursor-pointer hover:bg-destructive/10 rounded-full transition-colors" title={t('sidebar.logout')}>
                         <LogOut className="w-5 h-5" />
                     </button>
                 </div>
@@ -223,7 +213,7 @@ const AdminSidebar = () => {
                     <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
                         <Shield className="w-4 h-4 text-primary-foreground" />
                     </div>
-                    <h1 className="font-bold text-lg text-foreground tracking-tight">WorkEduMusic</h1>
+                    <h1 className="font-bold text-lg text-foreground tracking-tight">{t('sidebar.brand')}</h1>
                 </div>
 
                 <div className="relative" ref={mobileMenuRef}>
@@ -241,31 +231,30 @@ const AdminSidebar = () => {
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                 onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/reports'); }}
                             >
-                                <ClipboardCheck className="w-4 h-4 text-primary" /> Reports
+                                <ClipboardCheck className="w-4 h-4 text-primary" /> {t('sidebar.reports')}
                             </button>
 
-                            {/* --- ADDED LEAVE REQUESTS MOBILE LINK --- */}
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                 onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leave-requests'); }}
                             >
-                                <CalendarDays className="w-4 h-4 text-primary" /> Leave Requests
+                                <CalendarDays className="w-4 h-4 text-primary" /> {t('sidebar.leave')}
                             </button>
 
                             <button onClick={() => dispatch(toggleTheme())} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                                 <div className="flex items-center gap-3">
                                     {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}
-                                    <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                                    <span>{theme === 'dark' ? t('sidebar.light_mode') : t('sidebar.dark_mode')}</span>
                                 </div>
                             </button>
 
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                 onClick={() => { setIsMobileMenuOpen(false); setIsSettingsModalOpen(true); }}
                             >
-                                <Settings className="w-4 h-4 text-primary" /> Settings
+                                <Settings className="w-4 h-4 text-primary" /> {t('sidebar.settings')}
                             </button>
                             <div className="my-1 border-t border-border" />
                             <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors">
-                                <LogOut className="w-4 h-4" /> Log out
+                                <LogOut className="w-4 h-4" /> {t('sidebar.logout')}
                             </button>
                         </div>
                     )}
