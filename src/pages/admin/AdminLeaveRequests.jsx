@@ -210,7 +210,7 @@ const AdminLeaveRequests = () => {
                                     value={remarks}
                                     onChange={(e) => setRemarks(e.target.value)}
                                     placeholder={`E.g., "Enjoy your trip!" or "Insufficient staffing..."`}
-                                    className="flex min-h-[100px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary resize-none"
+                                    className="flex min-h-25 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary resize-none"
                                 />
                                 <p className="text-xs text-muted-foreground">This note will be sent to the employee via email.</p>
                             </div>
