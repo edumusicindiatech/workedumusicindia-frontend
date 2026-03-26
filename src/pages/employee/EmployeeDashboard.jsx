@@ -41,24 +41,25 @@ const EmployeeDashboard = () => {
     const fetchLeaveStatus = useCallback(async () => {
         try {
             const res = await api.get('/employee/leave-request/status');
+
             if (res.data.success && res.data.data?.status === 'approved') {
+                // 24-Hour Overlap Logic
+                const todayStart = new Date();
+                todayStart.setHours(0, 0, 0, 0);
 
-                // Normalizing today to Midnight
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
+                const todayEnd = new Date();
+                todayEnd.setHours(23, 59, 59, 999);
 
-                // Normalizing Leave Range to Midnight
                 const from = new Date(res.data.data.fromDate);
-                from.setHours(0, 0, 0, 0);
-
                 const to = new Date(res.data.data.toDate);
-                to.setHours(0, 0, 0, 0);
 
-                if (today >= from && today <= to) {
+                // If today falls anywhere within the approved leave range
+                if (from <= todayEnd && to >= todayStart) {
                     setLeaveData(res.data.data);
                     return true; // Is on leave
                 }
             }
+            // If pending, rejected, or revoked, it clears the vacation UI
             setLeaveData(null);
             return false;
         } catch (err) {
@@ -70,7 +71,7 @@ const EmployeeDashboard = () => {
     const fetchSchedule = useCallback(async () => {
         try {
             // Check leave status first to decide which UI to show
-            const isOnLeave = await fetchLeaveStatus();
+            await fetchLeaveStatus();
 
             const res = await api.get('/employee/my-schedule');
             if (res.data.success) {
@@ -114,8 +115,9 @@ const EmployeeDashboard = () => {
         if (socket.connected) joinUserRoom();
         socket.on("connect", joinUserRoom);
 
+        // Silently fetch schedule without any toasts
         const handleRealTimeUpdate = () => {
-            console.log("🔔 Admin update received! Re-syncing dashboard...");
+            console.log("🔔 Live update received! Re-syncing dashboard...");
             fetchSchedule();
         };
 
