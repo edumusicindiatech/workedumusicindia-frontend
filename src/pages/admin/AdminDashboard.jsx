@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
-import { Users, UserCheck, UserX, Clock, MapPin, School, BookOpen, RefreshCw, Activity } from "lucide-react";
+import {
+    Users, UserCheck, UserX, Clock, MapPin, School,
+    BookOpen, RefreshCw, Activity, CalendarOff, CheckCircle, XCircle
+} from "lucide-react";
 import { io } from "socket.io-client";
 import api from "../../api/axios";
 
@@ -49,6 +52,7 @@ const AdminDashboard = () => {
         };
     }, [fetchDashboardStats, user]);
 
+    // --- UPDATED STATUS BADGE HELPER ---
     const statusBadge = (status) => {
         const styles = {
             present: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
@@ -57,6 +61,10 @@ const AdminDashboard = () => {
             event: "bg-violet-500/10 text-violet-600 border-violet-500/20",
             Present: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
             Late: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+            // Leave Statuses
+            Approved: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+            Rejected: "bg-rose-500/10 text-rose-600 border-rose-500/20",
+            Leave: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
         };
         return styles[status] || styles[status?.toLowerCase()] || "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700";
     };
@@ -72,8 +80,8 @@ const AdminDashboard = () => {
                     </div>
                     <div className="w-10 h-10 rounded-full bg-muted animate-pulse" />
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                    {[1, 2, 3, 4].map(i => (
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
+                    {[1, 2, 3, 4, 5].map(i => (
                         <div key={i} className="h-32 bg-card border border-border rounded-2xl animate-pulse flex flex-col justify-between p-5">
                             <div className="flex justify-between items-center"><div className="w-20 h-3 bg-muted rounded-full" /><div className="w-8 h-8 rounded-xl bg-muted" /></div>
                             <div className="w-16 h-8 bg-muted rounded-lg" />
@@ -85,10 +93,12 @@ const AdminDashboard = () => {
         );
     }
 
+    // --- UPDATED STATS ARRAY ---
     const stats = [
         { label: "Total Staff", value: dashboardData?.stats?.totalEmployees || 0, icon: Users, color: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
         { label: "On Site", value: dashboardData?.stats?.presentToday || 0, icon: UserCheck, color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
         { label: "No Show", value: dashboardData?.stats?.noShow || 0, icon: UserX, color: "bg-rose-500/10 text-rose-600 dark:text-rose-400" },
+        { label: "On Leave", value: dashboardData?.stats?.onLeaveToday || 0, icon: CalendarOff, color: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400" },
         { label: "Pending", value: dashboardData?.stats?.pending || 0, icon: Clock, color: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
     ];
 
@@ -112,8 +122,8 @@ const AdminDashboard = () => {
                 </button>
             </div>
 
-            {/* --- STATS GRID --- */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-8">
+            {/* --- STATS GRID (Updated to 5 Columns) --- */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-5 mb-8">
                 {stats.map((stat) => (
                     <div key={stat.label} className="group bg-card rounded-2xl p-5 border border-border shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between overflow-hidden relative">
                         <div className="flex items-center justify-between gap-3 mb-4 relative z-10">
@@ -123,7 +133,6 @@ const AdminDashboard = () => {
                             </div>
                         </div>
                         <p className="text-3xl sm:text-4xl font-black text-foreground relative z-10 tracking-tight">{stat.value}</p>
-                        {/* Decorative background accent */}
                         <div className={`absolute -bottom-4 -right-4 w-24 h-24 rounded-full blur-2xl opacity-20 ${stat.color.split(' ')[0]}`} />
                     </div>
                 ))}
@@ -138,7 +147,7 @@ const AdminDashboard = () => {
 
                 <div className="flex flex-col">
                     {dashboardData?.recentActivity?.length > 0 ? (
-                        dashboardData.recentActivity.slice(0, 6).map((item, i) => (
+                        dashboardData.recentActivity.slice(0, 8).map((item, i) => (
                             <div
                                 key={item.id || i}
                                 className="group flex flex-col lg:flex-row lg:items-center justify-between p-4 sm:p-6 border-b border-border/40 last:border-0 hover:bg-muted/40 transition-all gap-4 sm:gap-6"
@@ -156,26 +165,35 @@ const AdminDashboard = () => {
                                     </div>
                                 </div>
 
-                                {/* Location & Category Tags */}
+                                {/* Location & Context Tags */}
                                 <div className="flex flex-row items-center gap-2 sm:gap-3 flex-1 min-w-0 bg-muted/30 lg:bg-transparent p-3 lg:p-0 rounded-xl lg:rounded-none border border-border/50 lg:border-none">
+                                    {/* Show school info if it's an attendance event, otherwise show leave range or category */}
                                     <div className="flex items-center gap-2 min-w-0 flex-1 bg-background lg:bg-muted/50 py-1.5 px-3 rounded-lg border border-border/50 lg:border-border">
-                                        <School className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                                        <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{item?.school || 'N/A'}</span>
+                                        {item.status === 'Approved' || item.status === 'Rejected' ? (
+                                            <CalendarOff className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
+                                        ) : (
+                                            <School className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                        )}
+                                        <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{item?.school || item?.leaveRange || 'N/A'}</span>
                                     </div>
                                     <div className="flex items-center gap-2 min-w-0 flex-1 bg-background lg:bg-muted/50 py-1.5 px-3 rounded-lg border border-border/50 lg:border-border">
                                         <BookOpen className="w-3.5 h-3.5 text-violet-500 shrink-0" />
-                                        <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{item?.category || 'N/A'}</span>
+                                        <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{item?.category || 'Field Operation'}</span>
                                     </div>
                                 </div>
 
                                 {/* Time & Status */}
                                 <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center gap-2 shrink-0 lg:w-48 border-t border-border/40 lg:border-none pt-3 lg:pt-0 mt-1 lg:mt-0">
-                                    <span className={`px-3 py-1 rounded-md text-[10px] sm:text-xs font-black uppercase tracking-widest border ${statusBadge(item?.status)}`}>
-                                        {item?.action || item?.status || 'Update'}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        {item.status === 'Approved' && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 hidden lg:block" />}
+                                        {item.status === 'Rejected' && <XCircle className="w-3.5 h-3.5 text-rose-500 hidden lg:block" />}
+                                        <span className={`px-3 py-1 rounded-md text-[10px] sm:text-xs font-black uppercase tracking-widest border ${statusBadge(item?.status)}`}>
+                                            {item?.action || item?.status || 'Update'}
+                                        </span>
+                                    </div>
                                     <div className="flex items-center gap-1.5 text-muted-foreground">
                                         <Clock className="w-3.5 h-3.5" />
-                                        <span className="text-xs font-bold text-foreground">{item?.checkInTime || 'Just now'}</span>
+                                        <span className="text-xs font-bold text-foreground">{item?.checkInTime || item?.time || 'Just now'}</span>
                                         {item?.timeAgo && <span className="text-[10px] font-medium opacity-70">• {item.timeAgo}</span>}
                                     </div>
                                 </div>
