@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSelector } from "react-redux";
 import {
     Film, Calendar as CalendarIcon, UploadCloud, MapPin,
     Users, PlayCircle, Award, Clock, X, Download,
-    ChevronDown, Trash2, AlertTriangle
+    ChevronDown, Trash2, AlertTriangle, Loader2
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
@@ -19,73 +20,146 @@ const EmployeeMedia = () => {
 
     // State for Modals & Actions
     const [activeVideo, setActiveVideo] = useState(null);
-    const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { fileId, monthKey }
+    const [deleteConfirmation, setDeleteConfirmation] = useState(null);
 
     // State for Real Data
     const [mediaData, setMediaData] = useState({});
     const [isLoading, setIsLoading] = useState(true);
 
+    // 🔥 NEW: Redux state for the Cinematic Upload feature
+    const { isUploading, jobQueue } = useSelector((state) => state.upload);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [previewUrl, setPreviewUrl] = useState(null);
+
+    const handleCancelUpload = (e) => {
+        e.stopPropagation(); // Prevent the click from doing anything else
+        window.dispatchEvent(new CustomEvent('vault-upload-cancel'));
+        toast.error("Upload cancelled.");
+    };
+
     const toggleMonth = (month) => {
         setExpandedMonth(expandedMonth === month ? null : month);
     };
 
-    // --- DATA FETCHING & GROUPING ---
-    useEffect(() => {
-        const fetchMedia = async () => {
-            setIsLoading(true);
-            try {
-                const response = await api.get(`/employee/media?year=${selectedYear}`);
+    // --- DATA FETCHING (Wrapped in useCallback so we can trigger it after upload) ---
+    const fetchMedia = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const response = await api.get(`/employee/media?year=${selectedYear}`);
 
-                if (response.data.success) {
-                    const rawLogs = response.data.data;
-                    const grouped = {};
-                    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            if (response.data.success) {
+                const rawLogs = response.data.data;
+                const grouped = {};
+                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-                    rawLogs.forEach(log => {
-                        const date = new Date(log.eventDate);
-                        const month = monthNames[date.getMonth()];
+                rawLogs.forEach(log => {
+                    const date = new Date(log.eventDate);
+                    const month = monthNames[date.getMonth()];
 
-                        if (!grouped[month]) grouped[month] = [];
+                    if (!grouped[month]) grouped[month] = [];
 
-                        // MAPPING GRANULAR FILES: 1 Video = 1 Card
-                        if (log.files && log.files.length > 0) {
-                            log.files.forEach((file, index) => {
-                                grouped[month].push({
-                                    id: file._id || `${log._id}-${index}`,
-                                    schoolName: log.school?.schoolName || "Unknown School",
-                                    band: log.band,
-                                    eventName: log.eventContext || null,
-                                    eventDate: date.toISOString().split('T')[0],
-                                    students: log.studentRecord,
-                                    marks: file.marks !== undefined ? file.marks : null,
-                                    remark: file.remark || null,
-                                    videoUrl: file.url,
-                                });
+                    if (log.files && log.files.length > 0) {
+                        log.files.forEach((file, index) => {
+                            grouped[month].push({
+                                id: file._id || `${log._id}-${index}`,
+                                schoolName: log.school?.schoolName || "Unknown School",
+                                band: log.band,
+                                eventName: log.eventContext || null,
+                                eventDate: date.toISOString().split('T')[0],
+                                students: log.studentRecord,
+                                marks: file.marks !== undefined ? file.marks : null,
+                                remark: file.remark || null,
+                                videoUrl: file.url,
                             });
-                        }
-                    });
-
-                    setMediaData(grouped);
-                    const availableMonths = Object.keys(grouped);
-                    if (availableMonths.length > 0) {
-                        setExpandedMonth(availableMonths[0]);
-                    } else {
-                        setExpandedMonth(null);
+                        });
                     }
+                });
+
+                setMediaData(grouped);
+                const availableMonths = Object.keys(grouped);
+                if (availableMonths.length > 0 && !isUploading) {
+                    setExpandedMonth(availableMonths[0]);
                 }
-            } catch (error) {
-                console.error("Failed to load media", error);
-                toast.error("Failed to load media gallery.");
-            } finally {
-                setIsLoading(false);
             }
+        } catch (error) {
+            console.error("Failed to load media", error);
+            toast.error("Failed to load media gallery.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [selectedYear, isUploading]);
+
+    // Initial Fetch
+    useEffect(() => {
+        fetchMedia();
+    }, [fetchMedia]);
+
+    // --- NEW: LISTEN TO HEADLESS UPLOADER ---
+    useEffect(() => {
+        const handleProgress = (e) => setUploadProgress(e.detail);
+        const handleRefresh = () => fetchMedia();
+
+        // 🔥 Catch the new events and fire the toasts from the stable UI!
+        const handleSuccess = () => toast.success("Video successfully saved to Vault!");
+        const handleError = (e) => toast.error(e.detail || "An upload error occurred.");
+
+        window.addEventListener('vault-upload-progress', handleProgress);
+        window.addEventListener('refreshMediaGallery', handleRefresh);
+        window.addEventListener('vault-upload-success', handleSuccess);
+        window.addEventListener('vault-upload-error', handleError);
+
+        return () => {
+            window.removeEventListener('vault-upload-progress', handleProgress);
+            window.removeEventListener('refreshMediaGallery', handleRefresh);
+            window.removeEventListener('vault-upload-success', handleSuccess);
+            window.removeEventListener('vault-upload-error', handleError);
+        };
+    }, [fetchMedia]);
+
+    // --- NEW: GENERATE TEMPORARY LOCAL PREVIEW FOR GHOST CARD ---
+    useEffect(() => {
+        if (isUploading && jobQueue?.files?.length > 0) {
+            const url = URL.createObjectURL(jobQueue.files[0]);
+            setPreviewUrl(url);
+
+            // Auto-expand the month we are uploading to
+            const d = new Date(jobQueue.metadata.eventDate || new Date());
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            setExpandedMonth(monthNames[d.getMonth()]);
+
+            return () => URL.revokeObjectURL(url);
+        } else {
+            setPreviewUrl(null);
+            setUploadProgress(0);
+        }
+    }, [isUploading, jobQueue]);
+
+    // --- NEW: INJECT GHOST CARD INTO DATA ---
+    const displayMediaData = { ...mediaData };
+    if (isUploading && jobQueue) {
+        const d = new Date(jobQueue.metadata.eventDate || new Date());
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const monthName = monthNames[d.getMonth()];
+
+        const ghostRecord = {
+            id: 'uploading-ghost',
+            isGhost: true,
+            schoolName: jobQueue.metadata.schoolName,
+            band: jobQueue.metadata.band,
+            eventName: jobQueue.metadata.eventName,
+            eventDate: jobQueue.metadata.eventDate,
+            students: jobQueue.metadata.studentsCount,
         };
 
-        fetchMedia();
-    }, [selectedYear]);
+        // Create the month array if it's the very first video of the month
+        if (!displayMediaData[monthName]) displayMediaData[monthName] = [];
+
+        // Put the ghost card at the very front!
+        displayMediaData[monthName] = [ghostRecord, ...displayMediaData[monthName]];
+    }
 
     const getMonthlyStats = (files) => {
-        const gradedFiles = files.filter(f => f.marks !== null);
+        const gradedFiles = files.filter(f => f.marks !== null && !f.isGhost);
         if (gradedFiles.length === 0) return { average: null, colorClass: "bg-muted text-muted-foreground border-border" };
 
         const sum = gradedFiles.reduce((acc, curr) => acc + curr.marks, 0);
@@ -101,7 +175,7 @@ const EmployeeMedia = () => {
 
     // --- CUSTOM DELETE DIALOG HANDLERS ---
     const triggerDeleteConfirmation = (e, fileId, monthKey) => {
-        e.stopPropagation(); // Prevents the video player from opening
+        e.stopPropagation();
         setDeleteConfirmation({ fileId, monthKey });
     };
 
@@ -117,16 +191,13 @@ const EmployeeMedia = () => {
             if (response.data.success) {
                 toast.success("Video deleted successfully.", { id: toastId });
 
-                // Optimistic UI Update
                 setMediaData(prevData => {
                     const updatedMonthFiles = prevData[monthKey].filter(file => file.id !== fileId);
                     const newData = { ...prevData };
 
-                    if (updatedMonthFiles.length === 0) {
-                        delete newData[monthKey]; // Remove month header if empty
-                    } else {
-                        newData[monthKey] = updatedMonthFiles;
-                    }
+                    if (updatedMonthFiles.length === 0) delete newData[monthKey];
+                    else newData[monthKey] = updatedMonthFiles;
+
                     return newData;
                 });
             }
@@ -134,7 +205,7 @@ const EmployeeMedia = () => {
             console.error("Delete error:", error);
             toast.error(error.response?.data?.message || "Failed to delete video.", { id: toastId });
         } finally {
-            setDeleteConfirmation(null); // Close the dialog
+            setDeleteConfirmation(null);
         }
     };
 
@@ -200,7 +271,7 @@ const EmployeeMedia = () => {
             </div>
 
             {/* Shimmer Loading */}
-            {isLoading ? (
+            {isLoading && !isUploading ? (
                 <div className="space-y-4">
                     {[1, 2].map((skeletonMonth) => (
                         <div key={skeletonMonth} className="bg-card dark:bg-[#181d29] border border-border dark:border-slate-700/50 rounded-2xl overflow-hidden shadow-sm">
@@ -210,34 +281,6 @@ const EmployeeMedia = () => {
                                         <div className="w-5 h-5 rounded-md bg-muted dark:bg-slate-800" />
                                         <div className="w-24 sm:w-32 h-5 rounded-md bg-muted dark:bg-slate-800" />
                                     </div>
-                                    <div className="flex items-center gap-2 ml-1 sm:ml-4 border-l border-border dark:border-slate-700 pl-4">
-                                        <div className="w-14 h-6 rounded-md bg-muted dark:bg-slate-800" />
-                                        <div className="w-20 h-6 rounded-md bg-muted dark:bg-slate-800" />
-                                    </div>
-                                </div>
-                                <div className="w-5 h-5 rounded-md bg-muted dark:bg-slate-800" />
-                            </div>
-                            <div className="p-5 sm:p-6 pt-2 border-t border-border dark:border-slate-800">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {[1, 2, 3].map((skeletonCard) => (
-                                        <div key={skeletonCard} className="bg-background dark:bg-[#0d1117] border border-border dark:border-slate-800 rounded-xl overflow-hidden flex flex-col animate-pulse">
-                                            <div className="aspect-video w-full bg-muted dark:bg-slate-800 shrink-0" />
-                                            <div className="p-4 space-y-4 flex-1">
-                                                <div className="flex justify-between items-start gap-4">
-                                                    <div className="h-4 bg-muted dark:bg-slate-800 rounded w-2/3" />
-                                                    <div className="h-4 bg-muted dark:bg-slate-800 rounded w-1/4" />
-                                                </div>
-                                                <div className="space-y-2 pt-2 border-t border-border dark:border-slate-800">
-                                                    <div className="h-3 bg-muted dark:bg-slate-800 rounded w-1/2" />
-                                                    <div className="h-3 bg-muted dark:bg-slate-800 rounded w-1/3" />
-                                                </div>
-                                            </div>
-                                            <div className="p-3.5 border-t border-border dark:border-slate-800 bg-muted/10 flex justify-between items-center">
-                                                <div className="h-3 bg-muted dark:bg-slate-800 rounded w-1/3" />
-                                                <div className="h-3 bg-muted dark:bg-slate-800 rounded w-1/6" />
-                                            </div>
-                                        </div>
-                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -245,9 +288,9 @@ const EmployeeMedia = () => {
                 </div>
             ) : (
                 <div className="space-y-4">
-                    {Object.keys(mediaData).map((month) => {
+                    {Object.keys(displayMediaData).map((month) => {
                         const isExpanded = expandedMonth === month;
-                        const mediaFiles = mediaData[month];
+                        const mediaFiles = displayMediaData[month];
                         const { average, colorClass } = getMonthlyStats(mediaFiles);
 
                         return (
@@ -266,10 +309,12 @@ const EmployeeMedia = () => {
                                             <span className="px-2.5 py-1 rounded-md bg-muted dark:bg-[#0d1117] text-[11px] font-bold text-muted-foreground">
                                                 {mediaFiles.length} videos
                                             </span>
-                                            <div className={`px-2.5 py-1 rounded-md border text-[11px] font-extrabold flex items-center gap-1.5 ${colorClass}`}>
-                                                <Award className="w-3 h-3" />
-                                                {average !== null ? `AVG: ${average}/100` : "Pending Grading"}
-                                            </div>
+                                            {average !== null && (
+                                                <div className={`px-2.5 py-1 rounded-md border text-[11px] font-extrabold flex items-center gap-1.5 ${colorClass}`}>
+                                                    <Award className="w-3 h-3" />
+                                                    AVG: {average}/100
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-300 shrink-0 ml-2 ${isExpanded ? 'rotate-180' : ''}`} />
@@ -280,106 +325,154 @@ const EmployeeMedia = () => {
                                     <div className="p-5 sm:p-6 pt-2 border-t border-border dark:border-slate-800 animate-in fade-in duration-300">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                             {mediaFiles.map((media) => (
-                                                <div key={media.id} className="group bg-background dark:bg-[#0d1117] border border-border dark:border-slate-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-200 flex flex-col relative">
+                                                media.isGhost ? (
+                                                    // 🔥 THE CINEMATIC GHOST CARD
+                                                    <div key="ghost" className="group bg-background dark:bg-[#0d1117] border border-primary/50 shadow-[0_0_20px_rgba(59,130,246,0.15)] rounded-xl overflow-hidden flex flex-col relative transition-all duration-300">
+                                                        <div className="relative aspect-video bg-black overflow-hidden shrink-0">
 
-                                                    {/* Smart Video Thumbnail */}
-                                                    <div
-                                                        className="relative aspect-video bg-slate-900 overflow-hidden shrink-0 cursor-pointer"
-                                                        onClick={() => media.videoUrl && setActiveVideo(media)}
-                                                    >
-                                                        {media.videoUrl ? (
-                                                            <video
-                                                                src={`${media.videoUrl}#t=0.001`}
-                                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-70 group-hover:opacity-100"
-                                                                preload="metadata"
-                                                                muted
-                                                                playsInline
-                                                            />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center">
-                                                                <Film className="w-8 h-8 text-slate-700" />
+                                                            {/* 🔥 NEW: The Cancel Button Overlay */}
+                                                            <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20">
+                                                                <button
+                                                                    onClick={handleCancelUpload}
+                                                                    className="p-2 sm:p-2 bg-black/40 hover:bg-destructive/90 active:bg-destructive backdrop-blur-md text-white rounded-full transition-all duration-200 shadow-lg border border-white/20 active:scale-90"
+                                                                    title="Cancel Upload"
+                                                                    aria-label="Cancel Upload"
+                                                                >
+                                                                    {/* 5x5 icon on mobile, 4x4 on desktop */}
+                                                                    <X className="w-5 h-5 sm:w-4 sm:h-4" />
+                                                                </button>
                                                             </div>
-                                                        )}
-                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-transparent transition-colors">
-                                                            <div className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg border border-white/10">
-                                                                <PlayCircle className="w-6 h-6 text-white ml-0.5" />
+
+                                                            {previewUrl ? (
+                                                                <video
+                                                                    src={previewUrl}
+                                                                    className="w-full h-full object-cover transition-all duration-300"
+                                                                    style={{
+                                                                        filter: `blur(${Math.max(0, 8 - (uploadProgress * 0.08))}px) grayscale(${Math.max(0, 100 - uploadProgress)}%) brightness(${0.5 + (uploadProgress * 0.005)})`
+                                                                    }}
+                                                                    autoPlay loop muted playsInline
+                                                                />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center bg-slate-900">
+                                                                    <UploadCloud className="w-8 h-8 text-primary animate-pulse" />
+                                                                </div>
+                                                            )}
+
+                                                            {/* Cinematic Progress Bar Overlay */}
+                                                            <div className="absolute bottom-0 left-0 w-full h-1.5 bg-black/50">
+                                                                <div className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }} />
+                                                            </div>
+                                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                                <span className="text-3xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] tracking-tighter">{uploadProgress}%</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="p-4 space-y-3 flex-1 opacity-60 animate-pulse">
+                                                            <div className="flex items-start justify-between gap-2">
+                                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                                    <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                                                                    <h3 className="font-bold text-foreground text-sm truncate">{media.schoolName}</h3>
+                                                                </div>
+                                                                <span className="shrink-0 bg-primary/10 text-primary text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-sm tracking-wider">
+                                                                    {media.band}
+                                                                </span>
+                                                            </div>
+                                                            <div className="pt-2 border-t border-border dark:border-slate-800">
+                                                                <p className="text-[12px] font-semibold text-primary truncate flex items-center gap-1.5">
+                                                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                                                    {uploadProgress === 100 ? "Finalizing database..." : "Uploading to Vault..."}
+                                                                </p>
                                                             </div>
                                                         </div>
                                                     </div>
-
-                                                    {/* Card Details */}
-                                                    <div className="p-4 space-y-3 flex-1">
-                                                        <div className="flex items-start justify-between gap-2">
-                                                            <div className="flex items-center gap-1.5 min-w-0">
-                                                                <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                                                                <h3 className="font-bold text-foreground text-sm truncate">{media.schoolName}</h3>
+                                                ) : (
+                                                    // STANDARD REAL DB CARD
+                                                    <div key={media.id} className="group bg-background dark:bg-[#0d1117] border border-border dark:border-slate-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-200 flex flex-col relative">
+                                                        <div
+                                                            className="relative aspect-video bg-slate-900 overflow-hidden shrink-0 cursor-pointer"
+                                                            onClick={() => media.videoUrl && setActiveVideo(media)}
+                                                        >
+                                                            {media.videoUrl ? (
+                                                                <video
+                                                                    src={`${media.videoUrl}#t=0.001`}
+                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-70 group-hover:opacity-100"
+                                                                    preload="metadata" muted playsInline
+                                                                />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center">
+                                                                    <Film className="w-8 h-8 text-slate-700" />
+                                                                </div>
+                                                            )}
+                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-transparent transition-colors">
+                                                                <div className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg border border-white/10">
+                                                                    <PlayCircle className="w-6 h-6 text-white ml-0.5" />
+                                                                </div>
                                                             </div>
-                                                            <span className="shrink-0 bg-primary/10 text-primary text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-sm tracking-wider">
-                                                                {media.band}
-                                                            </span>
                                                         </div>
-                                                        <div className="pt-2 border-t border-border dark:border-slate-800 flex flex-wrap gap-y-2 gap-x-4">
-                                                            <div className="w-full">
-                                                                {media.eventName && <p className="text-[12px] font-semibold text-foreground truncate">{media.eventName}</p>}
-                                                                <p className="text-[11px] text-muted-foreground mt-0.5">{media.eventDate}</p>
+
+                                                        <div className="p-4 space-y-3 flex-1">
+                                                            <div className="flex items-start justify-between gap-2">
+                                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                                    <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                                                                    <h3 className="font-bold text-foreground text-sm truncate">{media.schoolName}</h3>
+                                                                </div>
+                                                                <span className="shrink-0 bg-primary/10 text-primary text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-sm tracking-wider">
+                                                                    {media.band}
+                                                                </span>
                                                             </div>
-                                                            {media.students && (
-                                                                <div className="flex items-center gap-1.5 mt-1 bg-muted dark:bg-slate-800/50 px-2 py-1 rounded-md">
-                                                                    <Users className="w-3.5 h-3.5 text-blue-500" />
-                                                                    <span className="text-[11px] font-bold text-muted-foreground">{media.students} Present</span>
+                                                            <div className="pt-2 border-t border-border dark:border-slate-800 flex flex-wrap gap-y-2 gap-x-4">
+                                                                <div className="w-full">
+                                                                    {media.eventName && <p className="text-[12px] font-semibold text-foreground truncate">{media.eventName}</p>}
+                                                                    <p className="text-[11px] text-muted-foreground mt-0.5">{media.eventDate}</p>
+                                                                </div>
+                                                                {media.students && (
+                                                                    <div className="flex items-center gap-1.5 mt-1 bg-muted dark:bg-slate-800/50 px-2 py-1 rounded-md">
+                                                                        <Users className="w-3.5 h-3.5 text-blue-500" />
+                                                                        <span className="text-[11px] font-bold text-muted-foreground">{media.students} Present</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {media.remark && (
+                                                            <div className="px-4 pb-3">
+                                                                <div className="bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg flex gap-2.5 items-start">
+                                                                    <span className="text-blue-500 font-serif text-2xl leading-none h-4">"</span>
+                                                                    <p className="text-[12px] italic text-foreground font-medium leading-snug pt-1">{media.remark}</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="p-3.5 border-t border-border dark:border-slate-800 bg-muted/30 dark:bg-slate-800/30 mt-auto">
+                                                            {media.marks !== null ? (
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                                                                            <Award className="w-3 h-3 text-green-600 dark:text-green-400" />
+                                                                        </div>
+                                                                        <span className="text-[11px] font-extrabold text-green-700 dark:text-green-400 uppercase tracking-wide">Admin Score</span>
+                                                                    </div>
+                                                                    <span className="text-sm font-black text-foreground">{media.marks}/100</span>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-1.5 opacity-80">
+                                                                        <Clock className="w-4 h-4 text-muted-foreground" />
+                                                                        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Pending Review</span>
+                                                                    </div>
+                                                                    {!media.remark && (
+                                                                        <button
+                                                                            onClick={(e) => triggerDeleteConfirmation(e, media.id, month)}
+                                                                            className="flex items-center gap-1.5 px-2.5 py-1 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-md transition-colors active:scale-95 shadow-sm"
+                                                                        >
+                                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                                            <span className="text-[11px] font-extrabold uppercase tracking-wide">Delete</span>
+                                                                        </button>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                         </div>
                                                     </div>
-
-                                                    {/* Admin Remarks Block */}
-                                                    {media.remark && (
-                                                        <div className="px-4 pb-3">
-                                                            <div className="bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg flex gap-2.5 items-start">
-                                                                <span className="text-blue-500 font-serif text-2xl leading-none h-4">"</span>
-                                                                <p className="text-[12px] italic text-foreground font-medium leading-snug pt-1">
-                                                                    {media.remark}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Marking Footer with the Mobile-Friendly Delete Button */}
-                                                    <div className="p-3.5 border-t border-border dark:border-slate-800 bg-muted/30 dark:bg-slate-800/30 mt-auto">
-                                                        {media.marks !== null ? (
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
-                                                                        <Award className="w-3 h-3 text-green-600 dark:text-green-400" />
-                                                                    </div>
-                                                                    <span className="text-[11px] font-extrabold text-green-700 dark:text-green-400 uppercase tracking-wide">Admin Score</span>
-                                                                </div>
-                                                                <span className="text-sm font-black text-foreground">{media.marks}/100</span>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-1.5 opacity-80">
-                                                                    <Clock className="w-4 h-4 text-muted-foreground" />
-                                                                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Pending Review</span>
-                                                                </div>
-
-                                                                {/* ALWAYS VISIBLE DELETE BUTTON FOR UNGRADED VIDEOS */}
-                                                                {!media.remark ? (
-                                                                    <button
-                                                                        onClick={(e) => triggerDeleteConfirmation(e, media.id, month)}
-                                                                        className="flex items-center gap-1.5 px-2.5 py-1 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-md transition-colors active:scale-95 shadow-sm"
-                                                                        title="Delete Video"
-                                                                    >
-                                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                                        <span className="text-[11px] font-extrabold uppercase tracking-wide">Delete</span>
-                                                                    </button>
-                                                                ) : (
-                                                                    <span className="text-sm font-bold text-muted-foreground opacity-80">--/100</span>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
+                                                )
                                             ))}
                                         </div>
                                     </div>
@@ -388,7 +481,7 @@ const EmployeeMedia = () => {
                         );
                     })}
 
-                    {Object.keys(mediaData).length === 0 && (
+                    {Object.keys(displayMediaData).length === 0 && !isUploading && (
                         <div className="text-center py-16 bg-card dark:bg-[#181d29] rounded-2xl border border-border dark:border-slate-700/50">
                             <Film className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
                             <h3 className="text-lg font-bold text-foreground">No media found</h3>
@@ -403,7 +496,6 @@ const EmployeeMedia = () => {
                 onClose={() => setIsUploadModalOpen(false)}
             />
 
-            {/* Delete Confirmation Modal */}
             {deleteConfirmation && (
                 <div className="fixed inset-0 z-120 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-card dark:bg-[#181d29] border border-border dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden animate-in zoom-in-95">
@@ -436,7 +528,6 @@ const EmployeeMedia = () => {
                 </div>
             )}
 
-            {/* Cinematic Video Player */}
             {activeVideo && (
                 <div className="fixed inset-0 z-100 flex items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
                     <div className="absolute top-0 left-0 right-0 w-full max-w-6xl mx-auto p-4 flex justify-between items-start z-50">
@@ -458,7 +549,6 @@ const EmployeeMedia = () => {
                             <button
                                 onClick={() => handleDownload(activeVideo.videoUrl, `${activeVideo.schoolName.replace(/\s+/g, '-')}.mp4`)}
                                 className="p-2.5 sm:p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all duration-200 active:scale-95 group"
-                                title="Download Video"
                             >
                                 <Download className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
                             </button>
@@ -466,7 +556,6 @@ const EmployeeMedia = () => {
                             <button
                                 onClick={() => setActiveVideo(null)}
                                 className="p-2.5 sm:p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-all duration-200 active:scale-95 hover:rotate-90"
-                                title="Close Player"
                             >
                                 <X className="w-5 h-5" />
                             </button>

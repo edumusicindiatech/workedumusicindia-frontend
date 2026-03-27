@@ -10,11 +10,9 @@ import CustomSelect from "../../components/ui/CustomSelect";
 
 const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
     const { user, isHydrating } = useSelector((state) => state.auth);
-    // We need to know if an upload is happening to protect the files
     const { isUploading } = useSelector((state) => state.upload);
     const dispatch = useDispatch();
 
-    // Form State
     const [selectedSchoolId, setSelectedSchoolId] = useState("");
     const [band, setBand] = useState("");
     const [eventName, setEventName] = useState("");
@@ -24,14 +22,12 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
 
     const fileInputRef = useRef(null);
 
-    // Escape key listener
     useEffect(() => {
         const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
         if (isOpen) window.addEventListener('keydown', handleEsc);
         return () => window.removeEventListener('keydown', handleEsc);
     }, [isOpen, onClose]);
 
-    // 🔥 THE FIX: Auto-clear the form ONLY when closed AND not uploading
     useEffect(() => {
         if (!isOpen && !isUploading) {
             setFiles([]);
@@ -43,7 +39,6 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
         }
     }, [isOpen, isUploading]);
 
-    // CustomSelect logic
     const schoolOptions = user?.assignments?.map(item => item.school?.schoolName || "Unnamed School") || [];
     const currentSelectedName = user?.assignments?.find(
         item => (item.school?._id || item.school) === selectedSchoolId
@@ -77,12 +72,11 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
         if (!band) return toast.error("Band category is required.");
         if (files.length === 0) return toast.error("Please add at least one video.");
 
-        const MAX_SIZE = 200 * 1024 * 1024;
+        const MAX_SIZE = 500 * 1024 * 1024;
         if (files.some(f => f.size > MAX_SIZE)) {
-            return toast.error("Files exceed 200MB limit. Please compress them.");
+            return toast.error("Files exceed 500MB limit. Please compress them.");
         }
 
-        // 1. Dispatch the files to Redux
         dispatch(startBackgroundUpload({
             files: files,
             metadata: {
@@ -92,14 +86,9 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
             }
         }));
 
-        toast.success("Upload started! See progress in bottom right.");
-
-        // 2. Close the modal visually (but keep it in the DOM!)
         onClose();
     };
 
-    // 🔥 THE GHOST DOM TRICK: Instead of returning null, we hide it with CSS.
-    // This stops iOS Safari from deleting the video files from RAM!
     const visibilityClass = isOpen
         ? "opacity-100 pointer-events-auto z-60"
         : "opacity-0 pointer-events-none -z-50";
@@ -109,7 +98,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
             <div className="bg-card dark:bg-[#181d29] border border-border dark:border-slate-700/50 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl relative overflow-hidden">
 
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-border dark:border-slate-800 bg-muted/20">
+                <div className="flex items-center justify-between p-6 border-b border-border dark:border-slate-800 bg-muted/20 shrink-0">
                     <div>
                         <h2 className="text-xl font-extrabold text-foreground tracking-tight">Upload to Vault</h2>
                         <p className="text-xs font-medium text-muted-foreground mt-1">Add performance videos to your school's secure gallery.</p>
@@ -122,9 +111,12 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                     </button>
                 </div>
 
-                <form id="media-upload-form" onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                {/* 🔥 FIX: Added pb-40 to give the dropdown room to expand without getting cut off */}
+                <form id="media-upload-form" onSubmit={handleSubmit} className="overflow-y-auto p-6 pb-40 space-y-6 custom-scrollbar">
                     <div className="p-5 rounded-2xl bg-background/50 dark:bg-[#0d1117]/50 border border-border dark:border-slate-800 space-y-5">
-                        <div className="relative z-20">
+
+                        {/* 🔥 FIX: Forced z-[100] so the dropdown floats above everything else */}
+                        <div className="relative z-100">
                             <label className="block text-[13px] font-bold text-foreground mb-2 uppercase tracking-wider">
                                 Assigned School <span className="text-destructive">*</span>
                             </label>
@@ -133,7 +125,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                                     Loading schools...
                                 </div>
                             ) : (
-                                <div className="flex items-center">
+                                <div className="flex items-center relative">
                                     <div className="absolute left-3 z-10 pointer-events-none">
                                         <MapPin className="w-4 h-4 text-primary" />
                                     </div>
@@ -165,6 +157,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                         </div>
                     </div>
 
+                    {/* Rest of the form remains unchanged... */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 p-5 rounded-2xl bg-background/50 dark:bg-[#0d1117]/50 border border-border dark:border-slate-800">
                         <div className="space-y-2">
                             <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">Event Name <span className="text-muted-foreground lowercase font-medium tracking-normal">(Optional)</span></label>
@@ -206,7 +199,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                                 <UploadCloud className="w-7 h-7 text-primary" />
                             </div>
                             <p className="text-sm font-bold text-foreground mb-1">Click to browse videos</p>
-                            <p className="text-[11px] text-muted-foreground font-medium">MP4 or MOV • Max 200MB per file</p>
+                            <p className="text-[11px] text-muted-foreground font-medium">MP4 or MOV • Max 500MB per file</p>
                             <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple accept="video/*" className="hidden" disabled={files.length >= 5} />
                         </div>
 
@@ -238,7 +231,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                 </form>
 
                 {/* Footer */}
-                <div className="bg-muted/30 dark:bg-[#121620] p-5 md:px-7 flex items-center justify-between border-t border-border dark:border-slate-800">
+                <div className="bg-muted/30 dark:bg-[#121620] p-5 md:px-7 flex items-center justify-between border-t border-border dark:border-slate-800 shrink-0">
                     <div className="hidden sm:flex items-center gap-2 text-muted-foreground bg-background/50 px-3 py-1.5 rounded-lg border border-border dark:border-slate-800">
                         <Info className="w-4 h-4 text-primary" />
                         <span className="text-[11px] font-bold tracking-wide">Direct-to-Cloud Enabled</span>
