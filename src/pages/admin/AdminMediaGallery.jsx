@@ -111,7 +111,7 @@ const AdminMediaGallery = () => {
                             grouped[month].push({
                                 logId: log._id,
                                 fileId: file._id,
-                                eventName: log.eventContext,
+                                eventName: log.eventContext || log.mediaType,
                                 eventDate: date.toISOString().split('T')[0],
                                 students: log.studentRecord,
                                 marks: file.marks !== undefined ? file.marks : null,
