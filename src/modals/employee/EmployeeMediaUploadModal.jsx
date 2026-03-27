@@ -18,6 +18,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
     const [eventDate, setEventDate] = useState("");
     const [studentsCount, setStudentsCount] = useState("");
     const [files, setFiles] = useState([]);
+    const [uploadProgress, setUploadProgress] = useState(0);
 
     // 🔥 NEW: Internal Upload State to protect mobile memory
     const [isUploading, setIsUploading] = useState(false);
@@ -72,11 +73,11 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
 
         const MAX_SIZE = 200 * 1024 * 1024;
         if (files.some(f => f.size > MAX_SIZE)) {
-            return toast.error("Files exceed 200MB limit.");
+            return toast.error("Files exceed 200MB limit. Please compress them.");
         }
 
-        // Lock the UI
         setIsUploading(true);
+        setUploadProgress(0);
         const successfulUploads = [];
         const failedFiles = [];
         const toastId = toast.loading("Initializing secure upload...", { position: 'bottom-right' });
@@ -95,35 +96,55 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                 files: filePayload, metadata
             });
 
-            // PHASE 2: Sequential Mobile-Safe Upload
+            // PHASE 2: Sequential Mobile-Safe XHR Upload
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 const targetUrl = urlData.urls[i].uploadUrl;
                 const publicUrl = urlData.urls[i].publicUrl;
 
-                const statusMsg = `Uploading video ${i + 1} of ${files.length}...`;
-                setUploadStatus(statusMsg);
-                toast.loading(`${statusMsg} ⚠️ Keep app open.`, { id: toastId });
+                setUploadStatus(`Uploading video ${i + 1} of ${files.length}`);
+                setUploadProgress(0); // Reset progress for the new file
+                toast.loading(`Uploading video ${i + 1} of ${files.length}... ⚠️ Keep app open.`, { id: toastId });
 
-                try {
-                    // Direct-to-Cloudfetch. The file is safe because the modal is still open!
-                    const response = await fetch(targetUrl, {
-                        method: "PUT",
-                        headers: { "Content-Type": file.type },
-                        body: file
-                    });
+                // We wrap the older XMLHttpRequest in a Promise so we can 'await' it
+                await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open("PUT", targetUrl, true);
+                    xhr.setRequestHeader("Content-Type", file.type);
 
-                    if (!response.ok) throw new Error("Cloudflare rejected upload");
-                    successfulUploads.push({ url: publicUrl, fileType: 'video' });
-                } catch (err) {
+                    // This tracks the live percentage!
+                    xhr.upload.onprogress = (event) => {
+                        if (event.lengthComputable) {
+                            const percentComplete = Math.round((event.loaded / event.total) * 100);
+                            setUploadProgress(percentComplete);
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            successfulUploads.push({ url: publicUrl, fileType: 'video' });
+                            resolve();
+                        } else {
+                            reject(new Error(`Cloudflare rejected upload. Status: ${xhr.status}`));
+                        }
+                    };
+
+                    xhr.onerror = () => {
+                        reject(new Error("Network error. Connection lost."));
+                    };
+
+                    // Send the file directly from memory
+                    xhr.send(file);
+                }).catch((err) => {
                     console.error(`Failed to upload ${file.name}`, err);
                     failedFiles.push(file.name);
-                }
+                });
             }
 
             // PHASE 3: Save to Database
             if (successfulUploads.length > 0) {
                 setUploadStatus("Finalizing records...");
+                setUploadProgress(100);
                 toast.loading("Saving to Vault...", { id: toastId });
                 await api.post('/employee/media/save-log', {
                     ...metadata,
@@ -138,25 +159,21 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                 toast.success("All media successfully uploaded!", { duration: 5000 });
             } else {
                 toast.error(`Uploaded ${successfulUploads.length}/${files.length}. Failed: ${failedFiles.join(', ')}`, { duration: 8000 });
-
-                // Log failures (Fire-and-forget for error logging is fine)
                 api.post('/employee/media/send-failure-email', {
                     failedFiles, eventContext: eventName || "Regular Visit", schoolId: selectedSchoolId
                 }).catch(() => console.log("Offline error logging skipped."));
             }
 
-            // Tell the gallery UI to update instantly
             window.dispatchEvent(new Event('refreshMediaGallery'));
-
-            // NOW it is safe to close the modal and release mobile memory!
             onClose();
 
         } catch (error) {
             console.error("Upload Error:", error);
             toast.dismiss(toastId);
             toast.error("Upload failed. Please check your network.", { duration: 6000 });
-            setIsUploading(false); // Unlock the modal so they can try again
+            setIsUploading(false);
             setUploadStatus("");
+            setUploadProgress(0);
         }
     };
 
@@ -184,15 +201,31 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
 
                     {/* OVERLAY: Shows exactly what is happening during the upload */}
                     {isUploading && (
-                        <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
-                            <div className="w-16 h-16 bg-primary/20 text-primary rounded-2xl flex items-center justify-center mb-6 animate-pulse">
-                                <UploadCloud className="w-8 h-8" />
+                        <div className="absolute inset-0 z-50 bg-background/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
+
+                            {/* Circular Progress Indicator */}
+                            <div className="relative w-24 h-24 flex items-center justify-center mb-6">
+                                <svg className="w-full h-full transform -rotate-90">
+                                    <circle cx="48" cy="48" r="45" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-muted/30" />
+                                    <circle cx="48" cy="48" r="45" stroke="currentColor" strokeWidth="6" fill="transparent"
+                                        strokeDasharray={283}
+                                        strokeDashoffset={283 - (283 * uploadProgress) / 100}
+                                        className="text-primary transition-all duration-300 ease-out"
+                                    />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-xl font-black text-primary">{uploadProgress}%</span>
+                                </div>
                             </div>
+
                             <h3 className="text-2xl font-black text-foreground mb-2">Uploading Media</h3>
-                            <p className="text-primary font-bold animate-pulse">{uploadStatus}</p>
-                            <p className="text-sm text-muted-foreground mt-4 max-w-xs leading-relaxed">
-                                Please do not close your browser or lock your phone until this process is complete.
-                            </p>
+                            <p className="text-primary font-bold">{uploadStatus}</p>
+
+                            <div className="mt-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl max-w-xs">
+                                <p className="text-sm font-bold text-amber-600 dark:text-amber-400 leading-relaxed">
+                                    ⚠️ Keep your screen on.<br />Do not close this app or lock your phone until finished.
+                                </p>
+                            </div>
                         </div>
                     )}
 
