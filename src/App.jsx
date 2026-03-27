@@ -26,6 +26,7 @@ import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminResetPassword from "./pages/admin/AdminResetPassword";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminLeaveRequests from "./pages/admin/AdminLeaveRequests";
+import AdminMediaGallery from "./pages/admin/AdminMediaGallery";
 
 // Employee Imports
 import EmployeeLayout from "./components/employee/EmployeeLayout";
@@ -190,6 +191,10 @@ function App() {
           <Route path="attendance" element={<AttendanceFeed />} />
           <Route path="progress" element={<ProgressReport />} />
           <Route path="reports" element={<AdminReports />} />
+
+          {/* ---> ADDED ADMIN MEDIA ROUTE <--- */}
+          <Route path="media" element={<AdminMediaGallery />} />
+
           <Route path="leave-requests" element={<AdminLeaveRequests />} />
           <Route path="communication" element={<Communication />} />
           <Route path="notifications" element={<AdminNotifications />} />

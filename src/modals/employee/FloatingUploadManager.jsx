@@ -1,4 +1,3 @@
-// FloatingUploadManager.jsx
 import { useEffect, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import api from '../../api/axios';
@@ -60,7 +59,6 @@ const FloatingUploadManager = () => {
 
         uppy.on('complete', async (result) => {
             if (result.failed.length > 0) {
-                // Broadcast error
                 window.dispatchEvent(new CustomEvent('vault-upload-error', { detail: "Upload failed. Please check network." }));
                 dispatch(clearUploadJob());
                 return;
@@ -72,15 +70,17 @@ const FloatingUploadManager = () => {
                     uploadedFiles: successfulUploadsRef.current
                 });
 
-                // 🔥 Broadcast Success!
                 window.dispatchEvent(new CustomEvent('vault-upload-success'));
 
             } catch (err) {
-                // Broadcast Database Error
                 window.dispatchEvent(new CustomEvent('vault-upload-error', { detail: "Uploaded, but failed to save to database." }));
             } finally {
                 dispatch(clearUploadJob());
-                window.dispatchEvent(new Event('refreshMediaGallery'));
+
+                // 🔥 CRITICAL FIX: 500ms delay gives MongoDB time to save before UI fetches
+                setTimeout(() => {
+                    window.dispatchEvent(new Event('refreshMediaGallery'));
+                }, 500);
 
                 if (uppyRef.current) {
                     uppyRef.current.destroy();
@@ -88,17 +88,17 @@ const FloatingUploadManager = () => {
                 }
             }
         });
+
         files.forEach(file => uppy.addFile({ name: file.name, type: file.type, data: file }));
         uppyRef.current = uppy;
 
-        // 🔥 NEW: The Kill Switch Listener
         const handleCancel = () => {
             if (uppyRef.current) {
-                uppyRef.current.cancelAll(); // This tells Cloudflare to delete the chunks!
+                uppyRef.current.cancelAll();
                 uppyRef.current.destroy();
                 uppyRef.current = null;
             }
-            dispatch(clearUploadJob()); // This removes the Ghost Card from the UI
+            dispatch(clearUploadJob());
         };
         window.addEventListener('vault-upload-cancel', handleCancel);
 
@@ -112,7 +112,6 @@ const FloatingUploadManager = () => {
 
     }, [isUploading, jobQueue, dispatch]);
 
-    // 🔥 NO UI. THIS COMPONENT IS NOW A GHOST.
     return null;
 };
 

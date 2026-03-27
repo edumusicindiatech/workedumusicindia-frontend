@@ -2,11 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { io } from "socket.io-client";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 import {
     LayoutDashboard, Users, Radio, MessageSquare, Shield,
     Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle, ClipboardCheck,
-    CalendarDays
+    CalendarDays, Film // <-- Added Film icon
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -19,7 +19,7 @@ const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 const notificationSound = new Audio('/sounds/notification-ting.mp3');
 
 const AdminSidebar = () => {
-    const { t } = useTranslation(); // <-- Initialize translation
+    const { t } = useTranslation();
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const location = useLocation();
@@ -36,8 +36,8 @@ const AdminSidebar = () => {
     const [unreadCount, setUnreadCount] = useState(0);
 
     const mobileMenuRef = useRef(null);
-
     const pathnameRef = useRef(location.pathname);
+
     useEffect(() => {
         pathnameRef.current = location.pathname;
     }, [location.pathname]);
@@ -89,7 +89,7 @@ const AdminSidebar = () => {
 
             if (pathnameRef.current !== '/admin/notifications') {
                 setUnreadCount(prev => prev + 1);
-                toast(t('sidebar.new_alert_toast'), { icon: '🛡️' }); // <-- Translated toast
+                toast(t('sidebar.new_alert_toast'), { icon: '🛡️' });
             }
         };
 
@@ -122,13 +122,13 @@ const AdminSidebar = () => {
         localStorage.removeItem("access_token");
         localStorage.removeItem("user");
 
-        const toastId = toast.loading(t('sidebar.logging_out')); // <-- Translated
+        const toastId = toast.loading(t('sidebar.logging_out'));
         try {
             await api.post('/auth/logout');
-            toast.success(t('sidebar.logout_success'), { id: toastId }); // <-- Translated
+            toast.success(t('sidebar.logout_success'), { id: toastId });
         } catch (error) {
             console.error("Backend logout cleanup failed:", error);
-            toast.error(t('sidebar.logout_error'), { id: toastId }); // <-- Translated
+            toast.error(t('sidebar.logout_error'), { id: toastId });
         }
 
         navigate("/", { replace: true });
@@ -174,10 +174,15 @@ const AdminSidebar = () => {
                     <NavLink to="/admin/reports" className={desktopNavClasses} title={t('sidebar.reports')}>
                         <ClipboardCheck className="w-4.5 h-4.5" /> {t('sidebar.reports')}
                     </NavLink>
+
+                    {/* ---> ADDED MEDIA LINK HERE <--- */}
+                    <NavLink to="/admin/media" className={desktopNavClasses} title={t('sidebar.media') || 'Media Gallery'}>
+                        <Film className="w-4.5 h-4.5" /> {t('sidebar.media') || 'Media'}
+                    </NavLink>
+
                     <NavLink to="/admin/leave-requests" className={desktopNavClasses} title={t('sidebar.leave')}>
                         <CalendarDays className="w-4.5 h-4.5" /> {t('sidebar.leave')}
                     </NavLink>
-
                     <NavLink to="/admin/notifications" className={desktopNavClasses} title={t('sidebar.alerts')}>
                         <div className="relative flex items-center justify-center">
                             <Bell className="w-4.5 h-4.5" />
@@ -189,7 +194,6 @@ const AdminSidebar = () => {
                         </div>
                         {t('sidebar.alerts')}
                     </NavLink>
-
                     <NavLink to="/admin/communication" className={desktopNavClasses} title={t('sidebar.broadcast')}>
                         <MessageSquare className="w-4.5 h-4.5" /> {t('sidebar.broadcast')}
                     </NavLink>
@@ -232,6 +236,13 @@ const AdminSidebar = () => {
                                 onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/reports'); }}
                             >
                                 <ClipboardCheck className="w-4 h-4 text-primary" /> {t('sidebar.reports')}
+                            </button>
+
+                            {/* ---> ADDED MEDIA LINK HERE IN MOBILE DROPDOWN <--- */}
+                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/media'); }}
+                            >
+                                <Film className="w-4 h-4 text-primary" /> {t('sidebar.media') || 'Media Gallery'}
                             </button>
 
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"

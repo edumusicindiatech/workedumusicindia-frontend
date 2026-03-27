@@ -2,17 +2,16 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-    ArrowLeft, School, ClipboardList, Film, AlertTriangle,
+    ArrowLeft, School, ClipboardList, AlertTriangle,
     CalendarDays, MapPin, Pencil, Trash2, AlertCircle,
     Mail, Phone, Briefcase
 } from "lucide-react";
 import api from "../../api/axios";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 
 // --- Import Tab Components ---
 import AssignmentsTab from "./tabs/AssignmentsTab";
 import TasksTab from "./tabs/TasksTab";
-import MediaTab from "./tabs/MediaTab";
 import WarningsTab from "./tabs/WarningsTab";
 import AttendanceTab from "./tabs/AttendanceTab";
 
@@ -20,10 +19,8 @@ import AttendanceTab from "./tabs/AttendanceTab";
 import EditEmployeeModal from "../../modals/admin/EditEmployeeModal";
 import DeleteEmployeeModal from "../../modals/admin/DeleteEmployeeModal";
 
-const mediaCollections = [];
-
 const EmployeeProfile = () => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation();
     const { id } = useParams();
     const navigate = useNavigate();
 
@@ -190,14 +187,6 @@ const EmployeeProfile = () => {
                                 </TabsTrigger>
 
                                 <TabsTrigger
-                                    value="media"
-                                    className="relative flex items-center gap-2 py-3 px-1 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary text-muted-foreground hover:text-foreground transition-colors group"
-                                >
-                                    <Film className="w-4 h-4" /> <span className="font-semibold">{t('employee_profile.tabs.media')}</span>
-                                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary scale-x-0 group-data-[state=active]:scale-x-100 transition-transform origin-left rounded-t-full"></div>
-                                </TabsTrigger>
-
-                                <TabsTrigger
                                     value="warnings"
                                     className="relative flex items-center gap-2 py-3 px-1 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary text-muted-foreground hover:text-foreground transition-colors group"
                                 >
@@ -222,10 +211,6 @@ const EmployeeProfile = () => {
 
                             <TabsContent value="tasks" className="animate-in slide-in-from-left-4 fade-in duration-300">
                                 <TasksTab tasks={employeeData?.tasks || []} employeeId={id} onSuccess={fetchEmployeeDetails} />
-                            </TabsContent>
-
-                            <TabsContent value="media" className="animate-in slide-in-from-left-4 fade-in duration-300">
-                                <MediaTab collections={mediaCollections} />
                             </TabsContent>
 
                             <TabsContent value="warnings" className="animate-in slide-in-from-left-4 fade-in duration-300">

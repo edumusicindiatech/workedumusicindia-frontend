@@ -6,11 +6,17 @@ import {
     ChevronDown, Trash2, AlertTriangle, Loader2
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { io } from "socket.io-client";
 import api from "../../api/axios";
 import EmployeeMediaUploadModal from "../../modals/employee/EmployeeMediaUploadModal";
 import CustomSelect from "../../components/ui/CustomSelect";
 
+const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000", { withCredentials: true });
+
 const EmployeeMedia = () => {
+    // 🔥 NEW: Bring in the user object so we can identify our socket events
+    const { user } = useSelector((state) => state.auth);
+
     const currentYear = new Date().getFullYear();
     const availableYears = [currentYear, currentYear - 1, currentYear - 2];
 
@@ -18,21 +24,18 @@ const EmployeeMedia = () => {
     const [expandedMonth, setExpandedMonth] = useState(null);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
-    // State for Modals & Actions
     const [activeVideo, setActiveVideo] = useState(null);
     const [deleteConfirmation, setDeleteConfirmation] = useState(null);
 
-    // State for Real Data
     const [mediaData, setMediaData] = useState({});
     const [isLoading, setIsLoading] = useState(true);
 
-    // 🔥 NEW: Redux state for the Cinematic Upload feature
     const { isUploading, jobQueue } = useSelector((state) => state.upload);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [previewUrl, setPreviewUrl] = useState(null);
 
     const handleCancelUpload = (e) => {
-        e.stopPropagation(); // Prevent the click from doing anything else
+        e.stopPropagation();
         window.dispatchEvent(new CustomEvent('vault-upload-cancel'));
         toast.error("Upload cancelled.");
     };
@@ -41,11 +44,11 @@ const EmployeeMedia = () => {
         setExpandedMonth(expandedMonth === month ? null : month);
     };
 
-    // --- DATA FETCHING (Wrapped in useCallback so we can trigger it after upload) ---
     const fetchMedia = useCallback(async () => {
         setIsLoading(true);
         try {
-            const response = await api.get(`/employee/media?year=${selectedYear}`);
+            // 🔥 CACHE BUSTER ADDED: &_t=${Date.now()} forces the browser to get fresh data!
+            const response = await api.get(`/employee/media?year=${selectedYear}&_t=${Date.now()}`);
 
             if (response.data.success) {
                 const rawLogs = response.data.data;
@@ -89,17 +92,93 @@ const EmployeeMedia = () => {
         }
     }, [selectedYear, isUploading]);
 
-    // Initial Fetch
     useEffect(() => {
         fetchMedia();
     }, [fetchMedia]);
 
-    // --- NEW: LISTEN TO HEADLESS UPLOADER ---
+    // --- BULLETPROOF SOCKET LISTENERS ---
+    useEffect(() => {
+        if (!user || (!user._id && !user.id)) return;
+        const myUserId = user._id || user.id;
+
+        // 1. Handle Direct Grading Update
+        const handleDirectGrade = (data) => {
+            if (data?.userId === myUserId) {
+                setMediaData(prevData => {
+                    const newData = { ...prevData }; // Shallow clone the months object
+
+                    // Loop through the months to find the specific video
+                    for (const month in newData) {
+                        const fileIndex = newData[month].findIndex(f => f.id === data.fileId);
+
+                        if (fileIndex !== -1) {
+                            // Clone the array and the specific object to maintain React immutability
+                            const updatedMonthArray = [...newData[month]];
+                            updatedMonthArray[fileIndex] = {
+                                ...updatedMonthArray[fileIndex],
+                                marks: data.marks,
+                                remark: data.remark
+                            };
+                            newData[month] = updatedMonthArray;
+                            break; // Found and updated, stop looping
+                        }
+                    }
+                    return newData;
+                });
+            }
+        };
+
+        // 2. Handle Direct Deletion Update
+        const handleDirectDelete = (data) => {
+            if (data?.userId === myUserId) {
+                setMediaData(prevData => {
+                    const newData = { ...prevData };
+
+                    for (const month in newData) {
+                        const updatedMonthFiles = newData[month].filter(f => f.id !== data.fileId);
+
+                        // If the array size changed, we found the file
+                        if (updatedMonthFiles.length !== newData[month].length) {
+                            if (updatedMonthFiles.length === 0) {
+                                delete newData[month]; // Remove the whole month if empty
+                            } else {
+                                newData[month] = updatedMonthFiles;
+                            }
+                            break;
+                        }
+                    }
+                    return newData;
+                });
+            }
+        };
+
+        const handleRemoteNotification = (data) => {
+            if (data?.userId === myUserId && data?.notification?.type === 'Media') {
+                toast.success("An Admin has reviewed your video!", {
+                    icon: '🎓',
+                    duration: 4000
+                });
+            }
+        };
+
+        // Attach listeners
+        socket.on('media_graded_direct', handleDirectGrade);
+        socket.on('media_deleted_direct', handleDirectDelete);
+        socket.on('new_notification_for_user', handleRemoteNotification);
+
+        return () => {
+            socket.off('media_graded_direct', handleDirectGrade);
+            socket.off('media_deleted_direct', handleDirectDelete);
+            socket.off('new_notification_for_user', handleRemoteNotification);
+        };
+    }, [user]);
+
+
+    // --- UPLOADER LISTENERS ---
     useEffect(() => {
         const handleProgress = (e) => setUploadProgress(e.detail);
         const handleRefresh = () => fetchMedia();
 
-        // 🔥 Catch the new events and fire the toasts from the stable UI!
         const handleSuccess = () => toast.success("Video successfully saved to Vault!");
         const handleError = (e) => toast.error(e.detail || "An upload error occurred.");
 
@@ -116,7 +195,7 @@ const EmployeeMedia = () => {
         };
     }, [fetchMedia]);
 
-    // --- NEW: GENERATE TEMPORARY LOCAL PREVIEW FOR GHOST CARD ---
+    // --- GENERATE TEMPORARY LOCAL PREVIEW FOR GHOST CARD ---
     useEffect(() => {
         if (isUploading && jobQueue?.files?.length > 0) {
             const url = URL.createObjectURL(jobQueue.files[0]);
@@ -134,7 +213,7 @@ const EmployeeMedia = () => {
         }
     }, [isUploading, jobQueue]);
 
-    // --- NEW: INJECT GHOST CARD INTO DATA ---
+    // --- INJECT GHOST CARD INTO DATA ---
     const displayMediaData = { ...mediaData };
     if (isUploading && jobQueue) {
         const d = new Date(jobQueue.metadata.eventDate || new Date());
@@ -151,10 +230,7 @@ const EmployeeMedia = () => {
             students: jobQueue.metadata.studentsCount,
         };
 
-        // Create the month array if it's the very first video of the month
         if (!displayMediaData[monthName]) displayMediaData[monthName] = [];
-
-        // Put the ghost card at the very front!
         displayMediaData[monthName] = [ghostRecord, ...displayMediaData[monthName]];
     }
 
@@ -166,14 +242,13 @@ const EmployeeMedia = () => {
         const average = Math.round(sum / gradedFiles.length);
 
         let colorClass = "";
-        if (average < 50) colorClass = "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30";
-        else if (average < 80) colorClass = "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30";
+        if (average < 5) colorClass = "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30";
+        else if (average < 8) colorClass = "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30";
         else colorClass = "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30";
 
         return { average, colorClass };
     };
 
-    // --- CUSTOM DELETE DIALOG HANDLERS ---
     const triggerDeleteConfirmation = (e, fileId, monthKey) => {
         e.stopPropagation();
         setDeleteConfirmation({ fileId, monthKey });
@@ -209,7 +284,6 @@ const EmployeeMedia = () => {
         }
     };
 
-    // --- NATIVE DOWNLOAD FUNCTION ---
     const handleDownload = async (videoUrl, fileName) => {
         if (!videoUrl) return toast.error("No video file found.");
         const toastId = toast.loading("Starting download...");
@@ -312,7 +386,7 @@ const EmployeeMedia = () => {
                                             {average !== null && (
                                                 <div className={`px-2.5 py-1 rounded-md border text-[11px] font-extrabold flex items-center gap-1.5 ${colorClass}`}>
                                                     <Award className="w-3 h-3" />
-                                                    AVG: {average}/100
+                                                    AVG: {average}/10
                                                 </div>
                                             )}
                                         </div>
@@ -330,7 +404,6 @@ const EmployeeMedia = () => {
                                                     <div key="ghost" className="group bg-background dark:bg-[#0d1117] border border-primary/50 shadow-[0_0_20px_rgba(59,130,246,0.15)] rounded-xl overflow-hidden flex flex-col relative transition-all duration-300">
                                                         <div className="relative aspect-video bg-black overflow-hidden shrink-0">
 
-                                                            {/* 🔥 NEW: The Cancel Button Overlay */}
                                                             <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20">
                                                                 <button
                                                                     onClick={handleCancelUpload}
@@ -338,7 +411,6 @@ const EmployeeMedia = () => {
                                                                     title="Cancel Upload"
                                                                     aria-label="Cancel Upload"
                                                                 >
-                                                                    {/* 5x5 icon on mobile, 4x4 on desktop */}
                                                                     <X className="w-5 h-5 sm:w-4 sm:h-4" />
                                                                 </button>
                                                             </div>
@@ -451,7 +523,7 @@ const EmployeeMedia = () => {
                                                                         </div>
                                                                         <span className="text-[11px] font-extrabold text-green-700 dark:text-green-400 uppercase tracking-wide">Admin Score</span>
                                                                     </div>
-                                                                    <span className="text-sm font-black text-foreground">{media.marks}/100</span>
+                                                                    <span className="text-sm font-black text-foreground">{media.marks}/10</span>
                                                                 </div>
                                                             ) : (
                                                                 <div className="flex items-center justify-between">
