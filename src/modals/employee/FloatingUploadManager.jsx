@@ -1,20 +1,51 @@
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { UploadCloud, CheckCircle2, AlertTriangle, X, Minus, Maximize2 } from 'lucide-react';
+import { UploadCloud, AlertTriangle, X, Minus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import { clearUploadJob } from '../../store/slices/uploadSlice';
+
 const FloatingUploadManager = () => {
     const dispatch = useDispatch();
     const { isUploading, jobQueue } = useSelector((state) => state.upload);
 
-    // Local UI State for the floating widget
+    // Local UI State
     const [progress, setProgress] = useState(0);
     const [statusText, setStatusText] = useState("Initializing...");
     const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
     const [totalVideos, setTotalVideos] = useState(0);
     const [isMinimized, setIsMinimized] = useState(false);
     const [hasError, setHasError] = useState(false);
+
+    // 🔥 THE FIX: Screen Wake Lock API
+    // Prevents mobile phones from sleeping and dropping the Wi-Fi connection!
+    useEffect(() => {
+        let wakeLock = null;
+
+        const requestWakeLock = async () => {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Wake Lock is active - Phone will not sleep');
+                }
+            } catch (err) {
+                console.error(`Wake Lock error: ${err.message}`);
+            }
+        };
+
+        if (isUploading) {
+            requestWakeLock();
+        }
+
+        return () => {
+            if (wakeLock !== null) {
+                wakeLock.release().then(() => {
+                    wakeLock = null;
+                    console.log('Wake Lock released');
+                });
+            }
+        };
+    }, [isUploading]);
 
     useEffect(() => {
         if (!isUploading || !jobQueue) return;
@@ -26,7 +57,7 @@ const FloatingUploadManager = () => {
 
             setTotalVideos(files.length);
             setHasError(false);
-            setIsMinimized(false); // Pop it open when a new job starts
+            setIsMinimized(false);
 
             try {
                 setStatusText("Connecting to secure vault...");
@@ -86,7 +117,7 @@ const FloatingUploadManager = () => {
                 if (failedFiles.length === 0) {
                     toast.success("All videos safely in the Vault!");
                     window.dispatchEvent(new Event('refreshMediaGallery'));
-                    dispatch(clearUploadJob()); // Clears Redux & hides widget
+                    dispatch(clearUploadJob());
                 } else {
                     setHasError(true);
                     setStatusText(`Failed to upload ${failedFiles.length} videos.`);
@@ -104,7 +135,6 @@ const FloatingUploadManager = () => {
 
     }, [isUploading, jobQueue, dispatch]);
 
-    // If not uploading and no errors to show, render nothing
     if (!isUploading && !hasError) return null;
 
     return (
@@ -113,20 +143,14 @@ const FloatingUploadManager = () => {
             : 'bottom-4 right-4 sm:bottom-6 sm:right-6 w-[90%] sm:w-80 bg-card dark:bg-[#181d29] border border-border dark:border-slate-700 shadow-2xl rounded-2xl overflow-hidden'
             }`}>
             {isMinimized ? (
-                // Minimized "Pill" View
-                <div
-                    onClick={() => setIsMinimized(false)}
-                    className="flex items-center gap-3 px-5 py-3"
-                >
+                <div onClick={() => setIsMinimized(false)} className="flex items-center gap-3 px-5 py-3">
                     <UploadCloud className="w-5 h-5 text-primary-foreground animate-pulse" />
                     <span className="text-sm font-bold text-primary-foreground">
                         {Math.round(progress)}% • Video {currentVideoIndex}/{totalVideos}
                     </span>
                 </div>
             ) : (
-                // Maximized Panel View
                 <div className="flex flex-col">
-                    {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 bg-muted/30 border-b border-border dark:border-slate-800">
                         <div className="flex items-center gap-2">
                             {hasError ? <AlertTriangle className="w-4 h-4 text-destructive" /> : <UploadCloud className="w-4 h-4 text-primary" />}
@@ -146,18 +170,13 @@ const FloatingUploadManager = () => {
                         </div>
                     </div>
 
-                    {/* Body */}
                     <div className="p-5">
                         <p className="text-[13px] font-medium text-foreground mb-3 truncate">{statusText}</p>
 
                         {!hasError && (
                             <div className="space-y-2">
-                                {/* Progress Bar */}
                                 <div className="h-2 w-full bg-muted dark:bg-slate-800 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-primary transition-all duration-300 ease-out"
-                                        style={{ width: `${progress}%` }}
-                                    />
+                                    <div className="h-full bg-primary transition-all duration-300 ease-out" style={{ width: `${progress}%` }} />
                                 </div>
                                 <div className="flex justify-between items-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                                     <span>{progress}%</span>
@@ -166,10 +185,9 @@ const FloatingUploadManager = () => {
                             </div>
                         )}
 
-                        {/* Network Warning */}
                         <div className="mt-4 p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                             <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 leading-tight">
-                                You can browse the app, but do not close this browser tab until finished.
+                                Do not close this browser tab until finished.
                             </p>
                         </div>
                     </div>
