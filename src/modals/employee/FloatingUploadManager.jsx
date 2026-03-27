@@ -1,15 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { UploadCloud, AlertTriangle, X, Minus } from 'lucide-react';
-import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import { clearUploadJob } from '../../store/slices/uploadSlice';
+
+import Uppy from '@uppy/core';
+import AwsS3 from '@uppy/aws-s3';
 
 const FloatingUploadManager = () => {
     const dispatch = useDispatch();
     const { isUploading, jobQueue } = useSelector((state) => state.upload);
 
-    // Local UI State
     const [progress, setProgress] = useState(0);
     const [statusText, setStatusText] = useState("Initializing...");
     const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
@@ -17,124 +18,127 @@ const FloatingUploadManager = () => {
     const [isMinimized, setIsMinimized] = useState(false);
     const [hasError, setHasError] = useState(false);
 
-    // 🔥 THE FIX: Screen Wake Lock API
-    // Prevents mobile phones from sleeping and dropping the Wi-Fi connection!
+    const uppyRef = useRef(null);
+    const successfulUploadsRef = useRef([]);
+
     useEffect(() => {
-        let wakeLock = null;
+        if (!isUploading || !jobQueue || uppyRef.current) return;
 
-        const requestWakeLock = async () => {
-            try {
-                if ('wakeLock' in navigator) {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                    console.log('Wake Lock is active - Phone will not sleep');
-                }
-            } catch (err) {
-                console.error(`Wake Lock error: ${err.message}`);
+        const { files, metadata } = jobQueue;
+        setTotalVideos(files.length);
+        setHasError(false);
+        setIsMinimized(false);
+        successfulUploadsRef.current = [];
+
+        // 1. Start Headless Uppy with Aggressive Mobile Retries
+        const uppy = new Uppy({
+            autoProceed: true,
+            allowMultipleUploadBatches: false,
+            retryDelays: [1000, 3000, 5000, 10000, 15000] // Waits and retries on network drop
+        });
+
+        // 2. Configure AWS S3 Multipart Plugin
+        uppy.use(AwsS3, {
+            limit: window.innerWidth <= 768 ? 1 : 3, // 1 pipe for mobile, 3 for desktop
+            timeout: 60 * 1000, // 60 seconds before a chunk times out
+            shouldUseMultipart: (file) => file.size > 5 * 1024 * 1024,
+            async createMultipartUpload(file) {
+                const res = await api.post('/employee/media/multipart/create', {
+                    filename: file.name, type: file.type, metadata
+                });
+                return { uploadId: res.data.uploadId, key: res.data.key };
+            },
+            async signPart(file, partData) {
+                const res = await api.post('/employee/media/multipart/sign', {
+                    uploadId: partData.uploadId, key: partData.key, partNumber: partData.partNumber
+                });
+                return { url: res.data.url };
+            },
+            async completeMultipartUpload(file, uploadData) {
+                const res = await api.post('/employee/media/multipart/complete', {
+                    uploadId: uploadData.uploadId, key: uploadData.key, parts: uploadData.parts
+                });
+                return { location: res.data.location };
+            },
+            async abortMultipartUpload(file, uploadData) {
+                await api.post('/employee/media/multipart/abort', {
+                    uploadId: uploadData.uploadId, key: uploadData.key
+                });
             }
-        };
+        });
 
-        if (isUploading) {
-            requestWakeLock();
-        }
+        // 3. Link Uppy Events to React State
+        uppy.on('upload-started', () => {
+            setStatusText(`Uploading video 1 of ${files.length}...`);
+            setCurrentVideoIndex(1);
+
+            // Try to keep screen on (mobile)
+            if ('wakeLock' in navigator) {
+                navigator.wakeLock.request('screen').catch(() => { });
+            }
+        });
+
+        uppy.on('upload-progress', (file, progressData) => {
+            const percent = Math.round((progressData.bytesUploaded / progressData.bytesTotal) * 100);
+            setProgress(percent);
+        });
+
+        uppy.on('upload-success', (file, response) => {
+            successfulUploadsRef.current.push({ url: response.uploadURL, fileType: 'video' });
+
+            if (currentVideoIndex < files.length) {
+                setCurrentVideoIndex(prev => prev + 1);
+                setStatusText(`Uploading video ${currentVideoIndex + 1} of ${files.length}...`);
+            }
+        });
+
+        uppy.on('complete', async (result) => {
+            if (result.failed.length > 0) {
+                setHasError(true);
+                setStatusText(`Failed to upload ${result.failed.length} videos.`);
+                return; // Errors handled cleanly in UI now
+            }
+
+            // 4. Save to MongoDB via your existing route
+            try {
+                setStatusText("Finalizing database records...");
+                setProgress(100);
+
+                await api.post('/employee/media/save-log', {
+                    ...metadata,
+                    uploadedFiles: successfulUploadsRef.current
+                });
+
+                window.dispatchEvent(new Event('refreshMediaGallery'));
+                dispatch(clearUploadJob());
+
+                uppy.destroy();
+                uppyRef.current = null;
+            } catch (err) {
+                setHasError(true);
+                setStatusText("Failed to save records.");
+            }
+        });
+
+        // 5. Inject files into Uppy
+        files.forEach(file => uppy.addFile({
+            name: file.name,
+            type: file.type,
+            data: file,
+        }));
+
+        uppyRef.current = uppy;
 
         return () => {
-            if (wakeLock !== null) {
-                wakeLock.release().then(() => {
-                    wakeLock = null;
-                    console.log('Wake Lock released');
-                });
+            if (uppyRef.current) {
+                uppyRef.current.destroy();
+                uppyRef.current = null;
             }
         };
-    }, [isUploading]);
-
-    useEffect(() => {
-        if (!isUploading || !jobQueue) return;
-
-        const processUploadQueue = async () => {
-            const { files, metadata } = jobQueue;
-            const successfulUploads = [];
-            const failedFiles = [];
-
-            setTotalVideos(files.length);
-            setHasError(false);
-            setIsMinimized(false);
-
-            try {
-                setStatusText("Connecting to secure vault...");
-                const filePayload = files.map(f => ({ name: f.name, type: f.type }));
-                const { data: urlData } = await api.post('/employee/media/generate-urls', {
-                    files: filePayload, metadata
-                });
-
-                // Sequential XHR Upload Loop
-                for (let i = 0; i < files.length; i++) {
-                    setCurrentVideoIndex(i + 1);
-                    setStatusText(`Uploading video ${i + 1} of ${files.length}...`);
-                    setProgress(0);
-
-                    const file = files[i];
-                    const targetUrl = urlData.urls[i].uploadUrl;
-                    const publicUrl = urlData.urls[i].publicUrl;
-
-                    await new Promise((resolve, reject) => {
-                        const xhr = new XMLHttpRequest();
-                        xhr.open("PUT", targetUrl, true);
-                        xhr.setRequestHeader("Content-Type", file.type);
-
-                        xhr.upload.onprogress = (event) => {
-                            if (event.lengthComputable) {
-                                const percentComplete = Math.round((event.loaded / event.total) * 100);
-                                setProgress(percentComplete);
-                            }
-                        };
-
-                        xhr.onload = () => {
-                            if (xhr.status >= 200 && xhr.status < 300) {
-                                successfulUploads.push({ url: publicUrl, fileType: 'video' });
-                                resolve();
-                            } else {
-                                reject(new Error("Upload rejected."));
-                            }
-                        };
-
-                        xhr.onerror = () => reject(new Error("Network error."));
-                        xhr.send(file);
-                    }).catch((err) => {
-                        console.error(`Failed: ${file.name}`, err);
-                        failedFiles.push(file.name);
-                    });
-                }
-
-                if (successfulUploads.length > 0) {
-                    setStatusText("Finalizing database records...");
-                    setProgress(100);
-                    await api.post('/employee/media/save-log', {
-                        ...metadata,
-                        uploadedFiles: successfulUploads
-                    });
-                }
-
-                if (failedFiles.length === 0) {
-                    toast.success("All videos safely in the Vault!");
-                    window.dispatchEvent(new Event('refreshMediaGallery'));
-                    dispatch(clearUploadJob());
-                } else {
-                    setHasError(true);
-                    setStatusText(`Failed to upload ${failedFiles.length} videos.`);
-                    toast.error("Some videos failed. Check network.");
-                }
-
-            } catch (error) {
-                console.error("Upload Error:", error);
-                setHasError(true);
-                setStatusText("Upload connection crashed.");
-            }
-        };
-
-        processUploadQueue();
 
     }, [isUploading, jobQueue, dispatch]);
 
+    // --- UI RENDER ---
     if (!isUploading && !hasError) return null;
 
     return (
@@ -163,16 +167,18 @@ const FloatingUploadManager = () => {
                                 </button>
                             )}
                             {hasError && (
-                                <button onClick={() => dispatch(clearUploadJob())} className="p-1 hover:bg-muted rounded text-muted-foreground transition-colors">
+                                <button onClick={() => {
+                                    dispatch(clearUploadJob());
+                                    if (uppyRef.current) uppyRef.current.destroy();
+                                    uppyRef.current = null;
+                                }} className="p-1 hover:bg-muted rounded text-muted-foreground transition-colors">
                                     <X className="w-4 h-4" />
                                 </button>
                             )}
                         </div>
                     </div>
-
                     <div className="p-5">
                         <p className="text-[13px] font-medium text-foreground mb-3 truncate">{statusText}</p>
-
                         {!hasError && (
                             <div className="space-y-2">
                                 <div className="h-2 w-full bg-muted dark:bg-slate-800 rounded-full overflow-hidden">
@@ -184,10 +190,9 @@ const FloatingUploadManager = () => {
                                 </div>
                             </div>
                         )}
-
                         <div className="mt-4 p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                             <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 leading-tight">
-                                Do not close this browser tab until finished.
+                                Network drops will auto-resume. Please do not close this browser tab.
                             </p>
                         </div>
                     </div>
