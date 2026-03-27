@@ -39,30 +39,50 @@ const FloatingUploadManager = () => {
 
         // 2. Configure AWS S3 Multipart Plugin
         uppy.use(AwsS3, {
-            limit: window.innerWidth <= 768 ? 1 : 3, // 1 pipe for mobile, 3 for desktop
-            timeout: 60 * 1000, // 60 seconds before a chunk times out
-            shouldUseMultipart: (file) => file.size > 5 * 1024 * 1024,
-            async createMultipartUpload(file) {
+            limit: window.innerWidth <= 768 ? 1 : 3,
+            timeout: 60 * 1000,
+            // 🔥 CRITICAL FIX: Ensure this is exactly as written below
+            shouldUseMultipart: true,
+
+            // This function name must be EXACTLY 'createMultipartUpload'
+            createMultipartUpload: async (file) => {
                 const res = await api.post('/employee/media/multipart/create', {
-                    filename: file.name, type: file.type, metadata
+                    filename: file.name,
+                    type: file.type,
+                    metadata
                 });
-                return { uploadId: res.data.uploadId, key: res.data.key };
+                // Your backend returns { uploadId, key }. Uppy needs exactly those.
+                return {
+                    uploadId: res.data.uploadId,
+                    key: res.data.key
+                };
             },
-            async signPart(file, partData) {
+
+            // This function name must be EXACTLY 'signPart'
+            signPart: async (file, partData) => {
                 const res = await api.post('/employee/media/multipart/sign', {
-                    uploadId: partData.uploadId, key: partData.key, partNumber: partData.partNumber
+                    uploadId: partData.uploadId,
+                    key: partData.key,
+                    partNumber: partData.partNumber
                 });
                 return { url: res.data.url };
             },
-            async completeMultipartUpload(file, uploadData) {
+
+            // This function name must be EXACTLY 'completeMultipartUpload'
+            completeMultipartUpload: async (file, uploadData) => {
                 const res = await api.post('/employee/media/multipart/complete', {
-                    uploadId: uploadData.uploadId, key: uploadData.key, parts: uploadData.parts
+                    uploadId: uploadData.uploadId,
+                    key: uploadData.key,
+                    parts: uploadData.parts
                 });
                 return { location: res.data.location };
             },
-            async abortMultipartUpload(file, uploadData) {
+
+            // This function name must be EXACTLY 'abortMultipartUpload'
+            abortMultipartUpload: async (file, uploadData) => {
                 await api.post('/employee/media/multipart/abort', {
-                    uploadId: uploadData.uploadId, key: uploadData.key
+                    uploadId: uploadData.uploadId,
+                    key: uploadData.key
                 });
             }
         });
