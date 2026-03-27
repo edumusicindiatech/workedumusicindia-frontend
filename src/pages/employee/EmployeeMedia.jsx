@@ -75,6 +75,7 @@ const EmployeeMedia = () => {
                                 schoolName: log.school?.schoolName || t('employee_media.unknown_school'),
                                 band: log.band,
                                 eventName: log.eventContext || null,
+                                description: log.description,
                                 eventDate: date.toISOString().split('T')[0],
                                 students: log.studentRecord,
                                 marks: file.marks !== undefined ? file.marks : null,

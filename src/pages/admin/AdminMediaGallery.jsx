@@ -116,7 +116,7 @@ const AdminMediaGallery = () => {
                                 students: log.studentRecord,
                                 marks: file.marks !== undefined ? file.marks : null,
                                 remark: file.remark || null,
-                                description: log.eventContext,
+                                description: log.description || null, // ✅ Correctly mapping the description field
                                 videoUrl: file.url,
                             });
                         });
@@ -303,7 +303,7 @@ const AdminMediaGallery = () => {
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                 <div>
-                    <h1 className="text-3xl sm:text-4xl font-black text-foreground tracking-tight bg-linear-to-r from-primary to-blue-500 bg-clip-text text-transparent">
+                    <h1 className="text-3xl sm:text-4xl font-black text-foreground tracking-tight bg-linear-to-r from-primary to-blue-500 bg-clip-text">
                         {t('media_vault.admin.title')}
                     </h1>
                     <div className="flex items-center flex-wrap gap-2 mt-2 text-sm font-semibold text-muted-foreground">
@@ -326,7 +326,6 @@ const AdminMediaGallery = () => {
             {viewMode === 'employees' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in duration-500">
                     {isLoading ? (
-                        // --- DIRECTORY SHIMMER ---
                         [1, 2, 3, 4, 5, 6].map((i) => (
                             <div key={i} className="group relative bg-card dark:bg-[#0d1117] border border-border rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 overflow-hidden shadow-sm">
                                 <div className="flex items-center gap-4 w-full sm:w-auto overflow-hidden">
@@ -370,7 +369,6 @@ const AdminMediaGallery = () => {
             {viewMode === 'schools' && selectedEmployee && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-right-8 duration-500">
                     {isLoading ? (
-                        // --- SCHOOLS SHIMMER ---
                         [1, 2, 3, 4].map((i) => (
                             <div key={i} className="bg-card dark:bg-[#0d1117] border border-border rounded-3xl p-6 flex items-center gap-5 shadow-sm">
                                 <div className="w-14 h-14 rounded-2xl bg-muted/60 dark:bg-slate-800/50 animate-pulse shrink-0"></div>
@@ -422,14 +420,10 @@ const AdminMediaGallery = () => {
             {viewMode === 'gallery' && (
                 <div className="space-y-6 animate-in slide-in-from-right-8 duration-500">
                     {isLoading ? (
-                        // --- YOUTUBE STYLE SHIMMER ---
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             {[1, 2, 3, 4, 5, 6].map((i) => (
                                 <div key={i} className="bg-card dark:bg-[#131821] border border-border dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
-                                    {/* Thumbnail Skeleton */}
                                     <div className="w-full aspect-video bg-muted/60 dark:bg-slate-800/50 animate-pulse" />
-
-                                    {/* Content Skeleton */}
                                     <div className="p-4 space-y-4">
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex items-center gap-2 w-full">
@@ -443,8 +437,6 @@ const AdminMediaGallery = () => {
                                             <div className="h-3 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-1/3" />
                                         </div>
                                     </div>
-
-                                    {/* Footer Skeleton */}
                                     <div className="p-3.5 border-t border-border dark:border-slate-800 bg-muted/30 dark:bg-slate-800/30 flex justify-between">
                                         <div className="h-4 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-24" />
                                         <div className="h-4 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-12" />

@@ -7,8 +7,10 @@ import {
 import toast from "react-hot-toast";
 import { startBackgroundUpload } from "../../store/slices/uploadSlice";
 import CustomSelect from "../../components/ui/CustomSelect";
+import { useTranslation } from "react-i18next";
 
 const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
+    const { t } = useTranslation();
     const { user, isHydrating } = useSelector((state) => state.auth);
     const { isUploading } = useSelector((state) => state.upload);
     const dispatch = useDispatch();
@@ -19,6 +21,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
     const [eventDate, setEventDate] = useState("");
     const [studentsCount, setStudentsCount] = useState("");
     const [files, setFiles] = useState([]);
+    const [description, setDescription] = useState("");
 
     const fileInputRef = useRef(null);
 
@@ -36,6 +39,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
             setStudentsCount("");
             setBand("");
             setSelectedSchoolId("");
+            setDescription("");
         }
     }, [isOpen, isUploading]);
 
@@ -57,7 +61,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
         const selectedFiles = Array.from(e.target.files);
         const availableSlots = 5 - files.length;
         if (selectedFiles.length > availableSlots) {
-            toast.error(`Limit reached: Only ${availableSlots} more allowed.`);
+            toast.error(t('upload_modal.limit_reached_toast', { slots: availableSlots }));
             setFiles((prev) => [...prev, ...selectedFiles.slice(0, availableSlots)]);
         } else {
             setFiles((prev) => [...prev, ...selectedFiles]);
@@ -68,13 +72,17 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!selectedSchoolId) return toast.error("Please select a school.");
-        if (!band) return toast.error("Band category is required.");
-        if (files.length === 0) return toast.error("Please add at least one video.");
+        if (!selectedSchoolId) return toast.error(t('upload_modal.select_school_toast'));
+        if (!band) return toast.error(t('upload_modal.band_category_toast'));
+
+        // 🔥 NEW: Students Count Validation
+        if (!studentsCount) return toast.error(t('upload_modal.students_count_toast'));
+
+        if (files.length === 0) return toast.error(t('upload_modal.add_video_toast'));
 
         const MAX_SIZE = 500 * 1024 * 1024;
         if (files.some(f => f.size > MAX_SIZE)) {
-            return toast.error("Files exceed 500MB limit. Please compress them.");
+            return toast.error(t('upload_modal.size_limit_toast'));
         }
 
         dispatch(startBackgroundUpload({
@@ -82,7 +90,8 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
             metadata: {
                 schoolId: selectedSchoolId,
                 schoolName: currentSelectedName,
-                band, eventName, eventDate, studentsCount
+                band, eventName, eventDate, studentsCount,
+                description
             }
         }));
 
@@ -100,8 +109,8 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-border dark:border-slate-800 bg-muted/20 shrink-0">
                     <div>
-                        <h2 className="text-xl font-extrabold text-foreground tracking-tight">Upload to Vault</h2>
-                        <p className="text-xs font-medium text-muted-foreground mt-1">Add performance videos to your school's secure gallery.</p>
+                        <h2 className="text-xl font-extrabold text-foreground tracking-tight">{t('upload_modal.title')}</h2>
+                        <p className="text-xs font-medium text-muted-foreground mt-1">{t('upload_modal.subtitle')}</p>
                     </div>
                     <button
                         onClick={onClose}
@@ -111,18 +120,16 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                     </button>
                 </div>
 
-                {/* 🔥 FIX: Added pb-40 to give the dropdown room to expand without getting cut off */}
                 <form id="media-upload-form" onSubmit={handleSubmit} className="overflow-y-auto p-6 pb-40 space-y-6 custom-scrollbar">
                     <div className="p-5 rounded-2xl bg-background/50 dark:bg-[#0d1117]/50 border border-border dark:border-slate-800 space-y-5">
 
-                        {/* 🔥 FIX: Forced z-[100] so the dropdown floats above everything else */}
                         <div className="relative z-100">
                             <label className="block text-[13px] font-bold text-foreground mb-2 uppercase tracking-wider">
-                                Assigned School <span className="text-destructive">*</span>
+                                {t('upload_modal.assigned_school')} <span className="text-destructive">*</span>
                             </label>
                             {isHydrating ? (
                                 <div className="h-10.5 flex items-center px-4 bg-background dark:bg-[#12141c] border border-input dark:border-slate-700 rounded-lg text-sm text-muted-foreground">
-                                    Loading schools...
+                                    {t('upload_modal.loading_schools')}
                                 </div>
                             ) : (
                                 <div className="flex items-center relative">
@@ -138,7 +145,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
 
                         <div className="relative z-10">
                             <label className="block text-[13px] font-bold text-foreground mb-2 uppercase tracking-wider">
-                                Band Category <span className="text-destructive">*</span>
+                                {t('upload_modal.band_category')} <span className="text-destructive">*</span>
                             </label>
                             <div className="flex bg-background dark:bg-[#12141c] border border-input dark:border-slate-700 p-1 rounded-xl">
                                 {['Junior Band', 'Senior Band'].map((b) => {
@@ -149,7 +156,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                                             className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${isActive ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
                                         >
                                             {isActive && <CheckCircle2 className="w-4 h-4" />}
-                                            {b}
+                                            {b === 'Junior Band' ? t('upload_modal.junior_band') : t('upload_modal.senior_band')}
                                         </button>
                                     );
                                 })}
@@ -157,34 +164,48 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                         </div>
                     </div>
 
-                    {/* Rest of the form remains unchanged... */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 p-5 rounded-2xl bg-background/50 dark:bg-[#0d1117]/50 border border-border dark:border-slate-800">
                         <div className="space-y-2">
-                            <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">Event Name <span className="text-muted-foreground lowercase font-medium tracking-normal">(Optional)</span></label>
+                            <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">{t('upload_modal.event_name')} <span className="text-muted-foreground lowercase font-medium tracking-normal">{t('upload_modal.optional')}</span></label>
                             <div className="relative">
                                 <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500" />
-                                <input type="text" value={eventName} onChange={(e) => setEventName(e.target.value)} placeholder="e.g. Spring Concert" className="w-full h-11 pl-11 pr-4 bg-background dark:bg-[#12141c] border border-input dark:border-slate-700 focus:border-primary rounded-xl text-sm font-semibold text-foreground outline-none transition-all placeholder:text-muted-foreground/50" />
+                                <input type="text" value={eventName} onChange={(e) => setEventName(e.target.value)} placeholder={t('upload_modal.placeholder_event')} className="w-full h-11 pl-11 pr-4 bg-background dark:bg-[#12141c] border border-input dark:border-slate-700 focus:border-primary rounded-xl text-sm font-semibold text-foreground outline-none transition-all placeholder:text-muted-foreground/50" />
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">Event Date {eventName && <span className="text-destructive">*</span>}</label>
+                            <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">{t('upload_modal.event_date')} {eventName && <span className="text-destructive">*</span>}</label>
                             <div className="relative">
                                 <input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} className="w-full h-11 px-4 bg-background dark:bg-[#12141c] border border-input dark:border-slate-700 focus:border-primary rounded-xl text-sm font-semibold text-foreground outline-none transition-all scheme-light dark:scheme-dark" />
                             </div>
                         </div>
                         <div className="sm:col-span-2 space-y-2">
-                            <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">Students Present <span className="text-muted-foreground lowercase font-medium tracking-normal">(Optional)</span></label>
+                            {/* 🔥 FIX: Changed label to mandatory */}
+                            <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">
+                                {t('upload_modal.students_present')} <span className="text-destructive">*</span>
+                            </label>
                             <div className="relative sm:w-1/2">
                                 <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500" />
                                 <input type="number" value={studentsCount} onChange={(e) => setStudentsCount(e.target.value)} placeholder="0" className="w-full h-11 pl-11 pr-4 bg-background dark:bg-[#12141c] border border-input dark:border-slate-700 focus:border-primary rounded-xl text-sm font-semibold text-foreground outline-none transition-all placeholder:text-muted-foreground/50" />
                             </div>
+                        </div>
+                        <div className="sm:col-span-2 space-y-2 mt-2">
+                            <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">
+                                {t('upload_modal.instructor_note')} <span className="text-muted-foreground lowercase font-medium tracking-normal">{t('upload_modal.optional')}</span>
+                            </label>
+                            <textarea
+                                rows="3"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder={t('upload_modal.placeholder_desc')}
+                                className="w-full p-4 bg-background dark:bg-[#12141c] border border-input dark:border-slate-700 focus:border-primary rounded-xl text-sm font-semibold text-foreground outline-none transition-all placeholder:text-muted-foreground/50 resize-none"
+                            />
                         </div>
                     </div>
 
                     <div>
                         <div className="flex items-center justify-between mb-3">
                             <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">
-                                Video Files <span className="text-destructive">*</span>
+                                {t('upload_modal.video_files')} <span className="text-destructive">*</span>
                             </label>
                             <span className="text-[11px] font-black text-primary px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
                                 {files.length} / 5
@@ -198,8 +219,8 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                             <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mb-3">
                                 <UploadCloud className="w-7 h-7 text-primary" />
                             </div>
-                            <p className="text-sm font-bold text-foreground mb-1">Click to browse videos</p>
-                            <p className="text-[11px] text-muted-foreground font-medium">MP4 or MOV • Max 500MB per file</p>
+                            <p className="text-sm font-bold text-foreground mb-1">{t('upload_modal.click_to_browse')}</p>
+                            <p className="text-[11px] text-muted-foreground font-medium">{t('upload_modal.file_limits')}</p>
                             <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple accept="video/*" className="hidden" disabled={files.length >= 5} />
                         </div>
 
@@ -234,7 +255,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                 <div className="bg-muted/30 dark:bg-[#121620] p-5 md:px-7 flex items-center justify-between border-t border-border dark:border-slate-800 shrink-0">
                     <div className="hidden sm:flex items-center gap-2 text-muted-foreground bg-background/50 px-3 py-1.5 rounded-lg border border-border dark:border-slate-800">
                         <Info className="w-4 h-4 text-primary" />
-                        <span className="text-[11px] font-bold tracking-wide">Direct-to-Cloud Enabled</span>
+                        <span className="text-[11px] font-bold tracking-wide">{t('upload_modal.cloud_enabled')}</span>
                     </div>
 
                     <button
@@ -243,7 +264,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                         disabled={files.length === 0}
                         className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 rounded-xl font-bold text-sm disabled:opacity-50 disabled:grayscale transition-all duration-300 active:scale-95 shadow-md"
                     >
-                        Start Upload
+                        {t('upload_modal.start_upload')}
                         <ChevronRight className="w-4 h-4" />
                     </button>
                 </div>
