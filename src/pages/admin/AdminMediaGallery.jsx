@@ -325,7 +325,23 @@ const AdminMediaGallery = () => {
             {/* DIRECTORY VIEW */}
             {viewMode === 'employees' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in duration-500">
-                    {isLoading ? <p className="text-muted-foreground animate-pulse font-medium">{t('media_vault.admin.loading_dir')}</p> : employees.map(emp => {
+                    {isLoading ? (
+                        // --- DIRECTORY SHIMMER ---
+                        [1, 2, 3, 4, 5, 6].map((i) => (
+                            <div key={i} className="group relative bg-card dark:bg-[#0d1117] border border-border rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 overflow-hidden shadow-sm">
+                                <div className="flex items-center gap-4 w-full sm:w-auto overflow-hidden">
+                                    <div className="w-14 h-14 rounded-full bg-muted/60 dark:bg-slate-800/50 animate-pulse shrink-0"></div>
+                                    <div className="space-y-2 flex-1">
+                                        <div className="h-4 bg-muted/80 dark:bg-slate-700/80 animate-pulse rounded w-24"></div>
+                                        <div className="h-3 bg-muted/80 dark:bg-slate-700/80 animate-pulse rounded w-32"></div>
+                                    </div>
+                                </div>
+                                <div className="shrink-0 self-end sm:self-auto">
+                                    <div className="h-8 w-16 bg-muted/60 dark:bg-slate-800/50 animate-pulse rounded-lg"></div>
+                                </div>
+                            </div>
+                        ))
+                    ) : employees.map(emp => {
                         const weeklyScore = getWeeklyRating();
                         const isExcellent = weeklyScore >= 8;
                         return (
@@ -353,20 +369,30 @@ const AdminMediaGallery = () => {
             {/* SCHOOLS VIEW */}
             {viewMode === 'schools' && selectedEmployee && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-right-8 duration-500">
-                    {isLoading ? <p className="text-muted-foreground col-span-full">{t('media_vault.admin.scanning_records')}</p> :
-                        historicalSchools.length === 0 ? (<p className="text-muted-foreground italic col-span-full">{t('media_vault.admin.no_uploads_found')}</p>) : (
-                            historicalSchools.map((schoolData, idx) => (
-                                <div key={idx} onClick={() => handleDrillDown('bands', schoolData)} className="bg-card dark:bg-[#0d1117] border border-border rounded-3xl p-6 hover:border-primary/50 cursor-pointer flex items-center gap-5 group transition-all">
-                                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary transition-colors">
-                                        <School className="w-7 h-7 text-primary group-hover:text-white" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-extrabold text-lg text-foreground group-hover:text-primary transition-colors">{schoolData.schoolName}</h3>
-                                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1 opacity-80"><MapPin className="w-3.5 h-3.5" /> {t('media_vault.admin.click_to_view')}</p>
-                                    </div>
+                    {isLoading ? (
+                        // --- SCHOOLS SHIMMER ---
+                        [1, 2, 3, 4].map((i) => (
+                            <div key={i} className="bg-card dark:bg-[#0d1117] border border-border rounded-3xl p-6 flex items-center gap-5 shadow-sm">
+                                <div className="w-14 h-14 rounded-2xl bg-muted/60 dark:bg-slate-800/50 animate-pulse shrink-0"></div>
+                                <div className="space-y-2 flex-1">
+                                    <div className="h-5 bg-muted/80 dark:bg-slate-700/80 animate-pulse rounded w-1/2"></div>
+                                    <div className="h-3 bg-muted/80 dark:bg-slate-700/80 animate-pulse rounded w-1/3"></div>
                                 </div>
-                            ))
-                        )}
+                            </div>
+                        ))
+                    ) : historicalSchools.length === 0 ? (<p className="text-muted-foreground italic col-span-full">{t('media_vault.admin.no_uploads_found')}</p>) : (
+                        historicalSchools.map((schoolData, idx) => (
+                            <div key={idx} onClick={() => handleDrillDown('bands', schoolData)} className="bg-card dark:bg-[#0d1117] border border-border rounded-3xl p-6 hover:border-primary/50 cursor-pointer flex items-center gap-5 group transition-all">
+                                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary transition-colors">
+                                    <School className="w-7 h-7 text-primary group-hover:text-white" />
+                                </div>
+                                <div>
+                                    <h3 className="font-extrabold text-lg text-foreground group-hover:text-primary transition-colors">{schoolData.schoolName}</h3>
+                                    <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1 opacity-80"><MapPin className="w-3.5 h-3.5" /> {t('media_vault.admin.click_to_view')}</p>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
             )}
 
@@ -395,171 +421,201 @@ const AdminMediaGallery = () => {
             {/* --- GALLERY VIEW --- */}
             {viewMode === 'gallery' && (
                 <div className="space-y-6 animate-in slide-in-from-right-8 duration-500">
-                    {isLoading ? <p className="text-muted-foreground font-medium animate-pulse">{t('media_vault.admin.decrypting')}</p> :
-                        Object.keys(mediaData).length === 0 ? (
-                            <div className="text-center py-24 bg-card border border-border rounded-3xl shadow-sm">
-                                <Film className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
-                                <h3 className="text-xl font-black text-foreground">{t('media_vault.admin.vault_empty')}</h3>
-                                <p className="text-muted-foreground mt-2">{t('media_vault.admin.no_media_year', { band: selectedBand === 'Junior Band' ? t('media_vault.admin.junior_band') : t('media_vault.admin.senior_band'), year: selectedYear })}</p>
-                            </div>
-                        ) : (
-                            Object.keys(mediaData).map(month => {
-                                const isExpanded = expandedMonth === month;
-                                const mediaFiles = mediaData[month];
-                                const { average, colorClass, pendingCount } = getMonthlyStats(mediaFiles);
+                    {isLoading ? (
+                        // --- YOUTUBE STYLE SHIMMER ---
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {[1, 2, 3, 4, 5, 6].map((i) => (
+                                <div key={i} className="bg-card dark:bg-[#131821] border border-border dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+                                    {/* Thumbnail Skeleton */}
+                                    <div className="w-full aspect-video bg-muted/60 dark:bg-slate-800/50 animate-pulse" />
 
-                                return (
-                                    <div key={month} className="bg-card dark:bg-[#0d1117] border border-border rounded-3xl overflow-hidden shadow-sm transition-all duration-300">
-                                        <button onClick={() => toggleMonth(month)} className="w-full px-6 py-5 sm:p-6 flex items-center justify-between hover:bg-muted/30 transition-colors">
-                                            <div className="flex items-center gap-4 sm:gap-6">
-                                                <div className={`p-3 rounded-2xl ${isExpanded ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'} shadow-sm`}>
-                                                    <CalendarIcon className="w-6 h-6" />
-                                                </div>
-                                                <div className="text-left">
-                                                    <h2 className="text-xl font-black text-foreground tracking-tight">{t(`months.${month.toLowerCase()}`)} {selectedYear}</h2>
-                                                    <p className="text-xs sm:text-sm font-semibold text-muted-foreground mt-0.5">{mediaFiles.length} {t('media_vault.admin.total_videos')}</p>
-                                                </div>
-                                                <div className="hidden sm:flex items-center gap-3 ml-6 border-l border-border pl-6">
-                                                    {pendingCount > 0 && (
-                                                        <span className="px-3 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/30 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                                                            <AlertCircle className="w-3.5 h-3.5" /> {pendingCount} {t('media_vault.admin.pending')}
-                                                        </span>
-                                                    )}
-                                                    {average !== null && (
-                                                        <div className={`px-3 py-1 rounded-lg border text-xs font-black flex items-center gap-1.5 shadow-sm ${colorClass}`}>
-                                                            <Award className="w-4 h-4" /> {t('media_vault.admin.avg')}: {average}/10
-                                                        </div>
-                                                    )}
-                                                </div>
+                                    {/* Content Skeleton */}
+                                    <div className="p-4 space-y-4">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex items-center gap-2 w-full">
+                                                <div className="w-4 h-4 rounded-full bg-muted/80 dark:bg-slate-700/80 animate-pulse shrink-0" />
+                                                <div className="h-4 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-3/4" />
                                             </div>
-                                            <ChevronRight className={`w-6 h-6 text-muted-foreground transition-transform duration-300 ${isExpanded ? 'rotate-90 text-primary' : ''}`} />
-                                        </button>
+                                            <div className="w-16 h-4 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse shrink-0" />
+                                        </div>
+                                        <div className="pt-2 border-t border-border dark:border-slate-800/80 space-y-2">
+                                            <div className="h-3 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-1/2" />
+                                            <div className="h-3 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-1/3" />
+                                        </div>
+                                    </div>
 
-                                        {isExpanded && (
-                                            <div className="p-4 sm:p-6 pt-0 sm:pt-2 border-t border-border bg-background/50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                {mediaFiles.map((media) => {
-                                                    const isCardExpanded = expandedCards[media.fileId];
-                                                    const isVideoPlaying = playingVideos[media.fileId];
+                                    {/* Footer Skeleton */}
+                                    <div className="p-3.5 border-t border-border dark:border-slate-800 bg-muted/30 dark:bg-slate-800/30 flex justify-between">
+                                        <div className="h-4 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-24" />
+                                        <div className="h-4 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-12" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : Object.keys(mediaData).length === 0 ? (
+                        <div className="text-center py-24 bg-card border border-border rounded-3xl shadow-sm">
+                            <Film className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+                            <h3 className="text-xl font-black text-foreground">{t('media_vault.admin.vault_empty')}</h3>
+                            <p className="text-muted-foreground mt-2">{t('media_vault.admin.no_media_year', { band: selectedBand === 'Junior Band' ? t('media_vault.admin.junior_band') : t('media_vault.admin.senior_band'), year: selectedYear })}</p>
+                        </div>
+                    ) : (
+                        Object.keys(mediaData).map(month => {
+                            const isExpanded = expandedMonth === month;
+                            const mediaFiles = mediaData[month];
+                            const { average, colorClass, pendingCount } = getMonthlyStats(mediaFiles);
 
-                                                    return (
-                                                        <div key={media.fileId} className="flex flex-col bg-card dark:bg-[#131821] border border-border rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
+                            return (
+                                <div key={month} className="bg-card dark:bg-[#0d1117] border border-border rounded-3xl overflow-hidden shadow-sm transition-all duration-300">
+                                    <button onClick={() => toggleMonth(month)} className="w-full px-6 py-5 sm:p-6 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                                        <div className="flex items-center gap-4 sm:gap-6">
+                                            <div className={`p-3 rounded-2xl ${isExpanded ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'} shadow-sm`}>
+                                                <CalendarIcon className="w-6 h-6" />
+                                            </div>
+                                            <div className="text-left">
+                                                <h2 className="text-xl font-black text-foreground tracking-tight">{t(`months.${month.toLowerCase()}`)} {selectedYear}</h2>
+                                                <p className="text-xs sm:text-sm font-semibold text-muted-foreground mt-0.5">{mediaFiles.length} {t('media_vault.admin.total_videos')}</p>
+                                            </div>
+                                            <div className="hidden sm:flex items-center gap-3 ml-6 border-l border-border pl-6">
+                                                {pendingCount > 0 && (
+                                                    <span className="px-3 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/30 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                                                        <AlertCircle className="w-3.5 h-3.5" /> {pendingCount} {t('media_vault.admin.pending')}
+                                                    </span>
+                                                )}
+                                                {average !== null && (
+                                                    <div className={`px-3 py-1 rounded-lg border text-xs font-black flex items-center gap-1.5 shadow-sm ${colorClass}`}>
+                                                        <Award className="w-4 h-4" /> {t('media_vault.admin.avg')}: {average}/10
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <ChevronRight className={`w-6 h-6 text-muted-foreground transition-transform duration-300 ${isExpanded ? 'rotate-90 text-primary' : ''}`} />
+                                    </button>
 
-                                                            {/* VIDEO PLAYER AREA */}
-                                                            <div className={`w-full relative bg-black shrink-0 overflow-hidden transition-all duration-300 ${isVideoPlaying ? '' : 'aspect-video'}`}>
+                                    {isExpanded && (
+                                        <div className="p-4 sm:p-6 pt-0 sm:pt-2 border-t border-border bg-background/50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {mediaFiles.map((media) => {
+                                                const isCardExpanded = expandedCards[media.fileId];
+                                                const isVideoPlaying = playingVideos[media.fileId];
 
-                                                                {videoErrors[media.fileId] || !media.videoUrl ? (
-                                                                    <div className="flex flex-col items-center justify-center h-full w-full p-8 bg-slate-900 border-b border-border text-center absolute inset-0">
-                                                                        <AlertTriangle className="w-8 h-8 text-muted-foreground/50 mb-2" />
-                                                                        <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">{t('media_vault.admin.unavailable')}</span>
-                                                                    </div>
-                                                                ) : (
-                                                                    <>
-                                                                        <video
-                                                                            src={`${media.videoUrl}#t=0.001`}
-                                                                            controls={isVideoPlaying}
-                                                                            autoPlay={isVideoPlaying}
-                                                                            controlsList="nodownload"
-                                                                            className={`w-full bg-black ${isVideoPlaying ? 'h-auto max-h-[60vh] object-contain' : 'absolute inset-0 h-full object-cover opacity-70'}`}
-                                                                            preload="metadata"
-                                                                            playsInline
-                                                                            webkit-playsinline="true"
-                                                                            onError={() => handleVideoError(media.fileId)}
-                                                                        />
+                                                return (
+                                                    <div key={media.fileId} className="flex flex-col bg-card dark:bg-[#131821] border border-border rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
 
-                                                                        {!isVideoPlaying && (
-                                                                            <div
-                                                                                className="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-black/20 transition-colors z-10 group/play"
-                                                                                onClick={(e) => handlePlayVideo(e, media.fileId)}
-                                                                            >
-                                                                                <div className="w-16 h-16 rounded-full bg-black/50 flex items-center justify-center border-2 border-white/70 shadow-2xl backdrop-blur-sm group-hover/play:scale-110 group-hover/play:bg-black/70 transition-all">
-                                                                                    <Play className="w-8 h-8 text-white ml-1" fill="currentColor" />
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
-                                                                    </>
-                                                                )}
+                                                        {/* VIDEO PLAYER AREA */}
+                                                        <div className={`w-full relative bg-black shrink-0 overflow-hidden transition-all duration-300 ${isVideoPlaying ? '' : 'aspect-video'}`}>
 
-                                                                {media.marks === null && !isVideoPlaying && (
-                                                                    <div className="absolute top-3 left-3 bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md shadow-lg flex items-center gap-1 z-20 pointer-events-none">
-                                                                        <Clock className="w-3 h-3" /> {t('media_vault.admin.pending')}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-
-                                                            {/* ACCORDION HEADER */}
-                                                            <div
-                                                                onClick={() => toggleCard(media.fileId)}
-                                                                className="flex items-center justify-between p-4 bg-card cursor-pointer hover:bg-muted/30 transition-colors"
-                                                            >
-                                                                <div className="min-w-0 pr-4">
-                                                                    <h3 className="font-bold text-foreground text-sm truncate">{media.eventName || t('media_vault.admin.regular_class')}</h3>
-                                                                    <p className="text-muted-foreground text-xs">{media.eventDate}</p>
+                                                            {videoErrors[media.fileId] || !media.videoUrl ? (
+                                                                <div className="flex flex-col items-center justify-center h-full w-full p-8 bg-slate-900 border-b border-border text-center absolute inset-0">
+                                                                    <AlertTriangle className="w-8 h-8 text-muted-foreground/50 mb-2" />
+                                                                    <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">{t('media_vault.admin.unavailable')}</span>
                                                                 </div>
-                                                                <div className={`p-2 rounded-full bg-muted transition-transform duration-300 ${isCardExpanded ? 'rotate-180 bg-primary/10 text-primary' : ''}`}>
-                                                                    <ChevronDown className="w-4 h-4" />
-                                                                </div>
-                                                            </div>
+                                                            ) : (
+                                                                <>
+                                                                    <video
+                                                                        src={`${media.videoUrl}#t=0.001`}
+                                                                        controls={isVideoPlaying}
+                                                                        autoPlay={isVideoPlaying}
+                                                                        controlsList="nodownload"
+                                                                        className={`w-full bg-black ${isVideoPlaying ? 'h-auto max-h-[60vh] object-contain' : 'absolute inset-0 h-full object-cover opacity-70'}`}
+                                                                        preload="metadata"
+                                                                        playsInline
+                                                                        webkit-playsinline="true"
+                                                                        onError={() => handleVideoError(media.fileId)}
+                                                                    />
 
-                                                            {/* ACCORDION DATA AREA */}
-                                                            {isCardExpanded && (
-                                                                <div className="p-5 pt-2 flex flex-col flex-1 border-t border-border animate-in slide-in-from-top-2 fade-in duration-200">
-                                                                    <div className="flex justify-between items-start mb-4">
-                                                                        <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
-                                                                            <Users className="w-4 h-4 opacity-70" /> {media.students || '0'} {t('media_vault.admin.students_present')}
-                                                                        </div>
-                                                                        {media.marks !== null ? (
-                                                                            <span className="shrink-0 px-2 py-1 bg-green-500/10 text-green-600 border border-green-500/20 rounded-lg text-sm font-black tabular-nums">{media.marks}/10</span>
-                                                                        ) : (
-                                                                            <span className="shrink-0 px-2 py-1 bg-muted text-muted-foreground border border-border rounded-lg text-[10px] font-bold uppercase">{t('media_vault.admin.unscored')}</span>
-                                                                        )}
-                                                                    </div>
-
-                                                                    <div className="space-y-4 flex-1 mb-5">
-                                                                        <div>
-                                                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">{t('media_vault.admin.instructor_note')}</span>
-                                                                            <div className="text-xs text-foreground/90 bg-muted/40 p-3 rounded-xl border border-border/50 max-h-24 overflow-y-auto custom-scrollbar">
-                                                                                {media.description ? media.description : <span className="italic text-muted-foreground/50">{t('media_vault.admin.no_description')}</span>}
+                                                                    {!isVideoPlaying && (
+                                                                        <div
+                                                                            className="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-black/20 transition-colors z-10 group/play"
+                                                                            onClick={(e) => handlePlayVideo(e, media.fileId)}
+                                                                        >
+                                                                            <div className="w-16 h-16 rounded-full bg-black/50 flex items-center justify-center border-2 border-white/70 shadow-2xl backdrop-blur-sm group-hover/play:scale-110 group-hover/play:bg-black/70 transition-all">
+                                                                                <Play className="w-8 h-8 text-white ml-1" fill="currentColor" />
                                                                             </div>
                                                                         </div>
+                                                                    )}
+                                                                </>
+                                                            )}
 
-                                                                        {media.remark && (
-                                                                            <div>
-                                                                                <span className="text-[10px] font-bold text-primary uppercase tracking-wider mb-1.5 block">{t('media_vault.admin.your_feedback')}</span>
-                                                                                <div className="bg-primary/10 border-l-2 border-primary p-3 rounded-r-xl text-xs italic font-medium text-primary/90">
-                                                                                    "{media.remark}"
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-
-                                                                    {/* ACTION BUTTONS */}
-                                                                    <div className="flex items-center justify-between gap-2 pt-4 border-t border-border">
-                                                                        <div className="flex items-center gap-1.5">
-                                                                            <button onClick={() => handleCopyLink(media.videoUrl)} title={t('media_vault.admin.copy_link_title')} className="p-2.5 rounded-xl bg-muted text-muted-foreground hover:bg-muted/80 transition-colors border border-border">
-                                                                                <Copy className="w-4 h-4" />
-                                                                            </button>
-                                                                            <button onClick={() => handleDownload(media.videoUrl, media.eventName)} title={t('media_vault.admin.download_title')} className="p-2.5 rounded-xl bg-muted text-muted-foreground hover:bg-muted/80 transition-colors border border-border" disabled={!media.videoUrl || videoErrors[media.fileId]}>
-                                                                                <Download className="w-4 h-4" />
-                                                                            </button>
-                                                                            <button onClick={() => setDeleteModal({ isOpen: true, logId: media.logId, fileId: media.fileId })} title={t('media_vault.admin.delete_title')} className="p-2.5 rounded-xl bg-muted text-destructive hover:bg-destructive/10 transition-colors border border-border">
-                                                                                <Trash2 className="w-4 h-4" />
-                                                                            </button>
-                                                                        </div>
-                                                                        <button onClick={() => openReviewModal(media)} className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm ${media.marks !== null ? 'bg-muted text-foreground border border-border' : 'bg-primary text-white hover:scale-[1.02]'}`}>
-                                                                            {media.marks !== null ? t('media_vault.admin.edit_grade') : t('media_vault.admin.review')}
-                                                                        </button>
-                                                                    </div>
+                                                            {media.marks === null && !isVideoPlaying && (
+                                                                <div className="absolute top-3 left-3 bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md shadow-lg flex items-center gap-1 z-20 pointer-events-none">
+                                                                    <Clock className="w-3 h-3" /> {t('media_vault.admin.pending')}
                                                                 </div>
                                                             )}
                                                         </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })
-                        )}
+
+                                                        {/* ACCORDION HEADER */}
+                                                        <div
+                                                            onClick={() => toggleCard(media.fileId)}
+                                                            className="flex items-center justify-between p-4 bg-card cursor-pointer hover:bg-muted/30 transition-colors"
+                                                        >
+                                                            <div className="min-w-0 pr-4">
+                                                                <h3 className="font-bold text-foreground text-sm truncate">{media.eventName || t('media_vault.admin.regular_class')}</h3>
+                                                                <p className="text-muted-foreground text-xs">{media.eventDate}</p>
+                                                            </div>
+                                                            <div className={`p-2 rounded-full bg-muted transition-transform duration-300 ${isCardExpanded ? 'rotate-180 bg-primary/10 text-primary' : ''}`}>
+                                                                <ChevronDown className="w-4 h-4" />
+                                                            </div>
+                                                        </div>
+
+                                                        {/* ACCORDION DATA AREA */}
+                                                        {isCardExpanded && (
+                                                            <div className="p-5 pt-2 flex flex-col flex-1 border-t border-border animate-in slide-in-from-top-2 fade-in duration-200">
+                                                                <div className="flex justify-between items-start mb-4">
+                                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+                                                                        <Users className="w-4 h-4 opacity-70" /> {media.students || '0'} {t('media_vault.admin.students_present')}
+                                                                    </div>
+                                                                    {media.marks !== null ? (
+                                                                        <span className="shrink-0 px-2 py-1 bg-green-500/10 text-green-600 border border-green-500/20 rounded-lg text-sm font-black tabular-nums">{media.marks}/10</span>
+                                                                    ) : (
+                                                                        <span className="shrink-0 px-2 py-1 bg-muted text-muted-foreground border border-border rounded-lg text-[10px] font-bold uppercase">{t('media_vault.admin.unscored')}</span>
+                                                                    )}
+                                                                </div>
+
+                                                                <div className="space-y-4 flex-1 mb-5">
+                                                                    <div>
+                                                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">{t('media_vault.admin.instructor_note')}</span>
+                                                                        <div className="text-xs text-foreground/90 bg-muted/40 p-3 rounded-xl border border-border/50 max-h-24 overflow-y-auto custom-scrollbar">
+                                                                            {media.description ? media.description : <span className="italic text-muted-foreground/50">{t('media_vault.admin.no_description')}</span>}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {media.remark && (
+                                                                        <div>
+                                                                            <span className="text-[10px] font-bold text-primary uppercase tracking-wider mb-1.5 block">{t('media_vault.admin.your_feedback')}</span>
+                                                                            <div className="bg-primary/10 border-l-2 border-primary p-3 rounded-r-xl text-xs italic font-medium text-primary/90">
+                                                                                "{media.remark}"
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* ACTION BUTTONS */}
+                                                                <div className="flex items-center justify-between gap-2 pt-4 border-t border-border">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <button onClick={() => handleCopyLink(media.videoUrl)} title={t('media_vault.admin.copy_link_title')} className="p-2.5 rounded-xl bg-muted text-muted-foreground hover:bg-muted/80 transition-colors border border-border">
+                                                                            <Copy className="w-4 h-4" />
+                                                                        </button>
+                                                                        <button onClick={() => handleDownload(media.videoUrl, media.eventName)} title={t('media_vault.admin.download_title')} className="p-2.5 rounded-xl bg-muted text-muted-foreground hover:bg-muted/80 transition-colors border border-border" disabled={!media.videoUrl || videoErrors[media.fileId]}>
+                                                                            <Download className="w-4 h-4" />
+                                                                        </button>
+                                                                        <button onClick={() => setDeleteModal({ isOpen: true, logId: media.logId, fileId: media.fileId })} title={t('media_vault.admin.delete_title')} className="p-2.5 rounded-xl bg-muted text-destructive hover:bg-destructive/10 transition-colors border border-border">
+                                                                            <Trash2 className="w-4 h-4" />
+                                                                        </button>
+                                                                    </div>
+                                                                    <button onClick={() => openReviewModal(media)} className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm ${media.marks !== null ? 'bg-muted text-foreground border border-border' : 'bg-primary text-white hover:scale-[1.02]'}`}>
+                                                                        {media.marks !== null ? t('media_vault.admin.edit_grade') : t('media_vault.admin.review')}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
             )}
         </div>

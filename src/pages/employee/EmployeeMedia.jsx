@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000", { withCredentials: true });
 
 const EmployeeMedia = () => {
+    // 🔥 NEW: Bring in the user object so we can identify our socket events
     const { t } = useTranslation();
     const { user } = useSelector((state) => state.auth);
 
@@ -48,6 +49,7 @@ const EmployeeMedia = () => {
     const fetchMedia = useCallback(async () => {
         setIsLoading(true);
         try {
+            // 🔥 CACHE BUSTER ADDED: &_t=${Date.now()} forces the browser to get fresh data!
             const response = await api.get(`/employee/media?year=${selectedYear}&_t=${Date.now()}`);
 
             if (response.data.success) {
@@ -101,17 +103,23 @@ const EmployeeMedia = () => {
         fetchMedia();
     }, [fetchMedia]);
 
+    // --- BULLETPROOF SOCKET LISTENERS ---
     useEffect(() => {
         if (!user || (!user._id && !user.id)) return;
         const myUserId = user._id || user.id;
 
+        // 1. Handle Direct Grading Update
         const handleDirectGrade = (data) => {
             if (data?.userId === myUserId) {
                 setMediaData(prevData => {
-                    const newData = { ...prevData };
+                    const newData = { ...prevData }; // Shallow clone the months object
+
+                    // Loop through the months to find the specific video
                     for (const month in newData) {
                         const fileIndex = newData[month].findIndex(f => f.id === data.fileId);
+
                         if (fileIndex !== -1) {
+                            // Clone the array and the specific object to maintain React immutability
                             const updatedMonthArray = [...newData[month]];
                             updatedMonthArray[fileIndex] = {
                                 ...updatedMonthArray[fileIndex],
@@ -119,7 +127,7 @@ const EmployeeMedia = () => {
                                 remark: data.remark
                             };
                             newData[month] = updatedMonthArray;
-                            break;
+                            break; // Found and updated, stop looping
                         }
                     }
                     return newData;
@@ -127,15 +135,19 @@ const EmployeeMedia = () => {
             }
         };
 
+        // 2. Handle Direct Deletion Update
         const handleDirectDelete = (data) => {
             if (data?.userId === myUserId) {
                 setMediaData(prevData => {
                     const newData = { ...prevData };
+
                     for (const month in newData) {
                         const updatedMonthFiles = newData[month].filter(f => f.id !== data.fileId);
+
+                        // If the array size changed, we found the file
                         if (updatedMonthFiles.length !== newData[month].length) {
                             if (updatedMonthFiles.length === 0) {
-                                delete newData[month];
+                                delete newData[month]; // Remove the whole month if empty
                             } else {
                                 newData[month] = updatedMonthFiles;
                             }
@@ -156,6 +168,7 @@ const EmployeeMedia = () => {
             }
         };
 
+        // Attach listeners
         socket.on('media_graded_direct', handleDirectGrade);
         socket.on('media_deleted_direct', handleDirectDelete);
         socket.on('new_notification_for_user', handleRemoteNotification);
@@ -167,9 +180,12 @@ const EmployeeMedia = () => {
         };
     }, [user, t]);
 
+
+    // --- UPLOADER LISTENERS ---
     useEffect(() => {
         const handleProgress = (e) => setUploadProgress(e.detail);
         const handleRefresh = () => fetchMedia();
+
         const handleSuccess = () => toast.success(t('employee_media.upload_success'));
         const handleError = (e) => toast.error(e.detail || t('employee_media.upload_error'));
 
@@ -186,11 +202,13 @@ const EmployeeMedia = () => {
         };
     }, [fetchMedia, t]);
 
+    // --- GENERATE TEMPORARY LOCAL PREVIEW FOR GHOST CARD ---
     useEffect(() => {
         if (isUploading && jobQueue?.files?.length > 0) {
             const url = URL.createObjectURL(jobQueue.files[0]);
             setPreviewUrl(url);
 
+            // Auto-expand the month we are uploading to
             const d = new Date(jobQueue.metadata.eventDate || new Date());
             const monthNames = [
                 t('months.january'), t('months.february'), t('months.march'),
@@ -207,6 +225,7 @@ const EmployeeMedia = () => {
         }
     }, [isUploading, jobQueue, t]);
 
+    // --- INJECT GHOST CARD INTO DATA ---
     const displayMediaData = { ...mediaData };
     if (isUploading && jobQueue) {
         const d = new Date(jobQueue.metadata.eventDate || new Date());
@@ -342,7 +361,7 @@ const EmployeeMedia = () => {
                 </div>
             </div>
 
-            {/* NEW: YouTube Style Shimmer Loading */}
+            {/* YouTube Style Shimmer Loading */}
             {isLoading && !isUploading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
                     {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -382,6 +401,7 @@ const EmployeeMedia = () => {
 
                         return (
                             <div key={month} className="bg-card dark:bg-[#181d29] border border-border dark:border-slate-700/50 rounded-2xl overflow-hidden shadow-sm transition-all duration-200">
+                                {/* Accordion Header */}
                                 <button
                                     onClick={() => toggleMonth(month)}
                                     className="w-full px-5 py-4 sm:px-6 sm:py-5 flex items-center justify-between bg-transparent hover:bg-muted/30 dark:hover:bg-slate-800/30 transition-colors"
@@ -406,11 +426,13 @@ const EmployeeMedia = () => {
                                     <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-300 shrink-0 ml-2 ${isExpanded ? 'rotate-180' : ''}`} />
                                 </button>
 
+                                {/* Accordion Content */}
                                 {isExpanded && (
                                     <div className="p-5 sm:p-6 pt-2 border-t border-border dark:border-slate-800 animate-in fade-in duration-300">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                             {mediaFiles.map((media) => (
                                                 media.isGhost ? (
+                                                    // 🔥 THE CINEMATIC GHOST CARD
                                                     <div key="ghost" className="group bg-background dark:bg-[#0d1117] border border-primary/50 shadow-[0_0_20px_rgba(59,130,246,0.15)] rounded-xl overflow-hidden flex flex-col relative transition-all duration-300">
                                                         <div className="relative aspect-video bg-black overflow-hidden shrink-0">
 
@@ -440,6 +462,7 @@ const EmployeeMedia = () => {
                                                                 </div>
                                                             )}
 
+                                                            {/* Cinematic Progress Bar Overlay */}
                                                             <div className="absolute bottom-0 left-0 w-full h-1.5 bg-black/50">
                                                                 <div className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }} />
                                                             </div>
@@ -466,6 +489,7 @@ const EmployeeMedia = () => {
                                                         </div>
                                                     </div>
                                                 ) : (
+                                                    // STANDARD REAL DB CARD
                                                     <div key={media.id} className="group bg-background dark:bg-[#0d1117] border border-border dark:border-slate-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-200 flex flex-col relative">
                                                         <div
                                                             className="relative aspect-video bg-slate-900 overflow-hidden shrink-0 cursor-pointer"
