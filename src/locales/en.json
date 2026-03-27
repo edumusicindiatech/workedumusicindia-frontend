@@ -1077,6 +1077,7 @@
         "empty_title": "No Assignments Yet",
         "empty_desc": "You currently do not have any schools permanently assigned to your profile. Check back later!",
         "card_location": "Location",
+        "card_to": "to",
         "card_category": "Category",
         "distance_away": "{{count}} km away",
         "time_to": "to",

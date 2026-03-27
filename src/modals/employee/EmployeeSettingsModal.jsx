@@ -43,7 +43,7 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
             });
 
             if (response.data.success) {
-                dispatch(updateUserPreferences(personalResponse.data.preferences));
+                dispatch(updateUserPreferences(response?.data?.preferences));
 
                 const langCode = settings.language === "हिन्दी (Hindi)" ? "hi" : "en";
                 i18n.changeLanguage(langCode);
