@@ -41,6 +41,7 @@ import { Toaster } from "react-hot-toast";
 
 // ---> ADD YOUR MANAGER HERE <---
 import GlobalUploadManager from "./components/GlobalUploadManager";
+import FloatingUploadManager from "./modals/employee/FloatingUploadManager";
 
 function App() {
   const dispatch = useDispatch();
@@ -153,6 +154,7 @@ function App() {
 
       {/* ---> MOUNT MANAGER SECURELY HERE <--- */}
       <GlobalUploadManager />
+      <FloatingUploadManager />
 
       <Routes>
         {/* Public Routes */}

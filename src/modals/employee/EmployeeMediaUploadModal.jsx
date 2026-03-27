@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
     UploadCloud, X, Film, Info, MapPin,
     CalendarDays, ChevronRight, Users, CheckCircle2, Loader2
@@ -7,6 +7,7 @@ import {
 import toast from "react-hot-toast";
 import api from "../../api/axios";
 import CustomSelect from "../../components/ui/CustomSelect";
+import { startBackgroundUpload } from "../../store/slices/uploadSlice";
 
 const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
     const { user, isHydrating } = useSelector((state) => state.auth);
@@ -19,6 +20,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
     const [studentsCount, setStudentsCount] = useState("");
     const [files, setFiles] = useState([]);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const dispatch = useDispatch();
 
     // 🔥 NEW: Internal Upload State to protect mobile memory
     const [isUploading, setIsUploading] = useState(false);
@@ -65,7 +67,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
     const removeFile = (index) => setFiles(prev => prev.filter((_, i) => i !== index));
 
     // 🔥 THE BULLETPROOF MOBILE UPLOAD LOGIC
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
         if (!selectedSchoolId) return toast.error("Please select a school.");
         if (!band) return toast.error("Band category is required.");
@@ -76,105 +78,21 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
             return toast.error("Files exceed 200MB limit. Please compress them.");
         }
 
-        setIsUploading(true);
-        setUploadProgress(0);
-        const successfulUploads = [];
-        const failedFiles = [];
-        const toastId = toast.loading("Initializing secure upload...", { position: 'bottom-right' });
-
-        const metadata = {
-            schoolId: selectedSchoolId,
-            schoolName: currentSelectedName,
-            band, eventName, eventDate, studentsCount
-        };
-
-        try {
-            // PHASE 1: Get Presigned URLs
-            setUploadStatus("Requesting secure server access...");
-            const filePayload = files.map(f => ({ name: f.name, type: f.type }));
-            const { data: urlData } = await api.post('/employee/media/generate-urls', {
-                files: filePayload, metadata
-            });
-
-            // PHASE 2: Sequential Mobile-Safe XHR Upload
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const targetUrl = urlData.urls[i].uploadUrl;
-                const publicUrl = urlData.urls[i].publicUrl;
-
-                setUploadStatus(`Uploading video ${i + 1} of ${files.length}`);
-                setUploadProgress(0); // Reset progress for the new file
-                toast.loading(`Uploading video ${i + 1} of ${files.length}... ⚠️ Keep app open.`, { id: toastId });
-
-                // We wrap the older XMLHttpRequest in a Promise so we can 'await' it
-                await new Promise((resolve, reject) => {
-                    const xhr = new XMLHttpRequest();
-                    xhr.open("PUT", targetUrl, true);
-                    xhr.setRequestHeader("Content-Type", file.type);
-
-                    // This tracks the live percentage!
-                    xhr.upload.onprogress = (event) => {
-                        if (event.lengthComputable) {
-                            const percentComplete = Math.round((event.loaded / event.total) * 100);
-                            setUploadProgress(percentComplete);
-                        }
-                    };
-
-                    xhr.onload = () => {
-                        if (xhr.status >= 200 && xhr.status < 300) {
-                            successfulUploads.push({ url: publicUrl, fileType: 'video' });
-                            resolve();
-                        } else {
-                            reject(new Error(`Cloudflare rejected upload. Status: ${xhr.status}`));
-                        }
-                    };
-
-                    xhr.onerror = () => {
-                        reject(new Error("Network error. Connection lost."));
-                    };
-
-                    // Send the file directly from memory
-                    xhr.send(file);
-                }).catch((err) => {
-                    console.error(`Failed to upload ${file.name}`, err);
-                    failedFiles.push(file.name);
-                });
+        // 1. Dispatch the raw files to Redux
+        dispatch(startBackgroundUpload({
+            files: files,
+            metadata: {
+                schoolId: selectedSchoolId,
+                schoolName: currentSelectedName,
+                band, eventName, eventDate, studentsCount
             }
+        }));
 
-            // PHASE 3: Save to Database
-            if (successfulUploads.length > 0) {
-                setUploadStatus("Finalizing records...");
-                setUploadProgress(100);
-                toast.loading("Saving to Vault...", { id: toastId });
-                await api.post('/employee/media/save-log', {
-                    ...metadata,
-                    uploadedFiles: successfulUploads
-                });
-            }
+        // 2. Alert the user that the background process has caught the job
+        toast.success("Upload started! See progress in bottom right.");
 
-            // PHASE 4: Cleanup & Success
-            toast.dismiss(toastId);
-
-            if (failedFiles.length === 0) {
-                toast.success("All media successfully uploaded!", { duration: 5000 });
-            } else {
-                toast.error(`Uploaded ${successfulUploads.length}/${files.length}. Failed: ${failedFiles.join(', ')}`, { duration: 8000 });
-                api.post('/employee/media/send-failure-email', {
-                    failedFiles, eventContext: eventName || "Regular Visit", schoolId: selectedSchoolId
-                }).catch(() => console.log("Offline error logging skipped."));
-            }
-
-            window.dispatchEvent(new Event('refreshMediaGallery'));
-            onClose();
-
-        } catch (error) {
-            console.error("Upload Error:", error);
-            toast.dismiss(toastId);
-            toast.error("Upload failed. Please check your network.", { duration: 6000 });
-            setIsUploading(false);
-            setUploadStatus("");
-            setUploadProgress(0);
-        }
+        // 3. Instantly close the modal to free up their screen
+        onClose();
     };
 
     return (
