@@ -192,6 +192,14 @@ const AdminMediaGallery = () => {
     const handlePlayVideo = (e, fileId) => {
         e.stopPropagation();
         setPlayingVideos(prev => ({ ...prev, [fileId]: true }));
+
+        // Ensure the video plays immediately after state update
+        setTimeout(() => {
+            const videoEl = document.getElementById(`video-${fileId}`);
+            if (videoEl) {
+                videoEl.play().catch(err => console.log("Playback error:", err));
+            }
+        }, 0);
     };
 
     const handleCopyLink = (url) => {
@@ -238,6 +246,14 @@ const AdminMediaGallery = () => {
     };
 
     const openReviewModal = (media) => {
+        // Stop background video from playing when modal is opened
+        setPlayingVideos(prev => ({ ...prev, [media.fileId]: false }));
+
+        const videoEl = document.getElementById(`video-${media.fileId}`);
+        if (videoEl) {
+            videoEl.pause();
+        }
+
         setActiveReview(media);
         setReviewMarks(media.marks !== null ? media.marks : 0);
         setReviewRemark(media.remark || "");
@@ -493,7 +509,7 @@ const AdminMediaGallery = () => {
                                                     <div key={media.fileId} className="flex flex-col bg-card dark:bg-[#131821] border border-border rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
 
                                                         {/* VIDEO PLAYER AREA */}
-                                                        <div className={`w-full relative bg-black shrink-0 overflow-hidden transition-all duration-300 ${isVideoPlaying ? '' : 'aspect-video'}`}>
+                                                        <div className="w-full relative bg-black shrink-0 overflow-hidden transition-all duration-300 aspect-video">
 
                                                             {videoErrors[media.fileId] || !media.videoUrl ? (
                                                                 <div className="flex flex-col items-center justify-center h-full w-full p-8 bg-slate-900 border-b border-border text-center absolute inset-0">
@@ -503,11 +519,12 @@ const AdminMediaGallery = () => {
                                                             ) : (
                                                                 <>
                                                                     <video
+                                                                        id={`video-${media.fileId}`}
                                                                         src={`${media.videoUrl}#t=0.001`}
                                                                         controls={isVideoPlaying}
                                                                         autoPlay={isVideoPlaying}
                                                                         controlsList="nodownload"
-                                                                        className={`w-full bg-black ${isVideoPlaying ? 'h-auto max-h-[60vh] object-contain' : 'absolute inset-0 h-full object-cover opacity-70'}`}
+                                                                        className={`absolute inset-0 w-full h-full bg-black ${isVideoPlaying ? 'object-contain' : 'object-cover opacity-70'}`}
                                                                         preload="metadata"
                                                                         playsInline
                                                                         webkit-playsinline="true"

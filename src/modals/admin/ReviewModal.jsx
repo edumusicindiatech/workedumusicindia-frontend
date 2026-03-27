@@ -23,7 +23,7 @@ const ReviewModal = ({ isOpen, onClose, activeReview, reviewMarks, setReviewMark
                             <p className="font-black text-xl text-slate-300">{t('review_modal.media_not_found')}</p>
                         </div>
                     ) : (
-                        <video src={activeReview.videoUrl} controls autoPlay className="w-full h-full max-h-[40vh] lg:max-h-full object-contain" onError={() => handleVideoError(activeReview.fileId)} />
+                        <video src={activeReview.videoUrl} controls className="w-full h-full max-h-[40vh] lg:max-h-full object-contain" onError={() => handleVideoError(activeReview.fileId)} />
                     )}
                     <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-lg z-10">
                         <School className="w-4 h-4 text-white" />
