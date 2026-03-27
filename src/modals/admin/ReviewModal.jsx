@@ -1,8 +1,11 @@
 import {
     School, CheckCircle2, X, AlertTriangle, Plus, Minus, MessageSquare
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const ReviewModal = ({ isOpen, onClose, activeReview, reviewMarks, setReviewMarks, reviewRemark, setReviewRemark, submitReview, isSubmitting, videoErrors, handleVideoError, selectedSchool }) => {
+    const { t } = useTranslation();
+
     if (!isOpen || !activeReview) return null;
 
     const incrementMarks = () => setReviewMarks(prev => Math.min(10, Number(prev) + 1));
@@ -17,7 +20,7 @@ const ReviewModal = ({ isOpen, onClose, activeReview, reviewMarks, setReviewMark
                             <div className="w-20 h-20 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-5">
                                 <AlertTriangle className="w-10 h-10 opacity-40 text-destructive" />
                             </div>
-                            <p className="font-black text-xl text-slate-300">Media Not Found</p>
+                            <p className="font-black text-xl text-slate-300">{t('review_modal.media_not_found')}</p>
                         </div>
                     ) : (
                         <video src={activeReview.videoUrl} controls autoPlay className="w-full h-full max-h-[40vh] lg:max-h-full object-contain" onError={() => handleVideoError(activeReview.fileId)} />
@@ -31,15 +34,15 @@ const ReviewModal = ({ isOpen, onClose, activeReview, reviewMarks, setReviewMark
                 <div className="w-full lg:w-2/5 flex flex-col p-6 sm:p-8 overflow-y-auto">
                     <div className="flex justify-between items-start mb-8">
                         <div>
-                            <h2 className="text-2xl font-black text-foreground tracking-tight">Grade Performance</h2>
-                            <p className="text-sm font-semibold text-muted-foreground mt-1">{activeReview.eventName || 'Regular Class'} • {activeReview.eventDate}</p>
+                            <h2 className="text-2xl font-black text-foreground tracking-tight">{t('review_modal.grade_performance')}</h2>
+                            <p className="text-sm font-semibold text-muted-foreground mt-1">{activeReview.eventName || t('review_modal.regular_class')} • {activeReview.eventDate}</p>
                         </div>
                         <button onClick={onClose} className="p-2 bg-muted hover:bg-destructive/10 hover:text-destructive rounded-full text-muted-foreground"><X className="w-5 h-5" /></button>
                     </div>
 
                     <div className="space-y-8 flex-1">
                         <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Score (1-10) <span className="text-destructive">*</span></label>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">{t('review_modal.score_label')} <span className="text-destructive">*</span></label>
                             <div className="flex items-center justify-between bg-background border border-border p-2 rounded-2xl shadow-sm">
                                 <button onClick={decrementMarks} className="w-14 h-14 rounded-xl bg-muted hover:bg-destructive/10 hover:text-destructive flex items-center justify-center"><Minus className="w-6 h-6" /></button>
                                 <div className="text-4xl font-black text-foreground w-20 text-center tabular-nums tracking-tighter">{reviewMarks}</div>
@@ -49,16 +52,16 @@ const ReviewModal = ({ isOpen, onClose, activeReview, reviewMarks, setReviewMark
 
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 items-center gap-2">
-                                <MessageSquare className="w-3.5 h-3.5" /> Administrator Feedback
+                                <MessageSquare className="w-3.5 h-3.5" /> {t('review_modal.admin_feedback')}
                             </label>
-                            <textarea rows="4" value={reviewRemark} onChange={(e) => setReviewRemark(e.target.value)} className="w-full p-4 bg-background border border-input rounded-2xl text-base font-medium focus:ring-2 focus:ring-primary/50 outline-none resize-none shadow-sm" placeholder="Add constructive feedback..." />
+                            <textarea rows="4" value={reviewRemark} onChange={(e) => setReviewRemark(e.target.value)} className="w-full p-4 bg-background border border-input rounded-2xl text-base font-medium focus:ring-2 focus:ring-primary/50 outline-none resize-none shadow-sm" placeholder={t('review_modal.feedback_placeholder')} />
                         </div>
                     </div>
 
                     <div className="mt-10 pt-6 border-t border-border flex gap-4">
-                        <button onClick={onClose} className="px-6 py-4 rounded-2xl font-bold text-sm bg-muted text-foreground">Cancel</button>
+                        <button onClick={onClose} className="px-6 py-4 rounded-2xl font-bold text-sm bg-muted text-foreground">{t('review_modal.cancel')}</button>
                         <button onClick={submitReview} disabled={isSubmitting || videoErrors[activeReview.fileId]} className={`flex-1 py-4 rounded-2xl font-black text-sm uppercase tracking-wider flex justify-center items-center gap-2 transition-all shadow-lg ${videoErrors[activeReview.fileId] ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-primary text-white hover:scale-[1.02]'}`}>
-                            {isSubmitting ? 'Saving...' : <><CheckCircle2 className="w-5 h-5" /> Submit Grade</>}
+                            {isSubmitting ? t('review_modal.saving') : <><CheckCircle2 className="w-5 h-5" /> {t('review_modal.submit_grade')}</>}
                         </button>
                     </div>
                 </div>
@@ -67,4 +70,4 @@ const ReviewModal = ({ isOpen, onClose, activeReview, reviewMarks, setReviewMark
     );
 };
 
-export default ReviewModal
+export default ReviewModal;

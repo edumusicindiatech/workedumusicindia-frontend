@@ -10,11 +10,12 @@ import { io } from "socket.io-client";
 import api from "../../api/axios";
 import EmployeeMediaUploadModal from "../../modals/employee/EmployeeMediaUploadModal";
 import CustomSelect from "../../components/ui/CustomSelect";
+import { useTranslation } from "react-i18next";
 
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000", { withCredentials: true });
 
 const EmployeeMedia = () => {
-    // 🔥 NEW: Bring in the user object so we can identify our socket events
+    const { t } = useTranslation();
     const { user } = useSelector((state) => state.auth);
 
     const currentYear = new Date().getFullYear();
@@ -37,7 +38,7 @@ const EmployeeMedia = () => {
     const handleCancelUpload = (e) => {
         e.stopPropagation();
         window.dispatchEvent(new CustomEvent('vault-upload-cancel'));
-        toast.error("Upload cancelled.");
+        toast.error(t('employee_media.upload_cancelled'));
     };
 
     const toggleMonth = (month) => {
@@ -47,13 +48,17 @@ const EmployeeMedia = () => {
     const fetchMedia = useCallback(async () => {
         setIsLoading(true);
         try {
-            // 🔥 CACHE BUSTER ADDED: &_t=${Date.now()} forces the browser to get fresh data!
             const response = await api.get(`/employee/media?year=${selectedYear}&_t=${Date.now()}`);
 
             if (response.data.success) {
                 const rawLogs = response.data.data;
                 const grouped = {};
-                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                const monthNames = [
+                    t('months.january'), t('months.february'), t('months.march'),
+                    t('months.april'), t('months.may'), t('months.june'),
+                    t('months.july'), t('months.august'), t('months.september'),
+                    t('months.october'), t('months.november'), t('months.december')
+                ];
 
                 rawLogs.forEach(log => {
                     const date = new Date(log.eventDate);
@@ -65,7 +70,7 @@ const EmployeeMedia = () => {
                         log.files.forEach((file, index) => {
                             grouped[month].push({
                                 id: file._id || `${log._id}-${index}`,
-                                schoolName: log.school?.schoolName || "Unknown School",
+                                schoolName: log.school?.schoolName || t('employee_media.unknown_school'),
                                 band: log.band,
                                 eventName: log.eventContext || null,
                                 eventDate: date.toISOString().split('T')[0],
@@ -86,33 +91,27 @@ const EmployeeMedia = () => {
             }
         } catch (error) {
             console.error("Failed to load media", error);
-            toast.error("Failed to load media gallery.");
+            toast.error(t('employee_media.fetch_error'));
         } finally {
             setIsLoading(false);
         }
-    }, [selectedYear, isUploading]);
+    }, [selectedYear, isUploading, t]);
 
     useEffect(() => {
         fetchMedia();
     }, [fetchMedia]);
 
-    // --- BULLETPROOF SOCKET LISTENERS ---
     useEffect(() => {
         if (!user || (!user._id && !user.id)) return;
         const myUserId = user._id || user.id;
 
-        // 1. Handle Direct Grading Update
         const handleDirectGrade = (data) => {
             if (data?.userId === myUserId) {
                 setMediaData(prevData => {
-                    const newData = { ...prevData }; // Shallow clone the months object
-
-                    // Loop through the months to find the specific video
+                    const newData = { ...prevData };
                     for (const month in newData) {
                         const fileIndex = newData[month].findIndex(f => f.id === data.fileId);
-
                         if (fileIndex !== -1) {
-                            // Clone the array and the specific object to maintain React immutability
                             const updatedMonthArray = [...newData[month]];
                             updatedMonthArray[fileIndex] = {
                                 ...updatedMonthArray[fileIndex],
@@ -120,7 +119,7 @@ const EmployeeMedia = () => {
                                 remark: data.remark
                             };
                             newData[month] = updatedMonthArray;
-                            break; // Found and updated, stop looping
+                            break;
                         }
                     }
                     return newData;
@@ -128,19 +127,15 @@ const EmployeeMedia = () => {
             }
         };
 
-        // 2. Handle Direct Deletion Update
         const handleDirectDelete = (data) => {
             if (data?.userId === myUserId) {
                 setMediaData(prevData => {
                     const newData = { ...prevData };
-
                     for (const month in newData) {
                         const updatedMonthFiles = newData[month].filter(f => f.id !== data.fileId);
-
-                        // If the array size changed, we found the file
                         if (updatedMonthFiles.length !== newData[month].length) {
                             if (updatedMonthFiles.length === 0) {
-                                delete newData[month]; // Remove the whole month if empty
+                                delete newData[month];
                             } else {
                                 newData[month] = updatedMonthFiles;
                             }
@@ -154,14 +149,13 @@ const EmployeeMedia = () => {
 
         const handleRemoteNotification = (data) => {
             if (data?.userId === myUserId && data?.notification?.type === 'Media') {
-                toast.success("An Admin has reviewed your video!", {
+                toast.success(t('employee_media.admin_reviewed'), {
                     icon: '🎓',
                     duration: 4000
                 });
             }
         };
 
-        // Attach listeners
         socket.on('media_graded_direct', handleDirectGrade);
         socket.on('media_deleted_direct', handleDirectDelete);
         socket.on('new_notification_for_user', handleRemoteNotification);
@@ -171,16 +165,13 @@ const EmployeeMedia = () => {
             socket.off('media_deleted_direct', handleDirectDelete);
             socket.off('new_notification_for_user', handleRemoteNotification);
         };
-    }, [user]);
+    }, [user, t]);
 
-
-    // --- UPLOADER LISTENERS ---
     useEffect(() => {
         const handleProgress = (e) => setUploadProgress(e.detail);
         const handleRefresh = () => fetchMedia();
-
-        const handleSuccess = () => toast.success("Video successfully saved to Vault!");
-        const handleError = (e) => toast.error(e.detail || "An upload error occurred.");
+        const handleSuccess = () => toast.success(t('employee_media.upload_success'));
+        const handleError = (e) => toast.error(e.detail || t('employee_media.upload_error'));
 
         window.addEventListener('vault-upload-progress', handleProgress);
         window.addEventListener('refreshMediaGallery', handleRefresh);
@@ -193,17 +184,20 @@ const EmployeeMedia = () => {
             window.removeEventListener('vault-upload-success', handleSuccess);
             window.removeEventListener('vault-upload-error', handleError);
         };
-    }, [fetchMedia]);
+    }, [fetchMedia, t]);
 
-    // --- GENERATE TEMPORARY LOCAL PREVIEW FOR GHOST CARD ---
     useEffect(() => {
         if (isUploading && jobQueue?.files?.length > 0) {
             const url = URL.createObjectURL(jobQueue.files[0]);
             setPreviewUrl(url);
 
-            // Auto-expand the month we are uploading to
             const d = new Date(jobQueue.metadata.eventDate || new Date());
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const monthNames = [
+                t('months.january'), t('months.february'), t('months.march'),
+                t('months.april'), t('months.may'), t('months.june'),
+                t('months.july'), t('months.august'), t('months.september'),
+                t('months.october'), t('months.november'), t('months.december')
+            ];
             setExpandedMonth(monthNames[d.getMonth()]);
 
             return () => URL.revokeObjectURL(url);
@@ -211,13 +205,17 @@ const EmployeeMedia = () => {
             setPreviewUrl(null);
             setUploadProgress(0);
         }
-    }, [isUploading, jobQueue]);
+    }, [isUploading, jobQueue, t]);
 
-    // --- INJECT GHOST CARD INTO DATA ---
     const displayMediaData = { ...mediaData };
     if (isUploading && jobQueue) {
         const d = new Date(jobQueue.metadata.eventDate || new Date());
-        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const monthNames = [
+            t('months.january'), t('months.february'), t('months.march'),
+            t('months.april'), t('months.may'), t('months.june'),
+            t('months.july'), t('months.august'), t('months.september'),
+            t('months.october'), t('months.november'), t('months.december')
+        ];
         const monthName = monthNames[d.getMonth()];
 
         const ghostRecord = {
@@ -258,13 +256,13 @@ const EmployeeMedia = () => {
         if (!deleteConfirmation) return;
 
         const { fileId, monthKey } = deleteConfirmation;
-        const toastId = toast.loading("Deleting video...");
+        const toastId = toast.loading(t('employee_media.deleting_toast'));
 
         try {
             const response = await api.delete(`/employee/media/file/${fileId}`);
 
             if (response.data.success) {
-                toast.success("Video deleted successfully.", { id: toastId });
+                toast.success(t('employee_media.delete_success'), { id: toastId });
 
                 setMediaData(prevData => {
                     const updatedMonthFiles = prevData[monthKey].filter(file => file.id !== fileId);
@@ -278,15 +276,15 @@ const EmployeeMedia = () => {
             }
         } catch (error) {
             console.error("Delete error:", error);
-            toast.error(error.response?.data?.message || "Failed to delete video.", { id: toastId });
+            toast.error(error.response?.data?.message || t('employee_media.delete_error'), { id: toastId });
         } finally {
             setDeleteConfirmation(null);
         }
     };
 
     const handleDownload = async (videoUrl, fileName) => {
-        if (!videoUrl) return toast.error("No video file found.");
-        const toastId = toast.loading("Starting download...");
+        if (!videoUrl) return toast.error(t('employee_media.no_video_found'));
+        const toastId = toast.loading(t('employee_media.starting_download'));
 
         try {
             const response = await api.post('/employee/media/generate-download-url', {
@@ -300,13 +298,13 @@ const EmployeeMedia = () => {
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                toast.success("Download started!", { id: toastId });
+                toast.success(t('employee_media.download_started'), { id: toastId });
             } else {
                 throw new Error("Failed to get download link");
             }
         } catch (error) {
             console.error("Download Error:", error);
-            toast.error("Failed to start download.", { id: toastId });
+            toast.error(t('employee_media.download_failed'), { id: toastId });
         }
     };
 
@@ -317,11 +315,11 @@ const EmployeeMedia = () => {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 mb-8">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-extrabold text-primary tracking-tight mb-2">
-                        Media Gallery
+                        {t('employee_media.title')}
                     </h1>
                     <p className="text-[13px] font-medium text-muted-foreground flex items-center gap-2">
                         <Film className="w-4 h-4" />
-                        Browse uploads and view administrator feedback.
+                        {t('employee_media.subtitle')}
                     </p>
                 </div>
 
@@ -338,24 +336,39 @@ const EmployeeMedia = () => {
                         className="h-10 px-5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 shrink-0"
                     >
                         <UploadCloud className="w-4 h-4" />
-                        <span className="hidden sm:inline">Upload Media</span>
-                        <span className="sm:hidden">Upload</span>
+                        <span className="hidden sm:inline">{t('employee_media.upload_media')}</span>
+                        <span className="sm:hidden">{t('employee_media.upload')}</span>
                     </button>
                 </div>
             </div>
 
-            {/* Shimmer Loading */}
+            {/* NEW: YouTube Style Shimmer Loading */}
             {isLoading && !isUploading ? (
-                <div className="space-y-4">
-                    {[1, 2].map((skeletonMonth) => (
-                        <div key={skeletonMonth} className="bg-card dark:bg-[#181d29] border border-border dark:border-slate-700/50 rounded-2xl overflow-hidden shadow-sm">
-                            <div className="w-full px-5 py-4 sm:px-6 sm:py-5 flex items-center justify-between animate-pulse bg-muted/10">
-                                <div className="flex items-center flex-wrap gap-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-5 h-5 rounded-md bg-muted dark:bg-slate-800" />
-                                        <div className="w-24 sm:w-32 h-5 rounded-md bg-muted dark:bg-slate-800" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="bg-card dark:bg-[#131821] border border-border dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+                            {/* Thumbnail Skeleton */}
+                            <div className="w-full aspect-video bg-muted/60 dark:bg-slate-800/50 animate-pulse" />
+
+                            {/* Content Skeleton */}
+                            <div className="p-4 space-y-4">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-center gap-2 w-full">
+                                        <div className="w-4 h-4 rounded-full bg-muted/80 dark:bg-slate-700/80 animate-pulse shrink-0" />
+                                        <div className="h-4 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-3/4" />
                                     </div>
+                                    <div className="w-16 h-4 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse shrink-0" />
                                 </div>
+                                <div className="pt-2 border-t border-border dark:border-slate-800/80 space-y-2">
+                                    <div className="h-3 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-1/2" />
+                                    <div className="h-3 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-1/3" />
+                                </div>
+                            </div>
+
+                            {/* Footer Skeleton */}
+                            <div className="p-3.5 border-t border-border dark:border-slate-800 bg-muted/30 dark:bg-slate-800/30 flex justify-between">
+                                <div className="h-4 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-24" />
+                                <div className="h-4 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-12" />
                             </div>
                         </div>
                     ))}
@@ -369,7 +382,6 @@ const EmployeeMedia = () => {
 
                         return (
                             <div key={month} className="bg-card dark:bg-[#181d29] border border-border dark:border-slate-700/50 rounded-2xl overflow-hidden shadow-sm transition-all duration-200">
-                                {/* Accordion Header */}
                                 <button
                                     onClick={() => toggleMonth(month)}
                                     className="w-full px-5 py-4 sm:px-6 sm:py-5 flex items-center justify-between bg-transparent hover:bg-muted/30 dark:hover:bg-slate-800/30 transition-colors"
@@ -381,12 +393,12 @@ const EmployeeMedia = () => {
                                         </div>
                                         <div className="flex items-center gap-2 ml-1 sm:ml-4 border-l border-border dark:border-slate-700 pl-4">
                                             <span className="px-2.5 py-1 rounded-md bg-muted dark:bg-[#0d1117] text-[11px] font-bold text-muted-foreground">
-                                                {mediaFiles.length} videos
+                                                {mediaFiles.length} {t('employee_media.videos')}
                                             </span>
                                             {average !== null && (
                                                 <div className={`px-2.5 py-1 rounded-md border text-[11px] font-extrabold flex items-center gap-1.5 ${colorClass}`}>
                                                     <Award className="w-3 h-3" />
-                                                    AVG: {average}/10
+                                                    {t('employee_media.avg')}: {average}/10
                                                 </div>
                                             )}
                                         </div>
@@ -394,13 +406,11 @@ const EmployeeMedia = () => {
                                     <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-300 shrink-0 ml-2 ${isExpanded ? 'rotate-180' : ''}`} />
                                 </button>
 
-                                {/* Accordion Content */}
                                 {isExpanded && (
                                     <div className="p-5 sm:p-6 pt-2 border-t border-border dark:border-slate-800 animate-in fade-in duration-300">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                             {mediaFiles.map((media) => (
                                                 media.isGhost ? (
-                                                    // 🔥 THE CINEMATIC GHOST CARD
                                                     <div key="ghost" className="group bg-background dark:bg-[#0d1117] border border-primary/50 shadow-[0_0_20px_rgba(59,130,246,0.15)] rounded-xl overflow-hidden flex flex-col relative transition-all duration-300">
                                                         <div className="relative aspect-video bg-black overflow-hidden shrink-0">
 
@@ -408,7 +418,7 @@ const EmployeeMedia = () => {
                                                                 <button
                                                                     onClick={handleCancelUpload}
                                                                     className="p-2 sm:p-2 bg-black/40 hover:bg-destructive/90 active:bg-destructive backdrop-blur-md text-white rounded-full transition-all duration-200 shadow-lg border border-white/20 active:scale-90"
-                                                                    title="Cancel Upload"
+                                                                    title={t('employee_media.cancel_upload')}
                                                                     aria-label="Cancel Upload"
                                                                 >
                                                                     <X className="w-5 h-5 sm:w-4 sm:h-4" />
@@ -430,7 +440,6 @@ const EmployeeMedia = () => {
                                                                 </div>
                                                             )}
 
-                                                            {/* Cinematic Progress Bar Overlay */}
                                                             <div className="absolute bottom-0 left-0 w-full h-1.5 bg-black/50">
                                                                 <div className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }} />
                                                             </div>
@@ -445,19 +454,18 @@ const EmployeeMedia = () => {
                                                                     <h3 className="font-bold text-foreground text-sm truncate">{media.schoolName}</h3>
                                                                 </div>
                                                                 <span className="shrink-0 bg-primary/10 text-primary text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-sm tracking-wider">
-                                                                    {media.band}
+                                                                    {media.band === 'Junior Band' ? t('employee_media.junior_band') : t('employee_media.senior_band')}
                                                                 </span>
                                                             </div>
                                                             <div className="pt-2 border-t border-border dark:border-slate-800">
                                                                 <p className="text-[12px] font-semibold text-primary truncate flex items-center gap-1.5">
                                                                     <Loader2 className="w-3 h-3 animate-spin" />
-                                                                    {uploadProgress === 100 ? "Finalizing database..." : "Uploading to Vault..."}
+                                                                    {uploadProgress === 100 ? t('employee_media.finalizing') : t('employee_media.uploading')}
                                                                 </p>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    // STANDARD REAL DB CARD
                                                     <div key={media.id} className="group bg-background dark:bg-[#0d1117] border border-border dark:border-slate-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-200 flex flex-col relative">
                                                         <div
                                                             className="relative aspect-video bg-slate-900 overflow-hidden shrink-0 cursor-pointer"
@@ -488,7 +496,7 @@ const EmployeeMedia = () => {
                                                                     <h3 className="font-bold text-foreground text-sm truncate">{media.schoolName}</h3>
                                                                 </div>
                                                                 <span className="shrink-0 bg-primary/10 text-primary text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-sm tracking-wider">
-                                                                    {media.band}
+                                                                    {media.band === 'Junior Band' ? t('employee_media.junior_band') : t('employee_media.senior_band')}
                                                                 </span>
                                                             </div>
                                                             <div className="pt-2 border-t border-border dark:border-slate-800 flex flex-wrap gap-y-2 gap-x-4">
@@ -499,7 +507,7 @@ const EmployeeMedia = () => {
                                                                 {media.students && (
                                                                     <div className="flex items-center gap-1.5 mt-1 bg-muted dark:bg-slate-800/50 px-2 py-1 rounded-md">
                                                                         <Users className="w-3.5 h-3.5 text-blue-500" />
-                                                                        <span className="text-[11px] font-bold text-muted-foreground">{media.students} Present</span>
+                                                                        <span className="text-[11px] font-bold text-muted-foreground">{media.students} {t('employee_media.present')}</span>
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -521,7 +529,7 @@ const EmployeeMedia = () => {
                                                                         <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
                                                                             <Award className="w-3 h-3 text-green-600 dark:text-green-400" />
                                                                         </div>
-                                                                        <span className="text-[11px] font-extrabold text-green-700 dark:text-green-400 uppercase tracking-wide">Admin Score</span>
+                                                                        <span className="text-[11px] font-extrabold text-green-700 dark:text-green-400 uppercase tracking-wide">{t('employee_media.admin_score')}</span>
                                                                     </div>
                                                                     <span className="text-sm font-black text-foreground">{media.marks}/10</span>
                                                                 </div>
@@ -529,7 +537,7 @@ const EmployeeMedia = () => {
                                                                 <div className="flex items-center justify-between">
                                                                     <div className="flex items-center gap-1.5 opacity-80">
                                                                         <Clock className="w-4 h-4 text-muted-foreground" />
-                                                                        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Pending Review</span>
+                                                                        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">{t('employee_media.pending_review')}</span>
                                                                     </div>
                                                                     {!media.remark && (
                                                                         <button
@@ -537,7 +545,7 @@ const EmployeeMedia = () => {
                                                                             className="flex items-center gap-1.5 px-2.5 py-1 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-md transition-colors active:scale-95 shadow-sm"
                                                                         >
                                                                             <Trash2 className="w-3.5 h-3.5" />
-                                                                            <span className="text-[11px] font-extrabold uppercase tracking-wide">Delete</span>
+                                                                            <span className="text-[11px] font-extrabold uppercase tracking-wide">{t('employee_media.delete')}</span>
                                                                         </button>
                                                                     )}
                                                                 </div>
@@ -556,8 +564,8 @@ const EmployeeMedia = () => {
                     {Object.keys(displayMediaData).length === 0 && !isUploading && (
                         <div className="text-center py-16 bg-card dark:bg-[#181d29] rounded-2xl border border-border dark:border-slate-700/50">
                             <Film className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-                            <h3 className="text-lg font-bold text-foreground">No media found</h3>
-                            <p className="text-sm text-muted-foreground mt-1">There are no uploads for the year {selectedYear}.</p>
+                            <h3 className="text-lg font-bold text-foreground">{t('employee_media.no_media_found')}</h3>
+                            <p className="text-sm text-muted-foreground mt-1">{t('employee_media.no_uploads_year', { year: selectedYear })}</p>
                         </div>
                     )}
                 </div>
@@ -576,9 +584,9 @@ const EmployeeMedia = () => {
                                 <AlertTriangle className="w-6 h-6 text-destructive" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-foreground mb-2">Delete Video?</h3>
+                                <h3 className="text-xl font-bold text-foreground mb-2">{t('employee_media.delete_title')}</h3>
                                 <p className="text-sm text-muted-foreground leading-relaxed">
-                                    Are you sure you want to permanently delete this video? It will be removed from the vault and the admin will no longer be able to review it.
+                                    {t('employee_media.delete_desc')}
                                 </p>
                             </div>
                         </div>
@@ -587,13 +595,13 @@ const EmployeeMedia = () => {
                                 onClick={() => setDeleteConfirmation(null)}
                                 className="px-5 py-2.5 rounded-xl text-sm font-bold text-foreground bg-muted hover:bg-muted/80 transition-colors"
                             >
-                                Cancel
+                                {t('employee_media.cancel')}
                             </button>
                             <button
                                 onClick={executeDelete}
                                 className="px-5 py-2.5 rounded-xl text-sm font-bold text-destructive-foreground bg-destructive hover:bg-destructive/90 transition-colors shadow-md"
                             >
-                                Yes, Delete
+                                {t('employee_media.yes_delete')}
                             </button>
                         </div>
                     </div>
@@ -609,7 +617,7 @@ const EmployeeMedia = () => {
                             </h3>
                             <div className="flex items-center gap-2 mt-1.5">
                                 <span className="px-2 py-0.5 bg-blue-500/20 text-blue-300 text-[10px] font-extrabold uppercase tracking-wider rounded border border-blue-500/20">
-                                    {activeVideo.band}
+                                    {activeVideo.band === 'Junior Band' ? t('employee_media.junior_band') : t('employee_media.senior_band')}
                                 </span>
                                 <span className="text-slate-400 text-xs font-medium">
                                     • {activeVideo.eventName || activeVideo.eventDate}

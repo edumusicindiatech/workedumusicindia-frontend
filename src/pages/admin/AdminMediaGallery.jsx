@@ -12,6 +12,7 @@ import CustomSelect from "../../components/ui/CustomSelect";
 import ReviewModal from "../../modals/admin/ReviewModal";
 import DeleteModal from "../../modals/admin/DeleteModal";
 import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 
 // 🔥 FIX 1: Added withCredentials so this socket joins the Admin's private room to hear the updates
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000", { withCredentials: true });
@@ -19,6 +20,7 @@ const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000", { wi
 // --- MAIN COMPONENT ---
 
 const AdminMediaGallery = () => {
+    const { t } = useTranslation();
     const [viewMode, setViewMode] = useState('employees');
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [selectedSchool, setSelectedSchool] = useState(null);
@@ -61,7 +63,7 @@ const AdminMediaGallery = () => {
             const response = await api.get('/admin/employees');
             setEmployees(response.data.data || []);
         } catch (error) {
-            toast.error("Failed to load directory.");
+            toast.error(t('media_vault.admin.error_directory'));
         } finally {
             setIsLoading(false);
         }
@@ -75,7 +77,7 @@ const AdminMediaGallery = () => {
             setHistoricalSchools(response.data.data || []);
             setViewMode('schools');
         } catch (error) {
-            toast.error("Failed to load historical assignments.");
+            toast.error(t('media_vault.admin.error_history'));
             setViewMode('employees');
         } finally {
             setIsLoading(false);
@@ -91,6 +93,7 @@ const AdminMediaGallery = () => {
         }
 
         try {
+            // 🔥 FIX 3: Added cache buster here so it bypasses browser cache and gets the new video instantly!
             const response = await api.get(`/admin/media?teacher=${selectedEmployee._id}&school=${selectedSchool._id}&band=${selectedBand}&year=${selectedYear}&_t=${Date.now()}`);
 
             if (response.data.success) {
@@ -128,24 +131,22 @@ const AdminMediaGallery = () => {
                 });
             }
         } catch (error) {
-            toast.error("Failed to load media.");
+            toast.error(t('media_vault.admin.error_media'));
         } finally {
             // Turn off loading only if we turned it on
             if (!isSilentRefresh) {
                 setIsLoading(false);
             }
         }
-    }, [selectedEmployee, selectedSchool, selectedBand, selectedYear]);
+    }, [selectedEmployee, selectedSchool, selectedBand, selectedYear, t]);
 
     useEffect(() => {
         const handleRealTimeGalleryUpdate = (notif) => {
             if (viewMode === 'gallery' && notif?.type === 'Media') {
                 if (Date.now() - refetchTimestamp.current > 1000) {
-                    
                     refetchTimestamp.current = Date.now();
-                    
                     // Pass 'true' to trigger the silent refresh and stop the flashing!
-                    fetchMedia(true); 
+                    fetchMedia(true);
                 }
             }
         };
@@ -195,11 +196,11 @@ const AdminMediaGallery = () => {
 
     const handleCopyLink = (url) => {
         navigator.clipboard.writeText(url);
-        toast.success("Video link copied to clipboard!");
+        toast.success(t('media_vault.admin.link_copied'));
     };
 
     const handleDownload = async (fileUrl, smartFileName) => {
-        const toastId = toast.loading("Preparing secure download...");
+        const toastId = toast.loading(t('media_vault.admin.preparing_download'));
         try {
             const response = await fetch(fileUrl);
             if (!response.ok) throw new Error("Network response was not ok");
@@ -215,9 +216,9 @@ const AdminMediaGallery = () => {
             document.body.removeChild(a);
 
             window.URL.revokeObjectURL(blobUrl);
-            toast.success("Download started!", { id: toastId });
+            toast.success(t('media_vault.admin.download_started'), { id: toastId });
         } catch (error) {
-            toast.error("Direct download failed. Opening file instead.", { id: toastId });
+            toast.error(t('media_vault.admin.download_failed'), { id: toastId });
             window.open(fileUrl, '_blank');
         }
     };
@@ -226,11 +227,11 @@ const AdminMediaGallery = () => {
         setIsDeleting(true);
         try {
             await api.delete(`/admin/media/${deleteModal.logId}/file/${deleteModal.fileId}`);
-            toast.success("Video deleted successfully!");
+            toast.success(t('media_vault.admin.delete_success'));
             setDeleteModal({ isOpen: false, logId: null, fileId: null });
             fetchMedia();
         } catch (error) {
-            toast.error("Failed to delete video.");
+            toast.error(t('media_vault.admin.delete_error'));
         } finally {
             setIsDeleting(false);
         }
@@ -244,18 +245,18 @@ const AdminMediaGallery = () => {
     };
 
     const submitReview = async () => {
-        if (reviewMarks < 0 || reviewMarks > 10) return toast.error("Please assign a score between 0 and 10.");
+        if (reviewMarks < 0 || reviewMarks > 10) return toast.error(t('media_vault.admin.score_error'));
         setIsSubmitting(true);
         try {
             await api.put(`/admin/media/${activeReview.logId}/grade/${activeReview.fileId}`, {
                 marks: Number(reviewMarks),
                 remark: reviewRemark
             });
-            toast.success("Grade submitted successfully!");
+            toast.success(t('media_vault.admin.grade_success'));
             setReviewModalOpen(false);
             fetchMedia();
         } catch (error) {
-            toast.error("Failed to submit grade.");
+            toast.error(t('media_vault.admin.grade_error'));
         } finally {
             setIsSubmitting(false);
         }
@@ -302,12 +303,16 @@ const AdminMediaGallery = () => {
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                 <div>
-                    <h1 className="text-3xl sm:text-4xl font-black text-foreground tracking-tight bg-linear-to-r from-primary to-blue-500 bg-clip-text">Media Vault</h1>
+                    <h1 className="text-3xl sm:text-4xl font-black text-foreground tracking-tight bg-linear-to-r from-primary to-blue-500 bg-clip-text text-transparent">
+                        {t('media_vault.admin.title')}
+                    </h1>
                     <div className="flex items-center flex-wrap gap-2 mt-2 text-sm font-semibold text-muted-foreground">
-                        <button onClick={() => handleBreadcrumb('employees')} className={`hover:text-primary transition-colors ${viewMode === 'employees' ? 'text-primary' : ''}`}>Directory</button>
+                        <button onClick={() => handleBreadcrumb('employees')} className={`hover:text-primary transition-colors ${viewMode === 'employees' ? 'text-primary' : ''}`}>
+                            {t('media_vault.admin.directory')}
+                        </button>
                         {selectedEmployee && (<><ChevronRight className="w-4 h-4 opacity-50" /><button onClick={() => handleBreadcrumb('schools')} className={`hover:text-primary transition-colors ${viewMode === 'schools' ? 'text-primary' : ''}`}>{selectedEmployee.name}</button></>)}
                         {selectedSchool && (<><ChevronRight className="w-4 h-4 opacity-50" /><button onClick={() => handleBreadcrumb('bands')} className={`hover:text-primary transition-colors ${viewMode === 'bands' ? 'text-primary' : ''}`}>{selectedSchool.schoolName}</button></>)}
-                        {selectedBand && (<><ChevronRight className="w-4 h-4 opacity-50" /><span className="text-primary">{selectedBand}</span></>)}
+                        {selectedBand && (<><ChevronRight className="w-4 h-4 opacity-50" /><span className="text-primary">{selectedBand === 'Junior Band' ? t('media_vault.admin.junior_band') : t('media_vault.admin.senior_band')}</span></>)}
                     </div>
                 </div>
                 {viewMode === 'gallery' && (
@@ -320,7 +325,7 @@ const AdminMediaGallery = () => {
             {/* DIRECTORY VIEW */}
             {viewMode === 'employees' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in duration-500">
-                    {isLoading ? <p className="text-muted-foreground animate-pulse font-medium">Loading vault directory...</p> : employees.map(emp => {
+                    {isLoading ? <p className="text-muted-foreground animate-pulse font-medium">{t('media_vault.admin.loading_dir')}</p> : employees.map(emp => {
                         const weeklyScore = getWeeklyRating();
                         const isExcellent = weeklyScore >= 8;
                         return (
@@ -348,8 +353,8 @@ const AdminMediaGallery = () => {
             {/* SCHOOLS VIEW */}
             {viewMode === 'schools' && selectedEmployee && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-right-8 duration-500">
-                    {isLoading ? <p className="text-muted-foreground col-span-full">Scanning historical records...</p> :
-                        historicalSchools.length === 0 ? (<p className="text-muted-foreground italic col-span-full">No media uploads found.</p>) : (
+                    {isLoading ? <p className="text-muted-foreground col-span-full">{t('media_vault.admin.scanning_records')}</p> :
+                        historicalSchools.length === 0 ? (<p className="text-muted-foreground italic col-span-full">{t('media_vault.admin.no_uploads_found')}</p>) : (
                             historicalSchools.map((schoolData, idx) => (
                                 <div key={idx} onClick={() => handleDrillDown('bands', schoolData)} className="bg-card dark:bg-[#0d1117] border border-border rounded-3xl p-6 hover:border-primary/50 cursor-pointer flex items-center gap-5 group transition-all">
                                     <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary transition-colors">
@@ -357,7 +362,7 @@ const AdminMediaGallery = () => {
                                     </div>
                                     <div>
                                         <h3 className="font-extrabold text-lg text-foreground group-hover:text-primary transition-colors">{schoolData.schoolName}</h3>
-                                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1 opacity-80"><MapPin className="w-3.5 h-3.5" /> Click to view recorded bands</p>
+                                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1 opacity-80"><MapPin className="w-3.5 h-3.5" /> {t('media_vault.admin.click_to_view')}</p>
                                     </div>
                                 </div>
                             ))
@@ -375,9 +380,11 @@ const AdminMediaGallery = () => {
                                 className={`relative p-10 rounded-4xl border-2 flex flex-col items-center justify-center gap-4 transition-all duration-300 ${hasHistory ? 'border-primary/20 bg-card hover:border-primary hover:-translate-y-1' : 'border-border bg-muted/30 opacity-60 cursor-not-allowed grayscale'} overflow-hidden`}
                             >
                                 <Users className={`w-14 h-14 ${hasHistory ? 'text-primary' : 'text-muted-foreground'}`} />
-                                <h2 className="text-2xl font-black text-foreground tracking-tight">{band}</h2>
+                                <h2 className="text-2xl font-black text-foreground tracking-tight">
+                                    {band === 'Junior Band' ? t('media_vault.admin.junior_band') : t('media_vault.admin.senior_band')}
+                                </h2>
                                 <span className={`text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full ${hasHistory ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-muted text-muted-foreground border border-border'}`}>
-                                    {hasHistory ? 'Open Vault' : 'No Uploads'}
+                                    {hasHistory ? t('media_vault.admin.open_vault') : t('media_vault.admin.no_uploads')}
                                 </span>
                             </button>
                         );
@@ -388,12 +395,12 @@ const AdminMediaGallery = () => {
             {/* --- GALLERY VIEW --- */}
             {viewMode === 'gallery' && (
                 <div className="space-y-6 animate-in slide-in-from-right-8 duration-500">
-                    {isLoading ? <p className="text-muted-foreground font-medium animate-pulse">Decrypting vault...</p> :
+                    {isLoading ? <p className="text-muted-foreground font-medium animate-pulse">{t('media_vault.admin.decrypting')}</p> :
                         Object.keys(mediaData).length === 0 ? (
                             <div className="text-center py-24 bg-card border border-border rounded-3xl shadow-sm">
                                 <Film className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
-                                <h3 className="text-xl font-black text-foreground">Vault is Empty</h3>
-                                <p className="text-muted-foreground mt-2">No media has been uploaded for {selectedBand} in {selectedYear}.</p>
+                                <h3 className="text-xl font-black text-foreground">{t('media_vault.admin.vault_empty')}</h3>
+                                <p className="text-muted-foreground mt-2">{t('media_vault.admin.no_media_year', { band: selectedBand === 'Junior Band' ? t('media_vault.admin.junior_band') : t('media_vault.admin.senior_band'), year: selectedYear })}</p>
                             </div>
                         ) : (
                             Object.keys(mediaData).map(month => {
@@ -409,18 +416,18 @@ const AdminMediaGallery = () => {
                                                     <CalendarIcon className="w-6 h-6" />
                                                 </div>
                                                 <div className="text-left">
-                                                    <h2 className="text-xl font-black text-foreground tracking-tight">{month} {selectedYear}</h2>
-                                                    <p className="text-xs sm:text-sm font-semibold text-muted-foreground mt-0.5">{mediaFiles.length} Total Videos</p>
+                                                    <h2 className="text-xl font-black text-foreground tracking-tight">{t(`months.${month.toLowerCase()}`)} {selectedYear}</h2>
+                                                    <p className="text-xs sm:text-sm font-semibold text-muted-foreground mt-0.5">{mediaFiles.length} {t('media_vault.admin.total_videos')}</p>
                                                 </div>
                                                 <div className="hidden sm:flex items-center gap-3 ml-6 border-l border-border pl-6">
                                                     {pendingCount > 0 && (
                                                         <span className="px-3 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/30 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                                                            <AlertCircle className="w-3.5 h-3.5" /> {pendingCount} Pending
+                                                            <AlertCircle className="w-3.5 h-3.5" /> {pendingCount} {t('media_vault.admin.pending')}
                                                         </span>
                                                     )}
                                                     {average !== null && (
                                                         <div className={`px-3 py-1 rounded-lg border text-xs font-black flex items-center gap-1.5 shadow-sm ${colorClass}`}>
-                                                            <Award className="w-4 h-4" /> AVG: {average}/10
+                                                            <Award className="w-4 h-4" /> {t('media_vault.admin.avg')}: {average}/10
                                                         </div>
                                                     )}
                                                 </div>
@@ -443,7 +450,7 @@ const AdminMediaGallery = () => {
                                                                 {videoErrors[media.fileId] || !media.videoUrl ? (
                                                                     <div className="flex flex-col items-center justify-center h-full w-full p-8 bg-slate-900 border-b border-border text-center absolute inset-0">
                                                                         <AlertTriangle className="w-8 h-8 text-muted-foreground/50 mb-2" />
-                                                                        <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">Unavailable</span>
+                                                                        <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">{t('media_vault.admin.unavailable')}</span>
                                                                     </div>
                                                                 ) : (
                                                                     <>
@@ -474,7 +481,7 @@ const AdminMediaGallery = () => {
 
                                                                 {media.marks === null && !isVideoPlaying && (
                                                                     <div className="absolute top-3 left-3 bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md shadow-lg flex items-center gap-1 z-20 pointer-events-none">
-                                                                        <Clock className="w-3 h-3" /> Pending
+                                                                        <Clock className="w-3 h-3" /> {t('media_vault.admin.pending')}
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -485,7 +492,7 @@ const AdminMediaGallery = () => {
                                                                 className="flex items-center justify-between p-4 bg-card cursor-pointer hover:bg-muted/30 transition-colors"
                                                             >
                                                                 <div className="min-w-0 pr-4">
-                                                                    <h3 className="font-bold text-foreground text-sm truncate">{media.eventName || 'Regular Class'}</h3>
+                                                                    <h3 className="font-bold text-foreground text-sm truncate">{media.eventName || t('media_vault.admin.regular_class')}</h3>
                                                                     <p className="text-muted-foreground text-xs">{media.eventDate}</p>
                                                                 </div>
                                                                 <div className={`p-2 rounded-full bg-muted transition-transform duration-300 ${isCardExpanded ? 'rotate-180 bg-primary/10 text-primary' : ''}`}>
@@ -498,26 +505,26 @@ const AdminMediaGallery = () => {
                                                                 <div className="p-5 pt-2 flex flex-col flex-1 border-t border-border animate-in slide-in-from-top-2 fade-in duration-200">
                                                                     <div className="flex justify-between items-start mb-4">
                                                                         <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
-                                                                            <Users className="w-4 h-4 opacity-70" /> {media.students || '0'} Students Present
+                                                                            <Users className="w-4 h-4 opacity-70" /> {media.students || '0'} {t('media_vault.admin.students_present')}
                                                                         </div>
                                                                         {media.marks !== null ? (
                                                                             <span className="shrink-0 px-2 py-1 bg-green-500/10 text-green-600 border border-green-500/20 rounded-lg text-sm font-black tabular-nums">{media.marks}/10</span>
                                                                         ) : (
-                                                                            <span className="shrink-0 px-2 py-1 bg-muted text-muted-foreground border border-border rounded-lg text-[10px] font-bold uppercase">Unscored</span>
+                                                                            <span className="shrink-0 px-2 py-1 bg-muted text-muted-foreground border border-border rounded-lg text-[10px] font-bold uppercase">{t('media_vault.admin.unscored')}</span>
                                                                         )}
                                                                     </div>
 
                                                                     <div className="space-y-4 flex-1 mb-5">
                                                                         <div>
-                                                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">Instructor Note</span>
+                                                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">{t('media_vault.admin.instructor_note')}</span>
                                                                             <div className="text-xs text-foreground/90 bg-muted/40 p-3 rounded-xl border border-border/50 max-h-24 overflow-y-auto custom-scrollbar">
-                                                                                {media.description ? media.description : <span className="italic text-muted-foreground/50">Description not given by instructor.</span>}
+                                                                                {media.description ? media.description : <span className="italic text-muted-foreground/50">{t('media_vault.admin.no_description')}</span>}
                                                                             </div>
                                                                         </div>
 
                                                                         {media.remark && (
                                                                             <div>
-                                                                                <span className="text-[10px] font-bold text-primary uppercase tracking-wider mb-1.5 block">Your Feedback</span>
+                                                                                <span className="text-[10px] font-bold text-primary uppercase tracking-wider mb-1.5 block">{t('media_vault.admin.your_feedback')}</span>
                                                                                 <div className="bg-primary/10 border-l-2 border-primary p-3 rounded-r-xl text-xs italic font-medium text-primary/90">
                                                                                     "{media.remark}"
                                                                                 </div>
@@ -528,24 +535,24 @@ const AdminMediaGallery = () => {
                                                                     {/* ACTION BUTTONS */}
                                                                     <div className="flex items-center justify-between gap-2 pt-4 border-t border-border">
                                                                         <div className="flex items-center gap-1.5">
-                                                                            <button onClick={() => handleCopyLink(media.videoUrl)} title="Copy Link" className="p-2.5 rounded-xl bg-muted text-muted-foreground hover:bg-muted/80 transition-colors border border-border">
+                                                                            <button onClick={() => handleCopyLink(media.videoUrl)} title={t('media_vault.admin.copy_link_title')} className="p-2.5 rounded-xl bg-muted text-muted-foreground hover:bg-muted/80 transition-colors border border-border">
                                                                                 <Copy className="w-4 h-4" />
                                                                             </button>
-                                                                            <button onClick={() => handleDownload(media.videoUrl, media.eventName)} title="Download" className="p-2.5 rounded-xl bg-muted text-muted-foreground hover:bg-muted/80 transition-colors border border-border" disabled={!media.videoUrl || videoErrors[media.fileId]}>
+                                                                            <button onClick={() => handleDownload(media.videoUrl, media.eventName)} title={t('media_vault.admin.download_title')} className="p-2.5 rounded-xl bg-muted text-muted-foreground hover:bg-muted/80 transition-colors border border-border" disabled={!media.videoUrl || videoErrors[media.fileId]}>
                                                                                 <Download className="w-4 h-4" />
                                                                             </button>
-                                                                            <button onClick={() => setDeleteModal({ isOpen: true, logId: media.logId, fileId: media.fileId })} title="Delete" className="p-2.5 rounded-xl bg-muted text-destructive hover:bg-destructive/10 transition-colors border border-border">
+                                                                            <button onClick={() => setDeleteModal({ isOpen: true, logId: media.logId, fileId: media.fileId })} title={t('media_vault.admin.delete_title')} className="p-2.5 rounded-xl bg-muted text-destructive hover:bg-destructive/10 transition-colors border border-border">
                                                                                 <Trash2 className="w-4 h-4" />
                                                                             </button>
                                                                         </div>
                                                                         <button onClick={() => openReviewModal(media)} className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm ${media.marks !== null ? 'bg-muted text-foreground border border-border' : 'bg-primary text-white hover:scale-[1.02]'}`}>
-                                                                            {media.marks !== null ? 'Edit Grade' : 'Review'}
+                                                                            {media.marks !== null ? t('media_vault.admin.edit_grade') : t('media_vault.admin.review')}
                                                                         </button>
                                                                     </div>
                                                                 </div>
                                                             )}
                                                         </div>
-                                                    )
+                                                    );
                                                 })}
                                             </div>
                                         )}
