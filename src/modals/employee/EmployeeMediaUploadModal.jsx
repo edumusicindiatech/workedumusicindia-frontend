@@ -1,16 +1,15 @@
 import { useState, useRef, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import {
     UploadCloud, X, Film, Info, MapPin,
-    CalendarDays, ChevronRight, Users, CheckCircle2
+    CalendarDays, ChevronRight, Users, CheckCircle2, Loader2
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { startBackgroundUpload } from "../../store/slices/uploadSlice";
+import api from "../../api/axios";
 import CustomSelect from "../../components/ui/CustomSelect";
 
 const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
     const { user, isHydrating } = useSelector((state) => state.auth);
-    const dispatch = useDispatch();
 
     // Form State
     const [selectedSchoolId, setSelectedSchoolId] = useState("");
@@ -20,27 +19,28 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
     const [studentsCount, setStudentsCount] = useState("");
     const [files, setFiles] = useState([]);
 
+    // 🔥 NEW: Internal Upload State to protect mobile memory
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadStatus, setUploadStatus] = useState("");
+
     const fileInputRef = useRef(null);
 
-    // Handle initial state and escape key
+    // Lock the Escape key if uploading
     useEffect(() => {
-        const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && !isUploading) onClose();
+        };
         if (isOpen) window.addEventListener('keydown', handleEsc);
         return () => window.removeEventListener('keydown', handleEsc);
-    }, [isOpen, onClose]);
+    }, [isOpen, onClose, isUploading]);
 
     if (!isOpen) return null;
 
-    // --- CustomSelect Helper Logic ---
-    // Extract just the names for the CustomSelect options
     const schoolOptions = user?.assignments?.map(item => item.school?.schoolName || "Unnamed School") || [];
-
-    // Get the currently selected name to display in the CustomSelect
     const currentSelectedName = user?.assignments?.find(
         item => (item.school?._id || item.school) === selectedSchoolId
     )?.school?.schoolName || "";
 
-    // Handle when user picks a name from CustomSelect
     const handleSchoolSelect = (selectedName) => {
         const matchedAssignment = user?.assignments?.find(
             item => (item.school?.schoolName || "Unnamed School") === selectedName
@@ -49,7 +49,6 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
             setSelectedSchoolId(matchedAssignment.school?._id || matchedAssignment.school);
         }
     };
-    // ---------------------------------
 
     const handleFileSelect = (e) => {
         const selectedFiles = Array.from(e.target.files);
@@ -64,7 +63,8 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
 
     const removeFile = (index) => setFiles(prev => prev.filter((_, i) => i !== index));
 
-    const handleSubmit = (e) => {
+    // 🔥 THE BULLETPROOF MOBILE UPLOAD LOGIC
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!selectedSchoolId) return toast.error("Please select a school.");
         if (!band) return toast.error("Band category is required.");
@@ -75,26 +75,93 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
             return toast.error("Files exceed 200MB limit.");
         }
 
-        // 1. Send the actual File objects to Redux
-        dispatch(startBackgroundUpload({
-            files: files,
-            metadata: {
-                schoolId: selectedSchoolId,
-                schoolName: currentSelectedName,
-                band, eventName, eventDate, studentsCount
+        // Lock the UI
+        setIsUploading(true);
+        const successfulUploads = [];
+        const failedFiles = [];
+        const toastId = toast.loading("Initializing secure upload...", { position: 'bottom-right' });
+
+        const metadata = {
+            schoolId: selectedSchoolId,
+            schoolName: currentSelectedName,
+            band, eventName, eventDate, studentsCount
+        };
+
+        try {
+            // PHASE 1: Get Presigned URLs
+            setUploadStatus("Requesting secure server access...");
+            const filePayload = files.map(f => ({ name: f.name, type: f.type }));
+            const { data: urlData } = await api.post('/employee/media/generate-urls', {
+                files: filePayload, metadata
+            });
+
+            // PHASE 2: Sequential Mobile-Safe Upload
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const targetUrl = urlData.urls[i].uploadUrl;
+                const publicUrl = urlData.urls[i].publicUrl;
+
+                const statusMsg = `Uploading video ${i + 1} of ${files.length}...`;
+                setUploadStatus(statusMsg);
+                toast.loading(`${statusMsg} ⚠️ Keep app open.`, { id: toastId });
+
+                try {
+                    // Direct-to-Cloudfetch. The file is safe because the modal is still open!
+                    const response = await fetch(targetUrl, {
+                        method: "PUT",
+                        headers: { "Content-Type": file.type },
+                        body: file
+                    });
+
+                    if (!response.ok) throw new Error("Cloudflare rejected upload");
+                    successfulUploads.push({ url: publicUrl, fileType: 'video' });
+                } catch (err) {
+                    console.error(`Failed to upload ${file.name}`, err);
+                    failedFiles.push(file.name);
+                }
             }
-        }));
 
-        // 2. Show a silent, non-blocking notification
-        toast.success("Upload started in background. You can continue working.");
+            // PHASE 3: Save to Database
+            if (successfulUploads.length > 0) {
+                setUploadStatus("Finalizing records...");
+                toast.loading("Saving to Vault...", { id: toastId });
+                await api.post('/employee/media/save-log', {
+                    ...metadata,
+                    uploadedFiles: successfulUploads
+                });
+            }
 
-        // 3. Immediately close the modal!
-        onClose();
+            // PHASE 4: Cleanup & Success
+            toast.dismiss(toastId);
+
+            if (failedFiles.length === 0) {
+                toast.success("All media successfully uploaded!", { duration: 5000 });
+            } else {
+                toast.error(`Uploaded ${successfulUploads.length}/${files.length}. Failed: ${failedFiles.join(', ')}`, { duration: 8000 });
+
+                // Log failures (Fire-and-forget for error logging is fine)
+                api.post('/employee/media/send-failure-email', {
+                    failedFiles, eventContext: eventName || "Regular Visit", schoolId: selectedSchoolId
+                }).catch(() => console.log("Offline error logging skipped."));
+            }
+
+            // Tell the gallery UI to update instantly
+            window.dispatchEvent(new Event('refreshMediaGallery'));
+
+            // NOW it is safe to close the modal and release mobile memory!
+            onClose();
+
+        } catch (error) {
+            console.error("Upload Error:", error);
+            toast.dismiss(toastId);
+            toast.error("Upload failed. Please check your network.", { duration: 6000 });
+            setIsUploading(false); // Unlock the modal so they can try again
+            setUploadStatus("");
+        }
     };
 
     return (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
-            {/* Modal Container */}
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 sm:p-6 bg-background/90 backdrop-blur-md animate-in fade-in duration-300">
             <div className="bg-card dark:bg-[#181d29] border border-border dark:border-slate-700/50 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl relative overflow-hidden animate-in zoom-in-95">
 
                 {/* Header */}
@@ -103,9 +170,11 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                         <h2 className="text-xl font-extrabold text-foreground tracking-tight">Upload to Vault</h2>
                         <p className="text-xs font-medium text-muted-foreground mt-1">Add performance videos to your school's secure gallery.</p>
                     </div>
+                    {/* Disable the X button if uploading so they don't break the process */}
                     <button
-                        onClick={onClose}
-                        className="p-2.5 rounded-xl bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-all duration-300"
+                        onClick={() => !isUploading && onClose()}
+                        disabled={isUploading}
+                        className={`p-2.5 rounded-xl transition-all duration-300 ${isUploading ? 'opacity-30 cursor-not-allowed' : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground'}`}
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -113,10 +182,21 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
 
                 <form id="media-upload-form" onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-6 custom-scrollbar">
 
-                    {/* SECTION 1: Core Assignment */}
-                    <div className="p-5 rounded-2xl bg-background/50 dark:bg-[#0d1117]/50 border border-border dark:border-slate-800 space-y-5">
+                    {/* OVERLAY: Shows exactly what is happening during the upload */}
+                    {isUploading && (
+                        <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
+                            <div className="w-16 h-16 bg-primary/20 text-primary rounded-2xl flex items-center justify-center mb-6 animate-pulse">
+                                <UploadCloud className="w-8 h-8" />
+                            </div>
+                            <h3 className="text-2xl font-black text-foreground mb-2">Uploading Media</h3>
+                            <p className="text-primary font-bold animate-pulse">{uploadStatus}</p>
+                            <p className="text-sm text-muted-foreground mt-4 max-w-xs leading-relaxed">
+                                Please do not close your browser or lock your phone until this process is complete.
+                            </p>
+                        </div>
+                    )}
 
-                        {/* School CustomSelect */}
+                    <div className="p-5 rounded-2xl bg-background/50 dark:bg-[#0d1117]/50 border border-border dark:border-slate-800 space-y-5">
                         <div className="relative z-20">
                             <label className="block text-[13px] font-bold text-foreground mb-2 uppercase tracking-wider">
                                 Assigned School <span className="text-destructive">*</span>
@@ -141,7 +221,6 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                             )}
                         </div>
 
-                        {/* Band Segmented Control */}
                         <div className="relative z-10">
                             <label className="block text-[13px] font-bold text-foreground mb-2 uppercase tracking-wider">
                                 Band Category <span className="text-destructive">*</span>
@@ -168,7 +247,6 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                         </div>
                     </div>
 
-                    {/* SECTION 2: Event Details */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 p-5 rounded-2xl bg-background/50 dark:bg-[#0d1117]/50 border border-border dark:border-slate-800">
                         <div className="space-y-2">
                             <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">Event Name <span className="text-muted-foreground lowercase font-medium tracking-normal">(Optional)</span></label>
@@ -192,7 +270,6 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                         </div>
                     </div>
 
-                    {/* SECTION 3: Media Dropzone */}
                     <div>
                         <div className="flex items-center justify-between mb-3">
                             <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">
@@ -204,8 +281,8 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                         </div>
 
                         <div
-                            onClick={() => files.length < 5 && fileInputRef.current?.click()}
-                            className={`w-full flex flex-col items-center justify-center py-10 px-4 border-2 border-dashed rounded-2xl transition-all duration-300 ${files.length >= 5
+                            onClick={() => !isUploading && files.length < 5 && fileInputRef.current?.click()}
+                            className={`w-full flex flex-col items-center justify-center py-10 px-4 border-2 border-dashed rounded-2xl transition-all duration-300 ${files.length >= 5 || isUploading
                                 ? 'border-border bg-muted/30 opacity-50 cursor-not-allowed'
                                 : 'border-primary/30 bg-primary/5 hover:border-primary/60 hover:bg-primary/10 cursor-pointer'
                                 }`}
@@ -215,10 +292,9 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                             </div>
                             <p className="text-sm font-bold text-foreground mb-1">Click to browse videos</p>
                             <p className="text-[11px] text-muted-foreground font-medium">MP4 or MOV • Max 200MB per file</p>
-                            <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple accept="video/*" className="hidden" disabled={files.length >= 5} />
+                            <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple accept="video/*" className="hidden" disabled={files.length >= 5 || isUploading} />
                         </div>
 
-                        {/* File Previews */}
                         {files.length > 0 && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                                 {files.map((file, i) => (
@@ -235,7 +311,8 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                                         <button
                                             type="button"
                                             onClick={(e) => { e.stopPropagation(); removeFile(i); }}
-                                            className="p-1.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-lg transition-colors shrink-0"
+                                            disabled={isUploading}
+                                            className={`p-1.5 rounded-lg transition-colors shrink-0 ${isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-destructive/10 text-muted-foreground hover:text-destructive'}`}
                                         >
                                             <X className="w-4 h-4" />
                                         </button>
@@ -246,7 +323,6 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                     </div>
                 </form>
 
-                {/* Footer */}
                 <div className="bg-muted/30 dark:bg-[#121620] p-5 md:px-7 flex items-center justify-between border-t border-border dark:border-slate-800">
                     <div className="hidden sm:flex items-center gap-2 text-muted-foreground bg-background/50 px-3 py-1.5 rounded-lg border border-border dark:border-slate-800">
                         <Info className="w-4 h-4 text-primary" />
@@ -256,11 +332,20 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                     <button
                         type="submit"
                         form="media-upload-form"
-                        disabled={files.length === 0}
+                        disabled={files.length === 0 || isUploading}
                         className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 rounded-xl font-bold text-sm disabled:opacity-50 disabled:grayscale transition-all duration-300 active:scale-95 shadow-md"
                     >
-                        Start Upload
-                        <ChevronRight className="w-4 h-4" />
+                        {isUploading ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Processing...
+                            </>
+                        ) : (
+                            <>
+                                Start Upload
+                                <ChevronRight className="w-4 h-4" />
+                            </>
+                        )}
                     </button>
                 </div>
             </div>
