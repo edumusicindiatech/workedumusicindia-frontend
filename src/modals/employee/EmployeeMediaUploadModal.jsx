@@ -69,31 +69,26 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
         if (!selectedSchoolId) return toast.error("Please select a school.");
         if (!band) return toast.error("Band category is required.");
         if (files.length === 0) return toast.error("Please add at least one video.");
-        if (eventName && !eventDate) return toast.error("Please provide a date for the event.");
 
         const MAX_SIZE = 200 * 1024 * 1024;
-        const oversizedFiles = files.filter(f => f.size > MAX_SIZE);
-        if (oversizedFiles.length > 0) {
-            return toast.error("One or more files exceed the 200MB limit. Please compress them.");
+        if (files.some(f => f.size > MAX_SIZE)) {
+            return toast.error("Files exceed 200MB limit.");
         }
 
+        // 1. Send the actual File objects to Redux
         dispatch(startBackgroundUpload({
-            files,
+            files: files,
             metadata: {
                 schoolId: selectedSchoolId,
                 schoolName: currentSelectedName,
-                band,
-                eventName,
-                eventDate,
-                studentsCount
+                band, eventName, eventDate, studentsCount
             }
         }));
 
-        toast.loading(
-            "Uploading media in background... ⚠️ Please DO NOT close this tab.",
-            { id: 'global-upload-toast', duration: Infinity }
-        );
+        // 2. Show a silent, non-blocking notification
+        toast.success("Upload started in background. You can continue working.");
 
+        // 3. Immediately close the modal!
         onClose();
     };
 

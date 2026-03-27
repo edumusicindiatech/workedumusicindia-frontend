@@ -14,12 +14,9 @@ const store = configureStore({
     // Redux Toolkit includes thunk and devtools automatically
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
+            // THIS IS THE MAGIC LINE: It allows File objects in Redux
             serializableCheck: {
-                // Ignore these action types
                 ignoredActions: ['upload/startBackgroundUpload'],
-                // Ignore these field paths in all actions
-                ignoredActionPaths: ['payload.files'],
-                // Ignore these paths in the state
                 ignoredPaths: ['upload.jobQueue.files'],
             },
         }),

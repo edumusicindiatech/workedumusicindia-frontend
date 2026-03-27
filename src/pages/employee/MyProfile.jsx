@@ -154,8 +154,6 @@ const MyProfile = () => {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 md:space-y-8 animate-in fade-in duration-500 pb-24 p-4 sm:p-6 lg:p-8">
-            <Toaster position="top-right" />
-
             {/* Page Header */}
             <div>
                 <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground flex items-center gap-3">

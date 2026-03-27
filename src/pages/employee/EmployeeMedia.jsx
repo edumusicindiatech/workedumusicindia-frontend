@@ -282,17 +282,6 @@ const EmployeeMedia = () => {
                                             {mediaFiles.map((media) => (
                                                 <div key={media.id} className="group bg-background dark:bg-[#0d1117] border border-border dark:border-slate-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-200 flex flex-col relative">
 
-                                                    {/* Delete Button (Only visible if ungraded) */}
-                                                    {media.marks === null && !media.remark && (
-                                                        <button
-                                                            onClick={(e) => triggerDeleteConfirmation(e, media.id, month)}
-                                                            className="absolute top-2 right-2 z-10 p-2 bg-black/50 hover:bg-red-500/90 backdrop-blur-md text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-md hover:scale-105"
-                                                            title="Delete Video"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    )}
-
                                                     {/* Smart Video Thumbnail */}
                                                     <div
                                                         className="relative aspect-video bg-slate-900 overflow-hidden shrink-0 cursor-pointer"
@@ -355,7 +344,7 @@ const EmployeeMedia = () => {
                                                         </div>
                                                     )}
 
-                                                    {/* Marking Footer */}
+                                                    {/* Marking Footer with the Mobile-Friendly Delete Button */}
                                                     <div className="p-3.5 border-t border-border dark:border-slate-800 bg-muted/30 dark:bg-slate-800/30 mt-auto">
                                                         {media.marks !== null ? (
                                                             <div className="flex items-center justify-between">
@@ -368,12 +357,25 @@ const EmployeeMedia = () => {
                                                                 <span className="text-sm font-black text-foreground">{media.marks}/100</span>
                                                             </div>
                                                         ) : (
-                                                            <div className="flex items-center justify-between opacity-80">
-                                                                <div className="flex items-center gap-1.5">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-1.5 opacity-80">
                                                                     <Clock className="w-4 h-4 text-muted-foreground" />
                                                                     <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Pending Review</span>
                                                                 </div>
-                                                                <span className="text-sm font-bold text-muted-foreground">--/100</span>
+
+                                                                {/* ALWAYS VISIBLE DELETE BUTTON FOR UNGRADED VIDEOS */}
+                                                                {!media.remark ? (
+                                                                    <button
+                                                                        onClick={(e) => triggerDeleteConfirmation(e, media.id, month)}
+                                                                        className="flex items-center gap-1.5 px-2.5 py-1 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-md transition-colors active:scale-95 shadow-sm"
+                                                                        title="Delete Video"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                        <span className="text-[11px] font-extrabold uppercase tracking-wide">Delete</span>
+                                                                    </button>
+                                                                ) : (
+                                                                    <span className="text-sm font-bold text-muted-foreground opacity-80">--/100</span>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
@@ -401,13 +403,10 @@ const EmployeeMedia = () => {
                 onClose={() => setIsUploadModalOpen(false)}
             />
 
-            {/* =========================================
-                BEAUTIFUL DELETE CONFIRMATION MODAL 
-            ========================================== */}
+            {/* Delete Confirmation Modal */}
             {deleteConfirmation && (
                 <div className="fixed inset-0 z-120 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-card dark:bg-[#181d29] border border-border dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden animate-in zoom-in-95">
-
                         <div className="flex items-start gap-4">
                             <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center shrink-0 border border-destructive/20">
                                 <AlertTriangle className="w-6 h-6 text-destructive" />
@@ -419,7 +418,6 @@ const EmployeeMedia = () => {
                                 </p>
                             </div>
                         </div>
-
                         <div className="flex items-center justify-end gap-3 mt-8 pt-5 border-t border-border dark:border-slate-800">
                             <button
                                 onClick={() => setDeleteConfirmation(null)}
