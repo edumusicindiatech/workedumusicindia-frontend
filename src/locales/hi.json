@@ -857,6 +857,7 @@
         "status": {
             "event": "इवेंट लाइव",
             "running": "जारी",
+            "on_leave": "छुट्टी पर",
             "late": "देरी",
             "completed": "पूरा हुआ",
             "absent": "अनुपस्थित",

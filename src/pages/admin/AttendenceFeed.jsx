@@ -7,13 +7,13 @@ import {
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 
 import { io } from "socket.io-client";
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 const AttendanceFeed = () => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation();
     const { user } = useSelector((state) => state.auth);
 
     const [liveData, setLiveData] = useState([]);
@@ -105,6 +105,7 @@ const AttendanceFeed = () => {
     const getDerivedStatus = (record) => {
         if (record.status === 'Absent') return 'Absent';
         if (record.status === 'Holiday') return 'Holiday';
+        if (record.status === 'On Leave') return 'On Leave'; // <-- Added On Leave
         if (record.checkOutTime) return 'Completed';
         if (record.status === 'Event' || (record.eventNote && !record.checkOutTime)) return 'Event';
         if (record.checkInTime) return record.status === 'Late' ? 'Late' : 'Running';
@@ -119,6 +120,7 @@ const AttendanceFeed = () => {
             case "Completed": return { color: "text-blue-500 bg-blue-500/10 border-blue-500/20", icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: t('attendance_feed.status.completed') };
             case "Absent": return { color: "text-destructive bg-destructive/10 border-destructive/20", icon: <XCircle className="w-3.5 h-3.5" />, label: t('attendance_feed.status.absent') };
             case "Holiday": return { color: "text-teal-500 bg-teal-500/10 border-teal-500/20", icon: <Coffee className="w-3.5 h-3.5" />, label: t('attendance_feed.status.holiday') };
+            case "On Leave": return { color: "text-pink-500 bg-pink-500/10 border-pink-500/20", icon: <Timer className="w-3.5 h-3.5" />, label: t('attendance_feed.status.on_leave') }; // <-- Brand new Pink Leave Config
             default: return { color: "text-slate-400 bg-slate-400/10 border-slate-400/20", icon: <Clock className="w-3.5 h-3.5" />, label: t('attendance_feed.status.pending') };
         }
     };
@@ -128,7 +130,7 @@ const AttendanceFeed = () => {
         if (activeFilter === "Pending") filtered = liveData.filter(r => getDerivedStatus(r) === "Pending");
         else if (activeFilter === "Running") filtered = liveData.filter(r => ["Running", "Late", "Event"].includes(getDerivedStatus(r)));
         else if (activeFilter === "Completed") filtered = liveData.filter(r => getDerivedStatus(r) === "Completed");
-        else if (activeFilter === "Exceptions") filtered = liveData.filter(r => ["Absent", "Holiday"].includes(getDerivedStatus(r)));
+        else if (activeFilter === "Exceptions") filtered = liveData.filter(r => ["Absent", "Holiday", "On Leave"].includes(getDerivedStatus(r))); // <-- Added On Leave to exceptions
 
         return filtered.sort((a, b) => new Date(b.checkInTime || b.createdAt || b.date) - new Date(a.checkInTime || a.createdAt || a.date));
     }, [liveData, activeFilter]);
@@ -230,6 +232,8 @@ const AttendanceFeed = () => {
                         const isLate = record.status === 'Late' || !!record.lateReason;
                         const hadEvent = !!record.eventNote;
                         const isAbsent = uiStatus === 'Absent';
+                        const isHoliday = uiStatus === 'Holiday';
+                        const isOnLeave = uiStatus === 'On Leave'; // <-- New Variable
 
                         return (
                             <div
@@ -238,10 +242,12 @@ const AttendanceFeed = () => {
                                 className={`bg-card rounded-2xl border p-4 sm:p-5 shadow-sm transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 cursor-pointer hover:shadow-md hover:border-primary/30 group active:scale-[0.99] 
                                     ${hadEvent ? 'border-violet-500/40 bg-violet-500/5' : 'border-border'}
                                     ${isAbsent ? 'border-destructive/30 bg-destructive/5' : ''}
+                                    ${isHoliday ? 'border-teal-500/30 bg-teal-500/5' : ''} 
+                                    ${isOnLeave ? 'border-pink-500/30 bg-pink-500/5' : ''} 
                                 `}
                             >
                                 <div className="flex items-center gap-3 sm:gap-4 md:w-56 shrink-0">
-                                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-inner ${hadEvent ? 'bg-violet-600' : (isAbsent ? 'bg-destructive' : 'bg-primary')}`}>
+                                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-inner ${hadEvent ? 'bg-violet-600' : (isAbsent ? 'bg-destructive' : (isHoliday ? 'bg-teal-500' : (isOnLeave ? 'bg-pink-500' : 'bg-primary')))}`}>
                                         {(record.teacher?.name || "U").charAt(0).toUpperCase()}
                                     </div>
                                     <div className="flex flex-col min-w-0">
@@ -275,12 +281,12 @@ const AttendanceFeed = () => {
                                             {hadEvent && uiStatus === 'Completed' && <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-violet-500 text-white">{t('attendance_feed.card.event_badge')}</span>}
                                         </div>
                                         <div className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-                                            {record.checkInTime ? `${t('attendance_feed.card.arrived')}: ${formatTime(record.checkInTime)}` : ((isAbsent || uiStatus === 'Holiday') ? t('attendance_feed.card.off_duty') : t('attendance_feed.card.pending'))}
+                                            {record.checkInTime ? `${t('attendance_feed.card.arrived')}: ${formatTime(record.checkInTime)}` : ((isAbsent || isHoliday || isOnLeave) ? t('attendance_feed.card.off_duty') : t('attendance_feed.card.pending'))}
                                             {record.checkOutTime && ` • ${t('attendance_feed.card.departed')}: ${formatTime(record.checkOutTime)}`}
                                         </div>
                                     </div>
-                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${hadEvent ? 'bg-violet-500/20 text-violet-500' : (isAbsent ? 'bg-red-500/10 text-red-500' : 'bg-primary/10 text-primary')}`}>
-                                        {hadEvent ? <Star className="w-4 h-4 fill-current" /> : (isAbsent ? <XCircle className="w-4 h-4" /> : <FileText className="w-4 h-4" />)}
+                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${hadEvent ? 'bg-violet-500/20 text-violet-500' : (isAbsent ? 'bg-red-500/10 text-red-500' : (isHoliday ? 'bg-teal-500/10 text-teal-500' : (isOnLeave ? 'bg-pink-500/10 text-pink-500' : 'bg-primary/10 text-primary')))}`}>
+                                        {hadEvent ? <Star className="w-4 h-4 fill-current" /> : (isAbsent ? <XCircle className="w-4 h-4" /> : (isHoliday ? <Coffee className="w-4 h-4" /> : (isOnLeave ? <Timer className="w-4 h-4" /> : <FileText className="w-4 h-4" />)))}
                                     </div>
                                 </div>
                             </div>
@@ -305,8 +311,8 @@ const AttendanceFeed = () => {
 
                         <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-muted/30 sticky top-0 z-10 backdrop-blur-md">
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${!!selectedNoteRecord.eventNote ? 'bg-violet-600' : (selectedNoteRecord.status === 'Absent' ? 'bg-destructive' : 'bg-primary')} text-primary-foreground shadow-sm`}>
-                                    {!!selectedNoteRecord.eventNote ? <Star className="w-5 h-5 fill-current" /> : (selectedNoteRecord.status === 'Absent' ? <XCircle className="w-5 h-5" /> : <FileText className="w-5 h-5" />)}
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-primary-foreground shadow-sm ${!!selectedNoteRecord.eventNote ? 'bg-violet-600' : (selectedNoteRecord.status === 'Absent' ? 'bg-destructive' : (selectedNoteRecord.status === 'On Leave' ? 'bg-pink-500' : 'bg-primary'))}`}>
+                                    {!!selectedNoteRecord.eventNote ? <Star className="w-5 h-5 fill-current" /> : (selectedNoteRecord.status === 'Absent' ? <XCircle className="w-5 h-5" /> : (selectedNoteRecord.status === 'On Leave' ? <Timer className="w-5 h-5" /> : <FileText className="w-5 h-5" />))}
                                 </div>
                                 <div>
                                     <h3 className="font-extrabold text-lg leading-tight text-foreground">{t('attendance_feed.modal.title')}</h3>
@@ -330,7 +336,7 @@ const AttendanceFeed = () => {
                                 </div>
                             )}
 
-                            {(selectedNoteRecord.status === 'Absent' || !!selectedNoteRecord.lateReason || !!selectedNoteRecord.teacherNote) && (
+                            {(selectedNoteRecord.status === 'Absent' || selectedNoteRecord.status === 'On Leave' || !!selectedNoteRecord.lateReason || !!selectedNoteRecord.teacherNote) && (
                                 <div className="p-5 bg-muted/30 border border-border rounded-2xl space-y-4">
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                                         <AlertCircle className="w-4 h-4" /> {t('attendance_feed.modal.ops_intel')}
@@ -343,6 +349,13 @@ const AttendanceFeed = () => {
                                         </div>
                                     )}
 
+                                    {selectedNoteRecord.status === 'On Leave' && (
+                                        <div className="bg-pink-500/5 p-4 rounded-xl border border-pink-500/10 border-l-4 border-l-pink-500">
+                                            <span className="font-bold text-[10px] uppercase tracking-wider text-pink-600 dark:text-pink-500 block mb-1">{t('attendance_feed.status.on_leave')}</span>
+                                            <p className="text-sm font-medium text-foreground">"{selectedNoteRecord.teacherNote || 'Approved Leave'}"</p>
+                                        </div>
+                                    )}
+
                                     {selectedNoteRecord.lateReason && (
                                         <div className="bg-amber-500/5 p-4 rounded-xl border border-amber-500/10 border-l-4 border-l-amber-500">
                                             <span className="font-bold text-[10px] uppercase tracking-wider text-amber-600 dark:text-amber-500 block mb-1">{t('attendance_feed.modal.delayed_arrival')}</span>
@@ -350,7 +363,7 @@ const AttendanceFeed = () => {
                                         </div>
                                     )}
 
-                                    {selectedNoteRecord.teacherNote && selectedNoteRecord.status !== 'Absent' && (
+                                    {selectedNoteRecord.teacherNote && selectedNoteRecord.status !== 'Absent' && selectedNoteRecord.status !== 'On Leave' && (
                                         <div className="p-1">
                                             <span className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground block mb-1.5">{t('attendance_feed.modal.standard_report')}</span>
                                             <p className="text-sm font-medium text-foreground leading-relaxed">"{selectedNoteRecord.teacherNote}"</p>

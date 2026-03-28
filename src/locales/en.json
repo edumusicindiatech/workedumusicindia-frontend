@@ -868,6 +868,7 @@
             "event": "Event Live",
             "running": "Running",
             "late": "Late",
+            "on_leave": "On Leave",
             "completed": "Completed",
             "absent": "Absent",
             "holiday": "Holiday",
