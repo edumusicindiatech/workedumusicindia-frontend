@@ -1,5 +1,16 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
+html {
+  /* The Modern Fix: Reserves space for the scrollbar so the layout never shifts */
+  scrollbar-gutter: stable; 
+}
+
+/* Fallback for older browsers just in case */
+@supports not (scrollbar-gutter: stable) {
+  html {
+    overflow-y: scroll; 
+  }
+}
 
 @layer base {
   :root {

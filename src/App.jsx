@@ -27,6 +27,8 @@ import AdminResetPassword from "./pages/admin/AdminResetPassword";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminLeaveRequests from "./pages/admin/AdminLeaveRequests";
 import AdminMediaGallery from "./pages/admin/AdminMediaGallery";
+// ---> ADD LEADERBOARD IMPORT HERE <---
+import AdminLeaderboard from "./pages/admin/AdminLeaderBoard";
 
 // Employee Imports
 import EmployeeLayout from "./components/employee/EmployeeLayout";
@@ -190,11 +192,12 @@ function App() {
           <Route path="employees/:id" element={<EmployeeProfile />} />
           <Route path="attendance" element={<AttendanceFeed />} />
           <Route path="progress" element={<ProgressReport />} />
+
+          {/* ---> ADDED LEADERBOARD ROUTE HERE <--- */}
+          <Route path="leaderboard" element={<AdminLeaderboard />} />
+
           <Route path="reports" element={<AdminReports />} />
-
-          {/* ---> ADDED ADMIN MEDIA ROUTE <--- */}
           <Route path="media" element={<AdminMediaGallery />} />
-
           <Route path="leave-requests" element={<AdminLeaveRequests />} />
           <Route path="communication" element={<Communication />} />
           <Route path="notifications" element={<AdminNotifications />} />

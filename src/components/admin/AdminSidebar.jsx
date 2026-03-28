@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import {
     LayoutDashboard, Users, Radio, MessageSquare, Shield,
     Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle, ClipboardCheck,
-    CalendarDays, Film // <-- Added Film icon
+    CalendarDays, Film, Trophy
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -35,6 +35,9 @@ const AdminSidebar = () => {
     const [userPreferences, setUserPreferences] = useState(user?.preferences || null);
     const [unreadCount, setUnreadCount] = useState(0);
 
+    // 🔥 NEW: State to track pending media across the whole system
+    const [pendingMediaCount, setPendingMediaCount] = useState(0);
+
     const mobileMenuRef = useRef(null);
     const pathnameRef = useRef(location.pathname);
 
@@ -47,6 +50,25 @@ const AdminSidebar = () => {
             setUserPreferences(user.preferences);
         }
     }, [user?.preferences]);
+
+    // 🔥 NEW: Fetch pending media count whenever we mount OR navigate
+    useEffect(() => {
+        if (!user) return;
+
+        const fetchPendingMediaCount = async () => {
+            try {
+                const res = await api.get('/admin/employees');
+                if (res.data.success) {
+                    const totalPending = res.data.data.reduce((sum, emp) => sum + (emp.pendingCount || 0), 0);
+                    setPendingMediaCount(totalPending);
+                }
+            } catch (error) {
+                console.error("Failed to fetch pending media", error);
+            }
+        };
+
+        fetchPendingMediaCount();
+    }, [user, location.pathname]); // Re-run when changing pages so the dot disappears after you grade things!
 
     useEffect(() => {
         if (!user) return;
@@ -77,7 +99,7 @@ const AdminSidebar = () => {
         }
         socket.on("connect", joinUserRoom);
 
-        const handleNewNotification = () => {
+        const handleNewNotification = (notif) => {
             try {
                 notificationSound.currentTime = 0;
                 notificationSound.play().catch(err => {
@@ -90,6 +112,11 @@ const AdminSidebar = () => {
             if (pathnameRef.current !== '/admin/notifications') {
                 setUnreadCount(prev => prev + 1);
                 toast(t('sidebar.new_alert_toast'), { icon: '🛡️' });
+            }
+
+            // 🔥 NEW: If a new media is uploaded, increment the yellow dot instantly
+            if (notif?.type === 'Media' || (notif?.title && notif.title.toLowerCase().includes('media'))) {
+                setPendingMediaCount(prev => prev + 1);
             }
         };
 
@@ -116,22 +143,24 @@ const AdminSidebar = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    // 🔥 FIX: Reordered Logout to allow the toast to finish BEFORE destroying the page
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
-        dispatch(logout());
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("user");
-
         const toastId = toast.loading(t('sidebar.logging_out'));
+
         try {
             await api.post('/auth/logout');
-            toast.success(t('sidebar.logout_success'), { id: toastId });
+            toast.success(t('sidebar.logout_success'), { id: toastId, duration: 1500 });
         } catch (error) {
             console.error("Backend logout cleanup failed:", error);
-            toast.error(t('sidebar.logout_error'), { id: toastId });
+            toast.dismiss(toastId); // Kill the spinning loader if backend fails
         }
 
-        navigate("/", { replace: true });
+        // Wait just a tiny fraction of a second so the user can actually see the success toast
+        setTimeout(() => {
+            dispatch(logout());
+            navigate("/", { replace: true });
+        }, 400);
     };
 
     const desktopNavClasses = ({ isActive }) =>
@@ -171,13 +200,24 @@ const AdminSidebar = () => {
                     <NavLink to="/admin/progress" className={desktopNavClasses} title={t('sidebar.progress')}>
                         <TrendingUp className="w-4.5 h-4.5" /> {t('sidebar.progress')}
                     </NavLink>
+
+                    <NavLink to="/admin/leaderboard" className={desktopNavClasses} title={t('sidebar.leaderboard') || 'Leaderboard'}>
+                        <Trophy className="w-4.5 h-4.5" /> {t('sidebar.leaderboard') || 'Leaderboard'}
+                    </NavLink>
+
                     <NavLink to="/admin/reports" className={desktopNavClasses} title={t('sidebar.reports')}>
                         <ClipboardCheck className="w-4.5 h-4.5" /> {t('sidebar.reports')}
                     </NavLink>
 
-                    {/* ---> ADDED MEDIA LINK HERE <--- */}
+                    {/* 🔥 NEW: Added pulsing yellow dot for Pending Media */}
                     <NavLink to="/admin/media" className={desktopNavClasses} title={t('sidebar.media') || 'Media Gallery'}>
-                        <Film className="w-4.5 h-4.5" /> {t('sidebar.media') || 'Media'}
+                        <div className="relative flex items-center justify-center">
+                            <Film className="w-4.5 h-4.5" />
+                            {pendingMediaCount > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-amber-500 shadow-sm animate-pulse border-2 border-card" />
+                            )}
+                        </div>
+                        {t('sidebar.media') || 'Media'}
                     </NavLink>
 
                     <NavLink to="/admin/leave-requests" className={desktopNavClasses} title={t('sidebar.leave')}>
@@ -233,16 +273,27 @@ const AdminSidebar = () => {
                             </div>
 
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leaderboard'); }}
+                            >
+                                <Trophy className="w-4 h-4 text-primary" /> {t('sidebar.leaderboard') || 'Leaderboard'}
+                            </button>
+
+                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                 onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/reports'); }}
                             >
                                 <ClipboardCheck className="w-4 h-4 text-primary" /> {t('sidebar.reports')}
                             </button>
 
-                            {/* ---> ADDED MEDIA LINK HERE IN MOBILE DROPDOWN <--- */}
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                            {/* 🔥 NEW: Added pulsing yellow dot for Mobile Menu Media */}
+                            <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                 onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/media'); }}
                             >
-                                <Film className="w-4 h-4 text-primary" /> {t('sidebar.media') || 'Media Gallery'}
+                                <div className="flex items-center gap-3">
+                                    <Film className="w-4 h-4 text-primary" /> {t('sidebar.media') || 'Media Gallery'}
+                                </div>
+                                {pendingMediaCount > 0 && (
+                                    <span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm animate-pulse" />
+                                )}
                             </button>
 
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"

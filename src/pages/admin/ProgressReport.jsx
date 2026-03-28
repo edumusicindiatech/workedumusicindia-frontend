@@ -2,16 +2,24 @@ import { useState, useEffect, useMemo } from "react";
 import {
     ChevronRight, ArrowLeft, TrendingUp, Search,
     CheckCircle2, AlertCircle, XCircle, Star, Coffee, Film, CalendarDays,
-    Clock, FileText, School, Download, Trophy, LogOut, Users, FolderOpen, CalendarOff
+    Clock, FileText, School, Download, Trophy, Users, FolderOpen, CalendarOff,
+    BarChart3
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
 import { useTranslation } from "react-i18next";
+// 1. CHANGED IMPORTS: Brought in LineChart and Line instead of BarChart
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { io } from "socket.io-client";
+import { useSelector } from "react-redux";
+
+const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 const ProgressReport = () => {
     const { t } = useTranslation();
+    const { user } = useSelector((state) => state.auth);
     const [teachers, setTeachers] = useState([]);
     const [records, setRecords] = useState([]);
     const [isLoadingTeachers, setIsLoadingTeachers] = useState(true);
@@ -23,24 +31,83 @@ const ProgressReport = () => {
     const [selectedSchool, setSelectedSchool] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedDay, setSelectedDay] = useState(null);
+    const [lastUpdated, setLastUpdated] = useState(null);
+
+    // Graph States
+    const [showGraph, setShowGraph] = useState(false);
+    const [graphData, setGraphData] = useState([]);
+    const [isLoadingGraph, setIsLoadingGraph] = useState(false);
+
+    const fetchTeachers = async () => {
+        try {
+            const res = await api.get('/admin/progress/employees');
+            if (res.data.success) {
+                setTeachers(res.data.data);
+                setLastUpdated(new Date());
+            }
+        } catch (error) {
+            toast.error(t('progress_report.toasts.load_error'));
+        } finally {
+            setIsLoadingTeachers(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchTeachers = async () => {
-            try {
-                const res = await api.get('/admin/progress/employees');
-                if (res.data.success) setTeachers(res.data.data);
-            } catch (error) {
-                toast.error(t('progress_report.toasts.load_error'));
-            } finally {
-                setIsLoadingTeachers(false);
-            }
-        };
         fetchTeachers();
-    }, [t]);
+
+        if (!user) return;
+        const currentUserId = user.id || user._id;
+
+        const joinUserRoom = () => {
+            socket.emit("join_room", currentUserId);
+        };
+
+        if (socket.connected) joinUserRoom();
+        socket.on("connect", joinUserRoom);
+
+        const handleRefresh = () => {
+            try {
+                const audio = new Audio('/sounds/notification-ting.mp3');
+                audio.play().catch(() => { });
+                fetchTeachers();
+            } catch (e) { }
+
+            toast.success("Progress scores updated in real-time!", { icon: '📊' });
+            fetchTeachers();
+        };
+
+        socket.on('admin_leaderboard_refresh', handleRefresh);
+
+        return () => {
+            socket.off("connect", joinUserRoom);
+            socket.off('admin_leaderboard_refresh', handleRefresh);
+        };
+    }, [t, user]);
+
+    const formatUpdateTime = (date) => {
+        if (!date) return "";
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    };
+
+    const getZoneStyles = (zone) => {
+        switch (zone) {
+            case 'green': return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
+            case 'blue': return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+            case 'red': return 'bg-destructive/10 text-destructive border-destructive/20';
+            default: return 'bg-muted text-muted-foreground border-border';
+        }
+    };
+
+    const getChartColor = (score) => {
+        if (score >= 70) return '#10b981';
+        if (score >= 50) return '#3b82f6';
+        return '#ef4444';
+    };
 
     const handleSelectTeacher = async (teacher) => {
         setSelectedTeacher(teacher);
         setIsLoadingRecords(true);
+        setShowGraph(false);
         try {
             const res = await api.get(`/admin/progress/${teacher._id}/records`);
             if (res.data.success) {
@@ -51,6 +118,27 @@ const ProgressReport = () => {
             setSelectedTeacher(null);
         } finally {
             setIsLoadingRecords(false);
+        }
+    };
+
+    const handleToggleGraph = async () => {
+        if (showGraph) {
+            setShowGraph(false);
+            return;
+        }
+
+        setShowGraph(true);
+        setIsLoadingGraph(true);
+        try {
+            const res = await api.get(`/admin/progress/${selectedTeacher._id}/graph?month=${selectedMonth}`);
+            if (res.data.success) {
+                setGraphData(res.data.data);
+            }
+        } catch (error) {
+            toast.error("Failed to load graph data");
+            setShowGraph(false);
+        } finally {
+            setIsLoadingGraph(false);
         }
     };
 
@@ -121,6 +209,7 @@ const ProgressReport = () => {
         if (selectedDay) setSelectedDay(null);
         else if (selectedCategory) setSelectedCategory(null);
         else if (selectedSchool) setSelectedSchool(null);
+        else if (showGraph) setShowGraph(false);
         else if (selectedMonth) setSelectedMonth(null);
         else if (selectedTeacher) { setSelectedTeacher(null); setRecords([]); }
     };
@@ -156,19 +245,16 @@ const ProgressReport = () => {
     const handleExportExcel = async () => {
         if (!selectedMonth || !selectedTeacher) return;
         const toastId = toast.loading(t('progress_report.toasts.export_preparing'));
-
         try {
             const response = await api.get(`/admin/progress/${selectedTeacher._id}/export/${selectedMonth}`, {
                 responseType: 'blob'
             });
             const fileData = response.data || response;
-
             if (fileData.type === 'application/json') {
                 const text = await fileData.text();
                 const json = JSON.parse(text);
                 throw new Error(json.message || t('progress_report.toasts.export_gen_error'));
             }
-
             const blob = new Blob([fileData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = window.URL.createObjectURL(blob);
             const anchor = document.createElement('a');
@@ -179,7 +265,6 @@ const ProgressReport = () => {
             anchor.click();
             document.body.removeChild(anchor);
             window.URL.revokeObjectURL(url);
-
             toast.success(t('progress_report.toasts.export_success'), { id: toastId });
         } catch (err) {
             toast.error(err.message || t('progress_report.toasts.export_fail'), { id: toastId });
@@ -192,14 +277,25 @@ const ProgressReport = () => {
 
     return (
         <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto animate-in fade-in duration-500 pb-20">
-            <div className="mb-6 sm:mb-8 flex items-center gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm shrink-0">
-                    <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm shrink-0">
+                        <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
+                    </div>
+                    <div className="min-w-0">
+                        <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{t('progress_report.title')}</h1>
+                        <p className="text-muted-foreground text-xs sm:text-sm truncate">{t('progress_report.subtitle')}</p>
+                    </div>
                 </div>
-                <div className="min-w-0">
-                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{t('progress_report.title')}</h1>
-                    <p className="text-muted-foreground text-xs sm:text-sm truncate">{t('progress_report.subtitle')}</p>
-                </div>
+
+                {lastUpdated && !selectedTeacher && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 border border-border rounded-full self-start sm:self-center animate-in fade-in slide-in-from-right-4 duration-700">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                            <Clock className="w-3 h-3" /> Updated: {formatUpdateTime(lastUpdated)}
+                        </span>
+                    </div>
+                )}
             </div>
 
             {(selectedTeacher || selectedMonth) && (
@@ -209,10 +305,11 @@ const ProgressReport = () => {
                 >
                     <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform duration-300 group-hover:-translate-x-1" />
                     <span className="truncate">
-                        {selectedDay ? t('progress_report.nav.back_overview')
-                            : selectedCategory ? t('progress_report.nav.back_school', { name: selectedSchool.schoolName })
-                                : selectedSchool ? t('progress_report.nav.back_months')
-                                    : t('progress_report.nav.back_rankings')}
+                        {showGraph ? "Back to Month Overview"
+                            : selectedDay ? t('progress_report.nav.back_overview')
+                                : selectedCategory ? t('progress_report.nav.back_school', { name: selectedSchool.schoolName })
+                                    : selectedSchool ? t('progress_report.nav.back_months')
+                                        : t('progress_report.nav.back_rankings')}
                     </span>
                 </button>
             )}
@@ -224,10 +321,22 @@ const ProgressReport = () => {
                             : !selectedMonth ? t('progress_report.headers.teacher_reports', { name: selectedTeacher.name })
                                 : formatMonth(selectedMonth)}
                     </h3>
+
                     {selectedMonth && !selectedSchool && (
-                        <Button onClick={handleExportExcel} variant="outline" size="sm" className="gap-1.5 border-primary/20 text-primary font-bold hover:bg-primary hover:text-primary-foreground h-8 sm:h-9 px-3 shrink-0">
-                            <Download className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t('progress_report.btn.export')}</span>
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={handleToggleGraph}
+                                variant={showGraph ? "default" : "outline"}
+                                size="sm"
+                                className={`gap-1.5 h-8 sm:h-9 px-3 shrink-0 transition-all ${!showGraph && 'border-violet-500/20 text-violet-500 font-bold hover:bg-violet-500 hover:text-white'}`}
+                            >
+                                <BarChart3 className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">{showGraph ? 'Close Graph' : 'View Graph'}</span>
+                            </Button>
+                            <Button onClick={handleExportExcel} variant="outline" size="sm" className="gap-1.5 border-primary/20 text-primary font-bold hover:bg-primary hover:text-primary-foreground h-8 sm:h-9 px-3 shrink-0">
+                                <Download className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t('progress_report.btn.export')}</span>
+                            </Button>
+                        </div>
                     )}
                 </div>
 
@@ -257,8 +366,9 @@ const ProgressReport = () => {
                                                 </div>
                                             </div>
                                             <div className="flex items-center">
-                                                <span className="text-[10px] font-black text-emerald-500 uppercase flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 rounded-md">
-                                                    <Trophy className="w-3 h-3" /> {t('progress_report.score_out_of', { score: teacher.score })}
+                                                <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${getZoneStyles(teacher.colorZone)}`}>
+                                                    <Trophy className="w-3 h-3 inline mr-1 mb-0.5" />
+                                                    {teacher.currentWeeklyScore || 0} PTS
                                                 </span>
                                                 <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary ml-3" />
                                             </div>
@@ -286,28 +396,77 @@ const ProgressReport = () => {
                     )}
 
                     {selectedMonth && !selectedSchool && (
-                        <div className="space-y-3 animate-in fade-in slide-in-from-right-8 duration-300">
-                            {schoolsInMonth.schools.map(s => (
-                                <div key={s._id} onClick={() => setSelectedSchool(s)} className="p-4 border border-border/80 rounded-xl flex items-center justify-between hover:bg-muted/30 hover:border-indigo-500/40 hover:shadow-md cursor-pointer bg-card transition-all group">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
-                                            <School className="w-5 h-5" />
-                                        </div>
-                                        <span className="font-bold text-foreground text-sm sm:text-base">{s.schoolName}</span>
-                                    </div>
-                                    <ChevronRight className="w-5 h-5 text-muted-foreground/40 group-hover:text-indigo-500" />
-                                </div>
-                            ))}
+                        <div className="animate-in fade-in slide-in-from-right-8 duration-300">
+                            {showGraph ? (
+                                <div className="space-y-6">
+                                    <h4 className="text-[11px] font-black uppercase tracking-widest text-violet-600 flex items-center gap-2 mb-2">
+                                        <BarChart3 className="w-4 h-4" /> Weekly Performance Trend
+                                    </h4>
 
-                            {schoolsInMonth.hasLeaves && (
-                                <div onClick={() => setSelectedSchool({ _id: 'LEAVES_GENERAL', schoolName: t('progress_report.general_leaves') })} className="p-4 border border-cyan-500/30 rounded-xl flex items-center justify-between hover:bg-cyan-500/5 hover:border-cyan-500/60 hover:shadow-md cursor-pointer bg-cyan-500/5 transition-all group">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2.5 bg-cyan-500/10 rounded-xl text-cyan-600 group-hover:bg-cyan-500 group-hover:text-white transition-colors">
-                                            <FolderOpen className="w-5 h-5" />
-                                        </div>
-                                        <span className="font-bold text-foreground text-sm sm:text-base">{t('progress_report.general_leaves')}</span>
+                                    {/* 2. Added min-h and relative to fix Recharts error */}
+                                    <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-6 shadow-sm h-75 min-h-75 w-full min-w-full relative">
+                                        {isLoadingGraph ? (
+                                            <div className="h-full w-full flex items-center justify-center text-muted-foreground animate-pulse font-medium">Loading chart data...</div>
+                                        ) : graphData.length === 0 ? (
+                                            <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm font-medium">No weekly data recorded for this month.</div>
+                                        ) : (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                {/* 3. Replaced BarChart with LineChart */}
+                                                <LineChart data={graphData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                                                    <XAxis dataKey="weekLabel" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
+                                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} domain={[0, 100]} />
+                                                    <Tooltip
+                                                        cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '3 3' }}
+                                                        contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
+                                                    />
+
+                                                    {/* 4. Added Cricket-style Line with dynamic colored dots based on score */}
+                                                    <Line
+                                                        type="monotone"
+                                                        dataKey="score"
+                                                        stroke="#6366f1"
+                                                        strokeWidth={3}
+                                                        dot={(props) => {
+                                                            const { cx, cy, value, key } = props;
+                                                            return <circle key={key} cx={cx} cy={cy} r={5} fill={getChartColor(value)} stroke="#fff" strokeWidth={2} />;
+                                                        }}
+                                                        activeDot={{ r: 7, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }}
+                                                    />
+                                                </LineChart>
+                                            </ResponsiveContainer>
+                                        )}
                                     </div>
-                                    <ChevronRight className="w-5 h-5 text-muted-foreground/40 group-hover:text-cyan-500" />
+                                    <div className="flex justify-center gap-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                        <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div> Excellent (70+)</span>
+                                        <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div> Average (50-69)</span>
+                                        <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-destructive"></div> Poor (&lt;50)</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {schoolsInMonth.schools.map(s => (
+                                        <div key={s._id} onClick={() => setSelectedSchool(s)} className="p-4 border border-border/80 rounded-xl flex items-center justify-between hover:bg-muted/30 hover:border-indigo-500/40 hover:shadow-md cursor-pointer bg-card transition-all group">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                                                    <School className="w-5 h-5" />
+                                                </div>
+                                                <span className="font-bold text-foreground text-sm sm:text-base">{s.schoolName}</span>
+                                            </div>
+                                            <ChevronRight className="w-5 h-5 text-muted-foreground/40 group-hover:text-indigo-500" />
+                                        </div>
+                                    ))}
+                                    {schoolsInMonth.hasLeaves && (
+                                        <div onClick={() => setSelectedSchool({ _id: 'LEAVES_GENERAL', schoolName: t('progress_report.general_leaves') })} className="p-4 border border-cyan-500/30 rounded-xl flex items-center justify-between hover:bg-cyan-500/5 hover:border-cyan-500/60 hover:shadow-md cursor-pointer bg-cyan-500/5 transition-all group">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2.5 bg-cyan-500/10 rounded-xl text-cyan-600 group-hover:bg-cyan-500 group-hover:text-white transition-colors">
+                                                    <FolderOpen className="w-5 h-5" />
+                                                </div>
+                                                <span className="font-bold text-foreground text-sm sm:text-base">{t('progress_report.general_leaves')}</span>
+                                            </div>
+                                            <ChevronRight className="w-5 h-5 text-muted-foreground/40 group-hover:text-cyan-500" />
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -331,9 +490,7 @@ const ProgressReport = () => {
                                         <CalendarOff className="w-8 h-8" />
                                     </div>
                                     <p className="font-bold text-base text-foreground mb-1">{t('progress_report.approved_leaves')}</p>
-                                    <p className="text-[10px] font-bold text-cyan-700 uppercase tracking-widest bg-cyan-500/20 px-2.5 py-1 rounded-full">
-                                        {t('progress_report.request_count', { count: leavesData.length })}
-                                    </p>
+                                    <p className="text-[10px] font-bold text-cyan-700 uppercase tracking-widest bg-cyan-500/20 px-2.5 py-1 rounded-full">{t('progress_report.request_count', { count: leavesData.length })}</p>
                                 </div>
                             )}
                         </div>
@@ -398,9 +555,7 @@ const ProgressReport = () => {
                                 </>
                             ) : (
                                 <div>
-                                    <h4 className="text-[11px] font-black uppercase tracking-widest text-cyan-600 mb-4 flex items-center gap-2">
-                                        <CalendarOff className="w-4 h-4" /> {t('progress_report.breakdown.leaves_title')}
-                                    </h4>
+                                    <h4 className="text-[11px] font-black uppercase tracking-widest text-cyan-600 mb-4 flex items-center gap-2"><CalendarOff className="w-4 h-4" /> {t('progress_report.breakdown.leaves_title')}</h4>
                                     <div className="space-y-4">
                                         {leavesData.map(leave => (
                                             <div key={leave._id} className="p-5 border border-cyan-500/20 bg-cyan-500/5 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
@@ -409,10 +564,7 @@ const ProgressReport = () => {
                                                         <CalendarDays className="w-4 h-4 text-cyan-600" />
                                                         {new Date(leave.fromDate).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}
                                                         {leave.fromDate !== leave.toDate && (
-                                                            <>
-                                                                <span className="text-muted-foreground mx-1 text-xs">to</span>
-                                                                {new Date(leave.toDate).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}
-                                                            </>
+                                                            <><span className="text-muted-foreground mx-1 text-xs">to</span>{new Date(leave.toDate).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}</>
                                                         )}
                                                     </div>
                                                     <span className="px-2.5 py-1 bg-cyan-500 text-white rounded font-bold uppercase text-[10px] tracking-wider">{t('progress_report.breakdown.approved_tag')}</span>
@@ -443,12 +595,8 @@ const ProgressReport = () => {
                                 <span className={getStatusBadge(selectedDay.status)}>{selectedDay.status}</span>
                                 <h2 className="text-xl sm:text-2xl font-bold mt-4 mb-5 text-foreground">{formatFullDate(selectedDay.date)}</h2>
                                 <div className="flex justify-center gap-4">
-                                    <div className="text-xs font-bold text-emerald-600 bg-emerald-500/10 px-4 py-2 rounded-xl border border-emerald-500/20">
-                                        {t('progress_report.detail.in')}: {formatTime(selectedDay.checkInTime) || '--:--'}
-                                    </div>
-                                    <div className="text-xs font-bold text-rose-600 bg-rose-500/10 px-4 py-2 rounded-xl border border-rose-500/20">
-                                        {t('progress_report.detail.out')}: {formatTime(selectedDay.checkOutTime) || '--:--'}
-                                    </div>
+                                    <div className="text-xs font-bold text-emerald-600 bg-emerald-500/10 px-4 py-2 rounded-xl border border-emerald-500/20">{t('progress_report.detail.in')}: {formatTime(selectedDay.checkInTime) || '--:--'}</div>
+                                    <div className="text-xs font-bold text-rose-600 bg-rose-500/10 px-4 py-2 rounded-xl border border-rose-500/20">{t('progress_report.detail.out')}: {formatTime(selectedDay.checkOutTime) || '--:--'}</div>
                                 </div>
                             </div>
                             {(selectedDay.teacherNote || selectedDay.lateReason) && (
