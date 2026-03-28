@@ -47,7 +47,6 @@ const EmployeeNavbar = () => {
                 notificationSound.volume = 1;
                 document.removeEventListener('click', unlockAudio);
                 document.removeEventListener('touchstart', unlockAudio);
-                console.log("Audio successfully unlocked!");
             }).catch(e => console.log("Still waiting for user interaction..."));
         };
 

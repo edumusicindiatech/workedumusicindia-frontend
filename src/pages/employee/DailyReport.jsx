@@ -119,10 +119,6 @@ const DailyReport = () => {
                         <Calendar className="w-4 h-4 text-primary shrink-0" />
                         {todayFormatted}
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground font-medium">
-                        <MapPin className="w-4 h-4 text-primary shrink-0" />
-                        <span className="truncate max-w-50 sm:max-w-none">{t('daily_report.location_active')}</span>
-                    </div>
                 </div>
 
                 <div className="p-4 sm:p-6 space-y-6">

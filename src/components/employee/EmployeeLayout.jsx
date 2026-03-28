@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import EmployeeNavbar from "./EmployeeNavbar";
-import { useTranslation } from "react-i18next"; // <-- Added hook import
+import { useTranslation } from "react-i18next";
 
 const EmployeeLayout = () => {
     const { t } = useTranslation(); // <-- Initialize translation function
