@@ -3,15 +3,16 @@ import { useSelector } from "react-redux";
 import api from "../../api/axios";
 import {
     School, MapPin, ChevronRight, Loader2, Map,
-    Clock, Navigation, CalendarDays
+    Clock, Navigation, CalendarDays, UserX, CalendarOff
 } from "lucide-react";
 import toast from "react-hot-toast";
 import SchoolDetailsModal from "../../modals/employee/SchoolDetailsModal";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 
 import { io } from "socket.io-client";
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
+// --- HELPER FUNCTIONS ---
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return null;
     const R = 6371;
@@ -24,15 +25,31 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
     return (R * c).toFixed(1);
 };
 
+// Converts "14:30" (24h) to "2:30 PM" (12h)
+const formatTime12Hour = (timeStr) => {
+    if (!timeStr || !timeStr.includes(':')) return timeStr;
+    const [hourStr, minuteStr] = timeStr.split(':');
+    let hours = parseInt(hourStr, 10);
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+    
+    return `${hours}:${minuteStr} ${ampm}`;
+};
+
 const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const AssignedSchools = () => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation();
     const { user } = useSelector((state) => state.auth);
     const [assignedSchools, setAssignedSchools] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedSchool, setSelectedSchool] = useState(null);
     const [userLocation, setUserLocation] = useState(null);
+
+    // Note: You can populate these with real data from your API later
+    const [leaveStats, setLeaveStats] = useState({ absent: 0, leaves: 0 }); 
 
     useEffect(() => {
         if ("geolocation" in navigator) {
@@ -101,7 +118,7 @@ const AssignedSchools = () => {
         <div className="max-w-6xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
 
             {/* --- HEADER SECTION --- */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 pb-6 border-b border-border/40">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 pb-6 border-b border-border/40">
                 <div className="space-y-1.5">
                     <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-linear-to-r from-primary to-primary/60">
                         {t('assigned_schools.title')}
@@ -110,6 +127,18 @@ const AssignedSchools = () => {
                         <Map className="w-4 h-4 text-primary/70" />
                         {t('assigned_schools.subtitle')}
                     </p>
+                </div>
+
+                {/* --- NEW: ABSENT & LEAVE RECORD BOXES --- */}
+                <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+                    <div className="flex-1 md:flex-none bg-destructive/10 text-destructive border border-destructive/20 px-4 py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-sm whitespace-nowrap">
+                        <UserX className="w-4 h-4" />
+                        <span className="text-sm font-bold">{t('assigned_schools.absent')}: {leaveStats.absent}</span>
+                    </div>
+                    <div className="flex-1 md:flex-none bg-amber-500/10 text-amber-600 border border-amber-500/20 px-4 py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-sm cursor-pointer hover:bg-amber-500/20 transition-colors whitespace-nowrap">
+                        <CalendarOff className="w-4 h-4" />
+                        <span className="text-sm font-bold">{t('assigned_schools.leave_record')}: {leaveStats.leaves}</span>
+                    </div>
                 </div>
             </div>
 
@@ -155,8 +184,9 @@ const AssignedSchools = () => {
 
                                 <div className="space-y-4 mb-6 flex-1 w-full">
                                     {school.categories.map((cat, idx) => {
-                                        const startTime = cat.startTime || t('assigned_schools.na');
-                                        const endTime = cat.endTime || t('assigned_schools.na');
+                                        // FORMAT THE TIME HERE
+                                        const startTime = formatTime12Hour(cat.startTime) || t('assigned_schools.na');
+                                        const endTime = formatTime12Hour(cat.endTime) || t('assigned_schools.na');
                                         const allowedDays = cat.allowedDays || [];
 
                                         let distanceText = null;

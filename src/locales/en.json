@@ -588,6 +588,7 @@
         "stat_present": "Present",
         "stat_late": "Late",
         "stat_absent": "Absent",
+        "stat_leaves": "Leaves",
         "stat_events": "Events",
         "timeline_title": "Timeline",
         "timeline_description": "Description:",
@@ -1086,6 +1087,8 @@
         "time_to": "to",
         "view_history": "View Attendance History",
         "na": "N/A",
+        "absent": "Absent",
+        "leave_record": "Leave Record",
         "error_toast": "Failed to load your assigned schools. Please try again.",
         "weekdays": {
             "Mon": "M",

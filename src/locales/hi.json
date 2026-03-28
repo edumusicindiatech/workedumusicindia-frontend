@@ -592,6 +592,7 @@
         "timeline_title": "टाइमलाइन",
         "timeline_description": "विवरण:",
         "no_records": "पिछले 30 दिनों के लिए कोई उपस्थिति रिकॉर्ड नहीं मिला।",
+        "stat_leaves": "छुट्टियां",
         "statuses": {
             "Present": "उपस्थित",
             "Late": "देरी",
@@ -1071,6 +1072,8 @@
         "empty_desc": "वर्तमान में आपकी प्रोफ़ाइल में स्थायी रूप से कोई स्कूल नहीं सौंपा गया है। बाद में फिर से जांचें!",
         "card_location": "स्थान",
         "card_category": "श्रेणी",
+        "absent": "अनुपस्थित",
+        "leave_record": "छुट्टी का रिकॉर्ड",
         "distance_away": "{{count}} किमी दूर",
         "time_to": "से",
         "card_to": "से",

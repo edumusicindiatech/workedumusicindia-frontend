@@ -37,7 +37,7 @@ const AbsentModal = ({ isOpen, onClose, target, onSubmit, actionLoading }) => {
                 <div className="space-y-5">
                     <div className="space-y-2">
                         <label className="text-sm font-semibold flex items-center gap-2">
-                            {t('absent_modal.reason_label')} <span className="text-xs font-normal opacity-60 text-muted-foreground">{t('absent_modal.optional')}</span>
+                            {t('absent_modal.reason_label')} <span className="text-xs font-normal opacity-60 text-muted-foreground">{t('absent_modal.required')}</span>
                         </label>
                         <textarea
                             value={absentReason}
@@ -55,7 +55,7 @@ const AbsentModal = ({ isOpen, onClose, target, onSubmit, actionLoading }) => {
                             variant="destructive"
                             className="flex-1 h-11 rounded-xl shadow-sm"
                             onClick={handleSubmit}
-                            disabled={actionLoading}
+                            disabled={actionLoading || !absentReason.trim()}
                         >
                             {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('absent_modal.confirm')}
                         </Button>

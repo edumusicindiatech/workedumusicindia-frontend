@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
 import api from "../../api/axios";
-import { X, CheckCircle2, Clock, MapPin, UserX, PartyPopper, ChevronRight, ChevronLeft, CalendarDays, Plus } from "lucide-react";
+import { X, CheckCircle2, Clock, MapPin, UserX, PartyPopper, ChevronRight, ChevronLeft, CalendarDays, Plus, CalendarOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
@@ -50,7 +49,7 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300" onClick={onClose}>
-            <div className="bg-card w-full max-w-2xl rounded-2xl shadow-2xl border border-border flex flex-col max-h-[85vh] transition-all duration-300 ease-out animate-in zoom-in-95 fade-in overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-card w-full max-w-3xl rounded-2xl shadow-2xl border border-border flex flex-col max-h-[85vh] transition-all duration-300 ease-out animate-in zoom-in-95 fade-in overflow-hidden" onClick={(e) => e.stopPropagation()}>
 
                 {/* HEADER */}
                 <div className="px-6 py-5 border-b border-border flex items-start justify-between bg-muted/30 shrink-0">
@@ -130,27 +129,35 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                                 </div>
                             </div>
 
-                            {/* Stats Grid */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            {/* Stats Grid - Updated to 5 columns on desktop */}
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                                 <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex flex-col items-center justify-center text-center">
                                     <CheckCircle2 className="w-6 h-6 text-emerald-500 mb-2" />
-                                    <p className="text-2xl font-bold text-emerald-500 leading-none">{activeCategory.stats.present}</p>
-                                    <p className="text-[10px] uppercase font-bold text-emerald-500/70 mt-1 tracking-wider">{t('school_details.stat_present')}</p>
+                                    <p className="text-2xl font-bold text-emerald-500 leading-none">{activeCategory.stats.present || 0}</p>
+                                    <p className="text-[10px] uppercase font-bold text-emerald-500/70 mt-1 tracking-wider">{t('school_details.stat_present') || 'PRESENT'}</p>
                                 </div>
                                 <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl flex flex-col items-center justify-center text-center">
                                     <Clock className="w-6 h-6 text-amber-500 mb-2" />
-                                    <p className="text-2xl font-bold text-amber-500 leading-none">{activeCategory.stats.late}</p>
-                                    <p className="text-[10px] uppercase font-bold text-amber-500/70 mt-1 tracking-wider">{t('school_details.stat_late')}</p>
+                                    <p className="text-2xl font-bold text-amber-500 leading-none">{activeCategory.stats.late || 0}</p>
+                                    <p className="text-[10px] uppercase font-bold text-amber-500/70 mt-1 tracking-wider">{t('school_details.stat_late') || 'LATE'}</p>
                                 </div>
                                 <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-xl flex flex-col items-center justify-center text-center">
                                     <UserX className="w-6 h-6 text-destructive mb-2" />
-                                    <p className="text-2xl font-bold text-destructive leading-none">{activeCategory.stats.absent}</p>
-                                    <p className="text-[10px] uppercase font-bold text-destructive/70 mt-1 tracking-wider">{t('school_details.stat_absent')}</p>
+                                    <p className="text-2xl font-bold text-destructive leading-none">{activeCategory.stats.absent || 0}</p>
+                                    <p className="text-[10px] uppercase font-bold text-destructive/70 mt-1 tracking-wider">{t('school_details.stat_absent') || 'ABSENT'}</p>
                                 </div>
-                                <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex flex-col items-center justify-center text-center">
+
+                                {/* NEW: LEAVES BOX */}
+                                <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-xl flex flex-col items-center justify-center text-center">
+                                    <CalendarOff className="w-6 h-6 text-purple-500 mb-2" />
+                                    <p className="text-2xl font-bold text-purple-500 leading-none">{activeCategory.stats.leaves || 0}</p>
+                                    <p className="text-[10px] uppercase font-bold text-purple-500/70 mt-1 tracking-wider">{t('school_details.stat_leaves') || 'LEAVES'}</p>
+                                </div>
+
+                                <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex flex-col items-center justify-center text-center col-span-2 sm:col-span-1">
                                     <PartyPopper className="w-6 h-6 text-blue-500 mb-2" />
-                                    <p className="text-2xl font-bold text-blue-500 leading-none">{activeCategory.stats.events}</p>
-                                    <p className="text-[10px] uppercase font-bold text-blue-500/70 mt-1 tracking-wider">{t('school_details.stat_events')}</p>
+                                    <p className="text-2xl font-bold text-blue-500 leading-none">{activeCategory.stats.events || 0}</p>
+                                    <p className="text-[10px] uppercase font-bold text-blue-500/70 mt-1 tracking-wider">{t('school_details.stat_events') || 'EVENTS'}</p>
                                 </div>
                             </div>
 
@@ -162,15 +169,26 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                                         activeCategory.history.map((log, idx) => (
                                             <div key={idx} className="flex gap-4">
                                                 <div className="flex flex-col items-center mt-1">
-                                                    <div className={`w-3 h-3 rounded-full shrink-0 ${log.status === 'Present' ? 'bg-emerald-500' : log.status === 'Late' ? 'bg-amber-500' : log.status === 'Absent' ? 'bg-destructive' : 'bg-blue-500'}`} />
+                                                    <div className={`w-3 h-3 rounded-full shrink-0 ${log.status === 'Present' ? 'bg-emerald-500' :
+                                                            log.status === 'Late' ? 'bg-amber-500' :
+                                                                log.status === 'Absent' ? 'bg-destructive' :
+                                                                    (log.status === 'Leave' || log.status === 'Holiday') ? 'bg-purple-500' :
+                                                                        'bg-blue-500'
+                                                        }`} />
                                                     {idx !== activeCategory.history.length - 1 && <div className="w-0.5 h-full bg-border mt-2" />}
                                                 </div>
                                                 <div className="flex-1 pb-4">
                                                     <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                                                         <p className="font-bold text-sm text-foreground">{log.date}</p>
-                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1 ${log.status === 'Present' ? 'text-emerald-500 bg-emerald-500/10' : log.status === 'Late' ? 'text-amber-500 bg-amber-500/10' : log.status === 'Absent' ? 'text-destructive bg-destructive/10' : 'text-blue-500 bg-blue-500/10'}`}>
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1 ${log.status === 'Present' ? 'text-emerald-500 bg-emerald-500/10' :
+                                                                log.status === 'Late' ? 'text-amber-500 bg-amber-500/10' :
+                                                                    log.status === 'Absent' ? 'text-destructive bg-destructive/10' :
+                                                                        (log.status === 'Leave' || log.status === 'Holiday') ? 'text-purple-500 bg-purple-500/10' :
+                                                                            'text-blue-500 bg-blue-500/10'
+                                                            }`}>
                                                             {log.status === 'Event' && <PartyPopper className="w-3 h-3" />}
-                                                            {t(`school_details.statuses.${log.status}`)}
+                                                            {log.status === 'Leave' && <CalendarOff className="w-3 h-3" />}
+                                                            {t(`school_details.statuses.${log.status}`) || log.status}
                                                         </span>
                                                     </div>
                                                     {log.note && (

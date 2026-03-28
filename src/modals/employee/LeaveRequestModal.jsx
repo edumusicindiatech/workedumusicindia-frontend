@@ -3,10 +3,10 @@ import { X, CalendarPlus, Loader2, AlertCircle, CheckCircle2, XCircle } from "lu
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
-import { useTranslation, Trans } from "react-i18next"; // <-- Added imports
+import { useTranslation, Trans } from "react-i18next";
 
 const LeaveRequestModal = ({ isOpen, onClose }) => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
 
@@ -92,10 +92,11 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-card w-full max-w-md rounded-3xl shadow-xl border border-border overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Added max-h-[90vh] and overflow-y-auto to handle shorter mobile screens */}
+            <div className="bg-card w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl shadow-xl border border-border flex flex-col animate-in zoom-in-95 duration-200">
 
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30 sticky top-0 z-10">
                     <h3 className="text-lg font-bold flex items-center gap-2">
                         <CalendarPlus className="w-5 h-5 text-blue-500" />
                         {t('leave_request.title')}
@@ -109,7 +110,7 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                     </button>
                 </div>
 
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-10 gap-3">
                             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -148,7 +149,7 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                                     {activeRequest.status === 'approved' && t('leave_request.status_approved')}
                                     {activeRequest.status === 'rejected' && t('leave_request.status_rejected')}
                                 </h4>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-sm text-muted-foreground break-words">
                                     <Trans
                                         i18nKey="leave_request.requested_dates"
                                         values={{ from: activeRequest.fromDate, to: activeRequest.toDate }}
@@ -156,18 +157,19 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                                     />
                                 </p>
                                 {activeRequest.adminRemarks && (
-                                    <p className="text-sm mt-3 p-3 bg-muted rounded-xl">
+                                    <p className="text-sm mt-3 p-3 bg-muted rounded-xl break-words">
                                         <strong>{t('leave_request.admin_note')}</strong> {activeRequest.adminRemarks}
                                     </p>
                                 )}
                             </div>
 
-                            <div className="flex gap-3 pt-4 border-t border-border mt-4">
+                            {/* Buttons transition from stacked (mobile) to row (larger screens) */}
+                            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-border mt-4">
                                 {activeRequest.status === 'pending' ? (
                                     <>
                                         <Button
                                             variant="outline"
-                                            className="flex-1"
+                                            className="w-full sm:flex-1"
                                             onClick={handleDismiss}
                                             disabled={actionLoading}
                                         >
@@ -175,7 +177,7 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                                         </Button>
                                         <Button
                                             variant="destructive"
-                                            className="flex-1"
+                                            className="w-full sm:flex-1"
                                             onClick={revokeLeaveRequest}
                                             disabled={actionLoading}
                                         >
@@ -186,13 +188,13 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                                     <>
                                         <Button
                                             variant="outline"
-                                            className="flex-1"
+                                            className="w-full sm:flex-1"
                                             onClick={onClose}
                                         >
                                             {t('leave_request.btn_dismiss')}
                                         </Button>
                                         <Button
-                                            className="flex-1"
+                                            className="w-full sm:flex-1"
                                             onClick={handleDismiss}
                                         >
                                             {t('leave_request.btn_new_request')}
@@ -205,7 +207,8 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                     ) : (
 
                         <form onSubmit={submitLeaveRequest} className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                            {/* FIX: Changed from grid-cols-2 to grid-cols-1 sm:grid-cols-2 */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <label className="text-sm font-semibold text-foreground">{t('leave_request.label_from')}</label>
                                     <input
@@ -238,23 +241,24 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                                     value={formData.reason}
                                     onChange={handleInputChange}
                                     placeholder={t('leave_request.placeholder_reason')}
-                                    className="flex min-h-25 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary resize-none"
+                                    className="flex min-h-[100px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary resize-none"
                                 />
                             </div>
 
-                            <div className="pt-4 border-t border-border flex justify-end gap-3 mt-6">
+                            {/* Buttons stacked on mobile, row on larger screens */}
+                            <div className="pt-4 border-t border-border flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">
                                 <Button
                                     type="button"
                                     variant="outline"
                                     onClick={onClose}
-                                    className="h-11 px-6 rounded-xl"
+                                    className="w-full sm:w-auto h-11 px-6 rounded-xl"
                                     disabled={actionLoading}
                                 >
                                     {t('leave_request.btn_cancel')}
                                 </Button>
                                 <Button
                                     type="submit"
-                                    className="h-11 px-8 rounded-xl font-bold"
+                                    className="w-full sm:w-auto h-11 px-8 rounded-xl font-bold"
                                     disabled={actionLoading}
                                 >
                                     {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('leave_request.btn_submit')}
