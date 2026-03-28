@@ -149,7 +149,7 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                                     {activeRequest.status === 'approved' && t('leave_request.status_approved')}
                                     {activeRequest.status === 'rejected' && t('leave_request.status_rejected')}
                                 </h4>
-                                <p className="text-sm text-muted-foreground break-words">
+                                <p className="text-sm text-muted-foreground wrap-break-word">
                                     <Trans
                                         i18nKey="leave_request.requested_dates"
                                         values={{ from: activeRequest.fromDate, to: activeRequest.toDate }}
@@ -157,7 +157,7 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                                     />
                                 </p>
                                 {activeRequest.adminRemarks && (
-                                    <p className="text-sm mt-3 p-3 bg-muted rounded-xl break-words">
+                                    <p className="text-sm mt-3 p-3 bg-muted rounded-xl wrap-break-word">
                                         <strong>{t('leave_request.admin_note')}</strong> {activeRequest.adminRemarks}
                                     </p>
                                 )}
@@ -241,7 +241,7 @@ const LeaveRequestModal = ({ isOpen, onClose }) => {
                                     value={formData.reason}
                                     onChange={handleInputChange}
                                     placeholder={t('leave_request.placeholder_reason')}
-                                    className="flex min-h-[100px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary resize-none"
+                                    className="flex min-h-25 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary resize-none"
                                 />
                             </div>
 
