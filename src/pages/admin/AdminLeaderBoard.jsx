@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
     Trophy, Search, TrendingUp, TrendingDown, Minus, Star,
     ArrowLeft, BarChart3, CalendarDays, LineChart as LineChartIcon,
-    ChevronDown // <-- Added this import for the accordion icon
+    ChevronDown
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,9 @@ import {
 } from 'recharts';
 import { useSelector } from "react-redux";
 
-const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
+const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000", {
+    withCredentials: true
+});
 
 const AdminLeaderboard = () => {
     const { t } = useTranslation();
@@ -25,73 +27,63 @@ const AdminLeaderboard = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
 
-    // Accordion State for the Top 5 Chart
     const [isChartExpanded, setIsChartExpanded] = useState(false);
 
-    // Drill-down States
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [employeeGraphData, setEmployeeGraphData] = useState([]);
-    const [graphPeriod, setGraphPeriod] = useState('weekly'); // 'weekly' | 'monthly'
+    const [graphPeriod, setGraphPeriod] = useState('weekly');
     const [isGraphLoading, setIsGraphLoading] = useState(false);
 
-    // Fetch Leaderboard Data
-    const fetchLeaderboard = async () => {
+    // 1. DEDICATED FETCH (Leaderboard)
+    const fetchLeaderboard = useCallback(async () => {
         try {
-            const res = await api.get('/employee/leaderboard');
+            const res = await api.get(`/employee/leaderboard?_t=${Date.now()}`);
             if (res.data.success) {
                 setEmployees(res.data.data);
             }
         } catch (error) {
-            toast.error(t('leaderboard.toasts.load_error') || "Failed to load leaderboard");
+            toast.error(t('leaderboard.toasts.load_error'));
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [t]);
 
+    // 2. DEDICATED INITIAL LOAD
     useEffect(() => {
-        fetchLeaderboard(); // Initial load
+        fetchLeaderboard();
+    }, [fetchLeaderboard]);
 
-        if (!user) return;
-
-        const currentUserId = user.id || user._id;
-
-        // 1. Join the private room so we can actually hear the backend!
-        const joinUserRoom = () => {
-            socket.emit("join_room", currentUserId);
-        };
-
-        if (socket.connected) {
-            joinUserRoom();
+    // 3. DEDICATED SOCKET ROOM JOIN
+    useEffect(() => {
+        if (user && (user._id || user.id)) {
+            const adminId = user._id || user.id;
+            socket.emit('join_room', adminId);
         }
-        socket.on("connect", joinUserRoom);
+    }, [user]);
 
-        // 2. What to do when the backend says the cron job finished
+    // 4. DEDICATED SOCKET LISTENER
+    useEffect(() => {
         const handleRealTimeUpdate = () => {
-            // A. Play the sound
             try {
                 const notificationSound = new Audio('/sounds/notification-ting.mp3');
                 notificationSound.currentTime = 0;
                 notificationSound.play().catch(e => console.warn("Audio blocked", e));
             } catch (e) { console.error("Sound error", e); }
 
-            // B. Show a beautiful toast
-            toast.success("Scores calculated! Leaderboard updated.", {
+            toast.success(t('leaderboard.toasts.updated'), {
                 icon: '🏆',
                 duration: 4000
             });
 
-            // C. Actually fetch the new data so the graphs update!
             fetchLeaderboard();
         };
 
-        // Listen for the specific Admin refresh event
         socket.on('admin_leaderboard_refresh', handleRealTimeUpdate);
 
         return () => {
-            socket.off("connect", joinUserRoom);
             socket.off('admin_leaderboard_refresh', handleRealTimeUpdate);
         };
-    }, [t, user]);
+    }, [fetchLeaderboard, t]);
 
     // Fetch Individual Employee Graph Data
     useEffect(() => {
@@ -100,20 +92,18 @@ const AdminLeaderboard = () => {
         const fetchGraph = async () => {
             setIsGraphLoading(true);
             try {
-                // Dynamically get current month/year for the API call
                 const today = new Date();
                 const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
                 const currentYear = `${today.getFullYear()}`;
 
                 const dateParam = graphPeriod === 'weekly' ? currentMonth : currentYear;
 
-                // Adjust this endpoint based on how we configure the backend to handle 'monthly'
-                const res = await api.get(`/admin/progress/${selectedEmployee._id}/graph?period=${graphPeriod}&date=${dateParam}`);
+                const res = await api.get(`/admin/progress/${selectedEmployee._id}/graph?period=${graphPeriod}&date=${dateParam}&_t=${Date.now()}`);
                 if (res.data.success) {
                     setEmployeeGraphData(res.data.data);
                 }
             } catch (error) {
-                toast.error("Failed to load historical data");
+                toast.error(t('leaderboard.toasts.graph_error'));
                 setEmployeeGraphData([]);
             } finally {
                 setIsGraphLoading(false);
@@ -121,9 +111,9 @@ const AdminLeaderboard = () => {
         };
 
         fetchGraph();
-    }, [selectedEmployee, graphPeriod]);
+    }, [selectedEmployee, graphPeriod, t]);
 
-    // Helpers for dynamic styling
+    // Helpers
     const getZoneStyles = (zone) => {
         switch (zone) {
             case 'green': return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
@@ -134,9 +124,9 @@ const AdminLeaderboard = () => {
     };
 
     const getChartColor = (score) => {
-        if (score >= 70) return '#10b981'; // Green
-        if (score >= 50) return '#3b82f6'; // Blue
-        return '#ef4444'; // Red
+        if (score >= 70) return '#10b981';
+        if (score >= 50) return '#3b82f6';
+        return '#ef4444';
     };
 
     const getTrendIcon = (trend) => {
@@ -158,10 +148,9 @@ const AdminLeaderboard = () => {
         return employees.filter(emp => emp.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }, [employees, searchTerm]);
 
-    // Data for the Global Top 5 Bar Chart
     const top5GlobalData = useMemo(() => {
         return employees.slice(0, 5).map(emp => ({
-            name: emp.name.split(' ')[0], // First name only for cleaner X-Axis
+            name: emp.name.split(' ')[0],
             score: emp.currentWeeklyScore || 0,
             zone: emp.colorZone
         }));
@@ -177,10 +166,10 @@ const AdminLeaderboard = () => {
                     </div>
                     <div className="min-w-0">
                         <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">
-                            {selectedEmployee ? selectedEmployee.name : (t('leaderboard.title') || "Weekly Leaderboard")}
+                            {selectedEmployee ? selectedEmployee.name : t('leaderboard.title')}
                         </h1>
                         <p className="text-muted-foreground text-xs sm:text-sm truncate">
-                            {selectedEmployee ? "Detailed Performance History" : (t('leaderboard.subtitle') || "Complete team rankings and global trends")}
+                            {selectedEmployee ? t('leaderboard.detail_history') : t('leaderboard.subtitle')}
                         </p>
                     </div>
                 </div>
@@ -192,38 +181,35 @@ const AdminLeaderboard = () => {
                         onClick={() => setSelectedEmployee(null)}
                         className="gap-1.5 border-border text-muted-foreground hover:text-primary transition-all"
                     >
-                        <ArrowLeft className="w-4 h-4" /> <span className="hidden sm:inline">Back to List</span>
+                        <ArrowLeft className="w-4 h-4" /> <span className="hidden sm:inline">{t('leaderboard.back_to_list')}</span>
                     </Button>
                 )}
             </div>
 
-            {/* DYNAMIC TOP SECTION: GLOBAL CHART vs INDIVIDUAL CHART */}
+            {/* DYNAMIC TOP SECTION */}
             <div className="bg-card rounded-2xl sm:rounded-3xl border border-border shadow-lg shadow-slate-200/40 dark:shadow-none overflow-hidden flex flex-col mb-6 sm:mb-8 transition-all duration-300">
                 {!selectedEmployee ? (
-                    /* --- GLOBAL TOP 5 BAR CHART WITH SMOOTH ACCORDION --- */
                     <div className="animate-in fade-in zoom-in-95 duration-300">
-                        {/* Accordion Header (Clickable) */}
                         <div
                             className="p-4 sm:p-6 flex items-center justify-between cursor-pointer hover:bg-muted/40 transition-colors"
                             onClick={() => setIsChartExpanded(!isChartExpanded)}
                         >
                             <h3 className="font-bold text-sm sm:text-base text-foreground flex items-center gap-2">
-                                <BarChart3 className="w-4 h-4 text-primary" /> Top 5 Employees This Week
+                                <BarChart3 className="w-4 h-4 text-primary" /> {t('leaderboard.top_5_title')}
                             </h3>
                             <div className="p-1 rounded-full bg-background border border-border shadow-sm">
                                 <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${isChartExpanded ? 'rotate-180' : ''}`} />
                             </div>
                         </div>
 
-                        {/* Accordion Body (Smooth CSS Grid Transition) */}
                         <div className={`grid transition-all duration-300 ease-in-out ${isChartExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                             <div className="overflow-hidden">
                                 <div className="px-4 pb-4 sm:px-6 sm:pb-6 pt-0">
                                     <div className="h-50 sm:h-62.5 min-h-50 min-w-full w-full relative">
                                         {isLoading ? (
-                                            <div className="w-full h-full flex items-center justify-center text-muted-foreground animate-pulse">Loading Chart...</div>
+                                            <div className="w-full h-full flex items-center justify-center text-muted-foreground animate-pulse">{t('leaderboard.chart_loading')}</div>
                                         ) : top5GlobalData.length === 0 ? (
-                                            <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">No data available</div>
+                                            <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">{t('leaderboard.no_data')}</div>
                                         ) : (
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <BarChart data={top5GlobalData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
@@ -248,7 +234,6 @@ const AdminLeaderboard = () => {
                         </div>
                     </div>
                 ) : (
-                    /* --- INDIVIDUAL EMPLOYEE LINE CHART --- */
                     <div className="p-4 sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                             <div className="flex items-center gap-3">
@@ -257,38 +242,37 @@ const AdminLeaderboard = () => {
                                 </div>
                                 <div>
                                     <span className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border mb-1 inline-block ${getZoneStyles(selectedEmployee.colorZone)}`}>
-                                        Current Rank: #{selectedEmployee.currentWeeklyRank}
+                                        {t('leaderboard.current_rank', { rank: selectedEmployee.currentWeeklyRank })}
                                     </span>
                                     <h3 className="font-bold text-foreground leading-none flex items-center gap-2">
-                                        Score: {selectedEmployee.currentWeeklyScore}/100
+                                        {t('leaderboard.score_label', { score: selectedEmployee.currentWeeklyScore })}
                                         {getTrendIcon(selectedEmployee.scoreTrend)}
                                     </h3>
                                 </div>
                             </div>
 
-                            {/* Weekly / Monthly Toggle */}
                             <div className="flex bg-muted/50 p-1 rounded-xl border border-border">
                                 <button
                                     onClick={() => setGraphPeriod('weekly')}
                                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${graphPeriod === 'weekly' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                                 >
-                                    <CalendarDays className="w-3.5 h-3.5" /> Weekly
+                                    <CalendarDays className="w-3.5 h-3.5" /> {t('leaderboard.graph.weekly')}
                                 </button>
                                 <button
                                     onClick={() => setGraphPeriod('monthly')}
                                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${graphPeriod === 'monthly' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                                 >
-                                    <LineChartIcon className="w-3.5 h-3.5" /> Monthly
+                                    <LineChartIcon className="w-3.5 h-3.5" /> {t('leaderboard.graph.monthly')}
                                 </button>
                             </div>
                         </div>
 
                         <div className="h-62.5 min-h-62.5 w-full min-w-full relative">
                             {isGraphLoading ? (
-                                <div className="w-full h-full flex items-center justify-center text-muted-foreground animate-pulse">Loading {graphPeriod} data...</div>
+                                <div className="w-full h-full flex items-center justify-center text-muted-foreground animate-pulse">{t('leaderboard.graph.loading', { period: graphPeriod })}</div>
                             ) : employeeGraphData.length === 0 ? (
                                 <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm border-2 border-dashed border-border rounded-xl">
-                                    No historical data found for this period.
+                                    {t('leaderboard.graph.no_historical_data')}
                                 </div>
                             ) : (
                                 <ResponsiveContainer width="100%" height="100%">
@@ -314,7 +298,7 @@ const AdminLeaderboard = () => {
                 <div className="bg-card rounded-2xl sm:rounded-3xl border border-border shadow-lg shadow-slate-200/40 dark:shadow-none overflow-hidden flex flex-col min-h-100 transition-all duration-300">
                     <div className="p-4 sm:p-5 border-b border-border bg-muted/30 flex items-center justify-between gap-3 sm:gap-4">
                         <h3 className="font-bold text-sm sm:text-base text-foreground truncate flex items-center gap-2">
-                            <Star className="w-4 h-4 text-amber-500" /> Current Standings
+                            <Star className="w-4 h-4 text-amber-500" /> {t('leaderboard.standings_title')}
                         </h3>
                     </div>
 
@@ -322,7 +306,7 @@ const AdminLeaderboard = () => {
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <Input
-                                placeholder={t('leaderboard.search_placeholder') || "Search employee..."}
+                                placeholder={t('leaderboard.search_placeholder')}
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                                 className="pl-9 h-11 bg-card border-border/60 focus-visible:ring-primary/30 rounded-xl shadow-sm text-sm"
@@ -336,7 +320,7 @@ const AdminLeaderboard = () => {
                                 ))}
                             </div>
                         ) : filteredEmployees.length === 0 ? (
-                            <div className="text-center py-10 text-muted-foreground text-sm font-medium">No employees found.</div>
+                            <div className="text-center py-10 text-muted-foreground text-sm font-medium">{t('leaderboard.no_employees')}</div>
                         ) : (
                             <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 {filteredEmployees.map((emp) => (
@@ -354,12 +338,12 @@ const AdminLeaderboard = () => {
                                             </div>
                                             <div className="min-w-0">
                                                 <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors truncate">{emp.name}</p>
-                                                <p className="text-[10px] text-muted-foreground uppercase font-semibold truncate">{emp.zone || "Unassigned"}</p>
+                                                <p className="text-[10px] text-muted-foreground uppercase font-semibold truncate">{emp.zone || t('leaderboard.unassigned')}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 sm:gap-3 shrink-0 pl-2">
                                             <span className={`px-2 sm:px-2.5 py-1 rounded text-[10px] sm:text-[11px] font-black uppercase tracking-wider border ${getZoneStyles(emp.colorZone)}`}>
-                                                {emp.currentWeeklyScore} <span className="hidden sm:inline">/ 100</span><span className="inline sm:hidden">PTS</span>
+                                                {emp.currentWeeklyScore} <span className="hidden sm:inline">/ 100</span><span className="inline sm:hidden">{t('leaderboard.pts')}</span>
                                             </span>
                                             <div className="w-6 flex justify-center">
                                                 {getTrendIcon(emp.scoreTrend)}

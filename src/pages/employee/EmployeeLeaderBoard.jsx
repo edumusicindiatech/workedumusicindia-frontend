@@ -24,7 +24,6 @@ const EmployeeLeaderBoard = () => {
     const [leaderboard, setLeaderboard] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Personal Graph State
     const [myGraphData, setMyGraphData] = useState([]);
     const [graphPeriod, setGraphPeriod] = useState('weekly');
     const [isGraphLoading, setIsGraphLoading] = useState(false);
@@ -32,21 +31,21 @@ const EmployeeLeaderBoard = () => {
 
     const refetchTimestamp = useRef(0);
 
-    // Fetch Leaderboard Data
-    const fetchLeaderboard = async () => {
+    // 1. DEDICATED FETCH: LEADERBOARD
+    const fetchLeaderboard = useCallback(async () => {
         try {
-            const res = await api.get('/employee/leaderboard');
+            const res = await api.get(`/employee/leaderboard?_t=${Date.now()}`);
             if (res.data.success) {
                 setLeaderboard(res.data.data);
             }
         } catch (error) {
-            toast.error(t('leaderboard.toasts.load_error') || "Failed to load leaderboard");
+            toast.error(t('leaderboard.toasts.load_error'));
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [t]);
 
-    // Fetch Personal Graph Data
+    // 2. DEDICATED FETCH: GRAPH
     const fetchMyGraph = useCallback(async () => {
         setIsGraphLoading(true);
         try {
@@ -55,7 +54,7 @@ const EmployeeLeaderBoard = () => {
             const currentYear = `${today.getFullYear()}`;
             const dateParam = graphPeriod === 'weekly' ? currentMonth : currentYear;
 
-            const res = await api.get(`/employee/my-graph?period=${graphPeriod}&date=${dateParam}`);
+            const res = await api.get(`/employee/my-graph?period=${graphPeriod}&date=${dateParam}&_t=${Date.now()}`);
             if (res.data.success) {
                 setMyGraphData(res.data.data);
             }
@@ -66,19 +65,25 @@ const EmployeeLeaderBoard = () => {
         }
     }, [graphPeriod]);
 
+    // 3. DEDICATED EFFECT: INITIAL LOAD & PERIOD CHANGES
     useEffect(() => {
         fetchLeaderboard();
         fetchMyGraph();
+    }, [fetchLeaderboard, fetchMyGraph]);
 
-        if (!user) return;
+    // 4. DEDICATED EFFECT: SOCKET ROOM JOIN
+    useEffect(() => {
+        if (user && (user._id || user.id)) {
+            const currentUserId = user._id || user.id;
+            socket.emit('join_room', currentUserId);
+        }
+    }, [user]);
 
-        const currentUserId = user.id || user._id;
-        const joinUserRoom = () => socket.emit("join_room", currentUserId);
-
-        if (socket.connected) joinUserRoom();
-        socket.on("connect", joinUserRoom);
-
+    // 5. DEDICATED EFFECT: SOCKET LISTENER
+    useEffect(() => {
         const handleRealTimeUpdate = () => {
+            console.log("⚡ Employee Leaderboard Socket Ping Received!");
+
             if (Date.now() - refetchTimestamp.current > 2000) {
                 refetchTimestamp.current = Date.now();
 
@@ -87,7 +92,8 @@ const EmployeeLeaderBoard = () => {
                     audio.play().catch(() => { });
                 } catch (e) { }
 
-                toast.success("Leaderboard updated!", { icon: '🏆' });
+                toast.success(t('leaderboard.toasts.updated'), { icon: '🏆' });
+
                 fetchLeaderboard();
                 fetchMyGraph();
             }
@@ -96,14 +102,9 @@ const EmployeeLeaderBoard = () => {
         socket.on('leaderboard_refresh', handleRealTimeUpdate);
 
         return () => {
-            socket.off("connect", joinUserRoom);
             socket.off('leaderboard_refresh', handleRealTimeUpdate);
         };
-    }, [user, fetchMyGraph]);
-
-    useEffect(() => {
-        fetchMyGraph();
-    }, [graphPeriod, fetchMyGraph]);
+    }, [fetchLeaderboard, fetchMyGraph, t]);
 
     // Helpers
     const myStats = useMemo(() => {
@@ -144,7 +145,6 @@ const EmployeeLeaderBoard = () => {
             <div className="flex-1 flex flex-col items-center justify-end relative group animate-in slide-in-from-bottom-8 duration-700">
                 {isFirst && <Crown className="w-8 h-8 text-amber-500 mb-2 absolute -top-10 animate-bounce" />}
 
-                {/* 🔥 FIX: Combined the duplicate className properties here */}
                 <div
                     className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full mb-3 z-10 flex items-center justify-center text-white font-black text-lg sm:text-2xl shadow-lg bg-linear-to-br ${colorClass}`}
                     style={{ background: `linear-gradient(to bottom right, var(--tw-gradient-stops))` }}
@@ -154,7 +154,7 @@ const EmployeeLeaderBoard = () => {
 
                 <div className="text-center mb-2 z-10">
                     <p className="font-bold text-xs sm:text-sm text-foreground truncate w-full px-1">{employee.name.split(' ')[0]}</p>
-                    <p className="text-[10px] sm:text-xs font-black text-muted-foreground">{employee.currentWeeklyScore} PTS</p>
+                    <p className="text-[10px] sm:text-xs font-black text-muted-foreground">{employee.currentWeeklyScore} {t('leaderboard.pts')}</p>
                 </div>
 
                 <div className={`w-full rounded-t-2xl border-t border-l border-r ${bgOpacity} ${heightClass} flex items-start justify-center pt-4 relative overflow-hidden transition-all duration-300 group-hover:brightness-110`}>
@@ -175,8 +175,8 @@ const EmployeeLeaderBoard = () => {
                         <Medal className="w-6 h-6" />
                     </div>
                     <div>
-                        <h1 className="text-xl sm:text-3xl font-black tracking-tight text-foreground">Top Performers</h1>
-                        <p className="text-muted-foreground text-xs sm:text-sm">Weekly Team Leaderboard</p>
+                        <h1 className="text-xl sm:text-3xl font-black tracking-tight text-foreground">{t('leaderboard.employee_title')}</h1>
+                        <p className="text-muted-foreground text-xs sm:text-sm">{t('leaderboard.employee_subtitle')}</p>
                     </div>
                 </div>
             </div>
@@ -210,15 +210,15 @@ const EmployeeLeaderBoard = () => {
                             </div>
                             <div>
                                 <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5 mb-1">
-                                    <Target className="w-4 h-4 text-primary" /> My Ranking
+                                    <Target className="w-4 h-4 text-primary" /> {t('leaderboard.my_ranking')}
                                 </p>
                                 <h2 className="text-2xl sm:text-3xl font-black text-foreground flex items-center gap-3">
-                                    {myStats.currentWeeklyScore} <span className="text-base text-muted-foreground font-semibold">/ 100 PTS</span>
+                                    {myStats.currentWeeklyScore} <span className="text-base text-muted-foreground font-semibold">{t('leaderboard.out_of_100_pts')}</span>
                                     {getTrendIcon(myStats.scoreTrend)}
                                 </h2>
                                 <div className="mt-2 flex gap-2">
                                     <span className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${getZoneStyles(myStats.colorZone)}`}>
-                                        {myStats.colorZone} Zone
+                                        {t('leaderboard.zone_label', { zone: myStats.colorZone })}
                                     </span>
                                 </div>
                             </div>
@@ -230,7 +230,7 @@ const EmployeeLeaderBoard = () => {
                             className="w-full md:w-auto px-6 py-3 rounded-xl bg-muted/50 hover:bg-muted border border-border flex items-center justify-center gap-3 transition-colors font-bold text-sm text-foreground group"
                         >
                             <LineChartIcon className="w-5 h-5 text-primary" />
-                            {isChartExpanded ? 'Hide My Progress' : 'View My Progress'}
+                            {isChartExpanded ? t('leaderboard.hide_progress') : t('leaderboard.view_progress')}
                             <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${isChartExpanded ? 'rotate-180' : ''}`} />
                         </button>
                     </div>
@@ -242,20 +242,22 @@ const EmployeeLeaderBoard = () => {
                                 <div className="flex justify-end mb-4">
                                     <div className="flex bg-muted/50 p-1 rounded-xl border border-border">
                                         <button onClick={() => setGraphPeriod('weekly')} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${graphPeriod === 'weekly' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                                            <CalendarDays className="w-3.5 h-3.5" /> Weekly
+                                            <CalendarDays className="w-3.5 h-3.5" /> {t('leaderboard.graph.weekly')}
                                         </button>
                                         <button onClick={() => setGraphPeriod('monthly')} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${graphPeriod === 'monthly' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                                            <LineChartIcon className="w-3.5 h-3.5" /> Monthly
+                                            <LineChartIcon className="w-3.5 h-3.5" /> {t('leaderboard.graph.monthly')}
                                         </button>
                                     </div>
                                 </div>
 
                                 <div className="h-62.5 min-h-62.5 w-full min-w-full relative">
                                     {isGraphLoading ? (
-                                        <div className="w-full h-full flex items-center justify-center text-muted-foreground animate-pulse">Loading {graphPeriod} data...</div>
+                                        <div className="w-full h-full flex items-center justify-center text-muted-foreground animate-pulse">
+                                            {t('leaderboard.graph.loading', { period: t(`leaderboard.graph.${graphPeriod}`) })}
+                                        </div>
                                     ) : myGraphData.length === 0 ? (
                                         <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm border-2 border-dashed border-border rounded-xl">
-                                            No historical data found for this period.
+                                            {t('leaderboard.graph.no_historical_data')}
                                         </div>
                                     ) : (
                                         <ResponsiveContainer width="100%" height="100%">
@@ -282,7 +284,7 @@ const EmployeeLeaderBoard = () => {
             <div className="bg-card rounded-2xl sm:rounded-3xl border border-border shadow-sm overflow-hidden flex flex-col">
                 <div className="p-4 sm:p-5 border-b border-border bg-muted/30 flex items-center justify-between">
                     <h3 className="font-bold text-sm sm:text-base text-foreground flex items-center gap-2">
-                        <Users className="w-4 h-4 text-primary" /> Full Roster
+                        <Users className="w-4 h-4 text-primary" /> {t('leaderboard.full_roster')}
                     </h3>
                 </div>
 
@@ -294,7 +296,7 @@ const EmployeeLeaderBoard = () => {
                             ))}
                         </div>
                     ) : leaderboard.length === 0 ? (
-                        <div className="text-center py-10 text-muted-foreground text-sm font-medium">No active employees found.</div>
+                        <div className="text-center py-10 text-muted-foreground text-sm font-medium">{t('leaderboard.no_active_employees')}</div>
                     ) : (
                         <div className="space-y-2 animate-in fade-in duration-500">
                             {leaderboard.map((emp) => {
@@ -313,12 +315,12 @@ const EmployeeLeaderBoard = () => {
                                                 <p className={`font-bold text-sm truncate flex items-center gap-2 ${isMe ? 'text-primary' : 'text-foreground'}`}>
                                                     {emp.name} {isMe && <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
                                                 </p>
-                                                <p className="text-[10px] text-muted-foreground uppercase font-semibold truncate">{emp.zone || "Unassigned"}</p>
+                                                <p className="text-[10px] text-muted-foreground uppercase font-semibold truncate">{emp.zone || t('leaderboard.unassigned')}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3 shrink-0 pl-2">
                                             <span className={`px-2.5 py-1 rounded text-[11px] font-black uppercase tracking-wider border ${getZoneStyles(emp.colorZone)}`}>
-                                                {emp.currentWeeklyScore} <span className="hidden sm:inline">PTS</span>
+                                                {emp.currentWeeklyScore} <span className="hidden sm:inline">{t('leaderboard.pts')}</span>
                                             </span>
                                             <div className="w-6 flex justify-center">
                                                 {getTrendIcon(emp.scoreTrend)}
@@ -331,7 +333,6 @@ const EmployeeLeaderBoard = () => {
                     )}
                 </div>
             </div>
-
         </div>
     );
 };

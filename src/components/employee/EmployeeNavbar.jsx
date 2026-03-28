@@ -9,10 +9,11 @@ import { io } from "socket.io-client";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 
+// 🔥 UPGRADED: Imported cleaner, more distinct icons
 import {
-    LayoutDashboard, User, Calendar, BellRing, FileText,
-    Moon, Sun, LogOut, UserCircle, Settings, ClipboardList, Film,
-    Trophy // <-- Added Trophy icon
+    Home, User, CalendarCheck, Bell, BarChartBig,
+    Moon, Sun, LogOut, UserCircle, Settings, ListTodo, PlaySquare,
+    Trophy
 } from "lucide-react";
 
 import EmployeeSettingsModal from "../../modals/employee/EmployeeSettingsModal";
@@ -101,9 +102,13 @@ const EmployeeNavbar = () => {
         };
 
         socket.on("new_notification", handleNewNotification);
+        socket.on("leaderboard_refresh", handleNewNotification);
+        socket.on('new_notification_for_user', handleNewNotification);
 
         return () => {
             socket.off("new_notification", handleNewNotification);
+            socket.off("leaderboard_refresh", handleNewNotification);
+            socket.off('new_notification_for_user', handleNewNotification);
         };
     }, [user, token, t]);
 
@@ -123,7 +128,6 @@ const EmployeeNavbar = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // 🔥 FIX: Applied the exact same smooth logout logic here
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
         const toastId = toast.loading(t('navbar.logging_out'));
@@ -155,19 +159,17 @@ const EmployeeNavbar = () => {
             : "text-muted-foreground hover:text-foreground"
         }`;
 
+    // 🔥 UPGRADED: Cleaner, distinct icons for the main nav array
     const navItems = [
-        { path: "/employee/dashboard", icon: <LayoutDashboard className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.dashboard') },
-        { path: "/employee/assignments", icon: <Calendar className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.assignments') },
-        { path: "/employee/optional", icon: <ClipboardList className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.tasks') },
-        { path: "/employee/media", icon: <Film className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: "Media" },
-
-        // ---> ADDED LEADERBOARD TO MAIN NAV <---
+        { path: "/employee/dashboard", icon: <Home className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.dashboard') },
+        { path: "/employee/assignments", icon: <CalendarCheck className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.assignments') },
+        { path: "/employee/optional", icon: <ListTodo className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.tasks') },
+        { path: "/employee/media", icon: <PlaySquare className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.media') },
         { path: "/employee/leaderboard", icon: <Trophy className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.leaderboard') || 'Leaderboard' },
-
-        { path: "/employee/report", icon: <FileText className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.report') },
+        { path: "/employee/report", icon: <BarChartBig className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.report') },
         {
             path: "/employee/notifications",
-            icon: <BellRing className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />,
+            icon: <Bell className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />,
             label: t('navbar.notifications'),
             badge: notifCount
         },
@@ -223,7 +225,19 @@ const EmployeeNavbar = () => {
                                         <p className="text-[11px] text-muted-foreground truncate">{user?.email || ""}</p>
                                     </div>
 
-                                    {/* ---> ADDED LEADERBOARD TO MOBILE DROPDOWN <--- */}
+                                    {/* 🔥 NEW: Added Media and Daily Report to the Profile Dropdown */}
+                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                        onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/media'); }}
+                                    >
+                                        <PlaySquare className="w-4 h-4 text-primary" /> {t('navbar.media') || 'Media Gallery'}
+                                    </button>
+
+                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                        onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/report'); }}
+                                    >
+                                        <BarChartBig className="w-4 h-4 text-primary" /> {t('navbar.report') || 'Daily Report'}
+                                    </button>
+
                                     <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                         onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/leaderboard'); }}
                                     >
@@ -233,6 +247,9 @@ const EmployeeNavbar = () => {
                                     <NavLink to="/employee/profile" onClick={() => setIsMobileMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                                         <User className="w-4 h-4" /> {t('navbar.profile')}
                                     </NavLink>
+
+                                    <div className="my-1 border-t border-border" />
+
                                     <button onClick={() => { dispatch(toggleTheme()); setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                                         <div className="flex items-center gap-3">
                                             {themeMode === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}
@@ -243,9 +260,7 @@ const EmployeeNavbar = () => {
                                         <Settings className="w-4 h-4" /> {t('navbar.settings')}
                                     </button>
 
-                                    <div className="my-1 border-t border-border" />
-
-                                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors">
+                                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors mt-1">
                                         <LogOut className="w-4 h-4" /> {t('navbar.logout')}
                                     </button>
                                 </div>
@@ -255,9 +270,9 @@ const EmployeeNavbar = () => {
                 </div>
             </header>
 
-            {/* Mobile Bottom Navigation (Leaderboard is automatically added here by the navItems array) */}
+            {/* 🔥 UPGRADED: Taskbar now strictly filters out Profile, Media, and Report for a clean 5-item look */}
             <nav className="xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] overflow-x-auto overflow-y-hidden">
-                {navItems.filter(item => item.path !== "/employee/profile").map((item) => (
+                {navItems.filter(item => !["/employee/profile", "/employee/media", "/employee/report"].includes(item.path)).map((item) => (
                     <NavLink key={item.path} to={item.path} className={mobileNavClasses} title={item.label}>
                         <div className="relative mt-1">
                             {item.icon}

@@ -8,15 +8,15 @@
         "error": "Something went wrong"
     },
     "sidebar": {
-        "brand": "Admin Portal",
-        "new_alert_toast": "New alert received!",
         "logging_out": "Logging out...",
-        "logout_success": "Logged out successfully.",
-        "logout_error": "Failed to log out. Please try again.",
+        "logout_success": "Logged out successfully!",
+        "new_alert_toast": "New Alert Received",
+        "brand": "EduMusic Admin",
         "dashboard": "Dashboard",
         "roster": "Roster",
         "attendance": "Attendance",
         "progress": "Progress",
+        "leaderboard": "Leaderboard",
         "reports": "Reports",
         "media": "Media Gallery",
         "leave": "Leave Requests",
@@ -25,25 +25,25 @@
         "theme": "Toggle Theme",
         "settings": "Settings",
         "logout": "Logout",
-        "dark_mode": "Dark Mode",
-        "light_mode": "Light Mode"
+        "light_mode": "Light Mode",
+        "dark_mode": "Dark Mode"
     },
     "navbar": {
-        "brand": "EduMusic",
-        "new_notif_toast": "New notification received!",
+        "new_notif_toast": "New Notification!",
         "logging_out": "Logging out...",
-        "logout_success": "Logged out successfully.",
-        "logout_error": "Failed to log out. Please try again.",
+        "logout_success": "Logged out successfully!",
         "dashboard": "Dashboard",
         "assignments": "Assignments",
         "tasks": "Tasks",
-        "media": "Media",
-        "report": "Report",
+        "leaderboard": "Leaderboard",
+        "report": "Daily Report",
         "notifications": "Notifications",
         "profile": "Profile",
+        "brand": "EduMusic",
         "theme_tooltip": "Toggle Theme",
         "settings": "Settings",
         "logout": "Logout",
+        "media": "Media",
         "dark_mode": "Dark Mode",
         "light_mode": "Light Mode"
     },
@@ -1424,6 +1424,42 @@
             "copy_link_title": "Copy Link",
             "download_title": "Download",
             "delete_title": "Delete"
+        }
+    },
+    "leaderboard": {
+        "title": "Leaderboard",
+        "subtitle": "Track employee performance and rankings",
+        "employee_title": "Top Performers",
+        "employee_subtitle": "Weekly Team Leaderboard",
+        "detail_history": "Performance History",
+        "back_to_list": "Back to List",
+        "top_5_title": "Top 5 Performers",
+        "chart_loading": "Loading chart data...",
+        "no_data": "No data available",
+        "current_rank": "Rank #{{rank}}",
+        "score_label": "Score: {{score}}",
+        "standings_title": "Current Standings",
+        "search_placeholder": "Search employees...",
+        "no_employees": "No employees found matching your search.",
+        "no_active_employees": "No active employees found.",
+        "unassigned": "Unassigned",
+        "pts": "PTS",
+        "out_of_100_pts": "/ 100 PTS",
+        "full_roster": "Full Roster",
+        "my_ranking": "My Ranking",
+        "zone_label": "{{zone}} Zone",
+        "hide_progress": "Hide My Progress",
+        "view_progress": "View My Progress",
+        "toasts": {
+            "load_error": "Failed to load leaderboard",
+            "updated": "Leaderboard updated!",
+            "graph_error": "Failed to load graph data"
+        },
+        "graph": {
+            "weekly": "Weekly",
+            "monthly": "Monthly",
+            "loading": "Loading {{period}} data...",
+            "no_historical_data": "No historical data found for this period."
         }
     }
 }

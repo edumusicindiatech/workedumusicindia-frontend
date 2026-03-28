@@ -35,7 +35,6 @@ const AdminSidebar = () => {
     const [userPreferences, setUserPreferences] = useState(user?.preferences || null);
     const [unreadCount, setUnreadCount] = useState(0);
 
-    // 🔥 NEW: State to track pending media across the whole system
     const [pendingMediaCount, setPendingMediaCount] = useState(0);
 
     const mobileMenuRef = useRef(null);
@@ -51,7 +50,6 @@ const AdminSidebar = () => {
         }
     }, [user?.preferences]);
 
-    // 🔥 NEW: Fetch pending media count whenever we mount OR navigate
     useEffect(() => {
         if (!user) return;
 
@@ -68,7 +66,7 @@ const AdminSidebar = () => {
         };
 
         fetchPendingMediaCount();
-    }, [user, location.pathname]); // Re-run when changing pages so the dot disappears after you grade things!
+    }, [user, location.pathname]);
 
     useEffect(() => {
         if (!user) return;
@@ -114,16 +112,18 @@ const AdminSidebar = () => {
                 toast(t('sidebar.new_alert_toast'), { icon: '🛡️' });
             }
 
-            // 🔥 NEW: If a new media is uploaded, increment the yellow dot instantly
             if (notif?.type === 'Media' || (notif?.title && notif.title.toLowerCase().includes('media'))) {
                 setPendingMediaCount(prev => prev + 1);
             }
         };
 
         socket.on("new_notification", handleNewNotification);
+        // 🔥 FIX: Now the Sidebar also updates the bell icon when the leaderboard updates!
+        socket.on("admin_leaderboard_refresh", handleNewNotification);
 
         return () => {
             socket.off("new_notification", handleNewNotification);
+            socket.off("admin_leaderboard_refresh", handleNewNotification);
         };
     }, [user, t]);
 
@@ -143,7 +143,6 @@ const AdminSidebar = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // 🔥 FIX: Reordered Logout to allow the toast to finish BEFORE destroying the page
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
         const toastId = toast.loading(t('sidebar.logging_out'));
@@ -153,10 +152,9 @@ const AdminSidebar = () => {
             toast.success(t('sidebar.logout_success'), { id: toastId, duration: 1500 });
         } catch (error) {
             console.error("Backend logout cleanup failed:", error);
-            toast.dismiss(toastId); // Kill the spinning loader if backend fails
+            toast.dismiss(toastId);
         }
 
-        // Wait just a tiny fraction of a second so the user can actually see the success toast
         setTimeout(() => {
             dispatch(logout());
             navigate("/", { replace: true });
@@ -209,7 +207,6 @@ const AdminSidebar = () => {
                         <ClipboardCheck className="w-4.5 h-4.5" /> {t('sidebar.reports')}
                     </NavLink>
 
-                    {/* 🔥 NEW: Added pulsing yellow dot for Pending Media */}
                     <NavLink to="/admin/media" className={desktopNavClasses} title={t('sidebar.media') || 'Media Gallery'}>
                         <div className="relative flex items-center justify-center">
                             <Film className="w-4.5 h-4.5" />
@@ -284,7 +281,6 @@ const AdminSidebar = () => {
                                 <ClipboardCheck className="w-4 h-4 text-primary" /> {t('sidebar.reports')}
                             </button>
 
-                            {/* 🔥 NEW: Added pulsing yellow dot for Mobile Menu Media */}
                             <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                 onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/media'); }}
                             >
