@@ -11,7 +11,8 @@ import { useTranslation } from "react-i18next";
 
 import {
     LayoutDashboard, User, Calendar, BellRing, FileText,
-    Moon, Sun, LogOut, UserCircle, Settings, ClipboardList, Film // <-- Added Film icon
+    Moon, Sun, LogOut, UserCircle, Settings, ClipboardList, Film,
+    Trophy // <-- Added Trophy icon
 } from "lucide-react";
 
 import EmployeeSettingsModal from "../../modals/employee/EmployeeSettingsModal";
@@ -122,18 +123,23 @@ const EmployeeNavbar = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    // 🔥 FIX: Applied the exact same smooth logout logic here
     const handleLogout = async () => {
+        setIsMobileMenuOpen(false);
         const toastId = toast.loading(t('navbar.logging_out'));
         try {
             await api.post('/auth/logout');
-            toast.success(t('navbar.logout_success'), { id: toastId });
         } catch (error) {
             console.error("Backend logout failed, forcing local logout:", error);
-            toast.error(t('navbar.logout_error'), { id: toastId });
         } finally {
+            toast.dismiss(toastId);
             setAxiosToken(null);
             dispatch(logout());
-            navigate("/");
+            navigate("/", { replace: true });
+
+            setTimeout(() => {
+                toast.success(t('navbar.logout_success'), { duration: 3000 });
+            }, 100);
         }
     };
 
@@ -153,7 +159,11 @@ const EmployeeNavbar = () => {
         { path: "/employee/dashboard", icon: <LayoutDashboard className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.dashboard') },
         { path: "/employee/assignments", icon: <Calendar className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.assignments') },
         { path: "/employee/optional", icon: <ClipboardList className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.tasks') },
-        { path: "/employee/media", icon: <Film className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: "Media" }, // <-- Added Media Item Here
+        { path: "/employee/media", icon: <Film className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: "Media" },
+
+        // ---> ADDED LEADERBOARD TO MAIN NAV <---
+        { path: "/employee/leaderboard", icon: <Trophy className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.leaderboard') || 'Leaderboard' },
+
         { path: "/employee/report", icon: <FileText className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.report') },
         {
             path: "/employee/notifications",
@@ -213,6 +223,13 @@ const EmployeeNavbar = () => {
                                         <p className="text-[11px] text-muted-foreground truncate">{user?.email || ""}</p>
                                     </div>
 
+                                    {/* ---> ADDED LEADERBOARD TO MOBILE DROPDOWN <--- */}
+                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                        onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/leaderboard'); }}
+                                    >
+                                        <Trophy className="w-4 h-4 text-primary" /> {t('navbar.leaderboard') || 'Leaderboard'}
+                                    </button>
+
                                     <NavLink to="/employee/profile" onClick={() => setIsMobileMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                                         <User className="w-4 h-4" /> {t('navbar.profile')}
                                     </NavLink>
@@ -238,6 +255,7 @@ const EmployeeNavbar = () => {
                 </div>
             </header>
 
+            {/* Mobile Bottom Navigation (Leaderboard is automatically added here by the navItems array) */}
             <nav className="xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] overflow-x-auto overflow-y-hidden">
                 {navItems.filter(item => item.path !== "/employee/profile").map((item) => (
                     <NavLink key={item.path} to={item.path} className={mobileNavClasses} title={item.label}>

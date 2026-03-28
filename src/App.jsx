@@ -27,7 +27,6 @@ import AdminResetPassword from "./pages/admin/AdminResetPassword";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminLeaveRequests from "./pages/admin/AdminLeaveRequests";
 import AdminMediaGallery from "./pages/admin/AdminMediaGallery";
-// ---> ADD LEADERBOARD IMPORT HERE <---
 import AdminLeaderboard from "./pages/admin/AdminLeaderBoard";
 
 // Employee Imports
@@ -40,9 +39,10 @@ import EmployeeMedia from "./pages/employee/EmployeeMedia";
 import DailyReport from "./pages/employee/DailyReport";
 import EmployeeNotifications from "./pages/employee/EmployeeNotifications";
 import EmployeeResetPassword from "./pages/employee/EmployeeResetPassword";
-import { Toaster } from "react-hot-toast";
+// ---> ADDED EMPLOYEE LEADERBOARD IMPORT HERE <---
+import EmployeeLeaderBoard from "./pages/employee/EmployeeLeaderBoard";
 
-// ---> ADD YOUR MANAGER HERE <---
+import { Toaster } from "react-hot-toast";
 import FloatingUploadManager from "./modals/employee/FloatingUploadManager";
 
 function App() {
@@ -73,6 +73,7 @@ function App() {
         const profileResponse = await api.get('/employee/me/profile');
 
         if (profileResponse.data.success) {
+          // Need to pass the object with the properties your reducer expects
           dispatch(setCredentials({
             user: profileResponse.data.user,
             access_token: newAccessToken
@@ -154,7 +155,6 @@ function App() {
         }}
       />
 
-      {/* ---> MOUNT MANAGER SECURELY HERE <--- */}
       <FloatingUploadManager />
 
       <Routes>
@@ -181,6 +181,10 @@ function App() {
           <Route path="optional" element={<OptionalTasks />} />
           <Route path="media" element={<EmployeeMedia />} />
           <Route path="report" element={<DailyReport />} />
+
+          {/* ---> ADDED EMPLOYEE LEADERBOARD ROUTE HERE <--- */}
+          <Route path="leaderboard" element={<EmployeeLeaderBoard />} />
+
           <Route path="notifications" element={<EmployeeNotifications />} />
         </Route>
 
@@ -192,10 +196,7 @@ function App() {
           <Route path="employees/:id" element={<EmployeeProfile />} />
           <Route path="attendance" element={<AttendanceFeed />} />
           <Route path="progress" element={<ProgressReport />} />
-
-          {/* ---> ADDED LEADERBOARD ROUTE HERE <--- */}
           <Route path="leaderboard" element={<AdminLeaderboard />} />
-
           <Route path="reports" element={<AdminReports />} />
           <Route path="media" element={<AdminMediaGallery />} />
           <Route path="leave-requests" element={<AdminLeaveRequests />} />
