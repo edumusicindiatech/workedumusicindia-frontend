@@ -80,7 +80,6 @@ const AdminSidebar = () => {
                 }
             } catch (error) {
                 console.error("Failed to fetch global notifications count", error);
-                toast.error("Failed to sync notifications.");
             }
         };
 
@@ -236,10 +235,16 @@ const AdminSidebar = () => {
                     <button onClick={() => dispatch(toggleTheme())} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title={t('sidebar.theme')}>
                         {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-500" />}
                     </button>
-                    {/* ---> PROFILE BUTTON (DESKTOP) <--- */}
-                    <button onClick={() => navigate('/admin/profile')} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title={t('sidebar.profile') || 'My Profile'}>
-                        <UserCircle className="w-5 h-5" />
+                    
+                    {/* 🔥 UPGRADED: Desktop Profile Pic */}
+                    <button onClick={() => navigate('/admin/profile')} className="p-1 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors flex items-center justify-center w-9 h-9 overflow-hidden border border-border/50" title={t('sidebar.profile') || 'My Profile'}>
+                        {user?.profilePicture ? (
+                            <img src={user.profilePicture} alt="Admin" className="w-full h-full object-cover rounded-full" />
+                        ) : (
+                            <UserCircle className="w-5 h-5" />
+                        )}
                     </button>
+
                     <button onClick={() => setIsSettingsModalOpen(true)} className="p-2 text-muted-foreground md:cursor-pointer hover:text-foreground hover:bg-muted rounded-full transition-colors" title={t('sidebar.settings')}>
                         <Settings className="w-5 h-5" />
                     </button>
@@ -259,10 +264,10 @@ const AdminSidebar = () => {
                 </div>
 
                 <div className="relative" ref={mobileMenuRef}>
-                    <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-1 rounded-full hover:bg-muted transition-colors flex items-center justify-center w-10 h-10 overflow-hidden ring-2 ring-transparent focus:ring-primary/20">
-                        {/* Show Avatar if it exists, otherwise fallback to Icon */}
-                        {user?.profilePicture && typeof user.profilePicture === 'string' && user.profilePicture.startsWith('http') ? (
-                            <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover rounded-full" />
+                    {/* 🔥 UPGRADED: Mobile Toggle with Profile Picture */}
+                    <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-1 rounded-full hover:bg-muted transition-colors flex items-center justify-center w-10 h-10 overflow-hidden ring-2 ring-transparent focus:ring-primary/20 border border-border/50">
+                        {user?.profilePicture ? (
+                            <img src={user.profilePicture} alt="Admin" className="w-full h-full object-cover rounded-full" />
                         ) : (
                             <UserCircle className="w-7 h-7 text-muted-foreground" />
                         )}
@@ -304,18 +309,23 @@ const AdminSidebar = () => {
                                 <CalendarDays className="w-4 h-4 text-primary" /> {t('sidebar.leave')}
                             </button>
 
-                            <button onClick={() => dispatch(toggleTheme())} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                            <button onClick={() => { dispatch(toggleTheme()); setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                                 <div className="flex items-center gap-3">
                                     {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}
                                     <span>{theme === 'dark' ? t('sidebar.light_mode') : t('sidebar.dark_mode')}</span>
                                 </div>
                             </button>
 
-                            {/* ---> PROFILE BUTTON (MOBILE) <--- */}
+                            {/* 🔥 UPGRADED: Profile link in dropdown uses Avatar icon if exists */}
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                 onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/profile'); }}
                             >
-                                <UserCircle className="w-4 h-4 text-primary" /> {t('sidebar.profile') || 'My Profile'}
+                                {user?.profilePicture ? (
+                                    <img src={user.profilePicture} alt="Profile" className="w-4 h-4 rounded-full object-cover" />
+                                ) : (
+                                    <UserCircle className="w-4 h-4 text-primary" />
+                                )}
+                                {t('sidebar.profile') || 'My Profile'}
                             </button>
 
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
