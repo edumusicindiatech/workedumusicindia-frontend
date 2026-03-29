@@ -18,10 +18,16 @@ const authSlice = createSlice({
             state.isAuthenticated = true;
             state.isHydrating = false;
         },
-        // NEW REDUCER: Updates only the preferences inside the user object
+        // Updates only the preferences inside the user object
         updateUserPreferences: (state, action) => {
             if (state.user) {
                 state.user.preferences = action.payload;
+            }
+        },
+        // 🔥 NEW REDUCER: Instantly updates the profile picture in the UI
+        updateProfilePicture: (state, action) => {
+            if (state.user) {
+                state.user.profilePicture = action.payload;
             }
         },
         logout: (state) => {
@@ -36,5 +42,5 @@ const authSlice = createSlice({
     }
 });
 
-export const { setCredentials, updateUserPreferences, logout, setHydrationComplete } = authSlice.actions;
+export const { setCredentials, updateUserPreferences, updateProfilePicture, logout, setHydrationComplete } = authSlice.actions;
 export default authSlice.reducer;

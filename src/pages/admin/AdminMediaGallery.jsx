@@ -357,8 +357,16 @@ const AdminMediaGallery = () => {
                                 )}
 
                                 <div className="flex items-center gap-4 w-full sm:w-auto overflow-hidden">
-                                    <div className="w-14 h-14 rounded-full bg-linear-to-br from-primary to-blue-600 flex items-center justify-center text-xl font-black text-white shrink-0 group-hover:scale-110 transition-transform duration-500 shadow-md">
-                                        {emp.name.charAt(0)}
+                                    <div className="w-14 h-14 rounded-full bg-linear-to-br from-primary to-blue-600 flex items-center justify-center text-xl font-black text-white shrink-0 group-hover:scale-110 transition-transform duration-500 shadow-md overflow-hidden ring-2 ring-transparent group-hover:ring-primary/20">
+                                        {emp.profilePicture && typeof emp.profilePicture === 'string' && emp.profilePicture.startsWith('http') ? (
+                                            <img
+                                                src={emp.profilePicture}
+                                                alt={emp.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            emp.name.charAt(0).toUpperCase()
+                                        )}
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <h3 className="font-extrabold text-foreground text-base truncate group-hover:text-primary transition-colors duration-300">{emp.name}</h3>

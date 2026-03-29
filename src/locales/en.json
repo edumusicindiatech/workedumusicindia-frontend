@@ -1224,6 +1224,8 @@
         "employee_fallback": "Employee",
         "toasts": {
             "updating": "Updating password...",
+            "uploading_avatar": "Uploading Avatar...",
+            "avatar_updated": "Avatar updated successfully!",
             "success": "Password updated successfully!",
             "error": "Failed to update password."
         }

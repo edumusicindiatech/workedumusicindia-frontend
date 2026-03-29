@@ -237,8 +237,16 @@ const AdminLeaderboard = () => {
                     <div className="p-4 sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-white font-bold text-xl shadow-sm">
-                                    {selectedEmployee.name[0]}
+                                <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-white font-bold text-xl shadow-sm overflow-hidden shrink-0">
+                                    {selectedEmployee.profilePicture && typeof selectedEmployee.profilePicture === 'string' && selectedEmployee.profilePicture.startsWith('http') ? (
+                                        <img
+                                            src={selectedEmployee.profilePicture}
+                                            alt={selectedEmployee.name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        selectedEmployee.name.charAt(0).toUpperCase()
+                                    )}
                                 </div>
                                 <div>
                                     <span className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border mb-1 inline-block ${getZoneStyles(selectedEmployee.colorZone)}`}>
@@ -333,8 +341,16 @@ const AdminLeaderboard = () => {
                                             <div className={`w-7 sm:w-8 h-7 sm:h-8 flex items-center justify-center rounded-lg text-xs sm:text-sm font-black shrink-0 ${getRankStyle(emp.currentWeeklyRank)}`}>
                                                 #{emp.currentWeeklyRank}
                                             </div>
-                                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full gradient-primary flex items-center justify-center text-white font-bold text-sm shrink-0">
-                                                {emp.name[0]}
+                                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full gradient-primary flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden shadow-sm ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
+                                                {emp.profilePicture && typeof emp.profilePicture === 'string' && emp.profilePicture.startsWith('http') ? (
+                                                    <img
+                                                        src={emp.profilePicture}
+                                                        alt={emp.name}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    emp.name.charAt(0).toUpperCase()
+                                                )}
                                             </div>
                                             <div className="min-w-0">
                                                 <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors truncate">{emp.name}</p>

@@ -6,10 +6,10 @@ import {
 } from "lucide-react";
 import { io } from "socket.io-client";
 import api from "../../api/axios";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 
 const AdminDashboard = () => {
-    const { t } = useTranslation(); // <-- Initialize translation hook
+    const { t } = useTranslation();
     const { user } = useSelector((state) => state.auth);
 
     const [dashboardData, setDashboardData] = useState(null);
@@ -53,7 +53,6 @@ const AdminDashboard = () => {
         };
     }, [fetchDashboardStats, user]);
 
-    // Badge styling logic remains internal, but text is translated
     const statusBadgeStyle = (status) => {
         const styles = {
             present: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
@@ -151,8 +150,19 @@ const AdminDashboard = () => {
                                 className="group flex flex-col lg:flex-row lg:items-center justify-between p-4 sm:p-6 border-b border-border/40 last:border-0 hover:bg-muted/40 transition-all gap-4 sm:gap-6"
                             >
                                 <div className="flex items-center gap-3 sm:gap-4 lg:w-72 shrink-0">
-                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-sm sm:text-base font-bold shadow-inner shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                                        {item?.name?.charAt(0)?.toUpperCase() || 'U'}
+                                    {/* 🔥 UPGRADED: Logic to show profilePicture or classical Initial */}
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-primary/10 border border-primary/20 flex items-center justify-center shadow-inner shrink-0 transition-all duration-300">
+                                        {item?.profilePicture ? (
+                                            <img
+                                                src={item.profilePicture}
+                                                alt={item.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <span className="text-primary text-sm sm:text-base font-bold group-hover:scale-110 transition-transform">
+                                                {item?.name?.charAt(0)?.toUpperCase() || 'U'}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <p className="text-sm sm:text-base font-bold text-foreground truncate group-hover:text-primary transition-colors">{item?.name || 'Unknown User'}</p>

@@ -196,20 +196,32 @@ const AdminLeaveRequests = () => {
                         <div key={req.id} className="group bg-card border border-border rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300">
 
                             <div className="p-4 sm:p-5 border-b border-border/50 bg-muted/20 flex justify-between items-start gap-3">
-                                <div className="space-y-1 min-w-0 flex-1">
-                                    <h3 className="font-bold text-base sm:text-lg flex items-center gap-2 truncate">
-                                        <User className="w-4 h-4 text-muted-foreground shrink-0" />
-                                        <span className="truncate">{req.employeeName}</span>
-                                    </h3>
-                                    <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2 truncate">
-                                        <Mail className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-                                        <span className="truncate">{req.employeeEmail}</span>
-                                    </p>
+                                <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full gradient-primary flex items-center justify-center text-white font-bold text-sm sm:text-base shrink-0 overflow-hidden shadow-sm ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
+                                        {req.profilePicture && typeof req.profilePicture === 'string' && req.profilePicture.startsWith('http') ? (
+                                            <img
+                                                src={req.profilePicture}
+                                                alt={req.employeeName}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            req.employeeName.charAt(0).toUpperCase()
+                                        )}
+                                    </div>
+                                    <div className="space-y-0.5 sm:space-y-1 min-w-0 flex-1">
+                                        <h3 className="font-bold text-base sm:text-lg truncate text-foreground group-hover:text-primary transition-colors">
+                                            {req.employeeName}
+                                        </h3>
+                                        <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 truncate">
+                                            <Mail className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                                            <span className="truncate">{req.employeeEmail}</span>
+                                        </p>
+                                    </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-1 shrink-0">
                                     <span className={`px-2 sm:px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-tighter flex items-center gap-1 border ${req.status === 'pending' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                                            req.status === 'approved' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                                                'bg-destructive/10 text-destructive border-destructive/20'
+                                        req.status === 'approved' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                                            'bg-destructive/10 text-destructive border-destructive/20'
                                         }`}>
                                         {req.status === 'pending' && <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
                                         {req.status === 'approved' && <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}

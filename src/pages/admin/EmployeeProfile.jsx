@@ -103,7 +103,14 @@ const EmployeeProfile = () => {
 
                         <div className="relative shrink-0">
                             <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full gradient-primary flex items-center justify-center text-3xl font-extrabold text-primary-foreground shadow-lg ring-4 ring-background z-10 relative">
-                                {employeeData.name.charAt(0).toUpperCase()}
+                                {employeeData.profilePicture ? (
+                                    // If it's a URL, use an <img> tag. If it's an icon/string, just render it.
+                                    typeof employeeData.profilePicture === 'string' && employeeData.profilePicture.startsWith('http')
+                                        ? <img src={employeeData.profilePicture} alt={employeeData.name} className="w-full h-full rounded-full object-cover" />
+                                        : employeeData.profilePicture
+                                ) : (
+                                    employeeData.name.charAt(0).toUpperCase()
+                                )}
                             </div>
                             <div className={`absolute bottom-1 sm:bottom-2 right-1 sm:right-2 w-5 h-5 rounded-full border-4 border-background z-20 ${employeeData.isActive ? "bg-emerald-500" : "bg-destructive"}`} />
                         </div>

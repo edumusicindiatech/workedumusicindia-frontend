@@ -248,7 +248,14 @@ const AttendanceFeed = () => {
                             >
                                 <div className="flex items-center gap-3 sm:gap-4 md:w-56 shrink-0">
                                     <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-inner ${hadEvent ? 'bg-violet-600' : (isAbsent ? 'bg-destructive' : (isHoliday ? 'bg-teal-500' : (isOnLeave ? 'bg-pink-500' : 'bg-primary')))}`}>
-                                        {(record.teacher?.name || "U").charAt(0).toUpperCase()}
+                                        {record?.teacher?.profilePicture ? (
+                                            // If it's a URL, use an <img> tag. If it's an icon/string, just render it.
+                                            typeof record?.teacher?.profilePicture === 'string' && record?.teacher?.profilePicture.startsWith('http')
+                                                ? <img src={record?.teacher?.profilePicture} alt={record?.teacher?.profilePicture} className="w-full h-full rounded-full object-cover" />
+                                                : record?.teacher?.profilePicture
+                                        ) : (
+                                            record?.teacher?.name.charAt(0).toUpperCase()
+                                        )}
                                     </div>
                                     <div className="flex flex-col min-w-0">
                                         <span className="font-bold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors truncate">

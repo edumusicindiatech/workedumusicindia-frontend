@@ -223,7 +223,17 @@ const AdminReports = () => {
                                             {employees.filter(e => e.name.toLowerCase().includes(searchTerm.toLowerCase())).map((e) => (
                                                 <div key={e.id} onClick={() => handleSelectEmployee(e)} className="flex items-center justify-between p-4 bg-card border border-border/80 rounded-2xl hover:border-blue-500/40 cursor-pointer transition-all group">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-full bg-linear-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white font-bold">{e.name[0]}</div>
+                                                        <div className="w-10 h-10 rounded-full bg-linear-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white font-bold overflow-hidden shrink-0 shadow-sm ring-2 ring-transparent group-hover:ring-blue-500/20 transition-all">
+                                                            {e.profilePicture && typeof e.profilePicture === 'string' && e.profilePicture.startsWith('http') ? (
+                                                                <img
+                                                                    src={e.profilePicture}
+                                                                    alt={e.name}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            ) : (
+                                                                e.name.charAt(0).toUpperCase()
+                                                            )}
+                                                        </div>
                                                         <div>
                                                             <p className="font-bold text-sm text-foreground group-hover:text-blue-500 transition-colors">{e.name}</p>
                                                             <p className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">{e.location || 'Unassigned'}</p>

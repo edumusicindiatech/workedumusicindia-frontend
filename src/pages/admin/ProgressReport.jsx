@@ -359,7 +359,17 @@ const ProgressReport = () => {
                                         <div key={teacher._id} onClick={() => handleSelectTeacher(teacher)} className="flex items-center justify-between p-3 sm:p-4 bg-card border border-border/80 rounded-xl hover:border-primary/40 hover:shadow-md cursor-pointer transition-all duration-300 group">
                                             <div className="flex items-center gap-3 sm:gap-4">
                                                 <span className="text-[10px] sm:text-xs font-bold text-muted-foreground w-4">#{idx + 1}</span>
-                                                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full gradient-primary flex items-center justify-center text-white font-bold">{teacher.name[0]}</div>
+                                                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full gradient-primary flex items-center justify-center text-white font-bold shrink-0 overflow-hidden shadow-sm ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
+                                                    {teacher.profilePicture && typeof teacher.profilePicture === 'string' && teacher.profilePicture.startsWith('http') ? (
+                                                        <img
+                                                            src={teacher.profilePicture}
+                                                            alt={teacher.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        teacher.name.charAt(0).toUpperCase()
+                                                    )}
+                                                </div>
                                                 <div>
                                                     <p className="font-bold text-sm text-foreground group-hover:text-primary">{teacher.name}</p>
                                                     <p className="text-[10px] text-muted-foreground uppercase font-semibold">{teacher.zone || t('progress_report.unassigned')}</p>

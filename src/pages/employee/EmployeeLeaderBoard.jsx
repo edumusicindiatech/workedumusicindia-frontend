@@ -103,7 +103,7 @@ const EmployeeLeaderBoard = () => {
 
         return () => {
             socket.off('leaderboard_refresh', handleRealTimeUpdate);
-        };
+        }
     }, [fetchLeaderboard, fetchMyGraph, t]);
 
     // Helpers
@@ -146,10 +146,18 @@ const EmployeeLeaderBoard = () => {
                 {isFirst && <Crown className="w-8 h-8 text-amber-500 mb-2 absolute -top-10 animate-bounce" />}
 
                 <div
-                    className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full mb-3 z-10 flex items-center justify-center text-white font-black text-lg sm:text-2xl shadow-lg bg-linear-to-br ${colorClass}`}
+                    className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full mb-3 z-10 flex items-center justify-center text-white font-black text-lg sm:text-2xl shadow-lg bg-linear-to-br ${colorClass} overflow-hidden shrink-0 ring-4 ring-background`}
                     style={{ background: `linear-gradient(to bottom right, var(--tw-gradient-stops))` }}
                 >
-                    {employee.name[0]}
+                    {employee.profilePicture && typeof employee.profilePicture === 'string' && employee.profilePicture.startsWith('http') ? (
+                        <img
+                            src={employee.profilePicture}
+                            alt={employee.name}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        employee.name.charAt(0).toUpperCase()
+                    )}
                 </div>
 
                 <div className="text-center mb-2 z-10">
@@ -308,8 +316,16 @@ const EmployeeLeaderBoard = () => {
                                             <div className="w-8 h-8 flex items-center justify-center rounded-lg text-sm font-black text-muted-foreground bg-muted shrink-0">
                                                 #{emp.currentWeeklyRank}
                                             </div>
-                                            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 ${isMe ? 'bg-primary shadow-lg shadow-primary/30' : 'bg-slate-400 dark:bg-slate-600'}`}>
-                                                {emp.name[0]}
+                                            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden ${isMe ? 'bg-primary shadow-lg shadow-primary/30' : 'bg-slate-400 dark:bg-slate-600'}`}>
+                                                {emp.profilePicture && typeof emp.profilePicture === 'string' && emp.profilePicture.startsWith('http') ? (
+                                                    <img
+                                                        src={emp.profilePicture}
+                                                        alt={emp.name}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    emp.name.charAt(0).toUpperCase()
+                                                )}
                                             </div>
                                             <div className="min-w-0">
                                                 <p className={`font-bold text-sm truncate flex items-center gap-2 ${isMe ? 'text-primary' : 'text-foreground'}`}>

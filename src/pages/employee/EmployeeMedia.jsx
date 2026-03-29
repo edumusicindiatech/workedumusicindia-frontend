@@ -577,7 +577,7 @@ const EmployeeMedia = () => {
             />
 
             {deleteConfirmation && (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-120 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-card dark:bg-[#181d29] border border-border dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden animate-in zoom-in-95">
                         <div className="flex items-start gap-4">
                             <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center shrink-0 border border-destructive/20">
@@ -609,7 +609,7 @@ const EmployeeMedia = () => {
             )}
 
             {activeVideo && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
+                <div className="fixed inset-0 z-100 flex items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
                     <div className="absolute top-0 left-0 right-0 w-full max-w-6xl mx-auto p-4 flex justify-between items-start z-50">
                         <div className="bg-black/40 backdrop-blur-md border border-white/10 px-5 py-3 rounded-2xl shadow-2xl">
                             <h3 className="text-lg sm:text-xl font-black text-white tracking-wide">

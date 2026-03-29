@@ -129,7 +129,14 @@ const EmployeeRoster = () => {
                                             <td className="px-8 py-4">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground shadow-sm ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
-                                                        {emp.name.charAt(0).toUpperCase()}
+                                                        {emp.profilePicture ? (
+                                                            // If it's a URL, use an <img> tag. If it's an icon/string, just render it.
+                                                            typeof emp.profilePicture === 'string' && emp.profilePicture.startsWith('http')
+                                                                ? <img src={emp.profilePicture} alt={emp.name} className="w-full h-full rounded-full object-cover" />
+                                                                : emp.profilePicture
+                                                        ) : (
+                                                            emp.name.charAt(0).toUpperCase()
+                                                        )}
                                                     </div>
                                                     <div className="flex flex-col">
                                                         <div className="flex items-center gap-2">
