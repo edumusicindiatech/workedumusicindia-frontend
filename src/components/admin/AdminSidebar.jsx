@@ -118,7 +118,6 @@ const AdminSidebar = () => {
         };
 
         socket.on("new_notification", handleNewNotification);
-        // 🔥 FIX: Now the Sidebar also updates the bell icon when the leaderboard updates!
         socket.on("admin_leaderboard_refresh", handleNewNotification);
 
         return () => {
@@ -175,6 +174,7 @@ const AdminSidebar = () => {
 
     return (
         <>
+            {/* --- DESKTOP TOP NAVBAR --- */}
             <nav className="hidden xl:flex fixed top-0 w-full h-16 bg-card border-b border-border z-50 items-center justify-between px-6 shadow-sm">
                 <div className="flex items-center gap-3 w-64 shrink-0">
                     <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
@@ -198,15 +198,12 @@ const AdminSidebar = () => {
                     <NavLink to="/admin/progress" className={desktopNavClasses} title={t('sidebar.progress')}>
                         <TrendingUp className="w-4.5 h-4.5" /> {t('sidebar.progress')}
                     </NavLink>
-
                     <NavLink to="/admin/leaderboard" className={desktopNavClasses} title={t('sidebar.leaderboard') || 'Leaderboard'}>
                         <Trophy className="w-4.5 h-4.5" /> {t('sidebar.leaderboard') || 'Leaderboard'}
                     </NavLink>
-
                     <NavLink to="/admin/reports" className={desktopNavClasses} title={t('sidebar.reports')}>
                         <ClipboardCheck className="w-4.5 h-4.5" /> {t('sidebar.reports')}
                     </NavLink>
-
                     <NavLink to="/admin/media" className={desktopNavClasses} title={t('sidebar.media') || 'Media Gallery'}>
                         <div className="relative flex items-center justify-center">
                             <Film className="w-4.5 h-4.5" />
@@ -216,7 +213,6 @@ const AdminSidebar = () => {
                         </div>
                         {t('sidebar.media') || 'Media'}
                     </NavLink>
-
                     <NavLink to="/admin/leave-requests" className={desktopNavClasses} title={t('sidebar.leave')}>
                         <CalendarDays className="w-4.5 h-4.5" /> {t('sidebar.leave')}
                     </NavLink>
@@ -240,6 +236,10 @@ const AdminSidebar = () => {
                     <button onClick={() => dispatch(toggleTheme())} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title={t('sidebar.theme')}>
                         {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-500" />}
                     </button>
+                    {/* ---> PROFILE BUTTON (DESKTOP) <--- */}
+                    <button onClick={() => navigate('/admin/profile')} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title={t('sidebar.profile') || 'My Profile'}>
+                        <UserCircle className="w-5 h-5" />
+                    </button>
                     <button onClick={() => setIsSettingsModalOpen(true)} className="p-2 text-muted-foreground md:cursor-pointer hover:text-foreground hover:bg-muted rounded-full transition-colors" title={t('sidebar.settings')}>
                         <Settings className="w-5 h-5" />
                     </button>
@@ -249,6 +249,7 @@ const AdminSidebar = () => {
                 </div>
             </nav>
 
+            {/* --- MOBILE TOP NAVBAR --- */}
             <header className="xl:hidden fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4 shadow-sm">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
@@ -258,8 +259,13 @@ const AdminSidebar = () => {
                 </div>
 
                 <div className="relative" ref={mobileMenuRef}>
-                    <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-1.5 rounded-full hover:bg-muted transition-colors">
-                        <UserCircle className="w-7 h-7 text-muted-foreground" />
+                    <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-1 rounded-full hover:bg-muted transition-colors flex items-center justify-center w-10 h-10 overflow-hidden ring-2 ring-transparent focus:ring-primary/20">
+                        {/* Show Avatar if it exists, otherwise fallback to Icon */}
+                        {user?.profilePicture && typeof user.profilePicture === 'string' && user.profilePicture.startsWith('http') ? (
+                            <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover rounded-full" />
+                        ) : (
+                            <UserCircle className="w-7 h-7 text-muted-foreground" />
+                        )}
                     </button>
 
                     {isMobileMenuOpen && (
@@ -305,12 +311,21 @@ const AdminSidebar = () => {
                                 </div>
                             </button>
 
+                            {/* ---> PROFILE BUTTON (MOBILE) <--- */}
+                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/profile'); }}
+                            >
+                                <UserCircle className="w-4 h-4 text-primary" /> {t('sidebar.profile') || 'My Profile'}
+                            </button>
+
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                 onClick={() => { setIsMobileMenuOpen(false); setIsSettingsModalOpen(true); }}
                             >
                                 <Settings className="w-4 h-4 text-primary" /> {t('sidebar.settings')}
                             </button>
+
                             <div className="my-1 border-t border-border" />
+
                             <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors">
                                 <LogOut className="w-4 h-4" /> {t('sidebar.logout')}
                             </button>
@@ -319,6 +334,7 @@ const AdminSidebar = () => {
                 </div>
             </header>
 
+            {/* --- MOBILE BOTTOM NAVBAR --- */}
             <nav className="xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe">
                 <NavLink to="/admin/dashboard" className={mobileNavClasses}>
                     <LayoutDashboard className="w-6 h-6" />

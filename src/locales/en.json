@@ -8,6 +8,7 @@
         "error": "Something went wrong"
     },
     "sidebar": {
+        "profile": "Profile",
         "logging_out": "Logging out...",
         "logout_success": "Logged out successfully!",
         "new_alert_toast": "New Alert Received",
@@ -1467,6 +1468,30 @@
             "monthly": "Monthly",
             "loading": "Loading {{period}} data...",
             "no_historical_data": "No historical data found for this period."
+        }
+    },
+    "admin_profile": {
+        "title": "Admin Profile",
+        "subtitle": "Manage your administrative credentials and security settings.",
+        "btn_edit_password": "Change Password",
+        "personal_info": "Personal Information",
+        "label_email": "Email Address",
+        "label_phone": "Phone Number",
+        "not_provided": "Not Provided",
+        "system_access": "System Access",
+        "label_role": "System Role",
+        "label_status": "Account Status",
+        "toasts": {
+            "updating": "Updating password...",
+            "success": "Password changed successfully!",
+            "error": "Failed to update password.",
+            "file_too_large": "File is too large. Max size is 5MB.",
+            "uploading_avatar": "Uploading Avatar...",
+            "avatar_updated": "Avatar updated successfully!",
+            "upload_failed": "Failed to upload avatar.",
+            "removing_avatar": "Removing avatar...",
+            "avatar_removed": "Avatar removed successfully!",
+            "remove_failed": "Failed to remove avatar."
         }
     }
 }
