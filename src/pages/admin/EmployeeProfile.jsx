@@ -175,7 +175,8 @@ const EmployeeProfile = () => {
 
                     {/* --- TABS SECTION --- */}
                     <Tabs defaultValue="schools" className="space-y-6">
-                        <div className="w-full overflow-x-auto hide-scrollbar border-b border-border/40">
+                        {/* 👇 FIX APPLIED HERE: Added scrollbar hiding classes */}
+                        <div className="w-full overflow-x-auto border-b border-border/40 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                             <TabsList className="bg-transparent w-max sm:w-full flex justify-start p-0 h-auto gap-6 sm:gap-8 rounded-none">
                                 <TabsTrigger
                                     value="schools"
