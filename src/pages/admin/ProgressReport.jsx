@@ -3,14 +3,13 @@ import {
     ChevronRight, ArrowLeft, TrendingUp, Search,
     CheckCircle2, AlertCircle, XCircle, Star, Coffee, Film, CalendarDays,
     Clock, FileText, School, Download, Trophy, Users, FolderOpen, CalendarOff,
-    BarChart3
+    BarChart3, Loader2
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
 import { useTranslation } from "react-i18next";
-// 1. CHANGED IMPORTS: Brought in LineChart and Line instead of BarChart
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { io } from "socket.io-client";
 import { useSelector } from "react-redux";
@@ -357,8 +356,10 @@ const ProgressReport = () => {
                                 <div className="space-y-3">
                                     {filteredTeachers.map((teacher, idx) => (
                                         <div key={teacher._id} onClick={() => handleSelectTeacher(teacher)} className="flex items-center justify-between p-3 sm:p-4 bg-card border border-border/80 rounded-xl hover:border-primary/40 hover:shadow-md cursor-pointer transition-all duration-300 group">
-                                            <div className="flex items-center gap-3 sm:gap-4">
-                                                <span className="text-[10px] sm:text-xs font-bold text-muted-foreground w-4">#{idx + 1}</span>
+
+                                            {/* FIX 1: Added flex-1 and min-w-0 for layout constraint */}
+                                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 pr-2">
+                                                <span className="text-[10px] sm:text-xs font-bold text-muted-foreground w-4 shrink-0">#{idx + 1}</span>
                                                 <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full gradient-primary flex items-center justify-center text-white font-bold shrink-0 overflow-hidden shadow-sm ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
                                                     {teacher.profilePicture && typeof teacher.profilePicture === 'string' && teacher.profilePicture.startsWith('http') ? (
                                                         <img
@@ -370,17 +371,21 @@ const ProgressReport = () => {
                                                         teacher.name.charAt(0).toUpperCase()
                                                     )}
                                                 </div>
-                                                <div>
-                                                    <p className="font-bold text-sm text-foreground group-hover:text-primary">{teacher.name}</p>
-                                                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">{teacher.zone || t('progress_report.unassigned')}</p>
+
+                                                {/* FIX 1: Truncation wrappers and title attribute */}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-bold text-sm text-foreground group-hover:text-primary truncate" title={teacher.name}>{teacher.name}</p>
+                                                    <p className="text-[10px] text-muted-foreground uppercase font-semibold truncate" title={teacher.zone || t('progress_report.unassigned')}>{teacher.zone || t('progress_report.unassigned')}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center">
+
+                                            {/* FIX 1: Added shrink-0 to prevent badge squeezing */}
+                                            <div className="flex items-center shrink-0">
                                                 <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${getZoneStyles(teacher.colorZone)}`}>
                                                     <Trophy className="w-3 h-3 inline mr-1 mb-0.5" />
                                                     {teacher.currentWeeklyScore || 0} PTS
                                                 </span>
-                                                <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary ml-3" />
+                                                <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary ml-2 sm:ml-3" />
                                             </div>
                                         </div>
                                     ))}
@@ -390,18 +395,38 @@ const ProgressReport = () => {
                     )}
 
                     {selectedTeacher && !selectedMonth && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-right-8 duration-300">
-                            {monthsAvailable.map(m => (
-                                <div key={m} onClick={() => setSelectedMonth(m)} className="p-4 sm:p-5 border border-border/80 rounded-xl flex items-center justify-between hover:bg-muted/30 hover:border-primary/40 hover:shadow-md cursor-pointer transition-all group bg-card">
-                                    <div className="flex items-center gap-3 sm:gap-4">
-                                        <div className="p-2.5 bg-primary/10 rounded-xl text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
-                                            <CalendarDays className="w-5 h-5" />
-                                        </div>
-                                        <span className="font-bold text-sm sm:text-base text-foreground">{formatMonth(m)}</span>
-                                    </div>
-                                    <ChevronRight className="w-5 h-5 text-muted-foreground/40 group-hover:text-primary" />
+                        <div className="animate-in fade-in slide-in-from-right-8 duration-300">
+                            {/* FIX 2: Added Loading State and Empty State UI */}
+                            {isLoadingRecords ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                                    <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" />
+                                    <span className="font-semibold">Loading records...</span>
                                 </div>
-                            ))}
+                            ) : monthsAvailable.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                    {monthsAvailable.map(m => (
+                                        <div key={m} onClick={() => setSelectedMonth(m)} className="p-4 sm:p-5 border border-border/80 rounded-xl flex items-center justify-between hover:bg-muted/30 hover:border-primary/40 hover:shadow-md cursor-pointer transition-all group bg-card">
+                                            <div className="flex items-center gap-3 sm:gap-4">
+                                                <div className="p-2.5 bg-primary/10 rounded-xl text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
+                                                    <CalendarDays className="w-5 h-5" />
+                                                </div>
+                                                <span className="font-bold text-sm sm:text-base text-foreground">{formatMonth(m)}</span>
+                                            </div>
+                                            <ChevronRight className="w-5 h-5 text-muted-foreground/40 group-hover:text-primary" />
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="p-8 py-16 text-center border border-border/80 rounded-2xl flex flex-col items-center bg-card shadow-sm">
+                                    <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
+                                        <FileText className="w-8 h-8 text-muted-foreground/50" />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-foreground mb-1">No Records Found</h3>
+                                    <p className="text-sm text-muted-foreground max-w-sm">
+                                        There are no progress reports available for {selectedTeacher.name} at this time.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -413,7 +438,6 @@ const ProgressReport = () => {
                                         <BarChart3 className="w-4 h-4" /> Weekly Performance Trend
                                     </h4>
 
-                                    {/* 2. Added min-h and relative to fix Recharts error */}
                                     <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-6 shadow-sm h-75 min-h-75 w-full min-w-full relative">
                                         {isLoadingGraph ? (
                                             <div className="h-full w-full flex items-center justify-center text-muted-foreground animate-pulse font-medium">Loading chart data...</div>
@@ -421,7 +445,6 @@ const ProgressReport = () => {
                                             <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm font-medium">No weekly data recorded for this month.</div>
                                         ) : (
                                             <ResponsiveContainer width="100%" height="100%">
-                                                {/* 3. Replaced BarChart with LineChart */}
                                                 <LineChart data={graphData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
                                                     <XAxis dataKey="weekLabel" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
@@ -430,8 +453,6 @@ const ProgressReport = () => {
                                                         cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '3 3' }}
                                                         contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
                                                     />
-
-                                                    {/* 4. Added Cricket-style Line with dynamic colored dots based on score */}
                                                     <Line
                                                         type="monotone"
                                                         dataKey="score"

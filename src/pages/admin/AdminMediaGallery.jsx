@@ -341,6 +341,14 @@ const AdminMediaGallery = () => {
                                 </div>
                             </div>
                         ))
+                    ) : employees.length === 0 ? (
+                        <div className="col-span-full flex flex-col items-center justify-center p-12 py-24 text-center bg-card dark:bg-[#0d1117] border border-border rounded-3xl shadow-sm animate-in fade-in zoom-in duration-500">
+                            <div className="w-24 h-24 bg-muted/30 rounded-full flex items-center justify-center mb-6">
+                                <Users className="w-12 h-12 text-muted-foreground/50" />
+                            </div>
+                            <h3 className="text-2xl font-black text-foreground mb-2">{t('media_vault.admin.no_employees', 'Directory Empty')}</h3>
+                            <p className="text-muted-foreground max-w-sm">{t('media_vault.admin.no_employees_desc', 'There are no active employees available in the directory at this time.')}</p>
+                        </div>
                     ) : employees.map(emp => {
                         const avgScore = emp.lastMonthAvg ? parseFloat(emp.lastMonthAvg).toFixed(1) : "N/A";
                         const pendingCount = emp.pendingCount || 0;
@@ -503,7 +511,7 @@ const AdminMediaGallery = () => {
                                         <ChevronRight className={`w-6 h-6 text-muted-foreground transition-transform duration-300 ${isExpanded ? 'rotate-90 text-primary' : ''}`} />
                                     </button>
 
-                                    {/* 🔥 NEW: Smooth CSS Grid Accordion Trick for the Month Wrapper */}
+                                    {/* Smooth CSS Grid Accordion Trick for the Month Wrapper */}
                                     <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                                         <div className="overflow-hidden">
                                             <div className="p-4 sm:p-6 pt-0 sm:pt-2 border-t border-border bg-background/50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -571,7 +579,7 @@ const AdminMediaGallery = () => {
                                                                 </div>
                                                             </div>
 
-                                                            {/* 🔥 NEW: Smooth CSS Grid Accordion Trick for the Video Details */}
+                                                            {/* Smooth CSS Grid Accordion Trick for the Video Details */}
                                                             <div className={`grid transition-all duration-300 ease-in-out ${isCardExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                                                                 <div className="overflow-hidden">
                                                                     <div className="p-5 pt-2 flex flex-col flex-1 border-t border-border">
