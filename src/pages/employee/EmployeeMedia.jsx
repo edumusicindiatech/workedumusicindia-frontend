@@ -15,7 +15,6 @@ import { useTranslation } from "react-i18next";
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000", { withCredentials: true });
 
 const EmployeeMedia = () => {
-    // 🔥 NEW: Bring in the user object so we can identify our socket events
     const { t } = useTranslation();
     const { user } = useSelector((state) => state.auth);
 
@@ -23,7 +22,7 @@ const EmployeeMedia = () => {
     const availableYears = [currentYear, currentYear - 1, currentYear - 2];
 
     const [selectedYear, setSelectedYear] = useState(currentYear);
-    const [expandedMonth, setExpandedMonth] = useState(null);
+    const [expandedMonth, setExpandedMonth] = useState(null); // Starts collapsed
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
     const [activeVideo, setActiveVideo] = useState(null);
@@ -49,7 +48,6 @@ const EmployeeMedia = () => {
     const fetchMedia = useCallback(async () => {
         setIsLoading(true);
         try {
-            // 🔥 CACHE BUSTER ADDED: &_t=${Date.now()} forces the browser to get fresh data!
             const response = await api.get(`/employee/media?year=${selectedYear}&_t=${Date.now()}`);
 
             if (response.data.success) {
@@ -87,10 +85,9 @@ const EmployeeMedia = () => {
                 });
 
                 setMediaData(grouped);
-                const availableMonths = Object.keys(grouped);
-                if (availableMonths.length > 0 && !isUploading) {
-                    setExpandedMonth(availableMonths[0]);
-                }
+
+                // 🔥 REMOVED the logic that auto-expanded the first month here
+                // We leave expandedMonth as whatever it currently is (null on first load)
             }
         } catch (error) {
             console.error("Failed to load media", error);
@@ -98,7 +95,7 @@ const EmployeeMedia = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [selectedYear, isUploading, t]);
+    }, [selectedYear, t]);
 
     useEffect(() => {
         fetchMedia();
@@ -109,18 +106,15 @@ const EmployeeMedia = () => {
         if (!user || (!user._id && !user.id)) return;
         const myUserId = user._id || user.id;
 
-        // 1. Handle Direct Grading Update
         const handleDirectGrade = (data) => {
             if (data?.userId === myUserId) {
                 setMediaData(prevData => {
-                    const newData = { ...prevData }; // Shallow clone the months object
+                    const newData = { ...prevData };
 
-                    // Loop through the months to find the specific video
                     for (const month in newData) {
                         const fileIndex = newData[month].findIndex(f => f.id === data.fileId);
 
                         if (fileIndex !== -1) {
-                            // Clone the array and the specific object to maintain React immutability
                             const updatedMonthArray = [...newData[month]];
                             updatedMonthArray[fileIndex] = {
                                 ...updatedMonthArray[fileIndex],
@@ -128,7 +122,7 @@ const EmployeeMedia = () => {
                                 remark: data.remark
                             };
                             newData[month] = updatedMonthArray;
-                            break; // Found and updated, stop looping
+                            break;
                         }
                     }
                     return newData;
@@ -136,7 +130,6 @@ const EmployeeMedia = () => {
             }
         };
 
-        // 2. Handle Direct Deletion Update
         const handleDirectDelete = (data) => {
             if (data?.userId === myUserId) {
                 setMediaData(prevData => {
@@ -145,10 +138,9 @@ const EmployeeMedia = () => {
                     for (const month in newData) {
                         const updatedMonthFiles = newData[month].filter(f => f.id !== data.fileId);
 
-                        // If the array size changed, we found the file
                         if (updatedMonthFiles.length !== newData[month].length) {
                             if (updatedMonthFiles.length === 0) {
-                                delete newData[month]; // Remove the whole month if empty
+                                delete newData[month];
                             } else {
                                 newData[month] = updatedMonthFiles;
                             }
@@ -169,7 +161,6 @@ const EmployeeMedia = () => {
             }
         };
 
-        // Attach listeners
         socket.on('media_graded_direct', handleDirectGrade);
         socket.on('media_deleted_direct', handleDirectDelete);
         socket.on('new_notification_for_user', handleRemoteNotification);
@@ -180,7 +171,6 @@ const EmployeeMedia = () => {
             socket.off('new_notification_for_user', handleRemoteNotification);
         };
     }, [user, t]);
-
 
     // --- UPLOADER LISTENERS ---
     useEffect(() => {
@@ -209,7 +199,7 @@ const EmployeeMedia = () => {
             const url = URL.createObjectURL(jobQueue.files[0]);
             setPreviewUrl(url);
 
-            // Auto-expand the month we are uploading to
+            // Auto-expand the month we are uploading to so the user can see progress
             const d = new Date(jobQueue.metadata.eventDate || new Date());
             const monthNames = [
                 t('months.january'), t('months.february'), t('months.march'),
@@ -330,8 +320,6 @@ const EmployeeMedia = () => {
 
     return (
         <div className="max-w-6xl mx-auto p-4 md:p-6 mt-4">
-
-            {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 mb-8">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-extrabold text-primary tracking-tight mb-2">
@@ -362,15 +350,11 @@ const EmployeeMedia = () => {
                 </div>
             </div>
 
-            {/* YouTube Style Shimmer Loading */}
             {isLoading && !isUploading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
                     {[1, 2, 3, 4, 5, 6].map((i) => (
                         <div key={i} className="bg-card dark:bg-[#131821] border border-border dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
-                            {/* Thumbnail Skeleton */}
                             <div className="w-full aspect-video bg-muted/60 dark:bg-slate-800/50 animate-pulse" />
-
-                            {/* Content Skeleton */}
                             <div className="p-4 space-y-4">
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="flex items-center gap-2 w-full">
@@ -384,8 +368,6 @@ const EmployeeMedia = () => {
                                     <div className="h-3 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-1/3" />
                                 </div>
                             </div>
-
-                            {/* Footer Skeleton */}
                             <div className="p-3.5 border-t border-border dark:border-slate-800 bg-muted/30 dark:bg-slate-800/30 flex justify-between">
                                 <div className="h-4 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-24" />
                                 <div className="h-4 bg-muted/80 dark:bg-slate-700/80 rounded-md animate-pulse w-12" />
@@ -402,7 +384,6 @@ const EmployeeMedia = () => {
 
                         return (
                             <div key={month} className="bg-card dark:bg-[#181d29] border border-border dark:border-slate-700/50 rounded-2xl overflow-hidden shadow-sm transition-all duration-200">
-                                {/* Accordion Header */}
                                 <button
                                     onClick={() => toggleMonth(month)}
                                     className="w-full px-5 py-4 sm:px-6 sm:py-5 flex items-center justify-between bg-transparent hover:bg-muted/30 dark:hover:bg-slate-800/30 transition-colors"
@@ -427,22 +408,18 @@ const EmployeeMedia = () => {
                                     <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-300 shrink-0 ml-2 ${isExpanded ? 'rotate-180' : ''}`} />
                                 </button>
 
-                                {/* Accordion Content */}
                                 {isExpanded && (
                                     <div className="p-5 sm:p-6 pt-2 border-t border-border dark:border-slate-800 animate-in fade-in duration-300">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                             {mediaFiles.map((media) => (
                                                 media.isGhost ? (
-                                                    // 🔥 THE CINEMATIC GHOST CARD
                                                     <div key="ghost" className="group bg-background dark:bg-[#0d1117] border border-primary/50 shadow-[0_0_20px_rgba(59,130,246,0.15)] rounded-xl overflow-hidden flex flex-col relative transition-all duration-300">
                                                         <div className="relative aspect-video bg-black overflow-hidden shrink-0">
-
                                                             <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20">
                                                                 <button
                                                                     onClick={handleCancelUpload}
                                                                     className="p-2 sm:p-2 bg-black/40 hover:bg-destructive/90 active:bg-destructive backdrop-blur-md text-white rounded-full transition-all duration-200 shadow-lg border border-white/20 active:scale-90"
                                                                     title={t('employee_media.cancel_upload')}
-                                                                    aria-label="Cancel Upload"
                                                                 >
                                                                     <X className="w-5 h-5 sm:w-4 sm:h-4" />
                                                                 </button>
@@ -463,7 +440,6 @@ const EmployeeMedia = () => {
                                                                 </div>
                                                             )}
 
-                                                            {/* Cinematic Progress Bar Overlay */}
                                                             <div className="absolute bottom-0 left-0 w-full h-1.5 bg-black/50">
                                                                 <div className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }} />
                                                             </div>
@@ -490,7 +466,6 @@ const EmployeeMedia = () => {
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    // STANDARD REAL DB CARD
                                                     <div key={media.id} className="group bg-background dark:bg-[#0d1117] border border-border dark:border-slate-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-200 flex flex-col relative">
                                                         <div
                                                             className="relative aspect-video bg-slate-900 overflow-hidden shrink-0 cursor-pointer"
@@ -602,7 +577,7 @@ const EmployeeMedia = () => {
             />
 
             {deleteConfirmation && (
-                <div className="fixed inset-0 z-120 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-card dark:bg-[#181d29] border border-border dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden animate-in zoom-in-95">
                         <div className="flex items-start gap-4">
                             <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center shrink-0 border border-destructive/20">
@@ -634,7 +609,7 @@ const EmployeeMedia = () => {
             )}
 
             {activeVideo && (
-                <div className="fixed inset-0 z-100 flex items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
                     <div className="absolute top-0 left-0 right-0 w-full max-w-6xl mx-auto p-4 flex justify-between items-start z-50">
                         <div className="bg-black/40 backdrop-blur-md border border-white/10 px-5 py-3 rounded-2xl shadow-2xl">
                             <h3 className="text-lg sm:text-xl font-black text-white tracking-wide">

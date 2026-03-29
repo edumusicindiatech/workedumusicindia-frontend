@@ -382,7 +382,8 @@
         "optional": "(Optional)",
         "placeholder": "Sick leave, emergency, school is closed...",
         "cancel": "Cancel",
-        "confirm": "Confirm Absence"
+        "confirm": "Confirm Absence",
+        "required": "(Required)"
     },
     "add_event_modal": {
         "title": "Log New Event",
