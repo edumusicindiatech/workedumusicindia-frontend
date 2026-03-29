@@ -233,7 +233,6 @@ const EmployeeRoster = () => {
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
                 onSuccess={() => {
-                    toast.success(t('employee_roster.toast_success'));
                     fetchRoster();
                     setIsAddModalOpen(false);
                 }}
