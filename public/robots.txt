@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Allow: /contact-admin
+
+# Block crawlers from trying to index private dashboards
+Disallow: /admin/
+Disallow: /employee/
+Disallow: /api/
+
+# Point Google directly to your sitemap
+Sitemap: https://edumusicindia.com/sitemap.xml
