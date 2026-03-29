@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { setCredentials } from "../store/slices/authSlice";
 
@@ -9,10 +9,11 @@ import { Eye, EyeOff, Shield, Loader2, AlertCircle } from "lucide-react";
 
 import api, { setAxiosToken } from "../api/axios";
 import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next"; // <-- Added i18n import
+import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
 
 const Login = () => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation();
     const dispatch = useDispatch();
 
     // UI States
@@ -23,6 +24,21 @@ const Login = () => {
     // Form States
     const [employeeId, setEmployeeId] = useState("");
     const [password, setPassword] = useState("");
+
+    // --- BULLETPROOF LOGOUT TOAST LISTENER ---
+    useEffect(() => {
+        if (sessionStorage.getItem('justLoggedOut') === 'true') {
+            sessionStorage.removeItem('justLoggedOut'); // Clean up immediately
+            toast.remove(); // Instantly kill any lingering DOM wrappers
+
+            // Slight delay ensures the Login page is fully mounted before popping the toast
+            setTimeout(() => {
+                toast.success(t('login.logout_success', 'Logged out successfully!'), {
+                    duration: 3000
+                });
+            }, 150);
+        }
+    }, [t]);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -40,15 +56,27 @@ const Login = () => {
                     ? { ...data.user, role: data.role, isFirstLogin: data.isFirstLogin }
                     : { role: data.role, isFirstLogin: data.isFirstLogin, name: "New User" };
 
+                // 1. Update global state (this triggers the redirect to dashboard and theme changes)
                 dispatch(setCredentials({
                     user: completeUser,
                     access_token: data.access_token
                 }));
+
+                // 2. INSTANTLY destroy any existing toasts/invisible wrappers so the Profile button is clickable
+                toast.remove();
+
+                // 3. Wait 150ms for the new layout and Dark/Light theme to fully render, then fire ONE toast.
+                setTimeout(() => {
+                    if (data.role === 'admin') {
+                        toast.success(t('login.success_admin', 'Admin logged in successfully!'), { duration: 3000 });
+                    } else {
+                        toast.success(t('login.success_employee', 'Logged in successfully!'), { duration: 3000 });
+                    }
+                }, 150);
             }
         } catch (error) {
             console.error("Login Error:", error);
 
-            // --- USER-FRIENDLY ERROR MAPPING (Localized) ---
             let friendlyMessage = t('login.errors.default');
 
             if (!error.response) {
@@ -59,7 +87,6 @@ const Login = () => {
 
                 if (status === 400 || status === 401) {
                     friendlyMessage = t('login.errors.invalid_creds');
-
                     if (backendMsg.includes("token") || backendMsg.includes("jwt")) {
                         friendlyMessage = t('login.errors.auth_error');
                     }
@@ -82,9 +109,7 @@ const Login = () => {
 
     return (
         <div className="flex min-h-screen bg-background font-sans">
-            {/* Left Side: Modern Light/Brand Panel (Hidden on Mobile) */}
             <div className="hidden lg:flex lg:w-1/2 bg-primary/5 relative flex-col justify-center items-center p-12 overflow-hidden border-r border-border/40">
-                {/* Subtle Abstract Background */}
                 <div className="absolute top-[-10%] left-[-10%] w-125 h-125 bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
                 <div className="absolute bottom-[-10%] right-[-5%] w-100 h-100 bg-blue-500/10 rounded-full blur-[80px] pointer-events-none" />
 
@@ -114,14 +139,10 @@ const Login = () => {
                 </div>
             </div>
 
-            {/* Right Side: Clean Login Form */}
             <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative overflow-hidden bg-background">
-                {/* Mobile ambient glow */}
                 <div className="absolute top-0 right-0 w-75 h-75 bg-primary/10 rounded-full blur-[80px] pointer-events-none lg:hidden" />
 
                 <div className="w-full max-w-100 relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-
-                    {/* Mobile Branding */}
                     <div className="lg:hidden mb-10 text-center">
                         <div className="w-16 h-16 rounded-[1.25rem] bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-5 shadow-sm">
                             <Shield className="w-8 h-8 text-primary" />
@@ -129,13 +150,11 @@ const Login = () => {
                         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{t('login.mobile_brand_name')}</h1>
                     </div>
 
-                    {/* Form Header */}
                     <div className="text-center lg:text-left mb-8">
                         <h2 className="text-3xl font-extrabold text-foreground tracking-tight mb-2">{t('login.welcome_back')}</h2>
                         <p className="text-muted-foreground font-medium">{t('login.credentials_hint')}</p>
                     </div>
 
-                    {/* Error Display */}
                     {errorMsg && (
                         <div className="mb-8 bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3.5 rounded-xl flex items-start gap-3 animate-in slide-in-from-top-2 shadow-sm">
                             <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -143,7 +162,6 @@ const Login = () => {
                         </div>
                     )}
 
-                    {/* The Form */}
                     <form onSubmit={handleLogin} className="space-y-5">
                         <div className="space-y-2">
                             <Label htmlFor="employeeId" className="text-sm font-bold text-foreground">{t('login.label_employee_id')}</Label>

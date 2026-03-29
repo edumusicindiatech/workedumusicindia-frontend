@@ -126,25 +126,26 @@ const EmployeeNavbar = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    // <-- FIXED: Same clean logout handling without flashes for Employees
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
-        const toastId = toast.loading(t('navbar.logging_out'));
+
         try {
             await api.post('/auth/logout');
         } catch (error) {
-            console.error("Backend logout failed, forcing local logout:", error);
+            console.error("Backend logout cleanup failed:", error);
         } finally {
-            toast.dismiss(toastId);
+            // 1. Instantly nuke all toasts and their invisible wrappers from the DOM
+            toast.remove();
+
+            // 2. Set the secure flag that survives route changes
+            sessionStorage.setItem('justLoggedOut', 'true');
+
+            // 3. Clear auth state. App.jsx will force the redirect to Login.
             setAxiosToken(null);
             dispatch(logout());
-            navigate("/", { replace: true });
-
-            setTimeout(() => {
-                toast.success(t('navbar.logout_success'), { duration: 3000 });
-            }, 100);
         }
     };
-
     const desktopNavClasses = ({ isActive }) =>
         `flex items-center gap-2 px-3 py-2 rounded-xl transition-all font-medium text-sm ${isActive
             ? "bg-primary text-primary-foreground shadow-md"

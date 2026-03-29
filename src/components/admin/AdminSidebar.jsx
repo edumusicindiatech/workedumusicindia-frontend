@@ -141,22 +141,24 @@ const AdminSidebar = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    // <-- FIXED: Clean logout handling with no flash toasts
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
-        const toastId = toast.loading(t('sidebar.logging_out'));
 
         try {
             await api.post('/auth/logout');
-            toast.success(t('sidebar.logout_success'), { id: toastId, duration: 1500 });
         } catch (error) {
             console.error("Backend logout cleanup failed:", error);
-            toast.dismiss(toastId);
-        }
+        } finally {
+            // 1. Instantly nuke all toasts and their invisible wrappers from the DOM
+            toast.remove();
 
-        setTimeout(() => {
+            // 2. Set the secure flag that survives route changes
+            sessionStorage.setItem('justLoggedOut', 'true');
+
+            // 3. Clear auth state. App.jsx will force the redirect to Login.
             dispatch(logout());
-            navigate("/", { replace: true });
-        }, 400);
+        }
     };
 
     const desktopNavClasses = ({ isActive }) =>
@@ -235,7 +237,7 @@ const AdminSidebar = () => {
                     <button onClick={() => dispatch(toggleTheme())} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title={t('sidebar.theme')}>
                         {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-500" />}
                     </button>
-                    
+
                     {/* 🔥 UPGRADED: Desktop Profile Pic */}
                     <button onClick={() => navigate('/admin/profile')} className="p-1 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors flex items-center justify-center w-9 h-9 overflow-hidden border border-border/50" title={t('sidebar.profile') || 'My Profile'}>
                         {user?.profilePicture ? (
