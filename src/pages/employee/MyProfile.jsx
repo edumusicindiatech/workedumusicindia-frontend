@@ -15,7 +15,7 @@ const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, loading }) => {
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-150 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="bg-card dark:bg-[#181d29] border border-border dark:border-slate-800 rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 duration-300 relative overflow-hidden">
                 <div className="flex flex-col items-center text-center space-y-4">
                     <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center border border-destructive/20">
