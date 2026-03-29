@@ -141,7 +141,6 @@ const AdminSidebar = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // <-- FIXED: Clean logout handling with no flash toasts
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
 
@@ -162,7 +161,7 @@ const AdminSidebar = () => {
     };
 
     const desktopNavClasses = ({ isActive }) =>
-        `flex items-center gap-2 px-3 py-2 rounded-lg transition-all font-medium text-sm ${isActive
+        `flex items-center gap-2 px-3 py-2 rounded-lg transition-all font-medium text-sm whitespace-nowrap shrink-0 ${isActive
             ? "bg-primary text-primary-foreground shadow-sm"
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
         }`;
@@ -175,9 +174,11 @@ const AdminSidebar = () => {
 
     return (
         <>
-            {/* --- DESKTOP TOP NAVBAR --- */}
-            <nav className="hidden xl:flex fixed top-0 w-full h-16 bg-card border-b border-border z-50 items-center justify-between px-6 shadow-sm">
-                <div className="flex items-center gap-3 w-64 shrink-0">
+            {/* --- DESKTOP TOP NAVBAR --- triggered at 2xl instead of xl */}
+            <nav className="hidden 2xl:flex fixed top-0 w-full h-16 bg-card border-b border-border z-50 items-center justify-between px-6 shadow-sm">
+
+                {/* LEFT SECTION (Brand) */}
+                <div className="flex items-center gap-3 shrink-0 mr-2">
                     <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
                         <Shield className="w-5 h-5 text-primary-foreground" />
                     </div>
@@ -186,7 +187,8 @@ const AdminSidebar = () => {
                     </div>
                 </div>
 
-                <div className="flex items-center justify-center flex-1 gap-2">
+                {/* MIDDLE SECTION (Links) */}
+                <div className="flex items-center justify-start 2xl:justify-center flex-1 min-w-0 gap-1 overflow-x-auto px-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                     <NavLink to="/admin/dashboard" className={desktopNavClasses} title={t('sidebar.dashboard')}>
                         <LayoutDashboard className="w-4.5 h-4.5" /> {t('sidebar.dashboard')}
                     </NavLink>
@@ -233,12 +235,12 @@ const AdminSidebar = () => {
                     </NavLink>
                 </div>
 
-                <div className="flex items-center justify-end gap-3 w-64 shrink-0 border-l border-border pl-6">
+                {/* RIGHT SECTION (Controls) */}
+                <div className="flex items-center justify-end gap-2 shrink-0 border-l border-border pl-4 ml-2">
                     <button onClick={() => dispatch(toggleTheme())} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title={t('sidebar.theme')}>
                         {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-500" />}
                     </button>
 
-                    {/* 🔥 UPGRADED: Desktop Profile Pic */}
                     <button onClick={() => navigate('/admin/profile')} className="p-1 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors flex items-center justify-center w-9 h-9 overflow-hidden border border-border/50" title={t('sidebar.profile') || 'My Profile'}>
                         {user?.profilePicture ? (
                             <img src={user.profilePicture} alt="Admin" className="w-full h-full object-cover rounded-full" />
@@ -256,8 +258,8 @@ const AdminSidebar = () => {
                 </div>
             </nav>
 
-            {/* --- MOBILE TOP NAVBAR --- */}
-            <header className="xl:hidden fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4 shadow-sm">
+            {/* --- MOBILE TOP NAVBAR --- triggered at 2xl instead of xl */}
+            <header className="2xl:hidden fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4 shadow-sm">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
                         <Shield className="w-4 h-4 text-primary-foreground" />
@@ -266,7 +268,6 @@ const AdminSidebar = () => {
                 </div>
 
                 <div className="relative" ref={mobileMenuRef}>
-                    {/* 🔥 UPGRADED: Mobile Toggle with Profile Picture */}
                     <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-1 rounded-full hover:bg-muted transition-colors flex items-center justify-center w-10 h-10 overflow-hidden ring-2 ring-transparent focus:ring-primary/20 border border-border/50">
                         {user?.profilePicture ? (
                             <img src={user.profilePicture} alt="Admin" className="w-full h-full object-cover rounded-full" />
@@ -318,7 +319,6 @@ const AdminSidebar = () => {
                                 </div>
                             </button>
 
-                            {/* 🔥 UPGRADED: Profile link in dropdown uses Avatar icon if exists */}
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                 onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/profile'); }}
                             >
@@ -346,8 +346,8 @@ const AdminSidebar = () => {
                 </div>
             </header>
 
-            {/* --- MOBILE BOTTOM NAVBAR --- */}
-            <nav className="xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe">
+            {/* --- MOBILE BOTTOM NAVBAR --- triggered at 2xl instead of xl */}
+            <nav className="2xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe">
                 <NavLink to="/admin/dashboard" className={mobileNavClasses}>
                     <LayoutDashboard className="w-6 h-6" />
                 </NavLink>

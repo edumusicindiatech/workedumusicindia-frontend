@@ -85,9 +85,6 @@ const EmployeeMedia = () => {
                 });
 
                 setMediaData(grouped);
-
-                // 🔥 REMOVED the logic that auto-expanded the first month here
-                // We leave expandedMonth as whatever it currently is (null on first load)
             }
         } catch (error) {
             console.error("Failed to load media", error);
@@ -199,7 +196,6 @@ const EmployeeMedia = () => {
             const url = URL.createObjectURL(jobQueue.files[0]);
             setPreviewUrl(url);
 
-            // Auto-expand the month we are uploading to so the user can see progress
             const d = new Date(jobQueue.metadata.eventDate || new Date());
             const monthNames = [
                 t('months.january'), t('months.february'), t('months.march'),
@@ -408,155 +404,158 @@ const EmployeeMedia = () => {
                                     <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-300 shrink-0 ml-2 ${isExpanded ? 'rotate-180' : ''}`} />
                                 </button>
 
-                                {isExpanded && (
-                                    <div className="p-5 sm:p-6 pt-2 border-t border-border dark:border-slate-800 animate-in fade-in duration-300">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {mediaFiles.map((media) => (
-                                                media.isGhost ? (
-                                                    <div key="ghost" className="group bg-background dark:bg-[#0d1117] border border-primary/50 shadow-[0_0_20px_rgba(59,130,246,0.15)] rounded-xl overflow-hidden flex flex-col relative transition-all duration-300">
-                                                        <div className="relative aspect-video bg-black overflow-hidden shrink-0">
-                                                            <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20">
-                                                                <button
-                                                                    onClick={handleCancelUpload}
-                                                                    className="p-2 sm:p-2 bg-black/40 hover:bg-destructive/90 active:bg-destructive backdrop-blur-md text-white rounded-full transition-all duration-200 shadow-lg border border-white/20 active:scale-90"
-                                                                    title={t('employee_media.cancel_upload')}
-                                                                >
-                                                                    <X className="w-5 h-5 sm:w-4 sm:h-4" />
-                                                                </button>
+                                {/* <-- FIXED: Added smooth CSS Grid transition wrapper --> */}
+                                <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                                    <div className="overflow-hidden">
+                                        <div className="p-5 sm:p-6 pt-2 border-t border-border dark:border-slate-800">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                {mediaFiles.map((media) => (
+                                                    media.isGhost ? (
+                                                        <div key="ghost" className="group bg-background dark:bg-[#0d1117] border border-primary/50 shadow-[0_0_20px_rgba(59,130,246,0.15)] rounded-xl overflow-hidden flex flex-col relative transition-all duration-300">
+                                                            <div className="relative aspect-video bg-black overflow-hidden shrink-0">
+                                                                <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20">
+                                                                    <button
+                                                                        onClick={handleCancelUpload}
+                                                                        className="p-2 sm:p-2 bg-black/40 hover:bg-destructive/90 active:bg-destructive backdrop-blur-md text-white rounded-full transition-all duration-200 shadow-lg border border-white/20 active:scale-90"
+                                                                        title={t('employee_media.cancel_upload')}
+                                                                    >
+                                                                        <X className="w-5 h-5 sm:w-4 sm:h-4" />
+                                                                    </button>
+                                                                </div>
+
+                                                                {previewUrl ? (
+                                                                    <video
+                                                                        src={previewUrl}
+                                                                        className="w-full h-full object-cover transition-all duration-300"
+                                                                        style={{
+                                                                            filter: `blur(${Math.max(0, 8 - (uploadProgress * 0.08))}px) grayscale(${Math.max(0, 100 - uploadProgress)}%) brightness(${0.5 + (uploadProgress * 0.005)})`
+                                                                        }}
+                                                                        autoPlay loop muted playsInline
+                                                                    />
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center bg-slate-900">
+                                                                        <UploadCloud className="w-8 h-8 text-primary animate-pulse" />
+                                                                    </div>
+                                                                )}
+
+                                                                <div className="absolute bottom-0 left-0 w-full h-1.5 bg-black/50">
+                                                                    <div className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }} />
+                                                                </div>
+                                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                                    <span className="text-3xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] tracking-tighter">{uploadProgress}%</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="p-4 space-y-3 flex-1 opacity-60 animate-pulse">
+                                                                <div className="flex items-start justify-between gap-2">
+                                                                    <div className="flex items-center gap-1.5 min-w-0">
+                                                                        <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                                                                        <h3 className="font-bold text-foreground text-sm truncate">{media.schoolName}</h3>
+                                                                    </div>
+                                                                    <span className="shrink-0 bg-primary/10 text-primary text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-sm tracking-wider">
+                                                                        {media.band === 'Junior Band' ? t('employee_media.junior_band') : t('employee_media.senior_band')}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="pt-2 border-t border-border dark:border-slate-800">
+                                                                    <p className="text-[12px] font-semibold text-primary truncate flex items-center gap-1.5">
+                                                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                                                        {uploadProgress === 100 ? t('employee_media.finalizing') : t('employee_media.uploading')}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div key={media.id} className="group bg-background dark:bg-[#0d1117] border border-border dark:border-slate-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-200 flex flex-col relative">
+                                                            <div
+                                                                className="relative aspect-video bg-slate-900 overflow-hidden shrink-0 cursor-pointer"
+                                                                onClick={() => media.videoUrl && setActiveVideo(media)}
+                                                            >
+                                                                {media.videoUrl ? (
+                                                                    <video
+                                                                        src={`${media.videoUrl}#t=0.001`}
+                                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-70 group-hover:opacity-100"
+                                                                        preload="metadata" muted playsInline
+                                                                    />
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center">
+                                                                        <Film className="w-8 h-8 text-slate-700" />
+                                                                    </div>
+                                                                )}
+                                                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-transparent transition-colors">
+                                                                    <div className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg border border-white/10">
+                                                                        <PlayCircle className="w-6 h-6 text-white ml-0.5" />
+                                                                    </div>
+                                                                </div>
                                                             </div>
 
-                                                            {previewUrl ? (
-                                                                <video
-                                                                    src={previewUrl}
-                                                                    className="w-full h-full object-cover transition-all duration-300"
-                                                                    style={{
-                                                                        filter: `blur(${Math.max(0, 8 - (uploadProgress * 0.08))}px) grayscale(${Math.max(0, 100 - uploadProgress)}%) brightness(${0.5 + (uploadProgress * 0.005)})`
-                                                                    }}
-                                                                    autoPlay loop muted playsInline
-                                                                />
-                                                            ) : (
-                                                                <div className="w-full h-full flex items-center justify-center bg-slate-900">
-                                                                    <UploadCloud className="w-8 h-8 text-primary animate-pulse" />
+                                                            <div className="p-4 space-y-3 flex-1">
+                                                                <div className="flex items-start justify-between gap-2">
+                                                                    <div className="flex items-center gap-1.5 min-w-0">
+                                                                        <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                                                                        <h3 className="font-bold text-foreground text-sm truncate">{media.schoolName}</h3>
+                                                                    </div>
+                                                                    <span className="shrink-0 bg-primary/10 text-primary text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-sm tracking-wider">
+                                                                        {media.band === 'Junior Band' ? t('employee_media.junior_band') : t('employee_media.senior_band')}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="pt-2 border-t border-border dark:border-slate-800 flex flex-wrap gap-y-2 gap-x-4">
+                                                                    <div className="w-full">
+                                                                        {media.eventName && <p className="text-[12px] font-semibold text-foreground truncate">{media.eventName}</p>}
+                                                                        <p className="text-[11px] text-muted-foreground mt-0.5">{media.eventDate}</p>
+                                                                    </div>
+                                                                    {media.students && (
+                                                                        <div className="flex items-center gap-1.5 mt-1 bg-muted dark:bg-slate-800/50 px-2 py-1 rounded-md">
+                                                                            <Users className="w-3.5 h-3.5 text-blue-500" />
+                                                                            <span className="text-[11px] font-bold text-muted-foreground">{media.students} {t('employee_media.present')}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            {media.remark && (
+                                                                <div className="px-4 pb-3">
+                                                                    <div className="bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg flex gap-2.5 items-start">
+                                                                        <span className="text-blue-500 font-serif text-2xl leading-none h-4">"</span>
+                                                                        <p className="text-[12px] italic text-foreground font-medium leading-snug pt-1">{media.remark}</p>
+                                                                    </div>
                                                                 </div>
                                                             )}
 
-                                                            <div className="absolute bottom-0 left-0 w-full h-1.5 bg-black/50">
-                                                                <div className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }} />
-                                                            </div>
-                                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                                <span className="text-3xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] tracking-tighter">{uploadProgress}%</span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="p-4 space-y-3 flex-1 opacity-60 animate-pulse">
-                                                            <div className="flex items-start justify-between gap-2">
-                                                                <div className="flex items-center gap-1.5 min-w-0">
-                                                                    <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                                                                    <h3 className="font-bold text-foreground text-sm truncate">{media.schoolName}</h3>
-                                                                </div>
-                                                                <span className="shrink-0 bg-primary/10 text-primary text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-sm tracking-wider">
-                                                                    {media.band === 'Junior Band' ? t('employee_media.junior_band') : t('employee_media.senior_band')}
-                                                                </span>
-                                                            </div>
-                                                            <div className="pt-2 border-t border-border dark:border-slate-800">
-                                                                <p className="text-[12px] font-semibold text-primary truncate flex items-center gap-1.5">
-                                                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                                                    {uploadProgress === 100 ? t('employee_media.finalizing') : t('employee_media.uploading')}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div key={media.id} className="group bg-background dark:bg-[#0d1117] border border-border dark:border-slate-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-200 flex flex-col relative">
-                                                        <div
-                                                            className="relative aspect-video bg-slate-900 overflow-hidden shrink-0 cursor-pointer"
-                                                            onClick={() => media.videoUrl && setActiveVideo(media)}
-                                                        >
-                                                            {media.videoUrl ? (
-                                                                <video
-                                                                    src={`${media.videoUrl}#t=0.001`}
-                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-70 group-hover:opacity-100"
-                                                                    preload="metadata" muted playsInline
-                                                                />
-                                                            ) : (
-                                                                <div className="w-full h-full flex items-center justify-center">
-                                                                    <Film className="w-8 h-8 text-slate-700" />
-                                                                </div>
-                                                            )}
-                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-transparent transition-colors">
-                                                                <div className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg border border-white/10">
-                                                                    <PlayCircle className="w-6 h-6 text-white ml-0.5" />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="p-4 space-y-3 flex-1">
-                                                            <div className="flex items-start justify-between gap-2">
-                                                                <div className="flex items-center gap-1.5 min-w-0">
-                                                                    <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                                                                    <h3 className="font-bold text-foreground text-sm truncate">{media.schoolName}</h3>
-                                                                </div>
-                                                                <span className="shrink-0 bg-primary/10 text-primary text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-sm tracking-wider">
-                                                                    {media.band === 'Junior Band' ? t('employee_media.junior_band') : t('employee_media.senior_band')}
-                                                                </span>
-                                                            </div>
-                                                            <div className="pt-2 border-t border-border dark:border-slate-800 flex flex-wrap gap-y-2 gap-x-4">
-                                                                <div className="w-full">
-                                                                    {media.eventName && <p className="text-[12px] font-semibold text-foreground truncate">{media.eventName}</p>}
-                                                                    <p className="text-[11px] text-muted-foreground mt-0.5">{media.eventDate}</p>
-                                                                </div>
-                                                                {media.students && (
-                                                                    <div className="flex items-center gap-1.5 mt-1 bg-muted dark:bg-slate-800/50 px-2 py-1 rounded-md">
-                                                                        <Users className="w-3.5 h-3.5 text-blue-500" />
-                                                                        <span className="text-[11px] font-bold text-muted-foreground">{media.students} {t('employee_media.present')}</span>
+                                                            <div className="p-3.5 border-t border-border dark:border-slate-800 bg-muted/30 dark:bg-slate-800/30 mt-auto">
+                                                                {media.marks !== null ? (
+                                                                    <div className="flex items-center justify-between">
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                                                                                <Award className="w-3 h-3 text-green-600 dark:text-green-400" />
+                                                                            </div>
+                                                                            <span className="text-[11px] font-extrabold text-green-700 dark:text-green-400 uppercase tracking-wide">{t('employee_media.admin_score')}</span>
+                                                                        </div>
+                                                                        <span className="text-sm font-black text-foreground">{media.marks}/10</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex items-center justify-between">
+                                                                        <div className="flex items-center gap-1.5 opacity-80">
+                                                                            <Clock className="w-4 h-4 text-muted-foreground" />
+                                                                            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">{t('employee_media.pending_review')}</span>
+                                                                        </div>
+                                                                        {!media.remark && (
+                                                                            <button
+                                                                                onClick={(e) => triggerDeleteConfirmation(e, media.id, month)}
+                                                                                className="flex items-center gap-1.5 px-2.5 py-1 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-md transition-colors active:scale-95 shadow-sm"
+                                                                            >
+                                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                                <span className="text-[11px] font-extrabold uppercase tracking-wide">{t('employee_media.delete')}</span>
+                                                                            </button>
+                                                                        )}
                                                                     </div>
                                                                 )}
                                                             </div>
                                                         </div>
-
-                                                        {media.remark && (
-                                                            <div className="px-4 pb-3">
-                                                                <div className="bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg flex gap-2.5 items-start">
-                                                                    <span className="text-blue-500 font-serif text-2xl leading-none h-4">"</span>
-                                                                    <p className="text-[12px] italic text-foreground font-medium leading-snug pt-1">{media.remark}</p>
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        <div className="p-3.5 border-t border-border dark:border-slate-800 bg-muted/30 dark:bg-slate-800/30 mt-auto">
-                                                            {media.marks !== null ? (
-                                                                <div className="flex items-center justify-between">
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
-                                                                            <Award className="w-3 h-3 text-green-600 dark:text-green-400" />
-                                                                        </div>
-                                                                        <span className="text-[11px] font-extrabold text-green-700 dark:text-green-400 uppercase tracking-wide">{t('employee_media.admin_score')}</span>
-                                                                    </div>
-                                                                    <span className="text-sm font-black text-foreground">{media.marks}/10</span>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="flex items-center justify-between">
-                                                                    <div className="flex items-center gap-1.5 opacity-80">
-                                                                        <Clock className="w-4 h-4 text-muted-foreground" />
-                                                                        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">{t('employee_media.pending_review')}</span>
-                                                                    </div>
-                                                                    {!media.remark && (
-                                                                        <button
-                                                                            onClick={(e) => triggerDeleteConfirmation(e, media.id, month)}
-                                                                            className="flex items-center gap-1.5 px-2.5 py-1 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-md transition-colors active:scale-95 shadow-sm"
-                                                                        >
-                                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                                            <span className="text-[11px] font-extrabold uppercase tracking-wide">{t('employee_media.delete')}</span>
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )
-                                            ))}
+                                                    )
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
-                                )}
+                                </div>
                             </div>
                         );
                     })}

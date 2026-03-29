@@ -31,10 +31,10 @@ const formatTime12Hour = (timeStr) => {
     const [hourStr, minuteStr] = timeStr.split(':');
     let hours = parseInt(hourStr, 10);
     const ampm = hours >= 12 ? 'PM' : 'AM';
-    
+
     hours = hours % 12;
     hours = hours ? hours : 12; // the hour '0' should be '12'
-    
+
     return `${hours}:${minuteStr} ${ampm}`;
 };
 
@@ -49,7 +49,7 @@ const AssignedSchools = () => {
     const [userLocation, setUserLocation] = useState(null);
 
     // Note: You can populate these with real data from your API later
-    const [leaveStats, setLeaveStats] = useState({ absent: 0, leaves: 0 }); 
+    const [leaveStats, setLeaveStats] = useState({ absent: 0, leaves: 0 });
 
     useEffect(() => {
         if ("geolocation" in navigator) {
@@ -118,26 +118,27 @@ const AssignedSchools = () => {
         <div className="max-w-6xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
 
             {/* --- HEADER SECTION --- */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 pb-6 border-b border-border/40">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border/40">
                 <div className="space-y-1.5">
                     <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-linear-to-r from-primary to-primary/60">
                         {t('assigned_schools.title')}
                     </h1>
                     <p className="text-muted-foreground font-medium flex items-center gap-2 text-sm sm:text-base">
-                        <Map className="w-4 h-4 text-primary/70" />
-                        {t('assigned_schools.subtitle')}
+                        <Map className="w-4 h-4 text-primary/70 shrink-0" />
+                        <span className="truncate">{t('assigned_schools.subtitle')}</span>
                     </p>
                 </div>
 
-                {/* --- NEW: ABSENT & LEAVE RECORD BOXES --- */}
-                <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-                    <div className="flex-1 md:flex-none bg-destructive/10 text-destructive border border-destructive/20 px-4 py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-sm whitespace-nowrap">
-                        <UserX className="w-4 h-4" />
-                        <span className="text-sm font-bold">{t('assigned_schools.absent')}: {leaveStats.absent}</span>
+                {/* --- FIXED: COMPACT & RESPONSIVE ABSENT & LEAVE RECORD BOXES --- */}
+                {/* Replaced overflow-x-auto with flex-wrap so they stack neatly if zoomed or on very small screens */}
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    <div className="flex-1 sm:flex-none bg-destructive/10 text-destructive border border-destructive/20 px-3 py-1.5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm whitespace-nowrap cursor-default">
+                        <UserX className="w-3.5 h-3.5 shrink-0" />
+                        <span className="text-xs font-bold">{t('assigned_schools.absent')}: {leaveStats.absent}</span>
                     </div>
-                    <div className="flex-1 md:flex-none bg-amber-500/10 text-amber-600 border border-amber-500/20 px-4 py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-sm cursor-pointer hover:bg-amber-500/20 transition-colors whitespace-nowrap">
-                        <CalendarOff className="w-4 h-4" />
-                        <span className="text-sm font-bold">{t('assigned_schools.leave_record')}: {leaveStats.leaves}</span>
+                    <div className="flex-1 sm:flex-none bg-amber-500/10 text-amber-600 border border-amber-500/20 px-3 py-1.5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm cursor-pointer hover:bg-amber-500/20 transition-colors whitespace-nowrap">
+                        <CalendarOff className="w-3.5 h-3.5 shrink-0" />
+                        <span className="text-xs font-bold">{t('assigned_schools.leave_record')}: {leaveStats.leaves}</span>
                     </div>
                 </div>
             </div>

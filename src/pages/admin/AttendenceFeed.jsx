@@ -187,7 +187,7 @@ const AttendanceFeed = () => {
                     <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">{t('attendance_feed.title')}</h1>
                 </div>
 
-                <div className="relative z-40" ref={filterRef}>
+                <div className="relative z-30" ref={filterRef}>
                     <button
                         onClick={() => setIsFilterOpen(!isFilterOpen)}
                         className="flex items-center gap-2 px-4 py-2 sm:py-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:scale-105 transition-all active:scale-95"
