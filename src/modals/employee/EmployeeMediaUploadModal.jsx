@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { startBackgroundUpload } from "../../store/slices/uploadSlice";
 import CustomSelect from "../../components/ui/CustomSelect";
 import { useTranslation } from "react-i18next";
+import api from "../../api/axios";
 
 const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
     const { t } = useTranslation();
@@ -22,6 +23,8 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
     const [studentsCount, setStudentsCount] = useState("");
     const [files, setFiles] = useState([]);
     const [description, setDescription] = useState("");
+    const [liveSchools, setLiveSchools] = useState([]);
+    const [isFetchingSchools, setIsFetchingSchools] = useState(false);
 
     const fileInputRef = useRef(null);
 
@@ -43,13 +46,34 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
         }
     }, [isOpen, isUploading]);
 
-    const schoolOptions = user?.assignments?.map(item => item.school?.schoolName || "Unnamed School") || [];
-    const currentSelectedName = user?.assignments?.find(
+    useEffect(() => {
+        const fetchFreshSchools = async () => {
+            if (!isOpen) return; // Only fetch when modal opens
+
+            setIsFetchingSchools(true);
+            try {
+                // Route 1 from employeeRouter: Gets fresh profile including populated assignments
+                const response = await api.get('/employee/me/profile');
+                setLiveSchools(response.data.user.assignments || []);
+            } catch (error) {
+                console.error("Failed to fetch fresh schools:", error);
+                toast.error("Could not load your latest school assignments.");
+            } finally {
+                setIsFetchingSchools(false);
+            }
+        };
+
+        fetchFreshSchools();
+    }, [isOpen]);
+
+    const schoolOptions = liveSchools.map(item => item.school?.schoolName || "Unnamed School") || [];
+
+    const currentSelectedName = liveSchools.find(
         item => (item.school?._id || item.school) === selectedSchoolId
     )?.school?.schoolName || "";
 
     const handleSchoolSelect = (selectedName) => {
-        const matchedAssignment = user?.assignments?.find(
+        const matchedAssignment = liveSchools.find(
             item => (item.school?.schoolName || "Unnamed School") === selectedName
         );
         if (matchedAssignment) {
@@ -127,7 +151,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                             <label className="block text-[13px] font-bold text-foreground mb-2 uppercase tracking-wider">
                                 {t('upload_modal.assigned_school')} <span className="text-destructive">*</span>
                             </label>
-                            {isHydrating ? (
+                            {isHydrating || isFetchingSchools ? (
                                 <div className="h-10.5 flex items-center px-4 bg-background dark:bg-[#12141c] border border-input dark:border-slate-700 rounded-lg text-sm text-muted-foreground">
                                     {t('upload_modal.loading_schools')}
                                 </div>
