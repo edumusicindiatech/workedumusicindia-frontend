@@ -42,13 +42,19 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
                 globalEmployeeNotifications: settings.employeeEmailNotifications
             };
 
+            const personalPayload = {
+                systemLanguage: settings.language,
+                employeeNotifications: settings.employeeEmailNotifications
+            };
+
             if (isSuperAdmin) {
                 globalPayload.globalAdminNotifications = settings.adminEmailNotifications;
+                personalPayload.adminNotifications = settings.adminEmailNotifications;
             }
 
             const [globalResponse, personalResponse] = await Promise.all([
                 api.put('/admin/settings/global', globalPayload),
-                api.put('/employee/settings/preferences', { systemLanguage: settings.language })
+                api.put('/employee/settings/preferences', personalPayload)
             ]);
 
             if (globalResponse.data.success && personalResponse.data.success) {
