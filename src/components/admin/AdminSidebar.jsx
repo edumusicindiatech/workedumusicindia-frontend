@@ -183,7 +183,7 @@ const AdminSidebar = () => {
                 </div>
 
                 {/* MIDDLE SECTION (Links) */}
-                <div className="flex items-center justify-start 2xl:justify-center flex-1 min-w-0 gap-1 overflow-x-auto px-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                <div className="flex items-center justify-start flex-1 min-w-0 gap-1 overflow-x-auto px-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                     <NavLink to="/admin/dashboard" className={desktopNavClasses} title={t('sidebar.dashboard')}>
                         <LayoutDashboard className="w-4.5 h-4.5" /> {t('sidebar.dashboard')}
                     </NavLink>
