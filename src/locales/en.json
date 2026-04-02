@@ -8,14 +8,12 @@
         "error": "Something went wrong"
     },
     "sidebar": {
-        "profile": "Profile",
-        "logging_out": "Logging out...",
-        "logout_success": "Logged out successfully!",
-        "new_alert_toast": "New Alert Received",
-        "brand": "EduMusic Admin",
+        "brand": "WorkEduMusic",
+        "new_alert_toast": "New Alert!",
         "dashboard": "Dashboard",
-        "roster": "Roster",
+        "roster": "Employee Roster",
         "attendance": "Attendance",
+        "learning_hub": "Training Vault",
         "progress": "Progress",
         "leaderboard": "Leaderboard",
         "reports": "Reports",
@@ -24,27 +22,27 @@
         "alerts": "Alerts",
         "broadcast": "Broadcast",
         "theme": "Toggle Theme",
+        "profile": "My Profile",
         "settings": "Settings",
         "logout": "Logout",
-        "light_mode": "Light Mode",
-        "dark_mode": "Dark Mode"
+        "dark_mode": "Dark Mode",
+        "light_mode": "Light Mode"
     },
     "navbar": {
+        "brand": "WorkEduMusic",
         "new_notif_toast": "New Notification!",
-        "logging_out": "Logging out...",
-        "logout_success": "Logged out successfully!",
         "dashboard": "Dashboard",
         "assignments": "Assignments",
         "tasks": "Tasks",
+        "media": "Media",
+        "learning_hub": "Training Vault",
         "leaderboard": "Leaderboard",
         "report": "Daily Report",
         "notifications": "Notifications",
-        "profile": "Profile",
-        "brand": "EduMusic",
+        "profile": "My Profile",
         "theme_tooltip": "Toggle Theme",
         "settings": "Settings",
         "logout": "Logout",
-        "media": "Media",
         "dark_mode": "Dark Mode",
         "light_mode": "Light Mode"
     },
@@ -1492,6 +1490,70 @@
             "removing_avatar": "Removing avatar...",
             "avatar_removed": "Avatar removed successfully!",
             "remove_failed": "Failed to remove avatar."
+        }
+    },
+    "learning_hub": {
+        "page_title": "Training Vault",
+        "page_subtitle": "Learn from global instruction videos uploaded by administrators.",
+        "upload_btn": "Upload Lesson",
+        "empty_state_title": "Vault is Empty",
+        "empty_state_desc": "There are no training videos available at the moment.",
+        "empty_state_admin_hint": "Click 'Upload Lesson' to add the first one!",
+        "ghost_card": {
+            "cancel_upload": "Cancel Upload",
+            "uploading": "Uploading to Cloud...",
+            "finalizing": "Finalizing..."
+        },
+        "video_card": {
+            "instructor_label": "Instructor",
+            "download_tooltip": "Download Video",
+            "share_tooltip": "Share on WhatsApp",
+            "edit_tooltip": "Edit Video Details",
+            "delete_tooltip": "Delete Video"
+        },
+        "upload_modal": {
+            "title": "Upload Training Video",
+            "subtitle": "Share a lesson with all employees",
+            "lesson_title": "Lesson Title",
+            "title_placeholder": "e.g., Advanced Snare Drum Techniques",
+            "description": "Description",
+            "optional": "(Optional)",
+            "desc_placeholder": "Briefly explain what this video covers...",
+            "video_file": "Video File",
+            "click_to_select": "Click to select video",
+            "file_limits": "MP4, MOV, WebM (Max 500MB)",
+            "start_upload_btn": "Start Background Upload"
+        },
+        "edit_dialog": {
+            "title": "Edit Lesson Details",
+            "lesson_title": "Title",
+            "description": "Description",
+            "cancel_btn": "Cancel",
+            "save_btn": "Save Changes"
+        },
+        "delete_dialog": {
+            "title": "Delete Video",
+            "warning_text": "Are you sure you want to delete this training video? This action cannot be undone and will remove the video for all employees.",
+            "cancel_btn": "Cancel",
+            "confirm_btn": "Yes, Delete"
+        },
+        "toasts": {
+            "load_failed": "Failed to load training videos",
+            "upload_cancelled": "Upload cancelled",
+            "upload_failed": "Upload failed. Please check your connection.",
+            "deleting": "Deleting video...",
+            "delete_success": "Video deleted successfully",
+            "delete_failed": "Failed to delete video",
+            "updating": "Updating lesson...",
+            "update_success": "Updated successfully!",
+            "update_failed": "Failed to update lesson",
+            "preparing_download": "Preparing download...",
+            "download_started": "Download started!",
+            "download_failed": "Failed to download video.",
+            "file_too_large": "Video exceeds the 500MB limit.",
+            "title_required": "Title is required",
+            "file_required": "Please select a video file",
+            "keep_app_open": "Please keep the app open until the upload finishes!"
         }
     }
 }

@@ -8,40 +8,38 @@
         "error": "कुछ गलत हो गया"
     },
     "sidebar": {
-        "profile": "प्रोफ़ाइल",
-        "logging_out": "लॉग आउट हो रहा है...",
-        "logout_success": "सफलतापूर्वक लॉग आउट किया गया!",
-        "new_alert_toast": "नया अलर्ट प्राप्त हुआ",
-        "brand": "एडुम्यूज़िक एडमिन",
+        "brand": "वर्कएडम्यूजिक",
+        "new_alert_toast": "नया अलर्ट!",
         "dashboard": "डैशबोर्ड",
         "roster": "कर्मचारी सूची",
         "attendance": "उपस्थिति",
+        "learning_hub": "ट्रेनिंग वॉल्ट",
         "progress": "प्रगति",
         "leaderboard": "लीडरबोर्ड",
         "reports": "रिपोर्ट्स",
         "media": "मीडिया गैलरी",
         "leave": "छुट्टी के अनुरोध",
         "alerts": "अलर्ट्स",
-        "broadcast": "प्रसारण",
+        "broadcast": "ब्रॉडकास्ट",
         "theme": "थीम बदलें",
+        "profile": "मेरी प्रोफ़ाइल",
         "settings": "सेटिंग्स",
         "logout": "लॉग आउट",
-        "light_mode": "लाइट मोड",
-        "dark_mode": "डार्क मोड"
+        "dark_mode": "डार्क मोड",
+        "light_mode": "लाइट मोड"
     },
     "navbar": {
-        "new_notif_toast": "नई सूचना!",
-        "logging_out": "लॉग आउट हो रहा है...",
-        "logout_success": "सफलतापूर्वक लॉग आउट किया गया!",
+        "brand": "वर्कएडम्यूजिक",
+        "new_notif_toast": "नया नोटिफिकेशन!",
         "dashboard": "डैशबोर्ड",
         "assignments": "असाइनमेंट",
-        "tasks": "कार्य",
+        "tasks": "टास्क",
         "media": "मीडिया",
+        "learning_hub": "ट्रेनिंग वॉल्ट",
         "leaderboard": "लीडरबोर्ड",
         "report": "दैनिक रिपोर्ट",
-        "notifications": "सूचनाएं",
-        "profile": "प्रोफ़ाइल",
-        "brand": "एडुम्यूज़िक",
+        "notifications": "नोटिफिकेशन",
+        "profile": "मेरी प्रोफ़ाइल",
         "theme_tooltip": "थीम बदलें",
         "settings": "सेटिंग्स",
         "logout": "लॉग आउट",
@@ -1482,6 +1480,70 @@
             "removing_avatar": "अवतार हटाया जा रहा है...",
             "avatar_removed": "अवतार सफलतापूर्वक हटा दिया गया!",
             "remove_failed": "अवतार हटाने में विफल।"
+        }
+    },
+    "learning_hub": {
+        "page_title": "ट्रेनिंग वॉल्ट",
+        "page_subtitle": "एडमिनिस्ट्रेटर द्वारा अपलोड किए गए निर्देश वीडियो से सीखें।",
+        "upload_btn": "लेसन अपलोड करें",
+        "empty_state_title": "वॉल्ट खाली है",
+        "empty_state_desc": "अभी कोई ट्रेनिंग वीडियो उपलब्ध नहीं है।",
+        "empty_state_admin_hint": "पहला वीडियो जोड़ने के लिए 'लेसन अपलोड करें' पर क्लिक करें!",
+        "ghost_card": {
+            "cancel_upload": "अपलोड रद्द करें",
+            "uploading": "क्लाउड पर अपलोड हो रहा है...",
+            "finalizing": "पूरा हो रहा है..."
+        },
+        "video_card": {
+            "instructor_label": "प्रशिक्षक",
+            "download_tooltip": "वीडियो डाउनलोड करें",
+            "share_tooltip": "WhatsApp पर शेयर करें",
+            "edit_tooltip": "वीडियो विवरण संपादित करें",
+            "delete_tooltip": "वीडियो हटाएं"
+        },
+        "upload_modal": {
+            "title": "ट्रेनिंग वीडियो अपलोड करें",
+            "subtitle": "सभी कर्मचारियों के साथ एक लेसन साझा करें",
+            "lesson_title": "लेसन का शीर्षक",
+            "title_placeholder": "उदा., उन्नत स्नेयर ड्रम तकनीक",
+            "description": "विवरण",
+            "optional": "(वैकल्पिक)",
+            "desc_placeholder": "संक्षेप में बताएं कि यह वीडियो क्या कवर करता है...",
+            "video_file": "वीडियो फ़ाइल",
+            "click_to_select": "वीडियो चुनने के लिए क्लिक करें",
+            "file_limits": "MP4, MOV, WebM (अधिकतम 500MB)",
+            "start_upload_btn": "बैकग्राउंड अपलोड शुरू करें"
+        },
+        "edit_dialog": {
+            "title": "लेसन का विवरण संपादित करें",
+            "lesson_title": "शीर्षक",
+            "description": "विवरण",
+            "cancel_btn": "रद्द करें",
+            "save_btn": "परिवर्तन सहेजें"
+        },
+        "delete_dialog": {
+            "title": "वीडियो हटाएं",
+            "warning_text": "क्या आप वाकई इस ट्रेनिंग वीडियो को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती है और सभी कर्मचारियों के लिए वीडियो हटा देगी।",
+            "cancel_btn": "रद्द करें",
+            "confirm_btn": "हाँ, हटाएं"
+        },
+        "toasts": {
+            "load_failed": "ट्रेनिंग वीडियो लोड करने में विफल",
+            "upload_cancelled": "अपलोड रद्द कर दिया गया",
+            "upload_failed": "अपलोड विफल रहा। कृपया अपना कनेक्शन जांचें।",
+            "deleting": "वीडियो हटाया जा रहा है...",
+            "delete_success": "वीडियो सफलतापूर्वक हटा दिया गया",
+            "delete_failed": "वीडियो हटाने में विफल",
+            "updating": "लेसन अपडेट किया जा रहा है...",
+            "update_success": "सफलतापूर्वक अपडेट किया गया!",
+            "update_failed": "लेसन अपडेट करने में विफल",
+            "preparing_download": "डाउनलोड तैयार हो रहा है...",
+            "download_started": "डाउनलोड शुरू हो गया!",
+            "download_failed": "वीडियो डाउनलोड करने में विफल।",
+            "file_too_large": "वीडियो 500MB की सीमा से अधिक है।",
+            "title_required": "शीर्षक आवश्यक है",
+            "file_required": "कृपया एक वीडियो फ़ाइल चुनें",
+            "keep_app_open": "कृपया अपलोड पूरा होने तक ऐप खुला रखें!"
         }
     }
 }
