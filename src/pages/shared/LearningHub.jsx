@@ -2,10 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { BookOpen, UploadCloud, GraduationCap, X, Loader2, Trash2, Download, Edit2, CalendarDays } from "lucide-react";
 import api from "../../api/axios";
-import axios from "axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
-import { useTranslation } from "react-i18next"; // <-- IMPORT HOOK
+import { useTranslation } from "react-i18next";
 
 import LearningMediaUploadModal from "../../modals/admin/LearningMediaUploadModal";
 
@@ -17,8 +16,33 @@ const WhatsAppIcon = ({ className }) => (
     </svg>
 );
 
+// Helper component to explicitly force the browser to render the first frame 
+// immediately, ensuring a thumbnail is visible across all devices (including iOS).
+const VideoPlayer = ({ src }) => {
+    const videoRef = useRef(null);
+
+    useEffect(() => {
+        if (videoRef.current) {
+            // Force seeking to 0.001 to trigger thumbnail generation on mobile Safari/Chrome
+            videoRef.current.currentTime = 0.001;
+        }
+    }, [src]);
+
+    return (
+        <video
+            ref={videoRef}
+            src={`${src}#t=0.001`}
+            controls
+            controlsList="nodownload"
+            preload="metadata"
+            playsInline
+            className="absolute top-0 left-0 w-full h-full object-contain bg-black"
+        />
+    );
+};
+
 const LearningHub = () => {
-    const { t } = useTranslation(); // <-- INIT HOOK
+    const { t } = useTranslation();
     const { user } = useSelector((state) => state.auth);
     const { isUploading, jobQueue } = useSelector((state) => state.upload);
 
@@ -82,7 +106,6 @@ const LearningHub = () => {
     useEffect(() => {
         const handleProgress = (e) => setUploadProgress(e.detail);
         const handleRefresh = () => fetchVideos();
-        // Using generic success message if custom key isn't provided, falling back to update_success or english text
         const handleSuccess = () => toast.success(t('learning_hub.toasts.update_success', 'Lesson uploaded successfully!'));
         const handleError = (e) => toast.error(e.detail || t('learning_hub.toasts.upload_failed'));
 
@@ -215,16 +238,16 @@ const LearningHub = () => {
 
             {/* --- EDIT DIALOG --- */}
             {editModalOpen && (
-                <div className="fixed inset-0 z-120 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-card border border-border rounded-3xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden animate-in zoom-in-95">
-                        <div className="flex items-center justify-between mb-6">
+                <div className="fixed inset-0 z-120 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-card border-t sm:border border-border rounded-t-3xl sm:rounded-3xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 flex flex-col max-h-[90vh]">
+                        <div className="flex items-center justify-between mb-6 shrink-0">
                             <h3 className="text-xl font-black text-foreground">{t('learning_hub.edit_dialog.title')}</h3>
                             <button onClick={() => setEditModalOpen(false)} className="p-2 bg-muted/50 hover:bg-muted text-muted-foreground rounded-xl transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <form onSubmit={submitEdit} className="space-y-4">
+                        <form onSubmit={submitEdit} className="space-y-4 overflow-y-auto custom-scrollbar grow pb-safe">
                             <div className="space-y-2">
                                 <label className="block text-[13px] font-bold uppercase tracking-wider text-foreground">{t('learning_hub.edit_dialog.lesson_title')} <span className="text-destructive">*</span></label>
                                 <input
@@ -244,7 +267,7 @@ const LearningHub = () => {
                                 />
                             </div>
 
-                            <div className="pt-4 flex items-center justify-end gap-3 border-t border-border mt-6">
+                            <div className="pt-4 flex items-center justify-end gap-3 border-t border-border mt-6 shrink-0">
                                 <button type="button" onClick={() => setEditModalOpen(false)} className="px-5 py-2.5 rounded-xl text-sm font-bold text-foreground bg-muted hover:bg-muted/80 transition-colors">
                                     {t('learning_hub.edit_dialog.cancel_btn')}
                                 </button>
@@ -259,8 +282,8 @@ const LearningHub = () => {
 
             {/* --- DELETE DIALOG --- */}
             {deleteDialog.isOpen && (
-                <div className="fixed inset-0 z-120 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden animate-in zoom-in-95">
+                <div className="fixed inset-0 z-120 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-card border-t sm:border border-border rounded-t-3xl sm:rounded-2xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 pb-safe sm:pb-6">
                         <div className="flex items-start gap-4">
                             <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center shrink-0 border border-destructive/20">
                                 <Trash2 className="w-6 h-6 text-destructive" />
@@ -298,7 +321,7 @@ const LearningHub = () => {
                 {isAdmin && (
                     <button
                         onClick={() => setIsUploadModalOpen(true)}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all active:scale-95 shadow-md shrink-0"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all active:scale-95 shadow-md shrink-0 w-full sm:w-auto justify-center"
                     >
                         <UploadCloud className="w-5 h-5" />
                         {t('learning_hub.upload_btn')}
@@ -313,7 +336,7 @@ const LearningHub = () => {
                     ))}
                 </div>
             ) : videos.length === 0 && !isLearningUploadActive ? (
-                <div className="flex flex-col items-center justify-center text-center p-16 bg-card border border-border rounded-3xl shadow-sm animate-in zoom-in-95 duration-500">
+                <div className="flex flex-col items-center justify-center text-center p-10 sm:p-16 bg-card border border-border rounded-3xl shadow-sm animate-in zoom-in-95 duration-500">
                     <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4">
                         <GraduationCap className="w-10 h-10 text-muted-foreground/50" />
                     </div>
@@ -328,9 +351,7 @@ const LearningHub = () => {
                     {/* --- THE GHOST CARD --- */}
                     {isLearningUploadActive && jobQueue && (
                         <div className="group bg-background dark:bg-[#0d1117] border border-primary/50 shadow-[0_0_20px_rgba(59,130,246,0.15)] rounded-3xl overflow-hidden flex flex-col relative transition-all duration-300">
-
                             <div className="relative w-full aspect-video bg-black overflow-hidden shrink-0">
-
                                 <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20">
                                     <button onClick={handleCancelUpload} className="p-2 bg-black/40 hover:bg-destructive/90 active:bg-destructive backdrop-blur-md text-white rounded-full transition-all duration-200 shadow-lg border border-white/20 active:scale-90" title={t('learning_hub.ghost_card.cancel_upload')}>
                                         <X className="w-4 h-4" />
@@ -374,13 +395,8 @@ const LearningHub = () => {
                         <div key={video._id} className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col">
 
                             <div className="relative w-full aspect-video bg-black shrink-0 overflow-hidden">
-                                <video
-                                    src={`${video.fileUrl}#t=0.001`}
-                                    controls
-                                    controlsList="nodownload"
-                                    preload="metadata"
-                                    className="absolute top-0 left-0 w-full h-full object-contain"
-                                />
+                                {/* Utilizing the explicit VideoPlayer component to guarantee thumbnail loads immediately */}
+                                <VideoPlayer src={video.fileUrl} />
                             </div>
 
                             <div className="p-5 flex flex-col flex-1">
