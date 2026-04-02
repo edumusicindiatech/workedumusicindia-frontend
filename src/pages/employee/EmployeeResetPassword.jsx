@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, ShieldCheck, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+// 1. Import Toaster back in
 import toast, { Toaster } from "react-hot-toast";
 import api from "../../api/axios";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 
 const EmployeeResetPassword = () => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -24,18 +25,13 @@ const EmployeeResetPassword = () => {
         try {
             const response = await api.post('/auth/reset-initial-password', { newPassword });
 
-            // Show Success Toast
             toast.success(response.data?.message || t('employee_reset_password.toast_success'));
-
-            // Always push to Employee Dashboard on success
             navigate('/employee/dashboard');
+
         } catch (error) {
             console.error("Reset Error:", error);
-
-            // Extract error message
             const errorMessage = error.response?.data?.message || t('employee_reset_password.error_default');
 
-            // Show Error Toast & Inline Error
             setErrorMsg(errorMessage);
             toast.error(errorMessage);
 
@@ -46,7 +42,8 @@ const EmployeeResetPassword = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-muted/20 p-4">
-            {/* Added Toaster to render the notifications */}
+
+            {/* 2. Add Toaster here just like AdminResetPassword */}
             <Toaster position="top-right" />
 
             <div className="bg-card w-full max-w-md p-8 rounded-3xl shadow-xl border border-border animate-in zoom-in-95">
