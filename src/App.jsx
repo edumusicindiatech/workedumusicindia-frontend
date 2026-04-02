@@ -10,9 +10,12 @@ import ProtectedRoute from "./components/routing/ProtectedRoute";
 import PublicRoute from "./components/routing/PublicRoute";
 
 // Auth & Shared
-import Login from "./pages/Login";
-import NotFound from "./pages/Notfound";
+import Login from "./pages/shared/Login";
+import NotFound from "./pages/shared/Notfound";
 import AdminContact from "./pages/admin/AdminContact";
+
+// ---> ADDED LEARNING HUB IMPORT HERE (Assuming you place it in a shared folder) <---
+import LearningHub from "./pages/shared/LearningHub";
 
 // Admin Imports
 import AdminLayout from "./components/admin/AdminLayout";
@@ -40,7 +43,6 @@ import EmployeeMedia from "./pages/employee/EmployeeMedia";
 import DailyReport from "./pages/employee/DailyReport";
 import EmployeeNotifications from "./pages/employee/EmployeeNotifications";
 import EmployeeResetPassword from "./pages/employee/EmployeeResetPassword";
-// ---> ADDED EMPLOYEE LEADERBOARD IMPORT HERE <---
 import EmployeeLeaderBoard from "./pages/employee/EmployeeLeaderBoard";
 
 import { Toaster } from "react-hot-toast";
@@ -74,7 +76,6 @@ function App() {
         const profileResponse = await api.get('/employee/me/profile');
 
         if (profileResponse.data.success) {
-          // Need to pass the object with the properties your reducer expects
           dispatch(setCredentials({
             user: profileResponse.data.user,
             access_token: newAccessToken
@@ -102,18 +103,14 @@ function App() {
             await api.post('/employee/media/send-failure-email', payload);
           } catch (err) {
             console.error("Failed to send queued email", err);
-            return; // Stop and keep in queue if it fails again
+            return;
           }
         }
-
-        // If all succeeded, clear the queue!
         localStorage.removeItem('offlineEmailQueue');
       }
     };
 
     window.addEventListener('online', handleOnline);
-
-    // Also run once on app mount just in case they refreshed the page while offline
     if (navigator.onLine) handleOnline();
 
     return () => window.removeEventListener('online', handleOnline);
@@ -129,7 +126,6 @@ function App() {
     }
   }, [user?.preferences?.systemLanguage, i18n]);
 
-  // --- BLANK SCREEN DURING HYDRATION ---
   if (isHydrating) {
     return <div className="min-h-screen w-full bg-[#f8f9fa] dark:bg-[#12161f]"></div>;
   }
@@ -181,11 +177,12 @@ function App() {
           <Route path="assignments" element={<AssignedSchools />} />
           <Route path="optional" element={<OptionalTasks />} />
           <Route path="media" element={<EmployeeMedia />} />
+
+          {/* ---> ADDED EMPLOYEE LEARNING HUB ROUTE <--- */}
+          <Route path="learning-hub" element={<LearningHub />} />
+
           <Route path="report" element={<DailyReport />} />
-
-          {/* ---> ADDED EMPLOYEE LEADERBOARD ROUTE HERE <--- */}
           <Route path="leaderboard" element={<EmployeeLeaderBoard />} />
-
           <Route path="notifications" element={<EmployeeNotifications />} />
         </Route>
 
@@ -201,6 +198,10 @@ function App() {
           <Route path="leaderboard" element={<AdminLeaderboard />} />
           <Route path="reports" element={<AdminReports />} />
           <Route path="media" element={<AdminMediaGallery />} />
+
+          {/* ---> ADDED ADMIN LEARNING HUB ROUTE <--- */}
+          <Route path="learning-hub" element={<LearningHub />} />
+
           <Route path="leave-requests" element={<AdminLeaveRequests />} />
           <Route path="communication" element={<Communication />} />
           <Route path="notifications" element={<AdminNotifications />} />

@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import {
     Home, User, CalendarCheck, Bell, BarChartBig,
     Moon, Sun, LogOut, UserCircle, Settings, ListTodo, PlaySquare,
-    Trophy
+    Trophy, BookOpen // <-- ADDED BookOpen HERE
 } from "lucide-react";
 
 import EmployeeSettingsModal from "../../modals/employee/EmployeeSettingsModal";
@@ -126,7 +126,6 @@ const EmployeeNavbar = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // <-- FIXED: Same clean logout handling without flashes for Employees
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
 
@@ -135,17 +134,13 @@ const EmployeeNavbar = () => {
         } catch (error) {
             console.error("Backend logout cleanup failed:", error);
         } finally {
-            // 1. Instantly nuke all toasts and their invisible wrappers from the DOM
             toast.remove();
-
-            // 2. Set the secure flag that survives route changes
             sessionStorage.setItem('justLoggedOut', 'true');
-
-            // 3. Clear auth state. App.jsx will force the redirect to Login.
             setAxiosToken(null);
             dispatch(logout());
         }
     };
+
     const desktopNavClasses = ({ isActive }) =>
         `flex items-center gap-2 px-3 py-2 rounded-xl transition-all font-medium text-sm ${isActive
             ? "bg-primary text-primary-foreground shadow-md"
@@ -163,6 +158,10 @@ const EmployeeNavbar = () => {
         { path: "/employee/assignments", icon: <CalendarCheck className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.assignments') },
         { path: "/employee/optional", icon: <ListTodo className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.tasks') },
         { path: "/employee/media", icon: <PlaySquare className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.media') },
+
+        // ---> ADDED LEARNING HUB DESKTOP NAV ITEM <---
+        { path: "/employee/learning-hub", icon: <BookOpen className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.learning_hub') || 'Learn' },
+
         { path: "/employee/leaderboard", icon: <Trophy className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.leaderboard') || 'Leaderboard' },
         { path: "/employee/report", icon: <BarChartBig className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.report') },
         {
@@ -173,7 +172,6 @@ const EmployeeNavbar = () => {
         },
         {
             path: "/employee/profile",
-            // 🔥 UPGRADED: Uses profile picture if available, falls back to User icon
             icon: user?.profilePicture ? (
                 <img src={user.profilePicture} alt="Profile" className="w-6 h-6 lg:w-5 lg:h-5 rounded-full object-cover shrink-0 border border-border/50" />
             ) : (
@@ -221,7 +219,6 @@ const EmployeeNavbar = () => {
                         </button>
 
                         <div className="relative xl:hidden" ref={mobileMenuRef}>
-                            {/* 🔥 UPGRADED: Mobile Dropdown Toggle uses Profile Picture */}
                             <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-1 rounded-full hover:bg-muted transition-colors">
                                 {user?.profilePicture ? (
                                     <img src={user.profilePicture} alt="Profile" className="w-7 h-7 rounded-full object-cover border border-border" />
@@ -233,7 +230,6 @@ const EmployeeNavbar = () => {
                             {isMobileMenuOpen && (
                                 <div className="absolute top-12 right-0 w-56 bg-card border border-border rounded-2xl shadow-2xl p-2 animate-in slide-in-from-top-2 fade-in duration-200 z-50">
 
-                                    {/* 🔥 UPGRADED: Enhanced Menu Header with Avatar */}
                                     <div className="px-3 py-2.5 mb-1 border-b border-border flex items-center gap-3">
                                         {user?.profilePicture ? (
                                             <img src={user.profilePicture} alt="Profile" className="w-9 h-9 rounded-full object-cover shrink-0 border border-border" />
@@ -247,6 +243,13 @@ const EmployeeNavbar = () => {
                                             <p className="text-[11px] text-muted-foreground truncate">{user?.email || ""}</p>
                                         </div>
                                     </div>
+
+                                    {/* ---> ADDED LEARNING HUB MOBILE DROPDOWN BUTTON <--- */}
+                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                        onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/learning-hub'); }}
+                                    >
+                                        <BookOpen className="w-4 h-4 text-primary" /> {t('navbar.learning_hub') || 'Training Vault'}
+                                    </button>
 
                                     <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                         onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/report'); }}
@@ -286,9 +289,9 @@ const EmployeeNavbar = () => {
                 </div>
             </header>
 
-            {/* Taskbar filters out Profile, LEADERBOARD, and Report for a clean 5-item look with Media */}
+            {/* ---> EDITED TASKBAR FILTER: Filters out Learning Hub as well to keep Bottom Nav at 5 items max <--- */}
             <nav className="xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] overflow-x-auto overflow-y-hidden">
-                {navItems.filter(item => !["/employee/profile", "/employee/leaderboard", "/employee/report"].includes(item.path)).map((item) => (
+                {navItems.filter(item => !["/employee/profile", "/employee/leaderboard", "/employee/report", "/employee/learning-hub"].includes(item.path)).map((item) => (
                     <NavLink key={item.path} to={item.path} className={mobileNavClasses} title={item.label}>
                         <div className="relative mt-1">
                             {item.icon}

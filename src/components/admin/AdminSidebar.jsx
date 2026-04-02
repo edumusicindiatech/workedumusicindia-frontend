@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import {
     LayoutDashboard, Users, Radio, MessageSquare, Shield,
     Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle, ClipboardCheck,
-    CalendarDays, Film, Trophy
+    CalendarDays, Film, Trophy, BookOpen
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -149,13 +149,8 @@ const AdminSidebar = () => {
         } catch (error) {
             console.error("Backend logout cleanup failed:", error);
         } finally {
-            // 1. Instantly nuke all toasts and their invisible wrappers from the DOM
             toast.remove();
-
-            // 2. Set the secure flag that survives route changes
             sessionStorage.setItem('justLoggedOut', 'true');
-
-            // 3. Clear auth state. App.jsx will force the redirect to Login.
             dispatch(logout());
         }
     };
@@ -174,7 +169,7 @@ const AdminSidebar = () => {
 
     return (
         <>
-            {/* --- DESKTOP TOP NAVBAR --- triggered at 2xl instead of xl */}
+            {/* --- DESKTOP TOP NAVBAR --- */}
             <nav className="hidden 2xl:flex fixed top-0 w-full h-16 bg-card border-b border-border z-50 items-center justify-between px-6 shadow-sm">
 
                 {/* LEFT SECTION (Brand) */}
@@ -198,6 +193,11 @@ const AdminSidebar = () => {
                     <NavLink to="/admin/attendance" className={desktopNavClasses} title={t('sidebar.attendance')}>
                         <Radio className="w-4.5 h-4.5" /> {t('sidebar.attendance')}
                     </NavLink>
+
+                    <NavLink to="/admin/learning-hub" className={desktopNavClasses} title={t('sidebar.learning_hub') || 'Training Vault'}>
+                        <BookOpen className="w-4.5 h-4.5" /> {t('sidebar.learning_hub') || 'Learn'}
+                    </NavLink>
+
                     <NavLink to="/admin/progress" className={desktopNavClasses} title={t('sidebar.progress')}>
                         <TrendingUp className="w-4.5 h-4.5" /> {t('sidebar.progress')}
                     </NavLink>
@@ -258,7 +258,7 @@ const AdminSidebar = () => {
                 </div>
             </nav>
 
-            {/* --- MOBILE TOP NAVBAR --- triggered at 2xl instead of xl */}
+            {/* --- MOBILE TOP NAVBAR --- */}
             <header className="2xl:hidden fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4 shadow-sm">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
@@ -282,6 +282,12 @@ const AdminSidebar = () => {
                                 <p className="text-sm font-bold text-foreground truncate">{adminName}</p>
                                 <p className="text-[11px] text-muted-foreground truncate">{adminEmail}</p>
                             </div>
+
+                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/learning-hub'); }}
+                            >
+                                <BookOpen className="w-4 h-4 text-primary" /> {t('sidebar.learning_hub') || 'Training Vault'}
+                            </button>
 
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                 onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leaderboard'); }}
@@ -346,7 +352,8 @@ const AdminSidebar = () => {
                 </div>
             </header>
 
-            {/* --- MOBILE BOTTOM NAVBAR --- triggered at 2xl instead of xl */}
+            {/* --- MOBILE BOTTOM NAVBAR --- */}
+            {/* The Learning Hub has been explicitly removed from here to keep it in the dropdown profile menu instead. */}
             <nav className="2xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe">
                 <NavLink to="/admin/dashboard" className={mobileNavClasses}>
                     <LayoutDashboard className="w-6 h-6" />
@@ -357,9 +364,7 @@ const AdminSidebar = () => {
                 <NavLink to="/admin/attendance" className={mobileNavClasses}>
                     <Radio className="w-6 h-6" />
                 </NavLink>
-                <NavLink to="/admin/progress" className={mobileNavClasses}>
-                    <TrendingUp className="w-6 h-6" />
-                </NavLink>
+
                 <NavLink to="/admin/notifications" className={mobileNavClasses}>
                     <div className="relative flex items-center justify-center">
                         <Bell className="w-6 h-6" />

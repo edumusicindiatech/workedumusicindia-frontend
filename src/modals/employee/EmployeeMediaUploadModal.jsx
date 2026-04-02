@@ -48,11 +48,10 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
 
     useEffect(() => {
         const fetchFreshSchools = async () => {
-            if (!isOpen) return; // Only fetch when modal opens
+            if (!isOpen) return;
 
             setIsFetchingSchools(true);
             try {
-                // Route 1 from employeeRouter: Gets fresh profile including populated assignments
                 const response = await api.get('/employee/me/profile');
                 setLiveSchools(response.data.user.assignments || []);
             } catch (error) {
@@ -98,10 +97,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
         e.preventDefault();
         if (!selectedSchoolId) return toast.error(t('upload_modal.select_school_toast'));
         if (!band) return toast.error(t('upload_modal.band_category_toast'));
-
-        // 🔥 NEW: Students Count Validation
         if (!studentsCount) return toast.error(t('upload_modal.students_count_toast'));
-
         if (files.length === 0) return toast.error(t('upload_modal.add_video_toast'));
 
         const MAX_SIZE = 500 * 1024 * 1024;
@@ -109,7 +105,9 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
             return toast.error(t('upload_modal.size_limit_toast'));
         }
 
+        // 🔥 ADDED uploadType: 'vault' to the payload
         dispatch(startBackgroundUpload({
+            uploadType: 'vault',
             files: files,
             metadata: {
                 schoolId: selectedSchoolId,
@@ -130,7 +128,6 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
         <div className={`fixed inset-0 flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-sm transition-all duration-300 ${visibilityClass}`}>
             <div className="bg-card dark:bg-[#181d29] border border-border dark:border-slate-700/50 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl relative overflow-hidden">
 
-                {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-border dark:border-slate-800 bg-muted/20 shrink-0">
                     <div>
                         <h2 className="text-xl font-extrabold text-foreground tracking-tight">{t('upload_modal.title')}</h2>
@@ -203,7 +200,6 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                             </div>
                         </div>
                         <div className="sm:col-span-2 space-y-2">
-                            {/* 🔥 FIX: Changed label to mandatory */}
                             <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">
                                 {t('upload_modal.students_present')} <span className="text-destructive">*</span>
                             </label>
@@ -275,7 +271,6 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                     </div>
                 </form>
 
-                {/* Footer */}
                 <div className="bg-muted/30 dark:bg-[#121620] p-5 md:px-7 flex items-center justify-between border-t border-border dark:border-slate-800 shrink-0">
                     <div className="hidden sm:flex items-center gap-2 text-muted-foreground bg-background/50 px-3 py-1.5 rounded-lg border border-border dark:border-slate-800">
                         <Info className="w-4 h-4 text-primary" />

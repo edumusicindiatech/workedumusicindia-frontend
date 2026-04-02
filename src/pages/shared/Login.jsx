@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
-import { setCredentials } from "../store/slices/authSlice";
+import { setCredentials } from "../../store/slices/authSlice";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Shield, Loader2, AlertCircle } from "lucide-react";
 
-import api, { setAxiosToken } from "../api/axios";
+import api, { setAxiosToken } from "../../api/axios";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";

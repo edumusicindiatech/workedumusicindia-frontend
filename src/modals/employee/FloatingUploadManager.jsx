@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import api from '../../api/axios';
 import { clearUploadJob } from '../../store/slices/uploadSlice';
@@ -14,7 +14,8 @@ const FloatingUploadManager = () => {
     useEffect(() => {
         if (!isUploading || !jobQueue || uppyRef.current) return;
 
-        const { files, metadata } = jobQueue;
+        // Extract the uploadType (defaults to 'vault' for backward compatibility)
+        const { files, metadata, uploadType = 'vault' } = jobQueue;
         successfulUploadsRef.current = [];
 
         const uppy = new Uppy({
@@ -27,6 +28,7 @@ const FloatingUploadManager = () => {
             limit: window.innerWidth <= 768 ? 1 : 3,
             timeout: 60 * 1000,
             shouldUseMultipart: true,
+            // Both upload types can safely use these generic R2 multipart routes!
             createMultipartUpload: async (file) => {
                 const res = await api.post('/employee/media/multipart/create', { filename: file.name, type: file.type, metadata });
                 return { uploadId: res.data.uploadId, key: res.data.key };
@@ -50,7 +52,13 @@ const FloatingUploadManager = () => {
 
         uppy.on('upload-progress', (file, progressData) => {
             const percent = Math.round((progressData.bytesUploaded / progressData.bytesTotal) * 100);
-            window.dispatchEvent(new CustomEvent('vault-upload-progress', { detail: percent }));
+
+            // Route the UI updates to the correct page
+            if (uploadType === 'learning-hub') {
+                window.dispatchEvent(new CustomEvent('learning-upload-progress', { detail: percent }));
+            } else {
+                window.dispatchEvent(new CustomEvent('vault-upload-progress', { detail: percent }));
+            }
         });
 
         uppy.on('upload-success', (file, response) => {
@@ -59,27 +67,39 @@ const FloatingUploadManager = () => {
 
         uppy.on('complete', async (result) => {
             if (result.failed.length > 0) {
-                window.dispatchEvent(new CustomEvent('vault-upload-error', { detail: "Upload failed. Please check network." }));
+                const errorEvent = uploadType === 'learning-hub' ? 'learning-upload-error' : 'vault-upload-error';
+                window.dispatchEvent(new CustomEvent(errorEvent, { detail: "Upload failed. Please check network." }));
                 dispatch(clearUploadJob());
                 return;
             }
 
             try {
-                await api.post('/employee/media/save-log', {
-                    ...metadata,
-                    uploadedFiles: successfulUploadsRef.current
-                });
-
-                window.dispatchEvent(new CustomEvent('vault-upload-success'));
+                // CONDITIONAL DATABASE SAVING
+                if (uploadType === 'learning-hub') {
+                    await api.post('/learning', {
+                        title: metadata.title,
+                        description: metadata.description,
+                        fileUrl: successfulUploadsRef.current[0].url // Learning Hub saves single URL
+                    });
+                    window.dispatchEvent(new CustomEvent('learning-upload-success'));
+                } else {
+                    await api.post('/employee/media/save-log', {
+                        ...metadata,
+                        uploadedFiles: successfulUploadsRef.current
+                    });
+                    window.dispatchEvent(new CustomEvent('vault-upload-success'));
+                }
 
             } catch (err) {
-                window.dispatchEvent(new CustomEvent('vault-upload-error', { detail: "Uploaded, but failed to save to database." }));
+                const errorEvent = uploadType === 'learning-hub' ? 'learning-upload-error' : 'vault-upload-error';
+                window.dispatchEvent(new CustomEvent(errorEvent, { detail: "Uploaded, but failed to save to database." }));
             } finally {
                 dispatch(clearUploadJob());
 
-                // 🔥 CRITICAL FIX: 500ms delay gives MongoDB time to save before UI fetches
+                // Trigger the correct UI refresh
                 setTimeout(() => {
-                    window.dispatchEvent(new Event('refreshMediaGallery'));
+                    const refreshEvent = uploadType === 'learning-hub' ? 'refreshLearningHub' : 'refreshMediaGallery';
+                    window.dispatchEvent(new Event(refreshEvent));
                 }, 500);
 
                 if (uppyRef.current) {
@@ -100,10 +120,14 @@ const FloatingUploadManager = () => {
             }
             dispatch(clearUploadJob());
         };
+
+        // Listen for cancellations from both pages
         window.addEventListener('vault-upload-cancel', handleCancel);
+        window.addEventListener('learning-upload-cancel', handleCancel);
 
         return () => {
             window.removeEventListener('vault-upload-cancel', handleCancel);
+            window.removeEventListener('learning-upload-cancel', handleCancel);
             if (uppyRef.current) {
                 uppyRef.current.destroy();
                 uppyRef.current = null;

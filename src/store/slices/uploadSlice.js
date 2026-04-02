@@ -2,7 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
     isUploading: false,
-    jobQueue: null, // Will hold { files, metadata }
+    jobQueue: null, // Will hold { uploadType, files, metadata }
 };
 
 const uploadSlice = createSlice({
