@@ -76,10 +76,13 @@ const FloatingUploadManager = () => {
             try {
                 // CONDITIONAL DATABASE SAVING
                 if (uploadType === 'learning-hub') {
+                    // CRITICAL FIX: Map the uploaded URLs into an array for the backend
+                    const uploadedUrls = successfulUploadsRef.current.map(item => item.url);
+
                     await api.post('/learning', {
                         title: metadata.title,
                         description: metadata.description,
-                        fileUrl: successfulUploadsRef.current[0].url // Learning Hub saves single URL
+                        fileUrls: uploadedUrls // Pass the full array to your backend
                     });
                     window.dispatchEvent(new CustomEvent('learning-upload-success'));
                 } else {
