@@ -142,7 +142,7 @@ const EmployeeNavbar = () => {
     };
 
     const desktopNavClasses = ({ isActive }) =>
-        `flex items-center gap-2 px-3 py-2 rounded-xl transition-all font-medium text-sm ${isActive
+        `flex items-center gap-2 px-3 py-2 rounded-xl transition-all font-medium text-sm whitespace-nowrap shrink-0 ${isActive
             ? "bg-primary text-primary-foreground shadow-md"
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
         }`;
@@ -193,7 +193,7 @@ const EmployeeNavbar = () => {
                         <h1 className="font-display font-bold text-lg text-foreground tracking-tight hidden sm:block">{t('navbar.brand')}</h1>
                     </div>
 
-                    <nav className="hidden xl:flex items-center gap-1.5 flex-1 justify-center">
+                    <nav className="hidden xl:flex items-center gap-1.5 flex-1 justify-start overflow-x-auto px-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                         {navItems.map((item) => (
                             <NavLink key={item.path} to={item.path} className={desktopNavClasses}>
                                 {item.icon}
