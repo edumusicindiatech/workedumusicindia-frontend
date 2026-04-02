@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
-import { BookOpen, UploadCloud, GraduationCap, X, Loader2, Trash2, Download, Edit2, CalendarDays } from "lucide-react";
+import { BookOpen, UploadCloud, GraduationCap, X, Loader2, Trash2, Download, Edit2, CalendarDays, ChevronDown } from "lucide-react";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
@@ -16,14 +16,11 @@ const WhatsAppIcon = ({ className }) => (
     </svg>
 );
 
-// Helper component to explicitly force the browser to render the first frame 
-// immediately, ensuring a thumbnail is visible across all devices (including iOS).
 const VideoPlayer = ({ src }) => {
     const videoRef = useRef(null);
 
     useEffect(() => {
         if (videoRef.current) {
-            // Force seeking to 0.001 to trigger thumbnail generation on mobile Safari/Chrome
             videoRef.current.currentTime = 0.001;
         }
     }, [src]);
@@ -58,6 +55,8 @@ const LearningHub = () => {
 
     const [uploadProgress, setUploadProgress] = useState(0);
     const [previewUrl, setPreviewUrl] = useState(null);
+
+    const [expandedCards, setExpandedCards] = useState({});
 
     const isLearningUploadActive = isUploading && jobQueue?.uploadType === 'learning-hub';
 
@@ -226,6 +225,13 @@ const LearningHub = () => {
         window.open(whatsappUrl, '_blank');
     };
 
+    const toggleExpand = (videoId) => {
+        setExpandedCards(prev => ({
+            ...prev,
+            [videoId]: !prev[videoId]
+        }));
+    };
+
     const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
 
     return (
@@ -280,10 +286,10 @@ const LearningHub = () => {
                 </div>
             )}
 
-            {/* --- DELETE DIALOG --- */}
+            {/* --- DELETE DIALOG (UPDATED TO BE PERFECTLY CENTERED) --- */}
             {deleteDialog.isOpen && (
-                <div className="fixed inset-0 z-120 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-card border-t sm:border border-border rounded-t-3xl sm:rounded-2xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 pb-safe sm:pb-6">
+                <div className="fixed inset-0 z-120 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-card border border-border rounded-3xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden animate-in zoom-in-95">
                         <div className="flex items-start gap-4">
                             <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center shrink-0 border border-destructive/20">
                                 <Trash2 className="w-6 h-6 text-destructive" />
@@ -295,11 +301,11 @@ const LearningHub = () => {
                                 </p>
                             </div>
                         </div>
-                        <div className="flex items-center justify-end gap-3 mt-8 pt-5 border-t border-border">
-                            <button onClick={() => setDeleteDialog({ isOpen: false, videoId: null })} className="px-5 py-2.5 rounded-xl text-sm font-bold text-foreground bg-muted hover:bg-muted/80 transition-colors">
+                        <div className="flex flex-col sm:flex-row items-center justify-end gap-3 mt-8 pt-5 border-t border-border">
+                            <button onClick={() => setDeleteDialog({ isOpen: false, videoId: null })} className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-bold text-foreground bg-muted hover:bg-muted/80 transition-colors">
                                 {t('learning_hub.delete_dialog.cancel_btn')}
                             </button>
-                            <button onClick={confirmDelete} className="px-5 py-2.5 rounded-xl text-sm font-bold text-destructive-foreground bg-destructive hover:bg-destructive/90 transition-colors shadow-md">
+                            <button onClick={confirmDelete} className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-bold text-destructive-foreground bg-destructive hover:bg-destructive/90 transition-colors shadow-md">
                                 {t('learning_hub.delete_dialog.confirm_btn')}
                             </button>
                         </div>
@@ -391,80 +397,111 @@ const LearningHub = () => {
                     )}
 
                     {/* --- THE ACTUAL RENDERED VIDEOS --- */}
-                    {videos.map((video) => (
-                        <div key={video._id} className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col">
+                    {videos.map((video) => {
+                        const isExpanded = expandedCards[video._id];
 
-                            <div className="relative w-full aspect-video bg-black shrink-0 overflow-hidden">
-                                {/* Utilizing the explicit VideoPlayer component to guarantee thumbnail loads immediately */}
-                                <VideoPlayer src={video.fileUrl} />
-                            </div>
+                        return (
+                            <div key={video._id} className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col">
 
-                            <div className="p-5 flex flex-col flex-1">
-                                <h3 className="font-extrabold text-foreground text-lg line-clamp-1">{video.title}</h3>
-
-                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1 mb-2 font-medium">
-                                    <CalendarDays className="w-3.5 h-3.5 opacity-70" />
-                                    {formatDate(video.updatedAt || video.createdAt)}
+                                <div className="relative w-full aspect-video bg-black shrink-0 overflow-hidden">
+                                    <VideoPlayer src={video.fileUrl} />
                                 </div>
 
-                                {video.description && (
-                                    <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{video.description}</p>
-                                )}
+                                <div className="p-4 sm:p-5 flex flex-col flex-1">
 
-                                <div className="mt-auto pt-5 border-t border-border flex items-center justify-between">
-                                    <div className="flex flex-col">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{t('learning_hub.video_card.instructor_label')}</span>
-                                            <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded border shadow-sm ${video.uploaderRole === 'SuperAdmin'
-                                                ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30'
-                                                : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
-                                                }`}>
-                                                {video.uploaderRole}
-                                            </span>
+                                    {/* Always Visible Header (Clickable) */}
+                                    <div
+                                        className="flex items-start justify-between gap-3 cursor-pointer group"
+                                        onClick={() => toggleExpand(video._id)}
+                                    >
+                                        <div className="flex-1">
+                                            <h3 className="font-extrabold text-foreground text-lg line-clamp-1 group-hover:text-primary transition-colors">{video.title}</h3>
+                                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1 font-medium">
+                                                <CalendarDays className="w-3.5 h-3.5 opacity-70" />
+                                                {formatDate(video.updatedAt || video.createdAt)}
+                                            </div>
                                         </div>
-                                        <span className="text-sm font-bold text-foreground mt-0.5">{video.uploaderName}</span>
+                                        <button
+                                            className="p-1.5 bg-muted/50 text-muted-foreground rounded-full hover:bg-muted hover:text-foreground transition-colors shrink-0"
+                                            aria-label="Toggle details"
+                                        >
+                                            <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                                        </button>
                                     </div>
 
-                                    <div className="flex items-center gap-1.5">
-                                        <button
-                                            onClick={() => handleDownload(video)}
-                                            className="p-2.5 bg-muted text-foreground hover:bg-primary/10 hover:text-primary rounded-xl transition-colors"
-                                            title={t('learning_hub.video_card.download_tooltip')}
-                                        >
-                                            <Download className="w-4 h-4" />
-                                        </button>
+                                    {/* Expandable Accordion Content */}
+                                    <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                                        <div className="overflow-hidden flex flex-col">
+                                            <div className="pt-4 flex flex-col h-full">
 
-                                        <button
-                                            onClick={() => handleWhatsAppShare(video)}
-                                            className="p-2.5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 rounded-xl transition-colors"
-                                            title={t('learning_hub.video_card.share_tooltip')}
-                                        >
-                                            <WhatsAppIcon className="w-4 h-4" />
-                                        </button>
+                                                {video.description && (
+                                                    <p className="text-sm text-muted-foreground mb-4 line-clamp-3 leading-relaxed">{video.description}</p>
+                                                )}
 
-                                        {isAdmin && (
-                                            <>
-                                                <button
-                                                    onClick={() => openEditModal(video)}
-                                                    className="p-2.5 bg-muted text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500 rounded-xl transition-colors"
-                                                    title={t('learning_hub.video_card.edit_tooltip')}
-                                                >
-                                                    <Edit2 className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => triggerDelete(video._id)}
-                                                    className="p-2.5 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-xl transition-colors"
-                                                    title={t('learning_hub.video_card.delete_tooltip')}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </>
-                                        )}
+                                                <div className="mt-auto pt-4 sm:pt-5 border-t border-border flex flex-wrap items-center justify-between gap-y-3 gap-x-2">
+
+                                                    {/* Instructor Info Block */}
+                                                    <div className="flex flex-col min-w-40 flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider shrink-0">{t('learning_hub.video_card.instructor_label')}</span>
+                                                            <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded border shadow-sm shrink-0 ${video.uploaderRole === 'SuperAdmin'
+                                                                ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30'
+                                                                : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                                                                }`}>
+                                                                {video.uploaderRole}
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-sm font-bold text-foreground mt-0.5 truncate w-full" title={video.uploaderName}>
+                                                            {video.uploaderName}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Action Buttons Block */}
+                                                    <div className="flex items-center justify-end gap-1.5 shrink-0 ml-auto">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleDownload(video); }}
+                                                            className="p-2.5 bg-muted text-foreground hover:bg-primary/10 hover:text-primary rounded-xl transition-colors"
+                                                            title={t('learning_hub.video_card.download_tooltip')}
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                        </button>
+
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleWhatsAppShare(video); }}
+                                                            className="p-2.5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 rounded-xl transition-colors"
+                                                            title={t('learning_hub.video_card.share_tooltip')}
+                                                        >
+                                                            <WhatsAppIcon className="w-4 h-4" />
+                                                        </button>
+
+                                                        {isAdmin && (
+                                                            <>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); openEditModal(video); }}
+                                                                    className="p-2.5 bg-muted text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500 rounded-xl transition-colors"
+                                                                    title={t('learning_hub.video_card.edit_tooltip')}
+                                                                >
+                                                                    <Edit2 className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); triggerDelete(video._id); }}
+                                                                    className="p-2.5 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-xl transition-colors"
+                                                                    title={t('learning_hub.video_card.delete_tooltip')}
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
+
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>
