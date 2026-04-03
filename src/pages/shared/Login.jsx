@@ -12,6 +12,18 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
+// --- 1. NEW HELPER: GENERATE & STORE DEVICE ID ---
+// This creates a permanent, unique ID for this specific browser/app installation
+const getDeviceId = () => {
+    let id = localStorage.getItem('deviceId');
+    if (!id) {
+        // Fallback for older browsers if crypto.randomUUID is missing
+        id = crypto.randomUUID ? crypto.randomUUID() : 'dev-' + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('deviceId', id);
+    }
+    return id;
+};
+
 const Login = () => {
     const { t } = useTranslation();
     const dispatch = useDispatch();
@@ -46,7 +58,9 @@ const Login = () => {
         setErrorMsg("");
 
         try {
-            const response = await api.post('/auth/login', { employeeId, password });
+            // --- 2. ADD DEVICE ID TO PAYLOAD ---
+            const deviceId = getDeviceId();
+            const response = await api.post('/auth/login', { employeeId, password, deviceId });
             const data = response.data;
 
             if (data.access_token) {
@@ -84,6 +98,7 @@ const Login = () => {
             } else {
                 const status = error.response.status;
                 const backendMsg = error.response.data?.message?.toLowerCase() || "";
+                const rawBackendMsg = error.response.data?.message; // Keep exact casing for display
 
                 if (status === 400 || status === 401) {
                     friendlyMessage = t('login.errors.invalid_creds');
@@ -91,7 +106,13 @@ const Login = () => {
                         friendlyMessage = t('login.errors.auth_error');
                     }
                 } else if (status === 403) {
-                    friendlyMessage = t('login.errors.restricted');
+                    // --- 3. SHOW EXACT DEVICE ERROR MESSAGE ---
+                    // Check if the backend error mentions "device" to show the specific translation
+                    if (backendMsg.includes("device")) {
+                        friendlyMessage = t('login.errors.device_mismatch');
+                    } else {
+                        friendlyMessage = t('login.errors.restricted');
+                    }
                 } else if (status === 404) {
                     friendlyMessage = t('login.errors.not_found');
                 } else if (status === 429) {

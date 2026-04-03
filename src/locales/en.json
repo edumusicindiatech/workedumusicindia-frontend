@@ -1283,6 +1283,7 @@
             "invalid_creds": "Incorrect Employee ID or password. Please try again.",
             "auth_error": "Authentication error. Please refresh the page and try again.",
             "restricted": "Your account has been restricted. Please contact your administrator.",
+            "device_mismatch": "Unauthorized device. This account is locked to another phone. Please contact your administrator to reset access.",
             "not_found": "Account not found. Please double-check your Employee ID.",
             "too_many_attempts": "Too many failed attempts. Please wait a few minutes and try again.",
             "server_error": "We're experiencing technical difficulties on our end. Please try again later."
