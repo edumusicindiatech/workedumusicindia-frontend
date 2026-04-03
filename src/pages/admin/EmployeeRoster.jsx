@@ -6,10 +6,10 @@ import { Plus, Search, ChevronRight, AlertCircle, Users } from "lucide-react";
 import toast from "react-hot-toast";
 import AddEmployeeModal from "../../modals/admin/AddEmployeeModal";
 import api from "../../api/axios";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 
 const EmployeeRoster = () => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation();
     const [search, setSearch] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const navigate = useNavigate();
@@ -128,12 +128,18 @@ const EmployeeRoster = () => {
                                         >
                                             <td className="px-8 py-4">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground shadow-sm ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
+                                                    {/* --- FIXED DESKTOP PROFILE PIC --- */}
+                                                    <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground shadow-sm ring-2 ring-transparent group-hover:ring-primary/20 overflow-hidden transition-all">
                                                         {emp.profilePicture ? (
-                                                            // If it's a URL, use an <img> tag. If it's an icon/string, just render it.
-                                                            typeof emp.profilePicture === 'string' && emp.profilePicture.startsWith('http')
-                                                                ? <img src={emp.profilePicture} alt={emp.name} className="w-full h-full rounded-full object-cover" />
-                                                                : emp.profilePicture
+                                                            <img
+                                                                src={emp.profilePicture}
+                                                                alt={emp.name}
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => {
+                                                                    e.target.style.display = 'none';
+                                                                    e.target.parentElement.innerHTML = emp.name.charAt(0).toUpperCase();
+                                                                }}
+                                                            />
                                                         ) : (
                                                             emp.name.charAt(0).toUpperCase()
                                                         )}
@@ -171,8 +177,21 @@ const EmployeeRoster = () => {
                                     className="bg-card p-4 rounded-2xl border border-border shadow-sm flex items-center justify-between active:scale-[0.98] transition-all cursor-pointer hover:border-primary/30"
                                 >
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-lg font-bold text-primary-foreground shadow-sm shrink-0">
-                                            {emp.name.charAt(0).toUpperCase()}
+                                        {/* --- FIXED MOBILE PROFILE PIC --- */}
+                                        <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-lg font-bold text-primary-foreground shadow-sm shrink-0 overflow-hidden">
+                                            {emp.profilePicture ? (
+                                                <img
+                                                    src={emp.profilePicture}
+                                                    alt={emp.name}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        e.target.parentElement.innerHTML = emp.name.charAt(0).toUpperCase();
+                                                    }}
+                                                />
+                                            ) : (
+                                                emp.name.charAt(0).toUpperCase()
+                                            )}
                                         </div>
                                         <div className="flex flex-col">
                                             <div className="flex items-center gap-2 mb-0.5">
