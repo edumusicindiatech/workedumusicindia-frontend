@@ -14,7 +14,6 @@ const FloatingUploadManager = () => {
     useEffect(() => {
         if (!isUploading || !jobQueue || uppyRef.current) return;
 
-        // Extract the uploadType (defaults to 'vault' for backward compatibility)
         const { files, metadata, uploadType = 'vault' } = jobQueue;
         successfulUploadsRef.current = [];
 
@@ -28,7 +27,6 @@ const FloatingUploadManager = () => {
             limit: window.innerWidth <= 768 ? 1 : 3,
             timeout: 60 * 1000,
             shouldUseMultipart: true,
-            // Both upload types can safely use these generic R2 multipart routes!
             createMultipartUpload: async (file) => {
                 const res = await api.post('/employee/media/multipart/create', { filename: file.name, type: file.type, metadata });
                 return { uploadId: res.data.uploadId, key: res.data.key };
@@ -52,8 +50,6 @@ const FloatingUploadManager = () => {
 
         uppy.on('upload-progress', (file, progressData) => {
             const percent = Math.round((progressData.bytesUploaded / progressData.bytesTotal) * 100);
-
-            // Route the UI updates to the correct page
             if (uploadType === 'learning-hub') {
                 window.dispatchEvent(new CustomEvent('learning-upload-progress', { detail: percent }));
             } else {
@@ -65,6 +61,9 @@ const FloatingUploadManager = () => {
             successfulUploadsRef.current.push({ url: response.uploadURL, fileType: 'video' });
         });
 
+        // ==========================================
+        // THE FIX IS IN THIS COMPLETE HANDLER
+        // ==========================================
         uppy.on('complete', async (result) => {
             if (result.failed.length > 0) {
                 const errorEvent = uploadType === 'learning-hub' ? 'learning-upload-error' : 'vault-upload-error';
@@ -74,42 +73,52 @@ const FloatingUploadManager = () => {
             }
 
             try {
-                // CONDITIONAL DATABASE SAVING
                 if (uploadType === 'learning-hub') {
-                    // CRITICAL FIX: Map the uploaded URLs into an array for the backend
                     const uploadedUrls = successfulUploadsRef.current.map(item => item.url);
 
+                    let parsedThumbnails = [];
+                    if (metadata.thumbnails) {
+                        try {
+                            parsedThumbnails = JSON.parse(metadata.thumbnails);
+                        } catch (e) {
+                            console.error("Failed to parse thumbnails payload:", e);
+                        }
+                    }
+
+                    // We MUST await this so Redux doesn't clear the job before the DB saves
                     await api.post('/learning', {
                         title: metadata.title,
                         description: metadata.description,
-                        fileUrls: uploadedUrls // Pass the full array to your backend
+                        fileUrls: uploadedUrls,
+                        thumbnails: parsedThumbnails
                     });
+
                     window.dispatchEvent(new CustomEvent('learning-upload-success'));
+                    setTimeout(() => window.dispatchEvent(new Event('refreshLearningHub')), 500);
+
                 } else {
                     await api.post('/employee/media/save-log', {
                         ...metadata,
                         uploadedFiles: successfulUploadsRef.current
                     });
                     window.dispatchEvent(new CustomEvent('vault-upload-success'));
+                    setTimeout(() => window.dispatchEvent(new Event('refreshMediaGallery')), 500);
                 }
 
             } catch (err) {
+                console.error("Database Save Error:", err);
                 const errorEvent = uploadType === 'learning-hub' ? 'learning-upload-error' : 'vault-upload-error';
                 window.dispatchEvent(new CustomEvent(errorEvent, { detail: "Uploaded, but failed to save to database." }));
-            } finally {
+            }
+
+            // Wait a fraction of a second before nuking Redux so the UI success events have time to fire
+            setTimeout(() => {
                 dispatch(clearUploadJob());
-
-                // Trigger the correct UI refresh
-                setTimeout(() => {
-                    const refreshEvent = uploadType === 'learning-hub' ? 'refreshLearningHub' : 'refreshMediaGallery';
-                    window.dispatchEvent(new Event(refreshEvent));
-                }, 500);
-
                 if (uppyRef.current) {
                     uppyRef.current.destroy();
                     uppyRef.current = null;
                 }
-            }
+            }, 100);
         });
 
         files.forEach(file => uppy.addFile({ name: file.name, type: file.type, data: file }));
@@ -124,7 +133,6 @@ const FloatingUploadManager = () => {
             dispatch(clearUploadJob());
         };
 
-        // Listen for cancellations from both pages
         window.addEventListener('vault-upload-cancel', handleCancel);
         window.addEventListener('learning-upload-cancel', handleCancel);
 

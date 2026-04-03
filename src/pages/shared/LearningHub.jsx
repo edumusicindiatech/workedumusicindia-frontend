@@ -16,24 +16,45 @@ const WhatsAppIcon = ({ className }) => (
     </svg>
 );
 
-const VideoPlayer = ({ src }) => {
+const VideoPlayer = ({ src, thumbnailUrl }) => {
+    const [isLoaded, setIsLoaded] = useState(false);
     const videoRef = useRef(null);
 
-    useEffect(() => {
-        if (videoRef.current) {
-            videoRef.current.currentTime = 0.001;
-        }
-    }, [src]);
+    // 1. Show the lightweight thumbnail first to save data
+    if (!isLoaded) {
+        return (
+            <div
+                className="absolute top-0 left-0 w-full h-full bg-black flex flex-col items-center justify-center cursor-pointer group bg-cover bg-center"
+                style={{ backgroundImage: `url(${thumbnailUrl || 'https://via.placeholder.com/1280x720/000000/FFFFFF/?text=EduMusic+Video'})` }}
+                onClick={() => setIsLoaded(true)}
+            >
+                {/* Dark Overlay for better button visibility */}
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-300"></div>
 
+                {/* Play Button UI */}
+                <div className="relative z-10 w-16 h-16 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary transition-all duration-300 backdrop-blur-md border border-white/30 shadow-2xl">
+                    <svg className="w-8 h-8 text-white ml-1 group-hover:text-primary-foreground transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
+                </div>
+                <span className="relative z-10 text-white/80 text-sm mt-3 font-medium tracking-wide group-hover:text-white transition-colors drop-shadow-md">
+                    Click to Play
+                </span>
+            </div>
+        );
+    }
+
+    // 2. Load the actual heavy video only when clicked
     return (
         <video
             ref={videoRef}
-            src={`${src}#t=0.001`}
+            src={src}
             controls
+            autoPlay
             controlsList="nodownload"
-            preload="metadata"
+            preload="auto"
             playsInline
-            className="absolute top-0 left-0 w-full h-full object-contain bg-black"
+            className="absolute top-0 left-0 w-full h-full object-contain bg-black animate-in fade-in duration-300"
         />
     );
 };
@@ -286,7 +307,7 @@ const LearningHub = () => {
                 </div>
             )}
 
-            {/* --- DELETE DIALOG (UPDATED TO BE PERFECTLY CENTERED) --- */}
+            {/* --- DELETE DIALOG --- */}
             {deleteDialog.isOpen && (
                 <div className="fixed inset-0 z-120 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-card border border-border rounded-3xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden animate-in zoom-in-95">
@@ -404,12 +425,11 @@ const LearningHub = () => {
                             <div key={video._id} className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col">
 
                                 <div className="relative w-full aspect-video bg-black shrink-0 overflow-hidden">
-                                    <VideoPlayer src={video.fileUrl} />
+                                    {/* WE PASSED THE PROP HERE */}
+                                    <VideoPlayer src={video.fileUrl} thumbnailUrl={video.thumbnailUrl} />
                                 </div>
 
                                 <div className="p-4 sm:p-5 flex flex-col flex-1">
-
-                                    {/* Always Visible Header (Clickable) */}
                                     <div
                                         className="flex items-start justify-between gap-3 cursor-pointer group"
                                         onClick={() => toggleExpand(video._id)}
@@ -429,7 +449,6 @@ const LearningHub = () => {
                                         </button>
                                     </div>
 
-                                    {/* Expandable Accordion Content */}
                                     <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                                         <div className="overflow-hidden flex flex-col">
                                             <div className="pt-4 flex flex-col h-full">
@@ -440,7 +459,6 @@ const LearningHub = () => {
 
                                                 <div className="mt-auto pt-4 sm:pt-5 border-t border-border flex flex-wrap items-center justify-between gap-y-3 gap-x-2">
 
-                                                    {/* Instructor Info Block */}
                                                     <div className="flex flex-col min-w-40 flex-1">
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider shrink-0">{t('learning_hub.video_card.instructor_label')}</span>
@@ -456,7 +474,6 @@ const LearningHub = () => {
                                                         </span>
                                                     </div>
 
-                                                    {/* Action Buttons Block */}
                                                     <div className="flex items-center justify-end gap-1.5 shrink-0 ml-auto">
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); handleDownload(video); }}

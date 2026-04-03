@@ -1,16 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { startBackgroundUpload } from "../../store/slices/uploadSlice";
-import { X, UploadCloud, Film, CheckCircle2 } from "lucide-react";
+import { X, UploadCloud, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 
-// Helper Component to generate and display the thumbnail locally
-const VideoThumbnail = ({ file }) => {
-    const [thumbnail, setThumbnail] = useState(null);
-
-    useEffect(() => {
-        let isMounted = true;
+// Generates a lightweight Base64 image in the browser (Zero backend CPU needed!)
+const generateHDThumbnail = (file) => {
+    return new Promise((resolve) => {
         const video = document.createElement("video");
         const url = URL.createObjectURL(file);
 
@@ -19,49 +16,27 @@ const VideoThumbnail = ({ file }) => {
         video.playsInline = true;
 
         video.onloadeddata = () => {
-            // Seek to 1 second into the video (or the end if it's super short)
             video.currentTime = Math.min(1, video.duration || 0.1);
         };
 
         video.onseeked = () => {
             const canvas = document.createElement("canvas");
-            canvas.width = video.videoWidth || 100;
-            canvas.height = video.videoHeight || 100;
+            // 640x360 keeps the payload tiny while looking perfectly crisp on cards
+            canvas.width = 640;
+            canvas.height = 360;
             const ctx = canvas.getContext("2d");
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            if (isMounted) {
-                setThumbnail(canvas.toDataURL("image/jpeg"));
-            }
+            // Compress to JPEG at 70% quality (Results in ~30kb payload)
+            resolve(canvas.toDataURL("image/jpeg", 0.7));
             URL.revokeObjectURL(url);
         };
 
         video.onerror = () => {
             URL.revokeObjectURL(url);
+            resolve(null);
         };
-
-        return () => {
-            isMounted = false;
-            URL.revokeObjectURL(url);
-        };
-    }, [file]);
-
-    if (!thumbnail) {
-        // Fallback loading state while thumbnail generates
-        return (
-            <div className="w-12 h-12 bg-primary/10 rounded-lg shrink-0 flex items-center justify-center animate-pulse">
-                <Film className="w-5 h-5 text-primary" />
-            </div>
-        );
-    }
-
-    return (
-        <img
-            src={thumbnail}
-            alt="Video Thumbnail"
-            className="w-12 h-12 object-cover rounded-lg shrink-0 border border-border"
-        />
-    );
+    });
 };
 
 const LearningMediaUploadModal = ({ isOpen, onClose }) => {
@@ -69,7 +44,7 @@ const LearningMediaUploadModal = ({ isOpen, onClose }) => {
     const dispatch = useDispatch();
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
-    const [files, setFiles] = useState([]); // Array of files
+    const [files, setFiles] = useState([]); // Now stores array of { file, thumbnail }
 
     const fileInputRef = useRef(null);
 
@@ -77,43 +52,39 @@ const LearningMediaUploadModal = ({ isOpen, onClose }) => {
         if (!isOpen) {
             setTitle("");
             setDescription("");
-            setFiles([]); // Reset to empty array
+            setFiles([]);
         }
     }, [isOpen]);
 
     if (!isOpen) return null;
 
-    const handleFileSelect = (e) => {
+    const handleFileSelect = async (e) => {
         const selectedFiles = Array.from(e.target.files);
         if (!selectedFiles.length) return;
 
         const MAX_COMBINED_SIZE = 500 * 1024 * 1024; // 500 MB
+        let runningTotalSize = files.reduce((total, f) => total + f.file.size, 0);
 
-        // 1. Calculate the size of files already in the upload queue
-        const currentTotalSize = files.reduce((total, f) => total + f.size, 0);
+        const validItems = [];
+        const toastId = toast.loading("Processing videos...");
 
-        // 2. Keep track of the running total as we evaluate new files
-        let runningTotalSize = currentTotalSize;
-        const validFiles = [];
-
-        // 3. Evaluate each newly selected file
         for (const f of selectedFiles) {
             if (runningTotalSize + f.size > MAX_COMBINED_SIZE) {
-                // Show an error and skip this file if it pushes us over the limit
-                toast.error(`Cannot add "${f.name}". The total upload size cannot exceed 500MB.`);
+                toast.error(`Cannot add "${f.name}". Max combined limit is 500MB.`);
             } else {
-                // If it fits, add it to our valid list and update the running total
-                validFiles.push(f);
+                // Extract thumbnail instantly
+                const thumbBase64 = await generateHDThumbnail(f);
+                validItems.push({ file: f, thumbnail: thumbBase64 });
                 runningTotalSize += f.size;
             }
         }
 
-        // Append only the files that fit within the combined limit
-        if (validFiles.length > 0) {
-            setFiles((prev) => [...prev, ...validFiles]);
+        toast.dismiss(toastId);
+
+        if (validItems.length > 0) {
+            setFiles((prev) => [...prev, ...validItems]);
         }
 
-        // Reset the input value so the same file can be selected again if removed later
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
@@ -126,10 +97,18 @@ const LearningMediaUploadModal = ({ isOpen, onClose }) => {
         if (!title.trim()) return toast.error(t('learning_hub.toasts.title_required'));
         if (files.length === 0) return toast.error(t('learning_hub.toasts.file_required'));
 
+        // Separate raw files for Uppy, and stringify thumbnails for Metadata
+        const rawFiles = files.map(item => item.file);
+        const base64Thumbnails = files.map(item => item.thumbnail);
+
         dispatch(startBackgroundUpload({
             uploadType: 'learning-hub',
-            files: files, // Sending the array of files
-            metadata: { title, description }
+            files: rawFiles,
+            metadata: {
+                title,
+                description,
+                thumbnails: JSON.stringify(base64Thumbnails) // Pack it into metadata
+            }
         }));
 
         onClose();
@@ -137,7 +116,6 @@ const LearningMediaUploadModal = ({ isOpen, onClose }) => {
 
     return (
         <div className="fixed inset-0 z-100 flex items-center justify-center sm:p-4 p-0 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-            {/* Modal Container: Full height on mobile, floating max-height on desktop */}
             <div className="bg-card sm:border border-border sm:rounded-3xl rounded-none w-full max-w-lg shadow-2xl relative overflow-hidden flex flex-col h-dvh sm:h-auto sm:max-h-[90vh]">
 
                 <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border bg-muted/20 shrink-0">
@@ -201,16 +179,20 @@ const LearningMediaUploadModal = ({ isOpen, onClose }) => {
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {files.map((file, index) => (
+                                {files.map((item, index) => (
                                     <div key={index} className="flex items-center justify-between p-3 bg-muted/30 border border-border rounded-xl animate-in slide-in-from-bottom-2">
                                         <div className="flex items-center gap-3 overflow-hidden">
 
-                                            {/* Renders the dynamic thumbnail generated on the fly */}
-                                            <VideoThumbnail file={file} />
+                                            {/* Pre-rendered Image instead of calculating it again */}
+                                            <img
+                                                src={item.thumbnail}
+                                                alt="Video Thumbnail"
+                                                className="w-12 h-12 object-cover rounded-lg shrink-0 border border-border bg-black"
+                                            />
 
                                             <div className="overflow-hidden">
-                                                <p className="text-sm font-bold truncate">{file.name}</p>
-                                                <p className="text-xs text-muted-foreground">{(file.size / (1024 * 1024)).toFixed(1)} MB</p>
+                                                <p className="text-sm font-bold truncate">{item.file.name}</p>
+                                                <p className="text-xs text-muted-foreground">{(item.file.size / (1024 * 1024)).toFixed(1)} MB</p>
                                             </div>
                                         </div>
                                         <button type="button" onClick={() => removeFile(index)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors shrink-0">
