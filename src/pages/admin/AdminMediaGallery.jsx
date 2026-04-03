@@ -3,7 +3,7 @@ import {
     Users, School, MapPin, ChevronRight, Film, Calendar as CalendarIcon,
     Award, Clock, Star, AlertTriangle,
     Copy, AlertCircle, Download, ChevronDown,
-    Trash2, Play
+    Trash2, PlayCircle
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
@@ -15,6 +15,46 @@ import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000", { withCredentials: true });
+
+// --- THE NEW VIDEO PLAYER COMPONENT ---
+const VideoPlayer = ({ src, thumbnailUrl, id, onError }) => {
+    const [isLoaded, setIsLoaded] = useState(false);
+    const videoRef = useRef(null);
+
+    if (!isLoaded) {
+        return (
+            <div
+                className="absolute inset-0 w-full h-full bg-black flex flex-col items-center justify-center cursor-pointer group bg-cover bg-center"
+                style={{ backgroundImage: `url(${thumbnailUrl || 'https://via.placeholder.com/1280x720/000000/FFFFFF/?text=EduMusic+Video'})` }}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    setIsLoaded(true);
+                }}
+            >
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-300"></div>
+                <div className="relative z-10 w-16 h-16 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary transition-all duration-300 backdrop-blur-md border border-white/30 shadow-2xl">
+                    <PlayCircle className="w-8 h-8 text-white group-hover:text-primary-foreground transition-colors" />
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <video
+            id={`video-${id}`}
+            ref={videoRef}
+            src={src}
+            controls
+            autoPlay
+            controlsList="nodownload"
+            preload="auto"
+            playsInline
+            onError={onError}
+            className="absolute inset-0 w-full h-full object-contain bg-black animate-in fade-in duration-300"
+        />
+    );
+};
+
 
 const AdminMediaGallery = () => {
     const { t } = useTranslation();
@@ -109,16 +149,18 @@ const AdminMediaGallery = () => {
                                 remark: file.remark || null,
                                 description: log.description || null,
                                 videoUrl: file.url,
+                                thumbnailUrl: file.thumbnailUrl || null,
                             });
                         });
                     }
                 });
                 setMediaData(grouped);
-                const availableMonths = Object.keys(grouped);
 
+                // Ensures accordions remain closed by default instead of auto-expanding
                 setExpandedMonth(prev => {
+                    const availableMonths = Object.keys(grouped);
                     if (prev && availableMonths.includes(prev)) return prev;
-                    return availableMonths.length > 0 ? availableMonths[0] : null;
+                    return null;
                 });
             }
         } catch (error) {
@@ -180,18 +222,6 @@ const AdminMediaGallery = () => {
         setExpandedCards(prev => ({ ...prev, [fileId]: !prev[fileId] }));
     };
 
-    const handlePlayVideo = (e, fileId) => {
-        e.stopPropagation();
-        setPlayingVideos(prev => ({ ...prev, [fileId]: true }));
-
-        setTimeout(() => {
-            const videoEl = document.getElementById(`video-${fileId}`);
-            if (videoEl) {
-                videoEl.play().catch(err => console.log("Playback error:", err));
-            }
-        }, 0);
-    };
-
     const handleCopyLink = (url) => {
         navigator.clipboard.writeText(url);
         toast.success(t('media_vault.admin.link_copied'));
@@ -208,7 +238,7 @@ const AdminMediaGallery = () => {
 
             const a = document.createElement('a');
             a.href = blobUrl;
-            a.download = smartFileName ? `${smartFileName}.mp4` : 'video.mp4';
+            a.download = smartFileName ? `${smartFileName.replace(/\s+/g, '-')}.mp4` : 'video.mp4';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -487,7 +517,7 @@ const AdminMediaGallery = () => {
                             return (
                                 <div key={month} className="bg-card dark:bg-[#0d1117] border border-border rounded-3xl overflow-hidden shadow-sm transition-all duration-300">
                                     <button onClick={() => toggleMonth(month)} className="w-full px-6 py-5 sm:p-6 flex items-center justify-between hover:bg-muted/30 transition-colors duration-300">
-                                        <div className="flex items-center gap-4 sm:gap-6">
+                                        <div className="flex items-center flex-wrap gap-3">
                                             <div className={`p-3 rounded-2xl transition-colors duration-300 ${isExpanded ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground shadow-sm'}`}>
                                                 <CalendarIcon className="w-6 h-6" />
                                             </div>
@@ -517,51 +547,24 @@ const AdminMediaGallery = () => {
                                             <div className="p-4 sm:p-6 pt-0 sm:pt-2 border-t border-border bg-background/50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                                 {mediaFiles.map((media) => {
                                                     const isCardExpanded = expandedCards[media.fileId];
-                                                    const isVideoPlaying = playingVideos[media.fileId];
 
                                                     return (
                                                         <div key={media.fileId} className="flex flex-col bg-card dark:bg-[#131821] border border-border rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
 
-                                                            {/* VIDEO PLAYER AREA */}
+                                                            {/* REPLACED NATIVE VIDEO WITH VIDEOPLAYER */}
                                                             <div className="w-full relative bg-black shrink-0 overflow-hidden transition-all duration-300 aspect-video">
-
                                                                 {videoErrors[media.fileId] || !media.videoUrl ? (
                                                                     <div className="flex flex-col items-center justify-center h-full w-full p-8 bg-slate-900 border-b border-border text-center absolute inset-0">
                                                                         <AlertTriangle className="w-8 h-8 text-muted-foreground/50 mb-2" />
                                                                         <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">{t('media_vault.admin.unavailable')}</span>
                                                                     </div>
                                                                 ) : (
-                                                                    <>
-                                                                        <video
-                                                                            id={`video-${media.fileId}`}
-                                                                            src={`${media.videoUrl}#t=0.001`}
-                                                                            controls={isVideoPlaying}
-                                                                            autoPlay={isVideoPlaying}
-                                                                            controlsList="nodownload"
-                                                                            className={`absolute inset-0 w-full h-full bg-black transition-opacity duration-500 ${isVideoPlaying ? 'object-contain opacity-100' : 'object-cover opacity-70'}`}
-                                                                            preload="metadata"
-                                                                            playsInline
-                                                                            webkit-playsinline="true"
-                                                                            onError={() => handleVideoError(media.fileId)}
-                                                                        />
-
-                                                                        {!isVideoPlaying && (
-                                                                            <div
-                                                                                className="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-black/20 transition-colors z-10 group/play"
-                                                                                onClick={(e) => handlePlayVideo(e, media.fileId)}
-                                                                            >
-                                                                                <div className="w-16 h-16 rounded-full bg-black/50 flex items-center justify-center border-2 border-white/70 shadow-2xl backdrop-blur-sm group-hover/play:scale-110 group-hover/play:bg-black/70 transition-all duration-300">
-                                                                                    <Play className="w-8 h-8 text-white ml-1" fill="currentColor" />
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
-                                                                    </>
-                                                                )}
-
-                                                                {media.marks === null && !isVideoPlaying && (
-                                                                    <div className="absolute top-3 left-3 bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md shadow-lg flex items-center gap-1 z-20 pointer-events-none animate-in fade-in zoom-in duration-300">
-                                                                        <Clock className="w-3 h-3" /> {t('media_vault.admin.pending')}
-                                                                    </div>
+                                                                    <VideoPlayer
+                                                                        src={media.videoUrl}
+                                                                        thumbnailUrl={media.thumbnailUrl}
+                                                                        id={media.fileId}
+                                                                        onError={() => handleVideoError(media.fileId)}
+                                                                    />
                                                                 )}
                                                             </div>
 

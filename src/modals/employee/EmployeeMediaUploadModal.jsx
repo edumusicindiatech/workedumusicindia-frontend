@@ -10,6 +10,40 @@ import CustomSelect from "../../components/ui/CustomSelect";
 import { useTranslation } from "react-i18next";
 import api from "../../api/axios";
 
+// Generates a lightweight Base64 image in the browser (Zero backend CPU needed!)
+const generateHDThumbnail = (file) => {
+    return new Promise((resolve) => {
+        const video = document.createElement("video");
+        const url = URL.createObjectURL(file);
+
+        video.src = url;
+        video.muted = true;
+        video.playsInline = true;
+
+        video.onloadeddata = () => {
+            video.currentTime = Math.min(1, video.duration || 0.1);
+        };
+
+        video.onseeked = () => {
+            const canvas = document.createElement("canvas");
+            // 640x360 keeps the payload tiny while looking perfectly crisp on cards
+            canvas.width = 640;
+            canvas.height = 360;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Compress to JPEG at 70% quality (Results in ~30kb payload)
+            resolve(canvas.toDataURL("image/jpeg", 0.7));
+            URL.revokeObjectURL(url);
+        };
+
+        video.onerror = () => {
+            URL.revokeObjectURL(url);
+            resolve(null);
+        };
+    });
+};
+
 const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
     const { t } = useTranslation();
     const { user, isHydrating } = useSelector((state) => state.auth);
@@ -21,7 +55,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
     const [eventName, setEventName] = useState("");
     const [eventDate, setEventDate] = useState("");
     const [studentsCount, setStudentsCount] = useState("");
-    const [files, setFiles] = useState([]);
+    const [files, setFiles] = useState([]); // Now stores array of { file, thumbnail }
     const [description, setDescription] = useState("");
     const [liveSchools, setLiveSchools] = useState([]);
     const [isFetchingSchools, setIsFetchingSchools] = useState(false);
@@ -80,18 +114,43 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
         }
     };
 
-    const handleFileSelect = (e) => {
+    const handleFileSelect = async (e) => {
         const selectedFiles = Array.from(e.target.files);
-        const availableSlots = 5 - files.length;
-        if (selectedFiles.length > availableSlots) {
-            toast.error(t('upload_modal.limit_reached_toast', { slots: availableSlots }));
-            setFiles((prev) => [...prev, ...selectedFiles.slice(0, availableSlots)]);
-        } else {
-            setFiles((prev) => [...prev, ...selectedFiles]);
+        if (!selectedFiles.length) return;
+
+        const MAX_COMBINED_SIZE = 500 * 1024 * 1024; // 500 MB
+        let runningTotalSize = files.reduce((total, f) => total + f.file.size, 0);
+
+        const validItems = [];
+        const toastId = toast.loading("Processing videos...");
+
+        for (const f of selectedFiles) {
+            if (runningTotalSize + f.size > MAX_COMBINED_SIZE) {
+                toast.error(`Cannot add "${f.name}". Max combined limit is 500MB.`);
+            } else {
+                // Extract thumbnail instantly
+                const thumbBase64 = await generateHDThumbnail(f);
+                validItems.push({ file: f, thumbnail: thumbBase64 });
+                runningTotalSize += f.size;
+            }
         }
+
+        toast.dismiss(toastId);
+
+        const availableSlots = 5 - files.length;
+        if (validItems.length > availableSlots) {
+            toast.error(t('upload_modal.limit_reached_toast', { slots: availableSlots }));
+            setFiles((prev) => [...prev, ...validItems.slice(0, availableSlots)]);
+        } else if (validItems.length > 0) {
+            setFiles((prev) => [...prev, ...validItems]);
+        }
+
+        if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
-    const removeFile = (index) => setFiles(prev => prev.filter((_, i) => i !== index));
+    const removeFile = (indexToRemove) => {
+        setFiles(files.filter((_, index) => index !== indexToRemove));
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -100,20 +159,19 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
         if (!studentsCount) return toast.error(t('upload_modal.students_count_toast'));
         if (files.length === 0) return toast.error(t('upload_modal.add_video_toast'));
 
-        const MAX_SIZE = 500 * 1024 * 1024;
-        if (files.some(f => f.size > MAX_SIZE)) {
-            return toast.error(t('upload_modal.size_limit_toast'));
-        }
+        // Separate raw files for Uppy, and stringify thumbnails for Metadata
+        const rawFiles = files.map(item => item.file);
+        const base64Thumbnails = files.map(item => item.thumbnail);
 
-        // 🔥 ADDED uploadType: 'vault' to the payload
         dispatch(startBackgroundUpload({
             uploadType: 'vault',
-            files: files,
+            files: rawFiles,
             metadata: {
                 schoolId: selectedSchoolId,
                 schoolName: currentSelectedName,
                 band, eventName, eventDate, studentsCount,
-                description
+                description,
+                thumbnails: JSON.stringify(base64Thumbnails) // Pack it into metadata
             }
         }));
 
@@ -246,15 +304,18 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
 
                         {files.length > 0 && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                                {files.map((file, i) => (
+                                {files.map((item, i) => (
                                     <div key={i} className="flex items-center justify-between bg-muted/30 p-3 rounded-xl border border-border dark:border-slate-800 animate-in slide-in-from-bottom-2">
                                         <div className="flex items-center gap-3 overflow-hidden">
-                                            <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-                                                <Film className="w-4 h-4 text-primary" />
-                                            </div>
+                                            {/* Pre-rendered Image instead of the default generic icon */}
+                                            <img
+                                                src={item.thumbnail}
+                                                alt="Video Thumbnail"
+                                                className="w-12 h-12 object-cover rounded-lg shrink-0 border border-border bg-black"
+                                            />
                                             <div className="flex flex-col overflow-hidden">
-                                                <span className="text-[13px] font-bold text-foreground truncate">{file.name}</span>
-                                                <span className="text-[10px] text-muted-foreground font-medium">{(file.size / (1024 * 1024)).toFixed(1)} MB</span>
+                                                <span className="text-[13px] font-bold text-foreground truncate">{item.file.name}</span>
+                                                <span className="text-[10px] text-muted-foreground font-medium">{(item.file.size / (1024 * 1024)).toFixed(1)} MB</span>
                                             </div>
                                         </div>
                                         <button
