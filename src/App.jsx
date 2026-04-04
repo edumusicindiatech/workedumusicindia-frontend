@@ -1,52 +1,63 @@
-import { useEffect } from "react";
+import { useEffect, Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { setCredentials, logout } from "./store/slices/authSlice";
 import api, { setAxiosToken } from "./api/axios";
 import { useTranslation } from "react-i18next";
+import { Toaster } from "react-hot-toast";
 
-// Route Guards
+// ==========================================
+// 1. SYNCHRONOUS IMPORTS (Keep Layouts & Guards static so the app shell loads instantly)
+// ==========================================
 import ProtectedRoute from "./components/routing/ProtectedRoute";
 import PublicRoute from "./components/routing/PublicRoute";
-
-// Auth & Shared
-import Login from "./pages/shared/Login";
-import NotFound from "./pages/shared/Notfound";
-import AdminContact from "./pages/admin/AdminContact";
-
-// ---> ADDED LEARNING HUB IMPORT HERE (Assuming you place it in a shared folder) <---
-import LearningHub from "./pages/shared/LearningHub";
-
-// Admin Imports
 import AdminLayout from "./components/admin/AdminLayout";
-import Dashboard from "./pages/admin/AdminDashboard";
-import EmployeeRoster from "./pages/admin/EmployeeRoster";
-import EmployeeProfile from "./pages/admin/EmployeeProfile";
-import Communication from "./pages/admin/Communication";
-import AttendanceFeed from "./pages/admin/AttendenceFeed";
-import ProgressReport from "./pages/admin/ProgressReport";
-import AdminNotifications from "./pages/admin/AdminNotifications";
-import AdminResetPassword from "./pages/admin/AdminResetPassword";
-import AdminReports from "./pages/admin/AdminReports";
-import AdminLeaveRequests from "./pages/admin/AdminLeaveRequests";
-import AdminMediaGallery from "./pages/admin/AdminMediaGallery";
-import AdminLeaderboard from "./pages/admin/AdminLeaderBoard";
-import AdminProfile from "./pages/admin/AdminProfile";
-
-// Employee Imports
 import EmployeeLayout from "./components/employee/EmployeeLayout";
-import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
-import MyProfile from "./pages/employee/MyProfile";
-import AssignedSchools from "./pages/employee/AssignedSchools";
-import OptionalTasks from "./pages/employee/Tasks";
-import EmployeeMedia from "./pages/employee/EmployeeMedia";
-import DailyReport from "./pages/employee/DailyReport";
-import EmployeeNotifications from "./pages/employee/EmployeeNotifications";
-import EmployeeResetPassword from "./pages/employee/EmployeeResetPassword";
-import EmployeeLeaderBoard from "./pages/employee/EmployeeLeaderBoard";
-
-import { Toaster } from "react-hot-toast";
 import FloatingUploadManager from "./modals/employee/FloatingUploadManager";
+
+// ==========================================
+// 2. ASYNCHRONOUS IMPORTS (Lazy-loaded chunks to fix Lighthouse render-blocking)
+// ==========================================
+// Auth & Shared
+const Login = lazy(() => import("./pages/shared/Login"));
+const NotFound = lazy(() => import("./pages/shared/Notfound"));
+const AdminContact = lazy(() => import("./pages/admin/AdminContact"));
+const LearningHub = lazy(() => import("./pages/shared/LearningHub"));
+
+// Admin Pages
+const Dashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const EmployeeRoster = lazy(() => import("./pages/admin/EmployeeRoster"));
+const EmployeeProfile = lazy(() => import("./pages/admin/EmployeeProfile"));
+const Communication = lazy(() => import("./pages/admin/Communication"));
+const AttendanceFeed = lazy(() => import("./pages/admin/AttendenceFeed"));
+const ProgressReport = lazy(() => import("./pages/admin/ProgressReport"));
+const AdminNotifications = lazy(() => import("./pages/admin/AdminNotifications"));
+const AdminResetPassword = lazy(() => import("./pages/admin/AdminResetPassword"));
+const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
+const AdminLeaveRequests = lazy(() => import("./pages/admin/AdminLeaveRequests"));
+const AdminMediaGallery = lazy(() => import("./pages/admin/AdminMediaGallery"));
+const AdminLeaderboard = lazy(() => import("./pages/admin/AdminLeaderBoard"));
+const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
+
+// Employee Pages
+const EmployeeDashboard = lazy(() => import("./pages/employee/EmployeeDashboard"));
+const MyProfile = lazy(() => import("./pages/employee/MyProfile"));
+const AssignedSchools = lazy(() => import("./pages/employee/AssignedSchools"));
+const OptionalTasks = lazy(() => import("./pages/employee/Tasks"));
+const EmployeeMedia = lazy(() => import("./pages/employee/EmployeeMedia"));
+const DailyReport = lazy(() => import("./pages/employee/DailyReport"));
+const EmployeeNotifications = lazy(() => import("./pages/employee/EmployeeNotifications"));
+const EmployeeResetPassword = lazy(() => import("./pages/employee/EmployeeResetPassword"));
+const EmployeeLeaderBoard = lazy(() => import("./pages/employee/EmployeeLeaderBoard"));
+
+// ==========================================
+// 3. FALLBACK LOADER
+// ==========================================
+const PageLoader = () => (
+  <div className="flex h-screen w-full items-center justify-center bg-[#f8f9fa] dark:bg-[#12161f]">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+  </div>
+);
 
 function App() {
   const dispatch = useDispatch();
@@ -154,62 +165,59 @@ function App() {
 
       <FloatingUploadManager />
 
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/contact-admin" element={<PublicRoute><AdminContact /></PublicRoute>} />
+      {/* --- ADDED SUSPENSE WRAPPER HERE --- */}
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/contact-admin" element={<PublicRoute><AdminContact /></PublicRoute>} />
 
-        {/* SECURE RESET PASSWORD ROUTES */}
-        <Route
-          path="/admin/reset-password"
-          element={<ProtectedRoute requireAdmin={true}><AdminResetPassword /></ProtectedRoute>}
-        />
-        <Route
-          path="/employee/reset-password"
-          element={<ProtectedRoute requireAdmin={false}><EmployeeResetPassword /></ProtectedRoute>}
-        />
+          {/* SECURE RESET PASSWORD ROUTES */}
+          <Route
+            path="/admin/reset-password"
+            element={<ProtectedRoute requireAdmin={true}><AdminResetPassword /></ProtectedRoute>}
+          />
+          <Route
+            path="/employee/reset-password"
+            element={<ProtectedRoute requireAdmin={false}><EmployeeResetPassword /></ProtectedRoute>}
+          />
 
-        {/* Employee Routes */}
-        <Route path="/employee" element={<ProtectedRoute requireAdmin={false}><EmployeeLayout /></ProtectedRoute>}>
-          <Route index element={<Navigate to="/employee/dashboard" replace />} />
-          <Route path="dashboard" element={<EmployeeDashboard />} />
-          <Route path="profile" element={<MyProfile />} />
-          <Route path="assignments" element={<AssignedSchools />} />
-          <Route path="optional" element={<OptionalTasks />} />
-          <Route path="media" element={<EmployeeMedia />} />
+          {/* Employee Routes */}
+          <Route path="/employee" element={<ProtectedRoute requireAdmin={false}><EmployeeLayout /></ProtectedRoute>}>
+            <Route index element={<Navigate to="/employee/dashboard" replace />} />
+            <Route path="dashboard" element={<EmployeeDashboard />} />
+            <Route path="profile" element={<MyProfile />} />
+            <Route path="assignments" element={<AssignedSchools />} />
+            <Route path="optional" element={<OptionalTasks />} />
+            <Route path="media" element={<EmployeeMedia />} />
+            <Route path="learning-hub" element={<LearningHub />} />
+            <Route path="report" element={<DailyReport />} />
+            <Route path="leaderboard" element={<EmployeeLeaderBoard />} />
+            <Route path="notifications" element={<EmployeeNotifications />} />
+          </Route>
 
-          {/* ---> ADDED EMPLOYEE LEARNING HUB ROUTE <--- */}
-          <Route path="learning-hub" element={<LearningHub />} />
+          {/* Admin Routes */}
+          <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminLayout /></ProtectedRoute>}>
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="profile" element={<AdminProfile />} />
+            <Route path="employees" element={<EmployeeRoster />} />
+            <Route path="employees/:id" element={<EmployeeProfile />} />
+            <Route path="attendance" element={<AttendanceFeed />} />
+            <Route path="progress" element={<ProgressReport />} />
+            <Route path="leaderboard" element={<AdminLeaderboard />} />
+            <Route path="reports" element={<AdminReports />} />
+            <Route path="media" element={<AdminMediaGallery />} />
+            <Route path="learning-hub" element={<LearningHub />} />
+            <Route path="leave-requests" element={<AdminLeaveRequests />} />
+            <Route path="communication" element={<Communication />} />
+            <Route path="notifications" element={<AdminNotifications />} />
+          </Route>
 
-          <Route path="report" element={<DailyReport />} />
-          <Route path="leaderboard" element={<EmployeeLeaderBoard />} />
-          <Route path="notifications" element={<EmployeeNotifications />} />
-        </Route>
-
-        {/* Admin Routes */}
-        <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminLayout /></ProtectedRoute>}>
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="profile" element={<AdminProfile />} />
-          <Route path="employees" element={<EmployeeRoster />} />
-          <Route path="employees/:id" element={<EmployeeProfile />} />
-          <Route path="attendance" element={<AttendanceFeed />} />
-          <Route path="progress" element={<ProgressReport />} />
-          <Route path="leaderboard" element={<AdminLeaderboard />} />
-          <Route path="reports" element={<AdminReports />} />
-          <Route path="media" element={<AdminMediaGallery />} />
-
-          {/* ---> ADDED ADMIN LEARNING HUB ROUTE <--- */}
-          <Route path="learning-hub" element={<LearningHub />} />
-
-          <Route path="leave-requests" element={<AdminLeaveRequests />} />
-          <Route path="communication" element={<Communication />} />
-          <Route path="notifications" element={<AdminNotifications />} />
-        </Route>
-
-        {/* 404 Fallback */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          {/* 404 Fallback */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </Router>
   );
 }
