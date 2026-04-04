@@ -41,13 +41,15 @@ const AttendanceFeed = () => {
                 setSelectedNoteRecord((prevRecord) => {
                     if (!prevRecord) return null;
                     const freshData = response.data.data;
-                    let updatedRecord = freshData.find(r => r._id === prevRecord._id);
+                    const prevId = prevRecord._id || prevRecord.id;
+                    let updatedRecord = freshData.find(r => (r._id || r.id) === prevId);
+
                     if (!updatedRecord) {
-                        const prevTeacherId = prevRecord.teacher?._id || prevRecord.teacher;
-                        const prevSchoolId = prevRecord.school?._id || prevRecord.school;
+                        const prevTeacherId = prevRecord.teacher?._id || prevRecord.teacher || prevRecord.user?._id;
+                        const prevSchoolId = prevRecord.school?._id || prevRecord.school || prevRecord.location;
                         updatedRecord = freshData.find(r => {
-                            const currentTeacherId = r.teacher?._id || r.teacher;
-                            const currentSchoolId = r.school?._id || r.school;
+                            const currentTeacherId = r.teacher?._id || r.teacher || r.user?._id;
+                            const currentSchoolId = r.school?._id || r.school || r.location;
                             return currentTeacherId === prevTeacherId &&
                                 currentSchoolId === prevSchoolId &&
                                 r.date === prevRecord.date;
@@ -102,26 +104,32 @@ const AttendanceFeed = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    // 🚨 UPDATED: Handles new virtual backend statuses
     const getDerivedStatus = (record) => {
+        if (record.status === 'NO SHOW') return 'No Show';
+        if (record.status === 'PENDING') return 'Pending';
         if (record.status === 'Absent') return 'Absent';
         if (record.status === 'Holiday') return 'Holiday';
-        if (record.status === 'On Leave') return 'On Leave'; // <-- Added On Leave
+        if (record.status === 'On Leave') return 'On Leave';
         if (record.checkOutTime) return 'Completed';
         if (record.status === 'Event' || (record.eventNote && !record.checkOutTime)) return 'Event';
-        if (record.checkInTime) return record.status === 'Late' ? 'Late' : 'Running';
+        if (record.checkInTime || record.status === 'RUNNING') return record.status === 'Late' ? 'Late' : 'Running';
         return 'Pending';
     };
 
+    // 🚨 UPDATED: Added UI configs for Pending and No Show
     const getStatusConfig = (status) => {
         switch (status) {
-            case "Event": return { color: "text-violet-500 bg-violet-500/10 border-violet-500/20", icon: <Star className="w-3.5 h-3.5" />, label: t('attendance_feed.status.event') };
-            case "Running": return { color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20", icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: t('attendance_feed.status.running') };
-            case "Late": return { color: "text-amber-500 bg-amber-500/10 border-amber-500/20", icon: <AlertCircle className="w-3.5 h-3.5" />, label: t('attendance_feed.status.late') };
-            case "Completed": return { color: "text-blue-500 bg-blue-500/10 border-blue-500/20", icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: t('attendance_feed.status.completed') };
-            case "Absent": return { color: "text-destructive bg-destructive/10 border-destructive/20", icon: <XCircle className="w-3.5 h-3.5" />, label: t('attendance_feed.status.absent') };
-            case "Holiday": return { color: "text-teal-500 bg-teal-500/10 border-teal-500/20", icon: <Coffee className="w-3.5 h-3.5" />, label: t('attendance_feed.status.holiday') };
-            case "On Leave": return { color: "text-pink-500 bg-pink-500/10 border-pink-500/20", icon: <Timer className="w-3.5 h-3.5" />, label: t('attendance_feed.status.on_leave') }; // <-- Brand new Pink Leave Config
-            default: return { color: "text-slate-400 bg-slate-400/10 border-slate-400/20", icon: <Clock className="w-3.5 h-3.5" />, label: t('attendance_feed.status.pending') };
+            case "Event": return { color: "text-violet-500 bg-violet-500/10 border-violet-500/20", icon: <Star className="w-3.5 h-3.5" />, label: t('attendance_feed.status.event', 'EVENT') };
+            case "Running": return { color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20", icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: t('attendance_feed.status.running', 'RUNNING') };
+            case "Late": return { color: "text-amber-500 bg-amber-500/10 border-amber-500/20", icon: <AlertCircle className="w-3.5 h-3.5" />, label: t('attendance_feed.status.late', 'LATE') };
+            case "Completed": return { color: "text-blue-500 bg-blue-500/10 border-blue-500/20", icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: t('attendance_feed.status.completed', 'COMPLETED') };
+            case "Absent": return { color: "text-destructive bg-destructive/10 border-destructive/20", icon: <XCircle className="w-3.5 h-3.5" />, label: t('attendance_feed.status.absent', 'ABSENT') };
+            case "Holiday": return { color: "text-teal-500 bg-teal-500/10 border-teal-500/20", icon: <Coffee className="w-3.5 h-3.5" />, label: t('attendance_feed.status.holiday', 'HOLIDAY') };
+            case "On Leave": return { color: "text-pink-500 bg-pink-500/10 border-pink-500/20", icon: <Timer className="w-3.5 h-3.5" />, label: t('attendance_feed.status.on_leave', 'ON LEAVE') };
+            case "No Show": return { color: "text-red-500 bg-red-500/10 border-red-500/20", icon: <XCircle className="w-3.5 h-3.5" />, label: "NO SHOW" };
+            case "Pending":
+            default: return { color: "text-orange-400 bg-orange-400/10 border-orange-400/20", icon: <Clock className="w-3.5 h-3.5" />, label: "PENDING" };
         }
     };
 
@@ -130,9 +138,10 @@ const AttendanceFeed = () => {
         if (activeFilter === "Pending") filtered = liveData.filter(r => getDerivedStatus(r) === "Pending");
         else if (activeFilter === "Running") filtered = liveData.filter(r => ["Running", "Late", "Event"].includes(getDerivedStatus(r)));
         else if (activeFilter === "Completed") filtered = liveData.filter(r => getDerivedStatus(r) === "Completed");
-        else if (activeFilter === "Exceptions") filtered = liveData.filter(r => ["Absent", "Holiday", "On Leave"].includes(getDerivedStatus(r))); // <-- Added On Leave to exceptions
+        // 🚨 UPDATED: Exceptions now includes No Show
+        else if (activeFilter === "Exceptions") filtered = liveData.filter(r => ["Absent", "Holiday", "On Leave", "No Show"].includes(getDerivedStatus(r)));
 
-        return filtered.sort((a, b) => new Date(b.checkInTime || b.createdAt || b.date) - new Date(a.checkInTime || a.createdAt || a.date));
+        return filtered.sort((a, b) => new Date(b.sortTime || b.checkInTime || b.createdAt || b.date) - new Date(a.sortTime || a.checkInTime || a.createdAt || a.date));
     }, [liveData, activeFilter]);
 
     const formatTime = (dateString) => {
@@ -149,9 +158,9 @@ const AttendanceFeed = () => {
             const res = await api.put(`/admin/attendance/${selectedNoteRecord._id}/override`, {
                 action: overrideAction,
                 reason: overrideReason,
-                teacherId: selectedNoteRecord.teacher?._id,
+                teacherId: selectedNoteRecord.teacher?._id || selectedNoteRecord.user?._id,
                 schoolId: selectedNoteRecord.school?._id,
-                band: selectedNoteRecord.band,
+                band: selectedNoteRecord.band || selectedNoteRecord.category,
                 date: selectedNoteRecord.date || new Date().toISOString().split('T')[0]
             });
             if (res.data.success) {
@@ -193,7 +202,7 @@ const AttendanceFeed = () => {
                         className="flex items-center gap-2 px-4 py-2 sm:py-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:scale-105 transition-all active:scale-95"
                     >
                         <Filter className="w-4 h-4" />
-                        <span className="text-sm font-bold hidden sm:inline">{t(`attendance_feed.filter_${activeFilter.toLowerCase()}`)}</span>
+                        <span className="text-sm font-bold hidden sm:inline">{t(`attendance_feed.filter_${activeFilter.toLowerCase()}`, activeFilter)}</span>
                         <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isFilterOpen ? 'rotate-180' : ''}`} />
                     </button>
 
@@ -209,7 +218,7 @@ const AttendanceFeed = () => {
                                             : "bg-muted/30 text-muted-foreground border-transparent hover:bg-muted"
                                             } ${f === 'Exceptions' ? 'col-span-2' : ''}`}
                                     >
-                                        {t(`attendance_feed.filter_${f.toLowerCase()}`)}
+                                        {t(`attendance_feed.filter_${f.toLowerCase()}`, f)}
                                     </button>
                                 ))}
                             </div>
@@ -227,54 +236,63 @@ const AttendanceFeed = () => {
             ) : (
                 <div className="space-y-4">
                     {filteredAndSortedData.map((record) => {
+                        // 🚨 UPDATED: Normalizing variables to support both Real and Virtual records safely
+                        const id = record._id || record.id;
+                        const teacherName = record.teacher?.name || record.user?.name || "Unknown";
+                        const profilePic = record.teacher?.profilePicture || record.user?.profilePicture;
+                        const zone = record.teacher?.zone || record.user?.zone || "Unassigned";
+                        const schoolName = record.school?.schoolName || record.location || "Unknown";
+                        const category = record.band || record.category || "General";
+                        const isVirtual = id?.toString().startsWith('pending-'); // Detects virtual records
+
                         const uiStatus = getDerivedStatus(record);
                         const statusConfig = getStatusConfig(uiStatus);
                         const isLate = record.status === 'Late' || !!record.lateReason;
                         const hadEvent = !!record.eventNote;
                         const isAbsent = uiStatus === 'Absent';
                         const isHoliday = uiStatus === 'Holiday';
-                        const isOnLeave = uiStatus === 'On Leave'; // <-- New Variable
+                        const isOnLeave = uiStatus === 'On Leave';
+                        const isNoShow = uiStatus === 'No Show';
 
                         return (
                             <div
-                                key={record._id}
+                                key={id}
                                 onClick={() => setSelectedNoteRecord(record)}
                                 className={`bg-card rounded-2xl border p-4 sm:p-5 shadow-sm transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 cursor-pointer hover:shadow-md hover:border-primary/30 group active:scale-[0.99] 
                                     ${hadEvent ? 'border-violet-500/40 bg-violet-500/5' : 'border-border'}
-                                    ${isAbsent ? 'border-destructive/30 bg-destructive/5' : ''}
+                                    ${(isAbsent || isNoShow) ? 'border-destructive/30 bg-destructive/5' : ''}
                                     ${isHoliday ? 'border-teal-500/30 bg-teal-500/5' : ''} 
                                     ${isOnLeave ? 'border-pink-500/30 bg-pink-500/5' : ''} 
                                 `}
                             >
                                 <div className="flex items-center gap-3 sm:gap-4 md:w-56 shrink-0">
-                                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-inner ${hadEvent ? 'bg-violet-600' : (isAbsent ? 'bg-destructive' : (isHoliday ? 'bg-teal-500' : (isOnLeave ? 'bg-pink-500' : 'bg-primary')))}`}>
-                                        {record?.teacher?.profilePicture ? (
-                                            // If it's a URL, use an <img> tag. If it's an icon/string, just render it.
-                                            typeof record?.teacher?.profilePicture === 'string' && record?.teacher?.profilePicture.startsWith('http')
-                                                ? <img src={record?.teacher?.profilePicture} alt={record?.teacher?.profilePicture} className="w-full h-full rounded-full object-cover" />
-                                                : record?.teacher?.profilePicture
+                                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-inner ${hadEvent ? 'bg-violet-600' : ((isAbsent || isNoShow) ? 'bg-destructive' : (isHoliday ? 'bg-teal-500' : (isOnLeave ? 'bg-pink-500' : 'bg-primary')))}`}>
+                                        {profilePic ? (
+                                            typeof profilePic === 'string' && profilePic.startsWith('http')
+                                                ? <img src={profilePic} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                                                : profilePic
                                         ) : (
-                                            record?.teacher?.name.charAt(0).toUpperCase()
+                                            teacherName.charAt(0).toUpperCase()
                                         )}
                                     </div>
                                     <div className="flex flex-col min-w-0">
                                         <span className="font-bold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors truncate">
-                                            {record.teacher?.name || "Unknown"}
+                                            {teacherName}
                                         </span>
                                         <span className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1 mt-0.5">
-                                            <MapPin className="w-3 h-3" /> {record.teacher?.zone || "Unassigned"}
+                                            <MapPin className="w-3 h-3" /> {zone}
                                         </span>
                                     </div>
                                 </div>
 
                                 <div className="flex-1 grid grid-cols-2 gap-3 bg-muted/30 p-3 rounded-xl border border-border/50 group-hover:bg-muted/50 transition-colors">
                                     <div className="min-w-0">
-                                        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5 opacity-70">{t('attendance_feed.card.location')}</span>
-                                        <span className="text-[11px] sm:text-xs font-bold text-foreground truncate block">{record.school?.schoolName || "Unknown"}</span>
+                                        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5 opacity-70">{t('attendance_feed.card.location', 'LOCATION')}</span>
+                                        <span className="text-[11px] sm:text-xs font-bold text-foreground truncate block">{schoolName}</span>
                                     </div>
                                     <div className="min-w-0 border-l border-border/50 pl-3">
-                                        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5 opacity-70">{t('attendance_feed.card.category')}</span>
-                                        <span className="text-[11px] sm:text-xs font-bold text-foreground truncate block">{record.band}</span>
+                                        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5 opacity-70">{t('attendance_feed.card.category', 'CATEGORY')}</span>
+                                        <span className="text-[11px] sm:text-xs font-bold text-foreground truncate block">{category}</span>
                                     </div>
                                 </div>
 
@@ -288,12 +306,16 @@ const AttendanceFeed = () => {
                                             {hadEvent && uiStatus === 'Completed' && <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-violet-500 text-white">{t('attendance_feed.card.event_badge')}</span>}
                                         </div>
                                         <div className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-                                            {record.checkInTime ? `${t('attendance_feed.card.arrived')}: ${formatTime(record.checkInTime)}` : ((isAbsent || isHoliday || isOnLeave) ? t('attendance_feed.card.off_duty') : t('attendance_feed.card.pending'))}
+                                            {record.timeText ? record.timeText : (
+                                                record.checkInTime
+                                                    ? `${t('attendance_feed.card.arrived')}: ${formatTime(record.checkInTime)}`
+                                                    : ((isAbsent || isHoliday || isOnLeave || isNoShow) ? t('attendance_feed.card.off_duty', 'Off Duty') : t('attendance_feed.card.pending', 'Pending'))
+                                            )}
                                             {record.checkOutTime && ` • ${t('attendance_feed.card.departed')}: ${formatTime(record.checkOutTime)}`}
                                         </div>
                                     </div>
-                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${hadEvent ? 'bg-violet-500/20 text-violet-500' : (isAbsent ? 'bg-red-500/10 text-red-500' : (isHoliday ? 'bg-teal-500/10 text-teal-500' : (isOnLeave ? 'bg-pink-500/10 text-pink-500' : 'bg-primary/10 text-primary')))}`}>
-                                        {hadEvent ? <Star className="w-4 h-4 fill-current" /> : (isAbsent ? <XCircle className="w-4 h-4" /> : (isHoliday ? <Coffee className="w-4 h-4" /> : (isOnLeave ? <Timer className="w-4 h-4" /> : <FileText className="w-4 h-4" />)))}
+                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${hadEvent ? 'bg-violet-500/20 text-violet-500' : ((isAbsent || isNoShow) ? 'bg-red-500/10 text-red-500' : (isHoliday ? 'bg-teal-500/10 text-teal-500' : (isOnLeave ? 'bg-pink-500/10 text-pink-500' : 'bg-primary/10 text-primary')))}`}>
+                                        {hadEvent ? <Star className="w-4 h-4 fill-current" /> : ((isAbsent || isNoShow) ? <XCircle className="w-4 h-4" /> : (isHoliday ? <Coffee className="w-4 h-4" /> : (isOnLeave ? <Timer className="w-4 h-4" /> : <FileText className="w-4 h-4" />)))}
                                     </div>
                                 </div>
                             </div>
@@ -318,13 +340,13 @@ const AttendanceFeed = () => {
 
                         <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-muted/30 sticky top-0 z-10 backdrop-blur-md">
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-primary-foreground shadow-sm ${!!selectedNoteRecord.eventNote ? 'bg-violet-600' : (selectedNoteRecord.status === 'Absent' ? 'bg-destructive' : (selectedNoteRecord.status === 'On Leave' ? 'bg-pink-500' : 'bg-primary'))}`}>
-                                    {!!selectedNoteRecord.eventNote ? <Star className="w-5 h-5 fill-current" /> : (selectedNoteRecord.status === 'Absent' ? <XCircle className="w-5 h-5" /> : (selectedNoteRecord.status === 'On Leave' ? <Timer className="w-5 h-5" /> : <FileText className="w-5 h-5" />))}
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-primary-foreground shadow-sm ${!!selectedNoteRecord.eventNote ? 'bg-violet-600' : ((selectedNoteRecord.status === 'Absent' || selectedNoteRecord.status === 'NO SHOW') ? 'bg-destructive' : (selectedNoteRecord.status === 'On Leave' ? 'bg-pink-500' : 'bg-primary'))}`}>
+                                    {!!selectedNoteRecord.eventNote ? <Star className="w-5 h-5 fill-current" /> : ((selectedNoteRecord.status === 'Absent' || selectedNoteRecord.status === 'NO SHOW') ? <XCircle className="w-5 h-5" /> : (selectedNoteRecord.status === 'On Leave' ? <Timer className="w-5 h-5" /> : <FileText className="w-5 h-5" />))}
                                 </div>
                                 <div>
                                     <h3 className="font-extrabold text-lg leading-tight text-foreground">{t('attendance_feed.modal.title')}</h3>
                                     <p className="text-xs font-medium text-muted-foreground mt-0.5 truncate max-w-50 sm:max-w-xs">
-                                        {selectedNoteRecord.teacher?.name} • {selectedNoteRecord.school?.schoolName}
+                                        {selectedNoteRecord.teacher?.name || selectedNoteRecord.user?.name} • {selectedNoteRecord.school?.schoolName || selectedNoteRecord.location}
                                     </p>
                                 </div>
                             </div>
@@ -334,6 +356,7 @@ const AttendanceFeed = () => {
                         </div>
 
                         <div className="p-6 space-y-6">
+                            {/* EVENT NOTE */}
                             {selectedNoteRecord.eventNote && (
                                 <div className="p-5 bg-violet-500/10 border border-violet-500/20 rounded-2xl shadow-sm">
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-2.5 flex items-center gap-2">
@@ -343,6 +366,7 @@ const AttendanceFeed = () => {
                                 </div>
                             )}
 
+                            {/* EXCEPTION NOTES */}
                             {(selectedNoteRecord.status === 'Absent' || selectedNoteRecord.status === 'On Leave' || !!selectedNoteRecord.lateReason || !!selectedNoteRecord.teacherNote) && (
                                 <div className="p-5 bg-muted/30 border border-border rounded-2xl space-y-4">
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
@@ -379,78 +403,89 @@ const AttendanceFeed = () => {
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-2 gap-4 p-5 bg-card border border-border rounded-2xl shadow-sm">
-                                <div>
-                                    <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase flex items-center gap-1.5 mb-1">
-                                        <Clock className="w-3 h-3" /> {t('attendance_feed.card.arrived')}
-                                    </span>
-                                    <p className="text-base font-bold text-foreground">{formatTime(selectedNoteRecord.checkInTime) || "—"}</p>
+                            {/* VIRTUAL STATUS MESSAGE (Replaces timestamps for Pending/No Show) */}
+                            {(selectedNoteRecord.id || selectedNoteRecord._id)?.toString().startsWith('pending-') ? (
+                                <div className="p-5 text-center bg-muted/20 border border-dashed border-border rounded-2xl">
+                                    <Clock className="w-6 h-6 text-muted-foreground mx-auto mb-2 opacity-50" />
+                                    <p className="text-sm font-bold text-foreground">Employee has not checked in yet.</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{selectedNoteRecord.timeText}</p>
                                 </div>
-                                <div className="border-l border-border pl-4">
-                                    <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase flex items-center gap-1.5 mb-1">
-                                        <LogOut className="w-3 h-3" /> {t('attendance_feed.card.departed')}
-                                    </span>
-                                    <p className="text-base font-bold text-foreground">{formatTime(selectedNoteRecord.checkOutTime) || (selectedNoteRecord.checkInTime ? t('attendance_feed.card.on_site') : "—")}</p>
-                                </div>
-                            </div>
-
-                            {/* OVERRIDE SECTION */}
-                            <div className="mt-6 pt-6 border-t border-border border-dashed">
-                                <div className="flex items-center justify-between mb-5">
-                                    <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
-                                        <Settings2 className="w-4 h-4 text-primary" /> {t('attendance_feed.modal.override_title')}
-                                    </h4>
-                                    <button
-                                        onClick={() => { setOverrideMode(!overrideMode); setOverrideAction(""); }}
-                                        className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors"
-                                    >
-                                        {overrideMode ? t('attendance_feed.modal.btn_cancel_override') : t('attendance_feed.modal.btn_enable_edit')}
-                                    </button>
-                                </div>
-
-                                {overrideMode && (
-                                    <div className="bg-muted/40 p-5 rounded-2xl border border-border space-y-5 animate-in fade-in slide-in-from-top-2">
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                                            {!selectedNoteRecord.checkInTime && (
-                                                <button onClick={() => setOverrideAction("CheckIn")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'CheckIn' ? 'bg-emerald-500 text-white border-emerald-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-emerald-500'}`}>{t('attendance_feed.modal.actions.CheckIn')}</button>
-                                            )}
-                                            {selectedNoteRecord.checkInTime && !selectedNoteRecord.checkOutTime && (
-                                                <button onClick={() => setOverrideAction("CheckOut")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'CheckOut' ? 'bg-blue-500 text-white border-blue-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-blue-500'}`}>{t('attendance_feed.modal.actions.CheckOut')}</button>
-                                            )}
-                                            <button onClick={() => setOverrideAction("Absent")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Absent' ? 'bg-destructive text-white border-red-700 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-destructive'}`}>{t('attendance_feed.modal.actions.Absent')}</button>
-                                            <button onClick={() => setOverrideAction("Late")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Late' ? 'bg-amber-500 text-white border-amber-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-amber-500'}`}>{t('attendance_feed.modal.actions.Late')}</button>
-                                            <button onClick={() => setOverrideAction("Event")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Event' ? 'bg-violet-500 text-white border-violet-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-violet-500'}`}>{t('attendance_feed.modal.actions.Event')}</button>
-                                            <button
-                                                onClick={() => setOverrideAction("Revoke")}
-                                                className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Revoke' ? 'bg-slate-800 text-white border-slate-900 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-slate-500'}`}
-                                            >
-                                                {selectedNoteRecord.checkOutTime ? t('attendance_feed.modal.actions.Revoke_Undo') : t('attendance_feed.modal.actions.Revoke_All')}
-                                            </button>
-                                        </div>
-
-                                        {overrideAction && (
-                                            <div className="space-y-4 animate-in fade-in">
-                                                <div>
-                                                    <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-2">{t('attendance_feed.modal.optional_note')}</label>
-                                                    <textarea
-                                                        value={overrideReason}
-                                                        onChange={(e) => setOverrideReason(e.target.value)}
-                                                        placeholder={t('attendance_feed.modal.placeholder_note', { action: t(`attendance_feed.modal.actions.${overrideAction === 'Revoke' ? (selectedNoteRecord.checkOutTime ? 'Revoke_Undo' : 'Revoke_All') : overrideAction}`).toLowerCase() })}
-                                                        className="w-full bg-card border border-border rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary outline-none resize-none h-24 placeholder:text-muted-foreground/50 transition-all shadow-sm"
-                                                    />
-                                                </div>
-                                                <Button
-                                                    className="w-full font-bold h-12 rounded-xl text-base shadow-lg shadow-primary/20"
-                                                    onClick={handleOverrideSubmit}
-                                                    disabled={isSubmittingOverride}
-                                                >
-                                                    {isSubmittingOverride ? t('attendance_feed.modal.btn_applying') : t('attendance_feed.modal.btn_confirm', { action: t(`attendance_feed.modal.actions.${overrideAction === 'Revoke' ? (selectedNoteRecord.checkOutTime ? 'Revoke_Undo' : 'Revoke_All') : overrideAction}`) })}
-                                                </Button>
-                                            </div>
-                                        )}
+                            ) : (
+                                <div className="grid grid-cols-2 gap-4 p-5 bg-card border border-border rounded-2xl shadow-sm">
+                                    <div>
+                                        <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase flex items-center gap-1.5 mb-1">
+                                            <Clock className="w-3 h-3" /> {t('attendance_feed.card.arrived')}
+                                        </span>
+                                        <p className="text-base font-bold text-foreground">{formatTime(selectedNoteRecord.checkInTime) || "—"}</p>
                                     </div>
-                                )}
-                            </div>
+                                    <div className="border-l border-border pl-4">
+                                        <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase flex items-center gap-1.5 mb-1">
+                                            <LogOut className="w-3 h-3" /> {t('attendance_feed.card.departed')}
+                                        </span>
+                                        <p className="text-base font-bold text-foreground">{formatTime(selectedNoteRecord.checkOutTime) || (selectedNoteRecord.checkInTime ? t('attendance_feed.card.on_site') : "—")}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 🚨 UPDATED OVERRIDE SECTION: Hidden for virtual pending records */}
+                            {!(selectedNoteRecord.id || selectedNoteRecord._id)?.toString().startsWith('pending-') && (
+                                <div className="mt-6 pt-6 border-t border-border border-dashed">
+                                    <div className="flex items-center justify-between mb-5">
+                                        <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                                            <Settings2 className="w-4 h-4 text-primary" /> {t('attendance_feed.modal.override_title')}
+                                        </h4>
+                                        <button
+                                            onClick={() => { setOverrideMode(!overrideMode); setOverrideAction(""); }}
+                                            className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors"
+                                        >
+                                            {overrideMode ? t('attendance_feed.modal.btn_cancel_override') : t('attendance_feed.modal.btn_enable_edit')}
+                                        </button>
+                                    </div>
+
+                                    {overrideMode && (
+                                        <div className="bg-muted/40 p-5 rounded-2xl border border-border space-y-5 animate-in fade-in slide-in-from-top-2">
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                                                {!selectedNoteRecord.checkInTime && (
+                                                    <button onClick={() => setOverrideAction("CheckIn")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'CheckIn' ? 'bg-emerald-500 text-white border-emerald-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-emerald-500'}`}>{t('attendance_feed.modal.actions.CheckIn')}</button>
+                                                )}
+                                                {selectedNoteRecord.checkInTime && !selectedNoteRecord.checkOutTime && (
+                                                    <button onClick={() => setOverrideAction("CheckOut")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'CheckOut' ? 'bg-blue-500 text-white border-blue-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-blue-500'}`}>{t('attendance_feed.modal.actions.CheckOut')}</button>
+                                                )}
+                                                <button onClick={() => setOverrideAction("Absent")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Absent' ? 'bg-destructive text-white border-red-700 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-destructive'}`}>{t('attendance_feed.modal.actions.Absent')}</button>
+                                                <button onClick={() => setOverrideAction("Late")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Late' ? 'bg-amber-500 text-white border-amber-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-amber-500'}`}>{t('attendance_feed.modal.actions.Late')}</button>
+                                                <button onClick={() => setOverrideAction("Event")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Event' ? 'bg-violet-500 text-white border-violet-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-violet-500'}`}>{t('attendance_feed.modal.actions.Event')}</button>
+                                                <button
+                                                    onClick={() => setOverrideAction("Revoke")}
+                                                    className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Revoke' ? 'bg-slate-800 text-white border-slate-900 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-slate-500'}`}
+                                                >
+                                                    {selectedNoteRecord.checkOutTime ? t('attendance_feed.modal.actions.Revoke_Undo') : t('attendance_feed.modal.actions.Revoke_All')}
+                                                </button>
+                                            </div>
+
+                                            {overrideAction && (
+                                                <div className="space-y-4 animate-in fade-in">
+                                                    <div>
+                                                        <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-2">{t('attendance_feed.modal.optional_note')}</label>
+                                                        <textarea
+                                                            value={overrideReason}
+                                                            onChange={(e) => setOverrideReason(e.target.value)}
+                                                            placeholder={t('attendance_feed.modal.placeholder_note', { action: t(`attendance_feed.modal.actions.${overrideAction === 'Revoke' ? (selectedNoteRecord.checkOutTime ? 'Revoke_Undo' : 'Revoke_All') : overrideAction}`).toLowerCase() })}
+                                                            className="w-full bg-card border border-border rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary outline-none resize-none h-24 placeholder:text-muted-foreground/50 transition-all shadow-sm"
+                                                        />
+                                                    </div>
+                                                    <Button
+                                                        className="w-full font-bold h-12 rounded-xl text-base shadow-lg shadow-primary/20"
+                                                        onClick={handleOverrideSubmit}
+                                                        disabled={isSubmittingOverride}
+                                                    >
+                                                        {isSubmittingOverride ? t('attendance_feed.modal.btn_applying') : t('attendance_feed.modal.btn_confirm', { action: t(`attendance_feed.modal.actions.${overrideAction === 'Revoke' ? (selectedNoteRecord.checkOutTime ? 'Revoke_Undo' : 'Revoke_All') : overrideAction}`) })}
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
