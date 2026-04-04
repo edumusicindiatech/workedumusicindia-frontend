@@ -1,7 +1,8 @@
 import { useEffect, Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { setCredentials, logout } from "./store/slices/authSlice";
+// 1. IMPORT setHydrationComplete HERE
+import { setCredentials, logout, setHydrationComplete } from "./store/slices/authSlice";
 import api, { setAxiosToken } from "./api/axios";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "react-hot-toast";
@@ -95,7 +96,13 @@ function App() {
           dispatch(logout());
         }
       } catch (error) {
-        dispatch(logout());
+        // 2. UPDATED CATCH BLOCK: Protects offline users and clears the loading screen
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+          dispatch(logout());
+        } else {
+          console.warn("Could not refresh token, likely offline. Relying on persisted cache.");
+          dispatch(setHydrationComplete());
+        }
       }
     };
 
