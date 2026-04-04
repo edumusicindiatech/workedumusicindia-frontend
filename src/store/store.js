@@ -11,6 +11,9 @@ const store = configureStore({
         location: locationReducer,
         upload: uploadReducer
     },
+
+    devTools: import.meta.env.DEV !== 'production',
+
     // Redux Toolkit includes thunk and devtools automatically
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
