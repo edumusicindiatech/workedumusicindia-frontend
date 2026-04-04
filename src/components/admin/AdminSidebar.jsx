@@ -361,6 +361,9 @@ const AdminSidebar = () => {
                 <NavLink to="/admin/employees" className={mobileNavClasses}>
                     <Users className="w-6 h-6" />
                 </NavLink>
+                <NavLink to="/admin/progress" className={mobileNavClasses}>
+                    <TrendingUp className="w-6 h-6" />
+                </NavLink>
                 <NavLink to="/admin/attendance" className={mobileNavClasses}>
                     <Radio className="w-6 h-6" />
                 </NavLink>
