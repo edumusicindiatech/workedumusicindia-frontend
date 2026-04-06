@@ -268,15 +268,16 @@
         "full_name": "Full Name",
         "email": "Email Address",
         "phone": "Phone Number",
-        "location_zone": "Location / Zone",
-        "zone_placeholder": "e.g. North Zone",
+        "location_zone": "Zone",
+        "zone_placeholder": "Enter Zone",
+        "role": "Account Role",
         "password_optional": "New Password (Optional)",
         "password_placeholder": "Leave blank to keep current",
         "cancel": "Cancel",
         "saving": "Saving...",
         "save_changes": "Save Changes",
-        "success_msg": "Profile updated successfully!",
-        "error_msg": "Failed to update employee."
+        "success_msg": "Employee updated successfully",
+        "error_msg": "Failed to update employee"
     },
     "roles": {
         "employee": "Employee",
