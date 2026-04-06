@@ -278,6 +278,10 @@
         "success_msg": "Profile updated successfully!",
         "error_msg": "Failed to update employee."
     },
+    "roles": {
+        "employee": "Employee",
+        "admin": "Admin"
+    },
     "issue_warning": {
         "title": "Issue Warning",
         "subtitle": "Record a formal warning for this employee.",

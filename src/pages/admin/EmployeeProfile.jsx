@@ -18,6 +18,7 @@ import AttendanceTab from "./tabs/AttendanceTab";
 // --- Import Modals ---
 import EditEmployeeModal from "../../modals/admin/EditEmployeeModal";
 import DeleteEmployeeModal from "../../modals/admin/DeleteEmployeeModal";
+import { useSelector } from "react-redux";
 
 const EmployeeProfile = () => {
     const { t } = useTranslation();
@@ -31,6 +32,8 @@ const EmployeeProfile = () => {
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+    const currentUser = useSelector((state) => state.auth.user);
 
     const fetchEmployeeDetails = useCallback(async () => {
         try {
@@ -237,7 +240,7 @@ const EmployeeProfile = () => {
 
                     {employeeData && (
                         <>
-                            <EditEmployeeModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} employee={employeeData} onSave={handleSaveEdit} />
+                            <EditEmployeeModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} employee={employeeData} onSave={handleSaveEdit} currentUser={currentUser} />
                             <DeleteEmployeeModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} employeeId={id} employeeName={employeeData.name} onConfirm={handleConfirmDelete} />
                         </>
                     )}
