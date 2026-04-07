@@ -14,17 +14,17 @@ import { useTranslation } from "react-i18next";
 import { io } from "socket.io-client";
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
-// Helper function to convert 24h format to 12h format (handles single times or ranges like "14:00 - 16:30")
+// Helper function to convert 24h format to 12h format
 const convertTo12HourFormat = (timeStr) => {
     if (!timeStr) return '';
     const times = timeStr.split('-').map(t => t.trim());
     return times.map(t => {
         const [hourStr, minuteStr] = t.split(':');
-        if (!hourStr || !minuteStr) return t;
+        if (!hourStr || !minuteStr) return t; 
         let hour = parseInt(hourStr, 10);
         const ampm = hour >= 12 ? 'PM' : 'AM';
         hour = hour % 12;
-        hour = hour ? hour : 12;
+        hour = hour ? hour : 12; 
         return `${hour}:${minuteStr} ${ampm}`;
     }).join(' - ');
 };
@@ -215,8 +215,12 @@ const Tasks = () => {
                                         <div className={`p-3 sm:p-4 rounded-2xl shrink-0 mt-0.5 ${isPending ? 'bg-primary/10 dark:bg-primary/20' : 'bg-muted'}`}>
                                             <School className={`w-6 h-6 sm:w-7 sm:h-7 ${isPending ? 'text-primary' : 'text-muted-foreground'}`} />
                                         </div>
-                                        <div className="overflow-hidden">
-                                            <h2 className="text-xl sm:text-2xl font-bold text-foreground truncate leading-tight pb-1">{task.schoolName}</h2>
+                                        
+                                        {/* FIXED HERE: Removed overflow-hidden from parent, removed truncate from h2 */}
+                                        <div className="flex-1 min-w-0">
+                                            <h2 className="text-xl sm:text-2xl font-bold text-foreground leading-tight pb-1 wrap-break-word">
+                                                {task.schoolName}
+                                            </h2>
                                             <div className="flex flex-wrap items-center gap-2 mt-1">
                                                 <p className="flex items-center gap-1.5 text-sm sm:text-base text-muted-foreground leading-relaxed truncate">
                                                     <MapPin className="w-4 h-4 shrink-0 text-muted-foreground/70" />
@@ -224,6 +228,7 @@ const Tasks = () => {
                                                 </p>
                                             </div>
                                         </div>
+
                                     </div>
                                     <span className={`self-start sm:self-auto text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shrink-0 flex items-center gap-1.5 border shadow-sm ${isPending ? 'bg-primary text-primary-foreground border-primary/20' : 'bg-muted text-muted-foreground border-border'
                                         }`}>
