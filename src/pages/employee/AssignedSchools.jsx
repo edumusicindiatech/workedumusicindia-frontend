@@ -13,16 +13,26 @@ import { io } from "socket.io-client";
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 // --- HELPER FUNCTIONS ---
+
+// UPDATED: Calculates in meters and formats automatically
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return null;
-    const R = 6371;
+
+    const R = 6371e3; // Earth's radius in METERS
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return (R * c).toFixed(1);
+
+    const distanceInMeters = R * c;
+
+    if (distanceInMeters < 1000) {
+        return `${Math.round(distanceInMeters)} m`;
+    } else {
+        return `${(distanceInMeters / 1000).toFixed(2)} km`;
+    }
 };
 
 // Converts "14:30" (24h) to "2:30 PM" (12h)
@@ -51,16 +61,27 @@ const AssignedSchools = () => {
     // Note: You can populate these with real data from your API later
     const [leaveStats, setLeaveStats] = useState({ absent: 0, leaves: 0 });
 
+    // UPDATED: Real-time GPS Watcher
     useEffect(() => {
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-                },
-                (err) => console.warn("Location access denied or unavailable", err),
-                { enableHighAccuracy: true }
-            );
+        if (!navigator.geolocation) {
+            console.warn("Geolocation is not supported by this browser.");
+            return;
         }
+
+        const watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+                setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            },
+            (err) => console.warn("Location access denied or unavailable", err),
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+
+        // Cleanup listener when component unmounts
+        return () => navigator.geolocation.clearWatch(watchId);
     }, []);
 
     const fetchSchools = useCallback(async () => {
@@ -130,7 +151,6 @@ const AssignedSchools = () => {
                 </div>
 
                 {/* --- FIXED: COMPACT & RESPONSIVE ABSENT & LEAVE RECORD BOXES --- */}
-                {/* Replaced overflow-x-auto with flex-wrap so they stack neatly if zoomed or on very small screens */}
                 <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                     <div className="flex-1 sm:flex-none bg-destructive/10 text-destructive border border-destructive/20 px-3 py-1.5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm whitespace-nowrap cursor-default">
                         <UserX className="w-3.5 h-3.5 shrink-0" />
@@ -185,7 +205,6 @@ const AssignedSchools = () => {
 
                                 <div className="space-y-4 mb-6 flex-1 w-full">
                                     {school.categories.map((cat, idx) => {
-                                        // FORMAT THE TIME HERE
                                         const startTime = formatTime12Hour(cat.startTime) || t('assigned_schools.na');
                                         const endTime = formatTime12Hour(cat.endTime) || t('assigned_schools.na');
                                         const allowedDays = cat.allowedDays || [];
@@ -196,7 +215,8 @@ const AssignedSchools = () => {
                                                 userLocation.lat, userLocation.lng,
                                                 cat.geofence.latitude, cat.geofence.longitude
                                             );
-                                            if (dist) distanceText = t('assigned_schools.distance_away', { count: dist });
+                                            // The calculator already formats the unit (m or km)
+                                            if (dist) distanceText = dist;
                                         }
 
                                         return (
@@ -206,7 +226,7 @@ const AssignedSchools = () => {
                                                         {cat.name}
                                                     </span>
                                                     {distanceText && (
-                                                        <span className="flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20 whitespace-nowrap">
+                                                        <span className="flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20 whitespace-nowrap animate-in fade-in zoom-in duration-300">
                                                             <Navigation className="w-3.5 h-3.5" />
                                                             {distanceText}
                                                         </span>
