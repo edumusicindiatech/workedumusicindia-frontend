@@ -288,6 +288,27 @@ const EmployeeDashboard = () => {
         }
     };
 
+    const formatTo12Hour = (timeStr) => {
+        if (!timeStr) return '';
+
+        // Split potential existing AM/PM
+        const [time, rawModifier] = timeStr.trim().split(/\s+/);
+        let [hours, minutes] = time.split(':');
+
+        hours = parseInt(hours, 10);
+
+        // Determine AM/PM if not already provided
+        const ampm = rawModifier ? rawModifier.toUpperCase() : (hours >= 12 ? 'PM' : 'AM');
+
+        // Convert to 12-hour format
+        hours = hours % 12;
+        hours = hours ? hours : 12; // the hour '0' should be '12'
+
+        // Ensure minutes are 2 digits
+        const formattedMins = minutes ? minutes.padStart(2, '0') : '00';
+
+        return `${hours}:${formattedMins} ${ampm}`;
+    };
     if (loading) {
         return (
             <div className="max-w-5xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
@@ -479,7 +500,9 @@ const EmployeeDashboard = () => {
                                         <div className="bg-muted/40 p-4 rounded-2xl border border-border/50 text-left lg:text-right min-w-50 flex flex-row lg:flex-col justify-between items-center lg:items-end">
                                             <div>
                                                 <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-widest mb-1">{t('employee_dashboard.card.schedule_label')}</p>
-                                                <p className="text-lg font-extrabold text-foreground">{visit.startTime} - {visit.endTime}</p>
+                                                <p className="text-lg font-extrabold text-foreground">
+                                                    {formatTo12Hour(visit.startTime)} - {formatTo12Hour(visit.endTime)}
+                                                </p>
                                             </div>
                                             {isPending && (
                                                 <div className={`mt-0 lg:mt-2 px-3 py-1.5 rounded-lg flex items-center gap-1.5 border ${isLateLive ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}>
