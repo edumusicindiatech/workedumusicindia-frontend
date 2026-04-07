@@ -30,7 +30,6 @@ const FloatingUploadManager = () => {
             createMultipartUpload: async (file) => {
                 const { thumbnails, ...cleanMetadata } = metadata;
 
-                // 2. Send the clean, lightweight metadata to initialize the upload
                 const res = await api.post('/employee/media/multipart/create', {
                     filename: file.name,
                     type: file.type,
@@ -69,9 +68,6 @@ const FloatingUploadManager = () => {
             successfulUploadsRef.current.push({ url: response.uploadURL, fileType: 'video' });
         });
 
-        // ==========================================
-        // THE FIX IS IN THIS COMPLETE HANDLER
-        // ==========================================
         uppy.on('complete', async (result) => {
             if (result.failed.length > 0) {
                 const errorEvent = uploadType === 'learning-hub' ? 'learning-upload-error' : 'vault-upload-error';
@@ -93,7 +89,6 @@ const FloatingUploadManager = () => {
                         }
                     }
 
-                    // We MUST await this so Redux doesn't clear the job before the DB saves
                     await api.post('/learning', {
                         title: metadata.title,
                         description: metadata.description,
@@ -119,7 +114,6 @@ const FloatingUploadManager = () => {
                 window.dispatchEvent(new CustomEvent(errorEvent, { detail: "Uploaded, but failed to save to database." }));
             }
 
-            // Wait a fraction of a second before nuking Redux so the UI success events have time to fire
             setTimeout(() => {
                 dispatch(clearUploadJob());
                 if (uppyRef.current) {
@@ -129,7 +123,33 @@ const FloatingUploadManager = () => {
             }, 100);
         });
 
-        files.forEach(file => uppy.addFile({ name: file.name, type: file.type, data: file }));
+        // ==========================================
+        // FIX: DUPLICATE FILE HANDLING
+        // ==========================================
+        let hasDuplicates = false;
+
+        files.forEach(file => {
+            try {
+                uppy.addFile({ name: file.name, type: file.type, data: file });
+            } catch (error) {
+                // Uppy throws an error if it detects a duplicate file ID
+                console.warn("Uppy skipped file:", error.message);
+                hasDuplicates = true;
+            }
+        });
+
+        if (hasDuplicates) {
+            const errorEvent = uploadType === 'learning-hub' ? 'learning-upload-error' : 'vault-upload-error';
+            window.dispatchEvent(new CustomEvent(errorEvent, { detail: "Duplicate files were skipped." }));
+        }
+
+        // Prevent getting stuck if ALL selected files were duplicates
+        if (uppy.getFiles().length === 0) {
+            dispatch(clearUploadJob());
+            uppy.destroy();
+            return;
+        }
+
         uppyRef.current = uppy;
 
         const handleCancel = () => {

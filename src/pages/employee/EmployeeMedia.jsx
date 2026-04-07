@@ -65,7 +65,11 @@ const EmployeeMedia = () => {
     const { user } = useSelector((state) => state.auth);
 
     const currentYear = new Date().getFullYear();
-    const availableYears = [currentYear, currentYear - 1, currentYear - 2];
+    const availableYears = [
+        { label: currentYear.toString(), value: currentYear },
+        { label: (currentYear - 1).toString(), value: currentYear - 1 },
+        { label: (currentYear - 2).toString(), value: currentYear - 2 }
+    ];
 
     const [selectedYear, setSelectedYear] = useState(currentYear);
     const [expandedMonth, setExpandedMonth] = useState(null);
