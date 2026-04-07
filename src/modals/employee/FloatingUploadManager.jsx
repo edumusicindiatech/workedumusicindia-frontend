@@ -28,7 +28,15 @@ const FloatingUploadManager = () => {
             timeout: 60 * 1000,
             shouldUseMultipart: true,
             createMultipartUpload: async (file) => {
-                const res = await api.post('/employee/media/multipart/create', { filename: file.name, type: file.type, metadata });
+                const { thumbnails, ...cleanMetadata } = metadata;
+
+                // 2. Send the clean, lightweight metadata to initialize the upload
+                const res = await api.post('/employee/media/multipart/create', {
+                    filename: file.name,
+                    type: file.type,
+                    metadata: cleanMetadata
+                });
+
                 return { uploadId: res.data.uploadId, key: res.data.key };
             },
             signPart: async (file, partData) => {
