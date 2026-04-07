@@ -23,14 +23,24 @@ const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 // --- Haversine Distance Calculator ---
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return null;
-    const R = 6371; // Earth's radius in km
+
+    const R = 6371e3; // Earth's radius in METERS (6,371,000 meters)
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return (R * c).toFixed(1);
+
+    const distanceInMeters = R * c;
+
+    // If distance is less than 1000m, show exact meters. 
+    // Otherwise, show kilometers with 2 decimal places.
+    if (distanceInMeters < 1000) {
+        return `${Math.round(distanceInMeters)} m`;
+    } else {
+        return `${(distanceInMeters / 1000).toFixed(2)} km`;
+    }
 };
 
 const EmployeeDashboard = () => {
@@ -442,7 +452,7 @@ const EmployeeDashboard = () => {
                                                 {liveDistance && (
                                                     <div className="shrink-0 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 animate-in fade-in zoom-in duration-300">
                                                         <Navigation className="w-3 h-3" />
-                                                        {liveDistance} km
+                                                        {liveDistance}
                                                     </div>
                                                 )}
                                             </div>
