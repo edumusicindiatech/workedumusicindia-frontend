@@ -141,20 +141,31 @@ const EmployeeDashboard = () => {
     }, [fetchSchedule, user]);
 
     // ==========================================
-    // 3. REAL-TIME LOCATION TRACKING (LIVE GPS)
+    // 3. REAL-TIME LOCATION TRACKING & BROADCASTING
     // ==========================================
     useEffect(() => {
-        if (!navigator.geolocation) {
-            console.warn("Geolocation is not supported by this browser.");
+        // Require both geolocation support AND a loaded user
+        if (!navigator.geolocation || !user) {
+            console.warn("Geolocation is not supported by this browser or user not loaded.");
             return;
         }
+
+        const currentUserId = user.id || user._id;
 
         // watchPosition continually monitors GPS and fires when movement occurs
         const watchId = navigator.geolocation.watchPosition(
             (pos) => {
-                setCurrentLocation({
-                    lat: pos.coords.latitude,
-                    lng: pos.coords.longitude
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+
+                // 1. Update Employee's own UI
+                setCurrentLocation({ lat, lng });
+
+                // 2. NEW: Broadcast to Admin backend
+                socket.emit("update_live_location", {
+                    employeeId: currentUserId,
+                    lat: lat,
+                    lng: lng
                 });
             },
             (err) => {
@@ -169,7 +180,7 @@ const EmployeeDashboard = () => {
 
         // Cleanup listener when component unmounts
         return () => navigator.geolocation.clearWatch(watchId);
-    }, []);
+    }, [user]); // Added user as dependency so it runs once user data loads
 
     // ==========================================
     // 4. HELPERS & ACTIONS

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { useSelector } from "react-redux";
 import {
     Radio, Clock, MapPin, School, Users, FileText,
-    AlertCircle, CheckCircle2, XCircle, Coffee, Star, X, Timer, Filter, ChevronDown, LogOut, Settings2
+    AlertCircle, CheckCircle2, XCircle, Coffee, Star, X, Timer, Filter, ChevronDown, LogOut, Settings2, Navigation
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
@@ -12,6 +12,27 @@ import { useTranslation } from "react-i18next";
 import { io } from "socket.io-client";
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
+// --- HELPER FUNCTION: Calculate Live Distance ---
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+
+    const R = 6371e3; // Earth's radius in METERS
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    const distanceInMeters = R * c;
+
+    if (distanceInMeters < 1000) {
+        return `${Math.round(distanceInMeters)} m`;
+    } else {
+        return `${(distanceInMeters / 1000).toFixed(2)} km`;
+    }
+};
+
 const AttendanceFeed = () => {
     const { t } = useTranslation();
     const { user } = useSelector((state) => state.auth);
@@ -20,6 +41,9 @@ const AttendanceFeed = () => {
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState("All");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+    // NEW: State to store live GPS coordinates for each employee
+    const [liveLocations, setLiveLocations] = useState({});
 
     const [selectedNoteRecord, setSelectedNoteRecord] = useState(null);
     const [overrideMode, setOverrideMode] = useState(false);
@@ -73,10 +97,25 @@ const AttendanceFeed = () => {
     const currentUserId = user?.id || user?._id;
     useEffect(() => {
         if (!currentUserId) return;
+
         socket.emit("join_room", currentUserId);
+        // 1. Join Admin Tracking Room
+        socket.emit("join_admin_room");
 
         const handleRealTimeUpdate = (data) => {
             fetchFeed(false);
+        };
+
+        // 2. Capture Real-Time GPS from Employees
+        const handleLocationUpdate = (data) => {
+            setLiveLocations(prev => ({
+                ...prev,
+                [data.employeeId]: {
+                    lat: data.lat,
+                    lng: data.lng,
+                    timestamp: data.timestamp
+                }
+            }));
         };
 
         socket.on("new_notification", (data) => {
@@ -86,9 +125,12 @@ const AttendanceFeed = () => {
         });
 
         socket.on("operations_update", handleRealTimeUpdate);
+        socket.on("employee_location_changed", handleLocationUpdate); // Listen to new socket event
+
         return () => {
             socket.off("new_notification");
             socket.off("operations_update", handleRealTimeUpdate);
+            socket.off("employee_location_changed", handleLocationUpdate);
         };
     }, [currentUserId, fetchFeed, t]);
 
@@ -105,7 +147,7 @@ const AttendanceFeed = () => {
     const getDerivedStatus = (record) => {
         if (record.status === 'Absent') return 'Absent';
         if (record.status === 'Holiday') return 'Holiday';
-        if (record.status === 'On Leave') return 'On Leave'; // <-- Added On Leave
+        if (record.status === 'On Leave') return 'On Leave';
         if (record.checkOutTime) return 'Completed';
         if (record.status === 'Event' || (record.eventNote && !record.checkOutTime)) return 'Event';
         if (record.checkInTime) return record.status === 'Late' ? 'Late' : 'Running';
@@ -120,7 +162,7 @@ const AttendanceFeed = () => {
             case "Completed": return { color: "text-blue-500 bg-blue-500/10 border-blue-500/20", icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: t('attendance_feed.status.completed') };
             case "Absent": return { color: "text-destructive bg-destructive/10 border-destructive/20", icon: <XCircle className="w-3.5 h-3.5" />, label: t('attendance_feed.status.absent') };
             case "Holiday": return { color: "text-teal-500 bg-teal-500/10 border-teal-500/20", icon: <Coffee className="w-3.5 h-3.5" />, label: t('attendance_feed.status.holiday') };
-            case "On Leave": return { color: "text-pink-500 bg-pink-500/10 border-pink-500/20", icon: <Timer className="w-3.5 h-3.5" />, label: t('attendance_feed.status.on_leave') }; // <-- Brand new Pink Leave Config
+            case "On Leave": return { color: "text-pink-500 bg-pink-500/10 border-pink-500/20", icon: <Timer className="w-3.5 h-3.5" />, label: t('attendance_feed.status.on_leave') };
             default: return { color: "text-slate-400 bg-slate-400/10 border-slate-400/20", icon: <Clock className="w-3.5 h-3.5" />, label: t('attendance_feed.status.pending') };
         }
     };
@@ -130,7 +172,7 @@ const AttendanceFeed = () => {
         if (activeFilter === "Pending") filtered = liveData.filter(r => getDerivedStatus(r) === "Pending");
         else if (activeFilter === "Running") filtered = liveData.filter(r => ["Running", "Late", "Event"].includes(getDerivedStatus(r)));
         else if (activeFilter === "Completed") filtered = liveData.filter(r => getDerivedStatus(r) === "Completed");
-        else if (activeFilter === "Exceptions") filtered = liveData.filter(r => ["Absent", "Holiday", "On Leave"].includes(getDerivedStatus(r))); // <-- Added On Leave to exceptions
+        else if (activeFilter === "Exceptions") filtered = liveData.filter(r => ["Absent", "Holiday", "On Leave"].includes(getDerivedStatus(r)));
 
         return filtered.sort((a, b) => new Date(b.checkInTime || b.createdAt || b.date) - new Date(a.checkInTime || a.createdAt || a.date));
     }, [liveData, activeFilter]);
@@ -233,7 +275,25 @@ const AttendanceFeed = () => {
                         const hadEvent = !!record.eventNote;
                         const isAbsent = uiStatus === 'Absent';
                         const isHoliday = uiStatus === 'Holiday';
-                        const isOnLeave = uiStatus === 'On Leave'; // <-- New Variable
+                        const isOnLeave = uiStatus === 'On Leave';
+
+                        // --- 3. DYNAMIC LOGIC: Calculate Distance & Determine UI Visibility ---
+                        const isActiveOrPending = ["Pending", "Running", "Late"].includes(uiStatus);
+                        const employeeLocation = liveLocations[record.teacher?._id];
+
+                        // Extract school coordinates securely (standard GeoJSON fallback logic)
+                        const schoolLng = record.school?.coordinates?.[0] || record.school?.location?.coordinates?.[0];
+                        const schoolLat = record.school?.coordinates?.[1] || record.school?.location?.coordinates?.[1];
+
+                        let liveDistance = null;
+                        if (isActiveOrPending && employeeLocation && schoolLat && schoolLng) {
+                            liveDistance = calculateDistance(
+                                employeeLocation.lat,
+                                employeeLocation.lng,
+                                schoolLat,
+                                schoolLng
+                            );
+                        }
 
                         return (
                             <div
@@ -249,7 +309,6 @@ const AttendanceFeed = () => {
                                 <div className="flex items-center gap-3 sm:gap-4 md:w-56 shrink-0">
                                     <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-inner ${hadEvent ? 'bg-violet-600' : (isAbsent ? 'bg-destructive' : (isHoliday ? 'bg-teal-500' : (isOnLeave ? 'bg-pink-500' : 'bg-primary')))}`}>
                                         {record?.teacher?.profilePicture ? (
-                                            // If it's a URL, use an <img> tag. If it's an icon/string, just render it.
                                             typeof record?.teacher?.profilePicture === 'string' && record?.teacher?.profilePicture.startsWith('http')
                                                 ? <img src={record?.teacher?.profilePicture} alt={record?.teacher?.profilePicture} className="w-full h-full rounded-full object-cover" />
                                                 : record?.teacher?.profilePicture
@@ -267,15 +326,40 @@ const AttendanceFeed = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex-1 grid grid-cols-2 gap-3 bg-muted/30 p-3 rounded-xl border border-border/50 group-hover:bg-muted/50 transition-colors">
-                                    <div className="min-w-0">
-                                        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5 opacity-70">{t('attendance_feed.card.location')}</span>
-                                        <span className="text-[11px] sm:text-xs font-bold text-foreground truncate block">{record.school?.schoolName || "Unknown"}</span>
+                                {/* Replaced the div with a flex column wrap to hold the Live Tracking elements below the school card nicely */}
+                                <div className="flex-1 flex flex-col gap-2 min-w-0">
+                                    <div className="grid grid-cols-2 gap-3 bg-muted/30 p-3 rounded-xl border border-border/50 group-hover:bg-muted/50 transition-colors">
+                                        <div className="min-w-0">
+                                            <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5 opacity-70">{t('attendance_feed.card.location')}</span>
+                                            <span className="text-[11px] sm:text-xs font-bold text-foreground truncate block">{record.school?.schoolName || "Unknown"}</span>
+                                        </div>
+                                        <div className="min-w-0 border-l border-border/50 pl-3">
+                                            <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5 opacity-70">{t('attendance_feed.card.category')}</span>
+                                            <span className="text-[11px] sm:text-xs font-bold text-foreground truncate block">{record.band}</span>
+                                        </div>
                                     </div>
-                                    <div className="min-w-0 border-l border-border/50 pl-3">
-                                        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5 opacity-70">{t('attendance_feed.card.category')}</span>
-                                        <span className="text-[11px] sm:text-xs font-bold text-foreground truncate block">{record.band}</span>
-                                    </div>
+
+                                    {/* 4. DYNAMIC UI: Live Location Tracking Badges */}
+                                    {isActiveOrPending && employeeLocation && (
+                                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                                            {liveDistance && (
+                                                <div className="shrink-0 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold flex items-center gap-1.5 animate-in fade-in zoom-in duration-300">
+                                                    <Radio className="w-3.5 h-3.5 animate-pulse" />
+                                                    {liveDistance}
+                                                </div>
+                                            )}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    window.open(`https://www.google.com/maps?q=${employeeLocation.lat},${employeeLocation.lng}`, '_blank');
+                                                }}
+                                                className="shrink-0 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold flex items-center gap-1.5 transition-colors"
+                                            >
+                                                <Navigation className="w-3.5 h-3.5" />
+                                                {t('attendance_feed.card.live_map', 'Locate')}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex items-center justify-between md:justify-end gap-4 lg:gap-6 md:w-64 shrink-0">
