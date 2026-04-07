@@ -42,7 +42,7 @@ const AttendanceFeed = () => {
     const [activeFilter, setActiveFilter] = useState("All");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-    // NEW: State to store live GPS coordinates for each employee
+    // State to store live GPS coordinates for each employee
     const [liveLocations, setLiveLocations] = useState({});
 
     const [selectedNoteRecord, setSelectedNoteRecord] = useState(null);
@@ -95,18 +95,17 @@ const AttendanceFeed = () => {
     }, [fetchFeed]);
 
     const currentUserId = user?.id || user?._id;
+
     useEffect(() => {
         if (!currentUserId) return;
 
         socket.emit("join_room", currentUserId);
-        // 1. Join Admin Tracking Room
         socket.emit("join_admin_room");
 
         const handleRealTimeUpdate = (data) => {
             fetchFeed(false);
         };
 
-        // 2. Capture Real-Time GPS from Employees
         const handleLocationUpdate = (data) => {
             setLiveLocations(prev => ({
                 ...prev,
@@ -125,7 +124,7 @@ const AttendanceFeed = () => {
         });
 
         socket.on("operations_update", handleRealTimeUpdate);
-        socket.on("employee_location_changed", handleLocationUpdate); // Listen to new socket event
+        socket.on("employee_location_changed", handleLocationUpdate);
 
         return () => {
             socket.off("new_notification");
@@ -219,12 +218,13 @@ const AttendanceFeed = () => {
     };
 
     return (
-        <div className="p-3 sm:p-6 lg:p-8 max-w-6xl mx-auto animate-fade-in pb-24 md:pb-8 h-full">
-            <div className="flex items-center justify-between mb-8 relative">
-                <div className="flex items-center gap-3">
-                    <div className="relative flex items-center justify-center">
-                        <div className="absolute w-4 h-4 rounded-full bg-emerald-500/20 animate-ping" />
-                        <div className="relative w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto animate-fade-in pb-24 md:pb-8 h-full">
+            {/* Header Section */}
+            <div className="flex items-center justify-between mb-6 sm:mb-8 relative">
+                <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="relative flex items-center justify-center shrink-0">
+                        <div className="absolute w-5 h-5 rounded-full bg-emerald-500/20 animate-ping" />
+                        <div className="relative w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
                     </div>
                     <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">{t('attendance_feed.title')}</h1>
                 </div>
@@ -232,11 +232,11 @@ const AttendanceFeed = () => {
                 <div className="relative z-30" ref={filterRef}>
                     <button
                         onClick={() => setIsFilterOpen(!isFilterOpen)}
-                        className="flex items-center gap-2 px-4 py-2 sm:py-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:scale-105 transition-all active:scale-95"
+                        className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:scale-105 transition-all active:scale-95"
                     >
-                        <Filter className="w-4 h-4" />
+                        <Filter className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0" />
                         <span className="text-sm font-bold hidden sm:inline">{t(`attendance_feed.filter_${activeFilter.toLowerCase()}`)}</span>
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isFilterOpen ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-300 shrink-0 ${isFilterOpen ? 'rotate-180' : ''}`} />
                     </button>
 
                     {isFilterOpen && (
@@ -247,7 +247,7 @@ const AttendanceFeed = () => {
                                         key={f}
                                         onClick={() => { setActiveFilter(f); setIsFilterOpen(false); }}
                                         className={`px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all border text-center ${activeFilter === f
-                                            ? "bg-primary/10 text-primary border-primary"
+                                            ? "bg-primary/10 text-primary border-primary shadow-sm"
                                             : "bg-muted/30 text-muted-foreground border-transparent hover:bg-muted"
                                             } ${f === 'Exceptions' ? 'col-span-2' : ''}`}
                                     >
@@ -263,11 +263,11 @@ const AttendanceFeed = () => {
             {loading ? (
                 <div className="space-y-4 animate-in fade-in duration-500">
                     {[...Array(5)].map((_, i) => (
-                        <div key={i} className="bg-card rounded-2xl border border-border/40 p-4 sm:p-5 h-24 animate-pulse" />
+                        <div key={i} className="bg-card rounded-2xl border border-border/40 p-5 h-32 sm:h-24 animate-pulse" />
                     ))}
                 </div>
             ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 sm:space-y-5">
                     {filteredAndSortedData.map((record) => {
                         const uiStatus = getDerivedStatus(record);
                         const statusConfig = getStatusConfig(uiStatus);
@@ -277,16 +277,19 @@ const AttendanceFeed = () => {
                         const isHoliday = uiStatus === 'Holiday';
                         const isOnLeave = uiStatus === 'On Leave';
 
-                        // --- 3. DYNAMIC LOGIC: Calculate Distance & Determine UI Visibility ---
                         const isActiveOrPending = ["Pending", "Running", "Late"].includes(uiStatus);
-                        const employeeLocation = liveLocations[record.teacher?._id];
 
-                        // Extract school coordinates securely (standard GeoJSON fallback logic)
-                        const schoolLng = record.school?.coordinates?.[0] || record.school?.location?.coordinates?.[0];
-                        const schoolLat = record.school?.coordinates?.[1] || record.school?.location?.coordinates?.[1];
+                        const teacherId = record.teacher?._id?.toString() || record.teacher?.id?.toString() || (typeof record.teacher === 'string' ? record.teacher : null);
+                        const employeeLocation = liveLocations[teacherId];
+
+                        const rawLng = record.school?.location?.coordinates?.[0] || record.school?.coordinates?.[0] || record.school?.longitude;
+                        const rawLat = record.school?.location?.coordinates?.[1] || record.school?.coordinates?.[1] || record.school?.latitude;
+
+                        const schoolLng = parseFloat(rawLng);
+                        const schoolLat = parseFloat(rawLat);
 
                         let liveDistance = null;
-                        if (isActiveOrPending && employeeLocation && schoolLat && schoolLng) {
+                        if (isActiveOrPending && employeeLocation && !isNaN(schoolLat) && !isNaN(schoolLng)) {
                             liveDistance = calculateDistance(
                                 employeeLocation.lat,
                                 employeeLocation.lng,
@@ -299,52 +302,56 @@ const AttendanceFeed = () => {
                             <div
                                 key={record._id}
                                 onClick={() => setSelectedNoteRecord(record)}
-                                className={`bg-card rounded-2xl border p-4 sm:p-5 shadow-sm transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 cursor-pointer hover:shadow-md hover:border-primary/30 group active:scale-[0.99] 
+                                className={`bg-card rounded-2xl border p-4 sm:p-5 shadow-sm transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6 cursor-pointer hover:shadow-md hover:border-primary/40 group active:scale-[0.99] overflow-hidden relative
                                     ${hadEvent ? 'border-violet-500/40 bg-violet-500/5' : 'border-border'}
                                     ${isAbsent ? 'border-destructive/30 bg-destructive/5' : ''}
                                     ${isHoliday ? 'border-teal-500/30 bg-teal-500/5' : ''} 
                                     ${isOnLeave ? 'border-pink-500/30 bg-pink-500/5' : ''} 
                                 `}
                             >
-                                <div className="flex items-center gap-3 sm:gap-4 md:w-56 shrink-0">
-                                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-inner ${hadEvent ? 'bg-violet-600' : (isAbsent ? 'bg-destructive' : (isHoliday ? 'bg-teal-500' : (isOnLeave ? 'bg-pink-500' : 'bg-primary')))}`}>
+                                {/* Left Section: Profile Info */}
+                                <div className="flex items-center gap-3 sm:gap-4 lg:w-[22%] shrink-0">
+                                    <div className={`w-11 h-11 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-inner overflow-hidden border-2 border-background ${hadEvent ? 'bg-violet-600' : (isAbsent ? 'bg-destructive' : (isHoliday ? 'bg-teal-500' : (isOnLeave ? 'bg-pink-500' : 'bg-primary')))}`}>
                                         {record?.teacher?.profilePicture ? (
                                             typeof record?.teacher?.profilePicture === 'string' && record?.teacher?.profilePicture.startsWith('http')
-                                                ? <img src={record?.teacher?.profilePicture} alt={record?.teacher?.profilePicture} className="w-full h-full rounded-full object-cover" />
+                                                ? <img src={record?.teacher?.profilePicture} alt={record?.teacher?.profilePicture} className="w-full h-full object-cover" />
                                                 : record?.teacher?.profilePicture
                                         ) : (
-                                            record?.teacher?.name.charAt(0).toUpperCase()
+                                            record?.teacher?.name?.charAt(0).toUpperCase() || "U"
                                         )}
                                     </div>
                                     <div className="flex flex-col min-w-0">
-                                        <span className="font-bold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors truncate">
+                                        <span className="font-extrabold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors truncate">
                                             {record.teacher?.name || "Unknown"}
                                         </span>
-                                        <span className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1 mt-0.5">
-                                            <MapPin className="w-3 h-3" /> {record.teacher?.zone || "Unassigned"}
+                                        <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground flex items-center gap-1 mt-0.5">
+                                            <MapPin className="w-3 h-3 text-primary/70 shrink-0" /> <span className="truncate">{record.teacher?.zone || "Unassigned"}</span>
                                         </span>
                                     </div>
                                 </div>
 
-                                {/* Replaced the div with a flex column wrap to hold the Live Tracking elements below the school card nicely */}
-                                <div className="flex-1 flex flex-col gap-2 min-w-0">
-                                    <div className="grid grid-cols-2 gap-3 bg-muted/30 p-3 rounded-xl border border-border/50 group-hover:bg-muted/50 transition-colors">
-                                        <div className="min-w-0">
-                                            <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5 opacity-70">{t('attendance_feed.card.location')}</span>
-                                            <span className="text-[11px] sm:text-xs font-bold text-foreground truncate block">{record.school?.schoolName || "Unknown"}</span>
+                                {/* Middle Section: School Info & Tracking */}
+                                <div className="flex-1 flex flex-col gap-2.5 min-w-0">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-muted/40 dark:bg-muted/20 p-3.5 rounded-xl border border-border/40 group-hover:bg-muted/60 transition-colors">
+                                        <div className="min-w-0 flex flex-col justify-center">
+                                            <span className="text-[9px] font-extrabold uppercase tracking-widest text-muted-foreground block mb-1">School</span>
+                                            <span className="text-xs sm:text-sm font-bold text-foreground truncate block flex-1">{record.school?.schoolName || "Unknown"}</span>
                                         </div>
-                                        <div className="min-w-0 border-l border-border/50 pl-3">
-                                            <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5 opacity-70">{t('attendance_feed.card.category')}</span>
-                                            <span className="text-[11px] sm:text-xs font-bold text-foreground truncate block">{record.band}</span>
+                                        <div className="min-w-0 sm:border-l border-border/60 sm:pl-4 flex flex-col justify-center">
+                                            <span className="text-[9px] font-extrabold uppercase tracking-widest text-muted-foreground block mb-1">Category</span>
+                                            <span className="text-xs sm:text-sm font-bold text-foreground truncate block">{record.band}</span>
                                         </div>
                                     </div>
 
-                                    {/* 4. DYNAMIC UI: Live Location Tracking Badges */}
+                                    {/* Live Tracking Dynamic Bar */}
                                     {isActiveOrPending && employeeLocation && (
-                                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                                        <div className="flex flex-wrap items-center gap-2.5 mt-0.5">
                                             {liveDistance && (
-                                                <div className="shrink-0 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold flex items-center gap-1.5 animate-in fade-in zoom-in duration-300">
-                                                    <Radio className="w-3.5 h-3.5 animate-pulse" />
+                                                <div className="bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 animate-in fade-in zoom-in duration-300 backdrop-blur-sm">
+                                                    <div className="relative flex items-center justify-center w-2 h-2">
+                                                        <div className="absolute w-2 h-2 rounded-full bg-blue-500 animate-ping opacity-75" />
+                                                        <div className="relative w-1.5 h-1.5 rounded-full bg-blue-600" />
+                                                    </div>
                                                     {liveDistance}
                                                 </div>
                                             )}
@@ -353,31 +360,33 @@ const AttendanceFeed = () => {
                                                     e.stopPropagation();
                                                     window.open(`https://www.google.com/maps?q=${employeeLocation.lat},${employeeLocation.lng}`, '_blank');
                                                 }}
-                                                className="shrink-0 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold flex items-center gap-1.5 transition-colors"
+                                                className="bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-white hover:shadow-md px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all duration-300 animate-in fade-in zoom-in"
                                             >
                                                 <Navigation className="w-3.5 h-3.5" />
-                                                {t('attendance_feed.card.live_map', 'Locate')}
+                                                {t('attendance_feed.card.live_map', 'Locate Employee')}
                                             </button>
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="flex items-center justify-between md:justify-end gap-4 lg:gap-6 md:w-64 shrink-0">
-                                    <div className="flex flex-col items-start md:items-end gap-1.5">
-                                        <div className="flex gap-2 items-center">
-                                            <span className={`px-2.5 py-1 rounded-md text-[9px] sm:text-[10px] font-bold uppercase tracking-widest border flex items-center gap-1.5 ${statusConfig.color}`}>
+                                {/* Right Section: Status & Timestamps */}
+                                <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between lg:w-[22%] shrink-0 border-t lg:border-none border-border/50 pt-4 lg:pt-0 mt-2 lg:mt-0">
+                                    <div className="flex flex-col items-start lg:items-end gap-2.5">
+                                        <div className="flex flex-wrap gap-2 items-center">
+                                            <span className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider border flex items-center gap-1.5 shadow-sm ${statusConfig.color}`}>
                                                 {statusConfig.icon} {statusConfig.label}
                                             </span>
-                                            {isLate && <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-amber-500 text-white animate-pulse">{t('attendance_feed.card.late_badge')}</span>}
-                                            {hadEvent && uiStatus === 'Completed' && <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-violet-500 text-white">{t('attendance_feed.card.event_badge')}</span>}
+                                            {isLate && <span className="px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider bg-amber-500 text-white shadow-sm animate-pulse">{t('attendance_feed.card.late_badge')}</span>}
+                                            {hadEvent && uiStatus === 'Completed' && <span className="px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider bg-violet-500 text-white shadow-sm">{t('attendance_feed.card.event_badge')}</span>}
                                         </div>
-                                        <div className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-                                            {record.checkInTime ? `${t('attendance_feed.card.arrived')}: ${formatTime(record.checkInTime)}` : ((isAbsent || isHoliday || isOnLeave) ? t('attendance_feed.card.off_duty') : t('attendance_feed.card.pending'))}
-                                            {record.checkOutTime && ` • ${t('attendance_feed.card.departed')}: ${formatTime(record.checkOutTime)}`}
+                                        <div className="text-[11px] sm:text-xs font-semibold text-muted-foreground flex flex-col sm:flex-row lg:flex-col gap-1 sm:gap-2 lg:gap-0.5 items-start lg:items-end">
+                                            <span>{record.checkInTime ? `${t('attendance_feed.card.arrived')}: ${formatTime(record.checkInTime)}` : ((isAbsent || isHoliday || isOnLeave) ? t('attendance_feed.card.off_duty') : t('attendance_feed.card.pending'))}</span>
+                                            {record.checkOutTime && <span className="hidden sm:inline lg:hidden">•</span>}
+                                            {record.checkOutTime && <span>{t('attendance_feed.card.departed')}: {formatTime(record.checkOutTime)}</span>}
                                         </div>
                                     </div>
-                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${hadEvent ? 'bg-violet-500/20 text-violet-500' : (isAbsent ? 'bg-red-500/10 text-red-500' : (isHoliday ? 'bg-teal-500/10 text-teal-500' : (isOnLeave ? 'bg-pink-500/10 text-pink-500' : 'bg-primary/10 text-primary')))}`}>
-                                        {hadEvent ? <Star className="w-4 h-4 fill-current" /> : (isAbsent ? <XCircle className="w-4 h-4" /> : (isHoliday ? <Coffee className="w-4 h-4" /> : (isOnLeave ? <Timer className="w-4 h-4" /> : <FileText className="w-4 h-4" />)))}
+                                    <div className={`hidden lg:flex w-10 h-10 rounded-full items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-sm ${hadEvent ? 'bg-violet-500/15 text-violet-600' : (isAbsent ? 'bg-red-500/10 text-red-600' : (isHoliday ? 'bg-teal-500/10 text-teal-600' : (isOnLeave ? 'bg-pink-500/10 text-pink-600' : 'bg-primary/10 text-primary')))}`}>
+                                        {hadEvent ? <Star className="w-5 h-5 fill-current" /> : (isAbsent ? <XCircle className="w-5 h-5" /> : (isHoliday ? <Coffee className="w-5 h-5" /> : (isOnLeave ? <Timer className="w-5 h-5" /> : <FileText className="w-5 h-5" />)))}
                                     </div>
                                 </div>
                             </div>
@@ -385,17 +394,19 @@ const AttendanceFeed = () => {
                     })}
 
                     {filteredAndSortedData.length === 0 && (
-                        <div className="py-16 flex flex-col items-center justify-center text-center px-4 border border-dashed border-border rounded-3xl bg-muted/10">
-                            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                                <Clock className="w-8 h-8 text-muted-foreground/50" />
+                        <div className="py-20 flex flex-col items-center justify-center text-center px-4 border border-dashed border-border rounded-4xl bg-muted/10 shadow-inner">
+                            <div className="w-20 h-20 rounded-full bg-background border border-border shadow-sm flex items-center justify-center mb-5 relative">
+                                <div className="absolute inset-0 rounded-full border border-primary/20 animate-ping opacity-20"></div>
+                                <Clock className="w-10 h-10 text-muted-foreground/40" />
                             </div>
-                            <h3 className="text-lg font-bold text-foreground mb-1">{t('attendance_feed.no_records_title')}</h3>
-                            <p className="text-sm text-muted-foreground max-w-sm">{t('attendance_feed.no_records_desc')}</p>
+                            <h3 className="text-xl font-extrabold text-foreground mb-2 tracking-tight">{t('attendance_feed.no_records_title')}</h3>
+                            <p className="text-sm font-medium text-muted-foreground max-w-md leading-relaxed">{t('attendance_feed.no_records_desc')}</p>
                         </div>
                     )}
                 </div>
             )}
 
+            {/* Modal remains visually unchanged to preserve reliable interaction */}
             {selectedNoteRecord && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={closeAndResetModal}>
                     <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-border flex flex-col overflow-y-auto max-h-[90vh] animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
@@ -428,7 +439,7 @@ const AttendanceFeed = () => {
                             )}
 
                             {(selectedNoteRecord.status === 'Absent' || selectedNoteRecord.status === 'On Leave' || !!selectedNoteRecord.lateReason || !!selectedNoteRecord.teacherNote) && (
-                                <div className="p-5 bg-muted/30 border border-border rounded-2xl space-y-4">
+                                <div className="p-5 bg-muted/30 border border-border rounded-2xl space-y-4 shadow-sm">
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                                         <AlertCircle className="w-4 h-4" /> {t('attendance_feed.modal.ops_intel')}
                                     </h4>
@@ -486,14 +497,14 @@ const AttendanceFeed = () => {
                                     </h4>
                                     <button
                                         onClick={() => { setOverrideMode(!overrideMode); setOverrideAction(""); }}
-                                        className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors"
+                                        className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors shadow-sm"
                                     >
                                         {overrideMode ? t('attendance_feed.modal.btn_cancel_override') : t('attendance_feed.modal.btn_enable_edit')}
                                     </button>
                                 </div>
 
                                 {overrideMode && (
-                                    <div className="bg-muted/40 p-5 rounded-2xl border border-border space-y-5 animate-in fade-in slide-in-from-top-2">
+                                    <div className="bg-muted/40 p-5 rounded-2xl border border-border space-y-5 animate-in fade-in slide-in-from-top-2 shadow-sm">
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                                             {!selectedNoteRecord.checkInTime && (
                                                 <button onClick={() => setOverrideAction("CheckIn")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'CheckIn' ? 'bg-emerald-500 text-white border-emerald-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-emerald-500'}`}>{t('attendance_feed.modal.actions.CheckIn')}</button>
@@ -520,11 +531,11 @@ const AttendanceFeed = () => {
                                                         value={overrideReason}
                                                         onChange={(e) => setOverrideReason(e.target.value)}
                                                         placeholder={t('attendance_feed.modal.placeholder_note', { action: t(`attendance_feed.modal.actions.${overrideAction === 'Revoke' ? (selectedNoteRecord.checkOutTime ? 'Revoke_Undo' : 'Revoke_All') : overrideAction}`).toLowerCase() })}
-                                                        className="w-full bg-card border border-border rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary outline-none resize-none h-24 placeholder:text-muted-foreground/50 transition-all shadow-sm"
+                                                        className="w-full bg-card border border-border rounded-xl p-4 text-sm font-medium focus:ring-2 focus:ring-primary outline-none resize-none h-24 placeholder:text-muted-foreground/40 transition-all shadow-sm"
                                                     />
                                                 </div>
                                                 <Button
-                                                    className="w-full font-bold h-12 rounded-xl text-base shadow-lg shadow-primary/20"
+                                                    className="w-full font-extrabold h-12 rounded-xl text-base shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
                                                     onClick={handleOverrideSubmit}
                                                     disabled={isSubmittingOverride}
                                                 >

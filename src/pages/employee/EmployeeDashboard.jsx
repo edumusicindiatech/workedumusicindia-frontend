@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import api from "../../api/axios";
 import {
@@ -53,8 +53,10 @@ const EmployeeDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
 
-    // NEW: State to store real-time continuous location
+    // State to store real-time continuous location
     const [currentLocation, setCurrentLocation] = useState(null);
+    // Ref to hold the latest location for the heartbeat interval
+    const lastLocationRef = useRef(null);
 
     // Modal States
     const [checkInModal, setCheckInModal] = useState({ isOpen: false, visit: null, isLate: false });
@@ -152,16 +154,17 @@ const EmployeeDashboard = () => {
 
         const currentUserId = user.id || user._id;
 
-        // watchPosition continually monitors GPS and fires when movement occurs
+        // 1. watchPosition continually monitors GPS and fires when movement occurs
         const watchId = navigator.geolocation.watchPosition(
             (pos) => {
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
 
-                // 1. Update Employee's own UI
+                // Update Employee's own UI and our Ref
                 setCurrentLocation({ lat, lng });
+                lastLocationRef.current = { lat, lng };
 
-                // 2. NEW: Broadcast to Admin backend
+                // Broadcast to Admin backend instantly on movement
                 socket.emit("update_live_location", {
                     employeeId: currentUserId,
                     lat: lat,
@@ -178,16 +181,30 @@ const EmployeeDashboard = () => {
             }
         );
 
-        // Cleanup listener when component unmounts
-        return () => navigator.geolocation.clearWatch(watchId);
-    }, [user]); // Added user as dependency so it runs once user data loads
+        // 2. THE HEARTBEAT: Broadcast the last known location every 5 seconds
+        const heartbeatInterval = setInterval(() => {
+            if (lastLocationRef.current) {
+                socket.emit("update_live_location", {
+                    employeeId: currentUserId,
+                    lat: lastLocationRef.current.lat,
+                    lng: lastLocationRef.current.lng
+                });
+            }
+        }, 5000);
+
+        // Cleanup listener and interval when component unmounts
+        return () => {
+            navigator.geolocation.clearWatch(watchId);
+            clearInterval(heartbeatInterval);
+        };
+    }, [user]);
 
     // ==========================================
     // 4. HELPERS & ACTIONS
     // ==========================================
     const openGoogleMaps = (coords) => {
         const [lng, lat] = coords;
-        const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+        const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
         window.open(url, '_blank');
     };
 
@@ -196,8 +213,9 @@ const EmployeeDashboard = () => {
             if (!navigator.geolocation) return reject(new Error("GPS not supported."));
             navigator.geolocation.getCurrentPosition(
                 (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                (err) => reject(new Error("Please enable GPS/Location Services.")),
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                (err) => reject(new Error(t('employee_dashboard.toasts.gps_error', 'Failed to get GPS signal. Please step outside or check location permissions.'))),
+                // Relaxed rules: allow a 15-second old cached location, and wait up to 15 seconds
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 }
             );
         });
     };
@@ -208,18 +226,30 @@ const EmployeeDashboard = () => {
         const toastId = toast.loading(t('employee_dashboard.toasts.verifying_in'));
 
         try {
-            const { lat, lng } = await getCoordinates();
+            // BUG FIX: Prioritize the live tracking location we already have in state!
+            let lat, lng;
+            if (currentLocation && currentLocation.lat) {
+                lat = currentLocation.lat;
+                lng = currentLocation.lng;
+            } else {
+                // If live tracking hasn't locked on yet, use the relaxed fallback
+                const coords = await getCoordinates();
+                lat = coords.lat;
+                lng = coords.lng;
+            }
+
             const response = await api.post('/employee/check-in', {
                 schoolId: visit.schoolId, band: visit.category,
                 latitude: lat, longitude: lng, lateReason, eventNote
             });
+
             toast.dismiss(toastId);
             toast.success(response.data?.message || t('employee_dashboard.toasts.check_in_success', { school: visit.schoolName }));
             setCheckInModal({ isOpen: false, visit: null, isLate: false });
             fetchSchedule();
         } catch (err) {
             toast.dismiss(toastId);
-            toast.error(err.response?.data?.message || t('employee_dashboard.toasts.check_in_fail'));
+            toast.error(err.response?.data?.message || err.message || t('employee_dashboard.toasts.check_in_fail'));
             setCheckInModal({ isOpen: false, visit: null, isLate: false });
         } finally {
             setActionLoading(false);
@@ -232,18 +262,29 @@ const EmployeeDashboard = () => {
         const toastId = toast.loading(t('employee_dashboard.toasts.verifying_out'));
 
         try {
-            const { lat, lng } = await getCoordinates();
+            // BUG FIX: Prioritize the live tracking location
+            let lat, lng;
+            if (currentLocation && currentLocation.lat) {
+                lat = currentLocation.lat;
+                lng = currentLocation.lng;
+            } else {
+                const coords = await getCoordinates();
+                lat = coords.lat;
+                lng = coords.lng;
+            }
+
             const response = await api.post('/employee/check-out', {
                 schoolId: visit.schoolId, band: visit.category,
                 latitude: lat, longitude: lng, overtimeReason
             });
+
             toast.dismiss(toastId);
             toast.success(response.data?.message || t('employee_dashboard.toasts.check_out_success', { school: visit.schoolName }));
             setCheckOutModal({ isOpen: false, visit: null, overtimeMinutes: 0 });
             fetchSchedule();
         } catch (err) {
             toast.dismiss(toastId);
-            toast.error(err.response?.data?.message || t('employee_dashboard.toasts.check_out_fail'));
+            toast.error(err.response?.data?.message || err.message || t('employee_dashboard.toasts.check_out_fail'));
             setCheckOutModal({ isOpen: false, visit: null, overtimeMinutes: 0 });
         } finally {
             setActionLoading(false);
@@ -418,7 +459,6 @@ const EmployeeDashboard = () => {
                             const isPending = visit.status === 'pending';
                             const isActive = visit.status === 'checked_in';
 
-                            // NEW: Calculate Live Distance specific to this visit
                             const schoolLng = visit.coordinates?.[0];
                             const schoolLat = visit.coordinates?.[1];
                             let liveDistance = null;
@@ -454,7 +494,6 @@ const EmployeeDashboard = () => {
                                                 {visit.schoolName}
                                             </h2>
 
-                                            {/* UPDATED UI: Rendering Live Distance */}
                                             <div className="flex items-start gap-2 mt-3 ml-1">
                                                 <MapPin className="w-4 h-4 mt-1 shrink-0 text-muted-foreground/70" />
                                                 <p className="text-sm text-muted-foreground leading-relaxed flex-1">
