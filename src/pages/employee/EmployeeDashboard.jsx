@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 
 import CheckInModal from "../../modals/employee/CheckInModal";
 import CheckOutModal from "../../modals/employee/CheckOutModal";
@@ -34,7 +34,7 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 };
 
 const EmployeeDashboard = () => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation();
     const { user } = useSelector((state) => state.auth);
 
     const [assignments, setAssignments] = useState([]);
@@ -42,6 +42,9 @@ const EmployeeDashboard = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
+
+    // NEW: State to store real-time continuous location
+    const [currentLocation, setCurrentLocation] = useState(null);
 
     // Modal States
     const [checkInModal, setCheckInModal] = useState({ isOpen: false, visit: null, isLate: false });
@@ -95,13 +98,6 @@ const EmployeeDashboard = () => {
         }
     }, [fetchLeaveStatus, t]);
 
-    const formatOvertime = (totalMinutes) => {
-        if (!totalMinutes || totalMinutes <= 0) return "";
-        const h = Math.floor(totalMinutes / 60);
-        const m = totalMinutes % 60;
-        return h > 0 ? `${h}${t('employee_dashboard.units.h')} ${m}${t('employee_dashboard.units.m')}` : `${m}${t('employee_dashboard.units.m')}`;
-    };
-
     useEffect(() => {
         fetchSchedule();
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -135,7 +131,38 @@ const EmployeeDashboard = () => {
     }, [fetchSchedule, user]);
 
     // ==========================================
-    // 3. HELPERS & ACTIONS
+    // 3. REAL-TIME LOCATION TRACKING (LIVE GPS)
+    // ==========================================
+    useEffect(() => {
+        if (!navigator.geolocation) {
+            console.warn("Geolocation is not supported by this browser.");
+            return;
+        }
+
+        // watchPosition continually monitors GPS and fires when movement occurs
+        const watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+                setCurrentLocation({
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude
+                });
+            },
+            (err) => {
+                console.error("Continuous Location Watch Error:", err.message);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0 // Force true real-time, no caching
+            }
+        );
+
+        // Cleanup listener when component unmounts
+        return () => navigator.geolocation.clearWatch(watchId);
+    }, []);
+
+    // ==========================================
+    // 4. HELPERS & ACTIONS
     // ==========================================
     const openGoogleMaps = (coords) => {
         const [lng, lat] = coords;
@@ -225,7 +252,7 @@ const EmployeeDashboard = () => {
     };
 
     // ==========================================
-    // 4. RENDER LOGIC
+    // 5. RENDER LOGIC
     // ==========================================
     if (loading) {
         return (
@@ -370,6 +397,20 @@ const EmployeeDashboard = () => {
                             const isPending = visit.status === 'pending';
                             const isActive = visit.status === 'checked_in';
 
+                            // NEW: Calculate Live Distance specific to this visit
+                            const schoolLng = visit.coordinates?.[0];
+                            const schoolLat = visit.coordinates?.[1];
+                            let liveDistance = null;
+
+                            if (currentLocation && schoolLat && schoolLng) {
+                                liveDistance = calculateDistance(
+                                    currentLocation.lat,
+                                    currentLocation.lng,
+                                    schoolLat,
+                                    schoolLng
+                                );
+                            }
+
                             return (
                                 <div key={visit.id} className={`group relative bg-card rounded-3xl p-5 sm:p-7 transition-all duration-300 border ${isActive ? 'border-emerald-500/50 scale-[1.01] dark:bg-emerald-950/10 shadow-lg' : 'border-border hover:shadow-md hover:border-primary/30'}`}>
                                     {isActive && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-emerald-500 rounded-b-full" />}
@@ -391,9 +432,20 @@ const EmployeeDashboard = () => {
                                                 <div className="p-2 bg-muted rounded-xl shrink-0"><School className="w-5 h-5 text-primary" /></div>
                                                 {visit.schoolName}
                                             </h2>
-                                            <p className="text-sm text-muted-foreground flex items-start gap-2 mt-3 ml-1 leading-relaxed">
-                                                <MapPin className="w-4 h-4 mt-1 shrink-0 text-muted-foreground/70" />{visit.address}
-                                            </p>
+
+                                            {/* UPDATED UI: Rendering Live Distance */}
+                                            <div className="flex items-start gap-2 mt-3 ml-1">
+                                                <MapPin className="w-4 h-4 mt-1 shrink-0 text-muted-foreground/70" />
+                                                <p className="text-sm text-muted-foreground leading-relaxed flex-1">
+                                                    {visit.address}
+                                                </p>
+                                                {liveDistance && (
+                                                    <div className="shrink-0 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 animate-in fade-in zoom-in duration-300">
+                                                        <Navigation className="w-3 h-3" />
+                                                        {liveDistance} km
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="bg-muted/40 p-4 rounded-2xl border border-border/50 text-left lg:text-right min-w-50 flex flex-row lg:flex-col justify-between items-center lg:items-end">
                                             <div>

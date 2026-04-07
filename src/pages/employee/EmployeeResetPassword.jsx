@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, ShieldCheck, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
-// 1. Import Toaster back in
 import toast, { Toaster } from "react-hot-toast";
 import api from "../../api/axios";
 import { useTranslation } from "react-i18next";
@@ -25,6 +24,15 @@ const EmployeeResetPassword = () => {
         try {
             const response = await api.post('/auth/reset-initial-password', { newPassword });
 
+            // --- NEW: SECURE THE DEVICE ID UPON SUCCESS ---
+            // If the password reset succeeded, make the temporary device ID permanent
+            const tempId = sessionStorage.getItem('tempDeviceId');
+            if (tempId) {
+                localStorage.setItem('deviceId', tempId);
+                sessionStorage.removeItem('tempDeviceId'); // Clean up temporary storage
+            }
+            // ----------------------------------------------
+
             toast.success(response.data?.message || t('employee_reset_password.toast_success'));
             navigate('/employee/dashboard');
 
@@ -43,7 +51,6 @@ const EmployeeResetPassword = () => {
     return (
         <div className="min-h-screen flex items-center justify-center bg-muted/20 p-4">
 
-            {/* 2. Add Toaster here just like AdminResetPassword */}
             <Toaster position="top-right" />
 
             <div className="bg-card w-full max-w-md p-8 rounded-3xl shadow-xl border border-border animate-in zoom-in-95">

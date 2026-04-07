@@ -12,14 +12,21 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
-// --- 1. NEW HELPER: GENERATE & STORE DEVICE ID ---
-// This creates a permanent, unique ID for this specific browser/app installation
+// --- 1. UPDATED HELPER: GET OR GENERATE TEMPORARY DEVICE ID ---
 const getDeviceId = () => {
+    // First, check if a permanent device ID already exists (from a past password update)
     let id = localStorage.getItem('deviceId');
+
     if (!id) {
-        // Fallback for older browsers if crypto.randomUUID is missing
-        id = crypto.randomUUID ? crypto.randomUUID() : 'dev-' + Math.random().toString(36).substring(2, 15);
-        localStorage.setItem('deviceId', id);
+        // If not, check if we already made a temporary one for this login session
+        id = sessionStorage.getItem('tempDeviceId');
+
+        if (!id) {
+            // Generate a new one and hold it TEMPORARILY in sessionStorage.
+            // It will NOT be recorded permanently until the password update succeeds.
+            id = crypto.randomUUID ? crypto.randomUUID() : 'dev-' + Math.random().toString(36).substring(2, 15);
+            sessionStorage.setItem('tempDeviceId', id);
+        }
     }
     return id;
 };
@@ -58,7 +65,7 @@ const Login = () => {
         setErrorMsg("");
 
         try {
-            // --- 2. ADD DEVICE ID TO PAYLOAD ---
+            // --- 2. FETCH DEVICE ID (PERMANENT OR TEMPORARY) ---
             const deviceId = getDeviceId();
             const response = await api.post('/auth/login', { employeeId, password, deviceId });
             const data = response.data;
@@ -98,7 +105,6 @@ const Login = () => {
             } else {
                 const status = error.response.status;
                 const backendMsg = error.response.data?.message?.toLowerCase() || "";
-                const rawBackendMsg = error.response.data?.message; // Keep exact casing for display
 
                 if (status === 400 || status === 401) {
                     friendlyMessage = t('login.errors.invalid_creds');
@@ -107,7 +113,6 @@ const Login = () => {
                     }
                 } else if (status === 403) {
                     // --- 3. SHOW EXACT DEVICE ERROR MESSAGE ---
-                    // Check if the backend error mentions "device" to show the specific translation
                     if (backendMsg.includes("device")) {
                         friendlyMessage = t('login.errors.device_mismatch');
                     } else {
