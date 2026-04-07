@@ -9,13 +9,28 @@ import {
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 import RejectTaskModal from "../../modals/employee/RejectTaskModal";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 
 import { io } from "socket.io-client";
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
+// Helper function to convert 24h format to 12h format (handles single times or ranges like "14:00 - 16:30")
+const convertTo12HourFormat = (timeStr) => {
+    if (!timeStr) return '';
+    const times = timeStr.split('-').map(t => t.trim());
+    return times.map(t => {
+        const [hourStr, minuteStr] = t.split(':');
+        if (!hourStr || !minuteStr) return t;
+        let hour = parseInt(hourStr, 10);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12;
+        hour = hour ? hour : 12;
+        return `${hour}:${minuteStr} ${ampm}`;
+    }).join(' - ');
+};
+
 const Tasks = () => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation();
     const { user } = useSelector((state) => state.auth);
 
     const [tasks, setTasks] = useState([]);
@@ -111,7 +126,7 @@ const Tasks = () => {
 
     if (loading) {
         return (
-            <div className="max-w-6xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
+            <div className="max-w-7xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 pb-6 border-b border-border/40">
                     <div className="space-y-3 w-full max-w-sm">
                         <div className="flex items-center gap-3">
@@ -122,9 +137,9 @@ const Tasks = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mt-8">
                     {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="bg-card rounded-3xl border border-border/60 p-5 sm:p-7 flex flex-col h-full overflow-hidden shadow-sm relative animate-pulse" />
+                        <div key={i} className="bg-card rounded-3xl border border-border/60 p-5 sm:p-7 flex flex-col h-75 overflow-hidden shadow-sm relative animate-pulse" />
                     ))}
                 </div>
             </div>
@@ -132,16 +147,16 @@ const Tasks = () => {
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
-
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 pb-6 border-b border-border/40">
-                <div className="space-y-1.5">
-                    <div className="flex items-center gap-3">
-                        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-linear-to-r from-primary to-primary/60">
+        <div className="max-w-7xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 pb-6 border-b border-border/40">
+                <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-linear-to-r from-primary to-primary/60">
                             {t('tasks.title')}
                         </h1>
                         {pendingCount > 0 && (
-                            <span className="flex items-center justify-center bg-primary/10 border border-primary/20 text-primary text-xs sm:text-sm px-3 py-1 rounded-full font-bold tracking-wide uppercase shadow-sm">
+                            <span className="flex items-center justify-center bg-primary/10 border border-primary/20 text-primary text-xs sm:text-sm px-3.5 py-1.5 rounded-full font-bold tracking-wide uppercase shadow-sm">
                                 <span className="relative flex h-2 w-2 mr-2">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
@@ -151,32 +166,33 @@ const Tasks = () => {
                         )}
                     </div>
                     <p className="text-muted-foreground font-medium flex items-center gap-2 text-sm sm:text-base">
-                        <CheckSquare className="w-4 h-4 text-primary/70" />
+                        <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-primary/70" />
                         {t('tasks.subtitle')}
                     </p>
                 </div>
             </div>
 
+            {/* Content Section */}
             {tasks.length === 0 ? (
-                <div className="bg-card border border-border rounded-4xl p-10 sm:p-16 mt-8 shadow-sm text-center flex flex-col items-center relative overflow-hidden group hover:shadow-md transition-shadow">
+                <div className="bg-card border border-border rounded-4xl p-8 sm:p-12 lg:p-16 mt-8 shadow-sm text-center flex flex-col items-center relative overflow-hidden group hover:shadow-md transition-all duration-300">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40" />
-                    <div className="relative w-24 h-24 mb-6">
+                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 mb-6">
                         <div className="absolute inset-0 bg-primary/10 rounded-full animate-ping opacity-50" />
-                        <div className="relative w-full h-full bg-muted dark:bg-muted/30 rounded-full flex items-center justify-center border-4 border-white dark:border-card shadow-sm z-10">
-                            <CheckCircle2 className="w-10 h-10 text-primary" />
+                        <div className="relative w-full h-full bg-muted dark:bg-muted/30 rounded-full flex items-center justify-center border-4 border-white dark:border-card shadow-sm z-10 transition-transform group-hover:scale-105">
+                            <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
                         </div>
                     </div>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground mb-3 tracking-tight">{t('tasks.empty.title')}</h2>
-                    <p className="text-muted-foreground mb-6 max-w-md text-base sm:text-lg leading-relaxed">
+                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-foreground mb-3 tracking-tight">{t('tasks.empty.title')}</h2>
+                    <p className="text-muted-foreground mb-6 max-w-md text-sm sm:text-base lg:text-lg leading-relaxed px-4">
                         {t('tasks.empty.desc')}
                     </p>
-                    <div className="flex items-center gap-2 text-sm font-bold text-primary bg-primary/10 px-5 py-2.5 rounded-full z-10 border border-primary/20 backdrop-blur-sm">
+                    <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-primary bg-primary/10 px-5 py-2.5 rounded-full z-10 border border-primary/20 backdrop-blur-sm">
                         <Sparkles className="w-4 h-4" />
                         <span>{t('tasks.empty.badge')}</span>
                     </div>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mt-8">
                     {tasks.map((task) => {
                         const isPending = task.status === "pending";
                         const isAccepted = task.status === "accepted";
@@ -185,80 +201,86 @@ const Tasks = () => {
                         return (
                             <div
                                 key={task.id}
-                                className={`group relative rounded-3xl border p-5 sm:p-7 flex flex-col h-full transition-all duration-300 overflow-hidden ${isPending ? "bg-card border-primary/40 shadow-[0_8px_30px_-5px_rgba(var(--primary),0.15)] hover:border-primary/70 scale-[1.01]" :
+                                className={`group relative rounded-3xl border p-5 sm:p-6 lg:p-8 flex flex-col h-full transition-all duration-300 overflow-hidden ${isPending ? "bg-card border-primary/30 shadow-lg hover:shadow-xl hover:border-primary/60 lg:hover:-translate-y-1" :
                                     isAccepted ? "bg-emerald-500/5 border-emerald-500/20 shadow-sm" :
-                                        "bg-card/50 border-border opacity-80 grayscale-[0.15] shadow-none hover:grayscale-0"
+                                        "bg-card/40 border-border opacity-80 grayscale-[0.15] shadow-none hover:grayscale-0"
                                     }`}
                             >
-                                {isPending && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-1.5 bg-primary rounded-b-full shadow-[0_0_15px_rgba(var(--primary),0.8)]" />}
-                                {isAccepted && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-1 bg-emerald-500 rounded-b-full" />}
+                                {isPending && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 sm:w-40 h-1.5 bg-primary rounded-b-full shadow-[0_0_15px_rgba(var(--primary),0.8)]" />}
+                                {isAccepted && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 sm:w-40 h-1 bg-emerald-500 rounded-b-full" />}
 
-                                <div className="flex items-start justify-between gap-4 mb-5">
+                                {/* Card Header */}
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                                     <div className="flex-1 min-w-0 flex items-start gap-4">
-                                        <div className={`p-3 rounded-2xl shrink-0 mt-0.5 ${isPending ? 'bg-primary/10 dark:bg-primary/20' : 'bg-muted'}`}>
-                                            <School className={`w-6 h-6 ${isPending ? 'text-primary' : 'text-muted-foreground'}`} />
+                                        <div className={`p-3 sm:p-4 rounded-2xl shrink-0 mt-0.5 ${isPending ? 'bg-primary/10 dark:bg-primary/20' : 'bg-muted'}`}>
+                                            <School className={`w-6 h-6 sm:w-7 sm:h-7 ${isPending ? 'text-primary' : 'text-muted-foreground'}`} />
                                         </div>
-                                        <div>
-                                            <h2 className="text-xl sm:text-2xl font-bold text-foreground truncate leading-tight">{task.schoolName}</h2>
-                                            <div className="flex flex-wrap items-center gap-2 mt-2">
-                                                <p className="flex items-start gap-1.5 text-sm sm:text-base text-muted-foreground leading-relaxed truncate">
-                                                    <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-muted-foreground/70" />
+                                        <div className="overflow-hidden">
+                                            <h2 className="text-xl sm:text-2xl font-bold text-foreground truncate leading-tight pb-1">{task.schoolName}</h2>
+                                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                                                <p className="flex items-center gap-1.5 text-sm sm:text-base text-muted-foreground leading-relaxed truncate">
+                                                    <MapPin className="w-4 h-4 shrink-0 text-muted-foreground/70" />
                                                     <span className="truncate">{task.location}</span>
                                                 </p>
                                             </div>
                                         </div>
                                     </div>
-                                    <span className={`text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider shrink-0 flex items-center gap-1.5 border shadow-sm ${isPending ? 'bg-primary text-primary-foreground border-primary/20' : 'bg-muted text-muted-foreground border-border'
+                                    <span className={`self-start sm:self-auto text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shrink-0 flex items-center gap-1.5 border shadow-sm ${isPending ? 'bg-primary text-primary-foreground border-primary/20' : 'bg-muted text-muted-foreground border-border'
                                         }`}>
                                         <Tags className="w-3 h-3" /> {task.category}
                                     </span>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5 bg-muted/30 dark:bg-muted/20 p-4 sm:p-5 rounded-2xl border border-border/50">
+                                {/* Scheduling Info */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 bg-muted/40 dark:bg-muted/20 p-4 sm:p-5 rounded-2xl border border-border/50">
                                     <div className="space-y-1.5">
                                         <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-bold uppercase tracking-wider">
                                             <Calendar className="w-4 h-4 text-primary/70" /> {t('tasks.card.days')}
                                         </div>
-                                        <p className="text-sm sm:text-base font-bold text-foreground">
-                                            {task.daysAllotted.join(", ")}
-                                            <span className="text-muted-foreground font-medium ml-1.5 text-xs bg-muted border border-border px-2 py-0.5 rounded-full">
+                                        <p className="text-sm sm:text-base font-bold text-foreground flex items-center flex-wrap gap-2">
+                                            <span>{task.daysAllotted.join(", ")}</span>
+                                            <span className="text-muted-foreground font-medium text-xs bg-background border border-border/50 px-2.5 py-0.5 rounded-full shadow-sm">
                                                 {task.duration}
                                             </span>
                                         </p>
                                     </div>
-                                    <div className="space-y-1.5 sm:border-l border-border/60 sm:pl-4">
+                                    <div className="space-y-1.5 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l border-border/60 sm:pl-4">
                                         <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-bold uppercase tracking-wider">
                                             <Clock className="w-4 h-4 text-amber-500" /> {t('tasks.card.timing')}
                                         </div>
-                                        <p className="text-sm sm:text-base font-bold text-foreground">{task.timing}</p>
+                                        <p className="text-sm sm:text-base font-bold text-foreground">
+                                            {convertTo12HourFormat(task.timing)}
+                                        </p>
                                     </div>
                                 </div>
 
+                                {/* Instructions */}
                                 <div className="mb-6 flex-1">
-                                    <div className="flex items-center gap-2 text-foreground font-bold mb-2">
+                                    <div className="flex items-center gap-2 text-foreground font-bold mb-2.5">
                                         <ClipboardList className="w-4 h-4 text-primary" />
                                         {t('tasks.card.instructions')}
                                     </div>
-                                    <p className="text-sm text-muted-foreground leading-relaxed bg-card border border-border/50 p-4 rounded-xl">
+                                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed bg-card border border-border/50 p-4 sm:p-5 rounded-xl">
                                         {task.taskDescription}
                                     </p>
                                 </div>
 
+                                {/* Action Buttons & Status */}
                                 <div className="pt-5 border-t border-border/60 mt-auto">
                                     {isPending && (
-                                        <div className="flex flex-col sm:flex-row items-center gap-3">
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                                             <Button
                                                 onClick={() => openRejectModal(task.id)}
                                                 disabled={actionLoading}
                                                 variant="outline"
-                                                className="w-full sm:flex-1 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive font-bold h-12 rounded-xl transition-colors"
+                                                className="w-full sm:w-auto sm:flex-1 border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive hover:text-destructive font-bold h-12 sm:h-14 rounded-xl transition-all"
                                             >
-                                                <XCircle className="w-4 h-4 mr-2" /> {t('tasks.card.btn_reject')}
+                                                <XCircle className="w-5 h-5 mr-2" /> {t('tasks.card.btn_reject')}
                                             </Button>
                                             <Button
                                                 onClick={() => handleAccept(task.id)}
                                                 disabled={actionLoading}
-                                                className="w-full sm:flex-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
+                                                className="w-full sm:w-auto sm:flex-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 sm:h-14 rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
                                             >
                                                 {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CheckCircle className="w-5 h-5 mr-2" /> {t('tasks.card.btn_accept')}</>}
                                             </Button>
@@ -266,19 +288,19 @@ const Tasks = () => {
                                     )}
 
                                     {isAccepted && (
-                                        <div className="flex items-center justify-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold py-3.5 rounded-xl shadow-sm">
+                                        <div className="flex items-center justify-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold py-3.5 sm:py-4 rounded-xl shadow-sm transition-all hover:bg-emerald-500/15">
                                             <CheckCircle2 className="w-5 h-5" /> {t('tasks.card.status_accepted')}
                                         </div>
                                     )}
 
                                     {isRejected && (
                                         <div className="space-y-3">
-                                            <div className="flex items-center justify-center gap-2 bg-destructive/10 border border-destructive/20 text-destructive font-bold py-3.5 rounded-xl">
+                                            <div className="flex items-center justify-center gap-2 bg-destructive/10 border border-destructive/20 text-destructive font-bold py-3.5 sm:py-4 rounded-xl transition-all hover:bg-destructive/15">
                                                 <XCircle className="w-5 h-5" /> {t('tasks.card.status_rejected')}
                                             </div>
-                                            <div className="text-sm text-destructive/80 bg-destructive/5 dark:bg-destructive/10 p-3.5 rounded-xl border border-destructive/10 flex items-start gap-2.5">
+                                            <div className="text-sm sm:text-base text-destructive/80 bg-destructive/5 dark:bg-destructive/10 p-3.5 sm:p-4 rounded-xl border border-destructive/10 flex items-start gap-3">
                                                 <Info className="w-5 h-5 shrink-0 mt-0.5" />
-                                                <span><strong>{t('tasks.card.reason_label')}</strong> {task.rejectReason}</span>
+                                                <span className="leading-relaxed"><strong>{t('tasks.card.reason_label')}</strong> {task.rejectReason}</span>
                                             </div>
                                         </div>
                                     )}
