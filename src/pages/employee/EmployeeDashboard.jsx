@@ -24,7 +24,7 @@ const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return null;
 
-    const R = 6371e3; // Earth's radius in METERS (6,371,000 meters)
+    const R = 6371e3; // Earth's radius in METERS
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a =
@@ -34,8 +34,6 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 
     const distanceInMeters = R * c;
 
-    // If distance is less than 1000m, show exact meters. 
-    // Otherwise, show kilometers with 2 decimal places.
     if (distanceInMeters < 1000) {
         return `${Math.round(distanceInMeters)} m`;
     } else {
@@ -53,21 +51,15 @@ const EmployeeDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
 
-    // State to store real-time continuous location
     const [currentLocation, setCurrentLocation] = useState(null);
-    // Ref to hold the latest location for the heartbeat interval
     const lastLocationRef = useRef(null);
 
-    // Modal States
     const [checkInModal, setCheckInModal] = useState({ isOpen: false, visit: null, isLate: false });
     const [checkOutModal, setCheckOutModal] = useState({ isOpen: false, visit: null, overtimeMinutes: 0 });
     const [absentModal, setAbsentModal] = useState({ isOpen: false, target: null });
     const [holidayModal, setHolidayModal] = useState({ isOpen: false, target: null });
     const [leaveModal, setLeaveModal] = useState({ isOpen: false });
 
-    // ==========================================
-    // 1. DATA FETCHING (SCHEDULE & LEAVE)
-    // ==========================================
     const fetchLeaveStatus = useCallback(async () => {
         try {
             const res = await api.get('/employee/leave-request/status');
@@ -116,9 +108,6 @@ const EmployeeDashboard = () => {
         return () => clearInterval(timer);
     }, [fetchSchedule]);
 
-    // ==========================================
-    // 2. REAL-TIME SOCKET SYNC
-    // ==========================================
     useEffect(() => {
         if (!user) return;
         const currentUserId = user.id || user._id;
@@ -142,11 +131,7 @@ const EmployeeDashboard = () => {
         };
     }, [fetchSchedule, user]);
 
-    // ==========================================
-    // 3. REAL-TIME LOCATION TRACKING & BROADCASTING
-    // ==========================================
     useEffect(() => {
-        // Require both geolocation support AND a loaded user
         if (!navigator.geolocation || !user) {
             console.warn("Geolocation is not supported by this browser or user not loaded.");
             return;
@@ -154,17 +139,14 @@ const EmployeeDashboard = () => {
 
         const currentUserId = user.id || user._id;
 
-        // 1. watchPosition continually monitors GPS and fires when movement occurs
         const watchId = navigator.geolocation.watchPosition(
             (pos) => {
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
 
-                // Update Employee's own UI and our Ref
                 setCurrentLocation({ lat, lng });
                 lastLocationRef.current = { lat, lng };
 
-                // Broadcast to Admin backend instantly on movement
                 socket.emit("update_live_location", {
                     employeeId: currentUserId,
                     lat: lat,
@@ -177,11 +159,10 @@ const EmployeeDashboard = () => {
             {
                 enableHighAccuracy: true,
                 timeout: 10000,
-                maximumAge: 0 // Force true real-time, no caching
+                maximumAge: 0
             }
         );
 
-        // 2. THE HEARTBEAT: Broadcast the last known location every 5 seconds
         const heartbeatInterval = setInterval(() => {
             if (lastLocationRef.current) {
                 socket.emit("update_live_location", {
@@ -192,19 +173,17 @@ const EmployeeDashboard = () => {
             }
         }, 5000);
 
-        // Cleanup listener and interval when component unmounts
         return () => {
             navigator.geolocation.clearWatch(watchId);
             clearInterval(heartbeatInterval);
         };
     }, [user]);
 
-    // ==========================================
-    // 4. HELPERS & ACTIONS
-    // ==========================================
+    // BUG FIX: Corrected Google Maps routing URL
     const openGoogleMaps = (coords) => {
+        if (!coords || coords.length < 2) return;
         const [lng, lat] = coords;
-        const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
         window.open(url, '_blank');
     };
 
@@ -214,7 +193,6 @@ const EmployeeDashboard = () => {
             navigator.geolocation.getCurrentPosition(
                 (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
                 (err) => reject(new Error(t('employee_dashboard.toasts.gps_error', 'Failed to get GPS signal. Please step outside or check location permissions.'))),
-                // Relaxed rules: allow a 15-second old cached location, and wait up to 15 seconds
                 { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 }
             );
         });
@@ -226,13 +204,11 @@ const EmployeeDashboard = () => {
         const toastId = toast.loading(t('employee_dashboard.toasts.verifying_in'));
 
         try {
-            // BUG FIX: Prioritize the live tracking location we already have in state!
             let lat, lng;
             if (currentLocation && currentLocation.lat) {
                 lat = currentLocation.lat;
                 lng = currentLocation.lng;
             } else {
-                // If live tracking hasn't locked on yet, use the relaxed fallback
                 const coords = await getCoordinates();
                 lat = coords.lat;
                 lng = coords.lng;
@@ -262,7 +238,6 @@ const EmployeeDashboard = () => {
         const toastId = toast.loading(t('employee_dashboard.toasts.verifying_out'));
 
         try {
-            // BUG FIX: Prioritize the live tracking location
             let lat, lng;
             if (currentLocation && currentLocation.lat) {
                 lat = currentLocation.lat;
@@ -313,13 +288,9 @@ const EmployeeDashboard = () => {
         }
     };
 
-    // ==========================================
-    // 5. RENDER LOGIC
-    // ==========================================
     if (loading) {
         return (
             <div className="max-w-5xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
-                {/* Shimmer Header */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 pb-6 border-b border-border/40">
                     <div className="space-y-3 w-full max-w-sm">
                         <div className="h-10 w-3/4 md:w-64 bg-muted rounded-lg animate-pulse" />
@@ -331,7 +302,6 @@ const EmployeeDashboard = () => {
                     </div>
                 </div>
 
-                {/* Shimmer Cards List */}
                 <div className="mt-6 space-y-5">
                     {[1, 2, 3].map((i) => (
                         <div key={i} className="bg-card rounded-3xl p-5 sm:p-7 border border-border/60 shadow-sm h-64 animate-pulse" />
@@ -343,8 +313,6 @@ const EmployeeDashboard = () => {
 
     return (
         <div className="max-w-5xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
-
-            {/* Header & Global Controls */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 pb-6 border-b border-border/40">
                 <div className="space-y-1.5">
                     <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-linear-to-r from-primary to-primary/60">
@@ -459,11 +427,12 @@ const EmployeeDashboard = () => {
                             const isPending = visit.status === 'pending';
                             const isActive = visit.status === 'checked_in';
 
-                            const schoolLng = visit.coordinates?.[0];
-                            const schoolLat = visit.coordinates?.[1];
+                            // BUG FIX: Parse coordinates securely
+                            const schoolLng = parseFloat(visit.coordinates?.[0]);
+                            const schoolLat = parseFloat(visit.coordinates?.[1]);
                             let liveDistance = null;
 
-                            if (currentLocation && schoolLat && schoolLng) {
+                            if (currentLocation && !isNaN(schoolLat) && !isNaN(schoolLng)) {
                                 liveDistance = calculateDistance(
                                     currentLocation.lat,
                                     currentLocation.lng,
