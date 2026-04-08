@@ -4,7 +4,8 @@ import api from "../../api/axios";
 import {
     MapPin, LogOut, Navigation, Clock, UserX,
     CalendarX, Loader2, School, PartyPopper, Sparkles, CheckCircle2,
-    CalendarPlus, Palmtree, Sun, Waves
+    CalendarPlus, Palmtree, Sun, Waves, Satellite, AlertTriangle,
+    Lock, RefreshCw, Info, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
@@ -53,12 +54,25 @@ const EmployeeDashboard = () => {
 
     const [currentLocation, setCurrentLocation] = useState(null);
     const lastLocationRef = useRef(null);
+    const watchIdRef = useRef(null);
+
+    // --- GPS & PWA STATE TRACKING ---
+    const [locationState, setLocationState] = useState('loading'); // 'loading', 'active', 'error'
+    const [isPermissionDenied, setIsPermissionDenied] = useState(false);
+    const [showHelpModal, setShowHelpModal] = useState(false);
+    const [isPWA, setIsPWA] = useState(false);
 
     const [checkInModal, setCheckInModal] = useState({ isOpen: false, visit: null, isLate: false });
     const [checkOutModal, setCheckOutModal] = useState({ isOpen: false, visit: null, overtimeMinutes: 0 });
     const [absentModal, setAbsentModal] = useState({ isOpen: false, target: null });
     const [holidayModal, setHolidayModal] = useState({ isOpen: false, target: null });
     const [leaveModal, setLeaveModal] = useState({ isOpen: false });
+
+    // --- INITIALIZE PWA DETECTION ---
+    useEffect(() => {
+        const checkIsPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        setIsPWA(checkIsPWA);
+    }, []);
 
     const fetchLeaveStatus = useCallback(async () => {
         try {
@@ -112,16 +126,12 @@ const EmployeeDashboard = () => {
         if (!user) return;
         const currentUserId = user.id || user._id;
 
-        const joinUserRoom = () => {
-            socket.emit("join_room", currentUserId);
-        };
+        const joinUserRoom = () => socket.emit("join_room", currentUserId);
 
         if (socket.connected) joinUserRoom();
         socket.on("connect", joinUserRoom);
 
-        const handleRealTimeUpdate = () => {
-            fetchSchedule();
-        };
+        const handleRealTimeUpdate = () => fetchSchedule();
 
         socket.on("new_notification", handleRealTimeUpdate);
 
@@ -131,21 +141,30 @@ const EmployeeDashboard = () => {
         };
     }, [fetchSchedule, user]);
 
-    useEffect(() => {
+    // --- REUSABLE LOCATION TRACKER ---
+    const startLocationTracking = useCallback(() => {
         if (!navigator.geolocation || !user) {
-            console.warn("Geolocation is not supported by this browser or user not loaded.");
+            setLocationState('error');
             return;
         }
 
+        if (watchIdRef.current !== null) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+        }
+
+        setLocationState('loading');
+        setIsPermissionDenied(false);
         const currentUserId = user.id || user._id;
 
-        const watchId = navigator.geolocation.watchPosition(
+        watchIdRef.current = navigator.geolocation.watchPosition(
             (pos) => {
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
 
                 setCurrentLocation({ lat, lng });
                 lastLocationRef.current = { lat, lng };
+                setLocationState('active');
+                setIsPermissionDenied(false);
 
                 socket.emit("update_live_location", {
                     employeeId: currentUserId,
@@ -155,13 +174,68 @@ const EmployeeDashboard = () => {
             },
             (err) => {
                 console.error("Continuous Location Watch Error:", err.message);
+                setLocationState('error');
+
+                if (err.code === err.PERMISSION_DENIED) {
+                    setIsPermissionDenied(true);
+                    toast.error(t('employee_dashboard.toasts.gps_denied', 'Location permission blocked. Click the red GPS icon for help.'), { id: 'gps-denied-toast' });
+
+                    if (watchIdRef.current !== null) {
+                        navigator.geolocation.clearWatch(watchIdRef.current);
+                        watchIdRef.current = null;
+                    }
+                } else {
+                    setIsPermissionDenied(false);
+                }
             },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            }
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
+    }, [user, t]);
+
+    // --- AUTO-DETECT PERMISSION CHANGES ---
+    useEffect(() => {
+        let permissionStatus = null;
+        if (navigator.permissions && navigator.permissions.query) {
+            navigator.permissions.query({ name: 'geolocation' })
+                .then((status) => {
+                    permissionStatus = status;
+                    status.onchange = () => {
+                        if (status.state === 'granted') {
+                            setShowHelpModal(false);
+                            toast.success("Location access granted! Resuming tracking...", { id: 'gps-granted-toast' });
+                            startLocationTracking();
+                        } else if (status.state === 'denied') {
+                            setLocationState('error');
+                            setIsPermissionDenied(true);
+                        }
+                    };
+                })
+                .catch((err) => console.log("Permissions API not supported or error:", err));
+        }
+
+        return () => {
+            if (permissionStatus) {
+                permissionStatus.onchange = null;
+            }
+        };
+    }, [startLocationTracking]);
+
+    // 1. Trigger tracking ONLY on mount
+    useEffect(() => {
+        startLocationTracking();
+
+        return () => {
+            if (watchIdRef.current !== null) {
+                navigator.geolocation.clearWatch(watchIdRef.current);
+            }
+        };
+    }, [startLocationTracking]);
+
+    // 2. Handle the 5-second Heartbeat separately
+    useEffect(() => {
+        const currentUserId = user?.id || user?._id;
+
+        if (!currentUserId || locationState !== 'active') return;
 
         const heartbeatInterval = setInterval(() => {
             if (lastLocationRef.current) {
@@ -174,12 +248,10 @@ const EmployeeDashboard = () => {
         }, 5000);
 
         return () => {
-            navigator.geolocation.clearWatch(watchId);
             clearInterval(heartbeatInterval);
         };
-    }, [user]);
+    }, [user, locationState]);
 
-    // BUG FIX: Corrected Google Maps routing URL
     const openGoogleMaps = (coords) => {
         if (!coords || coords.length < 2) return;
         const [lng, lat] = coords;
@@ -291,24 +363,19 @@ const EmployeeDashboard = () => {
     const formatTo12Hour = (timeStr) => {
         if (!timeStr) return '';
 
-        // Split potential existing AM/PM
         const [time, rawModifier] = timeStr.trim().split(/\s+/);
         let [hours, minutes] = time.split(':');
 
         hours = parseInt(hours, 10);
-
-        // Determine AM/PM if not already provided
         const ampm = rawModifier ? rawModifier.toUpperCase() : (hours >= 12 ? 'PM' : 'AM');
 
-        // Convert to 12-hour format
         hours = hours % 12;
-        hours = hours ? hours : 12; // the hour '0' should be '12'
+        hours = hours ? hours : 12;
 
-        // Ensure minutes are 2 digits
         const formattedMins = minutes ? minutes.padStart(2, '0') : '00';
-
         return `${hours}:${formattedMins} ${ampm}`;
     };
+
     if (loading) {
         return (
             <div className="max-w-5xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
@@ -333,7 +400,7 @@ const EmployeeDashboard = () => {
     }
 
     return (
-        <div className="max-w-5xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
+        <div className="max-w-5xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500 relative">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 pb-6 border-b border-border/40">
                 <div className="space-y-1.5">
                     <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-linear-to-r from-primary to-primary/60">
@@ -448,7 +515,6 @@ const EmployeeDashboard = () => {
                             const isPending = visit.status === 'pending';
                             const isActive = visit.status === 'checked_in';
 
-                            // BUG FIX: Parse coordinates securely
                             const schoolLng = parseFloat(visit.coordinates?.[0]);
                             const schoolLat = parseFloat(visit.coordinates?.[1]);
                             let liveDistance = null;
@@ -535,7 +601,147 @@ const EmployeeDashboard = () => {
                 )}
             </div>
 
-            {/* --- Modals --- */}
+            {/* --- RESPONSIVE FLOATING GPS WIDGET --- */}
+            <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-40 animate-in slide-in-from-bottom-5 duration-500">
+                <button
+                    onClick={() => {
+                        if (locationState === 'error') {
+                            if (isPermissionDenied) {
+                                setShowHelpModal(true);
+                            } else {
+                                toast(t('employee_dashboard.toasts.gps_retry', 'Retrying location capture...'), { icon: '🔄' });
+                                startLocationTracking();
+                            }
+                        }
+                    }}
+                    disabled={locationState === 'loading' || locationState === 'active'}
+                    className={`
+                        flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-xl 
+                        transition-all duration-300 ease-in-out border-[3px] sm:border-4 outline-none
+                        ${locationState === 'active'
+                            ? 'bg-emerald-500 border-emerald-200/50 hover:bg-emerald-600 cursor-default shadow-emerald-500/30'
+                            : locationState === 'error'
+                                ? 'bg-destructive border-destructive/30 hover:bg-red-600 cursor-pointer shadow-red-500/30 hover:scale-105'
+                                : 'bg-amber-500 border-amber-200/50 cursor-wait shadow-amber-500/30 animate-pulse'
+                        }
+                    `}
+                    title={
+                        locationState === 'active'
+                            ? 'GPS is active and tracking'
+                            : locationState === 'error'
+                                ? 'GPS Error: Click to retry or fix'
+                                : 'Acquiring GPS signal...'
+                    }
+                >
+                    {locationState === 'active' && <Satellite className="w-5 h-5 sm:w-6 sm:h-6 text-white" />}
+                    {locationState === 'error' && <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />}
+                    {locationState === 'loading' && <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 text-white animate-spin" />}
+                </button>
+            </div>
+
+            {/* --- RESPONSIVE VISUAL HELP MODAL --- */}
+            {showHelpModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in duration-200">
+                    <div className="bg-background rounded-3xl shadow-2xl w-full max-w-md flex flex-col max-h-[95vh] relative animate-in zoom-in-95 duration-300">
+
+                        <button
+                            onClick={() => setShowHelpModal(false)}
+                            className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 bg-muted/80 hover:bg-muted rounded-full transition-colors z-10 backdrop-blur-md"
+                        >
+                            <X className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
+                        </button>
+
+                        <div className="overflow-y-auto p-5 sm:p-8 space-y-5 sm:space-y-6">
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mt-2">
+                                <MapPin className="w-7 h-7 sm:w-8 sm:h-8" />
+                            </div>
+
+                            <div className="text-center space-y-1.5 sm:space-y-2">
+                                <h3 className="text-xl sm:text-2xl font-bold text-foreground">Location Blocked</h3>
+                                <p className="text-xs sm:text-sm text-muted-foreground px-2">
+                                    Your browser is preventing us from accessing your location. You need to enable it manually.
+                                </p>
+                            </div>
+
+                            <div className="bg-muted/50 rounded-2xl p-4 sm:p-5 space-y-3 sm:space-y-4 text-xs sm:text-sm font-medium">
+                                {isPWA ? (
+                                    <>
+                                        <div className="flex items-start gap-3 sm:gap-4">
+                                            <div className="bg-background p-1.5 sm:p-2 rounded-lg shadow-sm border border-border mt-0.5 sm:mt-1 shrink-0">
+                                                <Info className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
+                                            </div>
+                                            <div>
+                                                <p className="text-foreground font-bold">Step 1</p>
+                                                <p className="text-muted-foreground leading-snug">Go to your phone's <strong>Home Screen</strong>.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3 sm:gap-4">
+                                            <div className="bg-background p-1.5 sm:p-2 rounded-lg shadow-sm border border-border mt-0.5 sm:mt-1 shrink-0">
+                                                <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
+                                            </div>
+                                            <div>
+                                                <p className="text-foreground font-bold">Step 2</p>
+                                                <p className="text-muted-foreground leading-snug"><strong>Long-press</strong> this app's icon and tap <strong className="text-foreground">App Info (ⓘ)</strong> or Settings.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3 sm:gap-4">
+                                            <div className="bg-background p-1.5 sm:p-2 rounded-lg shadow-sm border border-border mt-0.5 sm:mt-1 shrink-0">
+                                                <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
+                                            </div>
+                                            <div>
+                                                <p className="text-foreground font-bold">Step 3</p>
+                                                <p className="text-muted-foreground leading-snug">Tap <strong>Permissions</strong>, find <strong>Location</strong>, and change it to <strong className="text-emerald-600 dark:text-emerald-400">Allow</strong>.</p>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex items-start gap-3 sm:gap-4">
+                                            <div className="bg-background p-1.5 sm:p-2 rounded-lg shadow-sm border border-border mt-0.5 sm:mt-1 shrink-0">
+                                                <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
+                                            </div>
+                                            <div>
+                                                <p className="text-foreground font-bold">Step 1</p>
+                                                <p className="text-muted-foreground leading-snug">Tap the <strong className="text-foreground">Lock icon 🔒</strong> in your browser's address bar at the top.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3 sm:gap-4">
+                                            <div className="bg-background p-1.5 sm:p-2 rounded-lg shadow-sm border border-border mt-0.5 sm:mt-1 shrink-0">
+                                                <Info className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
+                                            </div>
+                                            <div>
+                                                <p className="text-foreground font-bold">Step 2</p>
+                                                <p className="text-muted-foreground leading-snug">Find <strong>Permissions</strong> or <strong>Location</strong> and change it to <strong className="text-emerald-600 dark:text-emerald-400">Allow</strong>.</p>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                <div className="flex items-start gap-3 sm:gap-4 border-t border-border/50 pt-3 sm:pt-4 mt-1 sm:mt-2">
+                                    <div className="bg-background p-1.5 sm:p-2 rounded-lg shadow-sm border border-border mt-0.5 sm:mt-1 shrink-0">
+                                        <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
+                                    </div>
+                                    <div>
+                                        <p className="text-foreground font-bold">Final Step</p>
+                                        <p className="text-muted-foreground leading-snug">Return here. We will <strong>auto-detect</strong> the change, or you can click below.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-2 sm:pt-4 pb-2">
+                                <Button
+                                    onClick={() => window.location.reload()}
+                                    className="w-full h-11 sm:h-12 text-sm sm:text-base font-bold rounded-xl shadow-md"
+                                >
+                                    <RefreshCw className="w-4 h-4 mr-2" /> Reload Page manually
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- Existing Modals --- */}
             <CheckInModal isOpen={checkInModal.isOpen} onClose={() => setCheckInModal({ isOpen: false, visit: null, isLate: false })} visit={checkInModal.visit} isLate={checkInModal.isLate} onSubmit={submitCheckIn} actionLoading={actionLoading} />
             <CheckOutModal isOpen={checkOutModal.isOpen} onClose={() => setCheckOutModal({ isOpen: false, visit: null, overtimeMinutes: 0 })} visit={checkOutModal.visit} overtimeMinutes={checkOutModal.overtimeMinutes} onSubmit={submitCheckOut} actionLoading={actionLoading} />
             <AbsentModal isOpen={absentModal.isOpen} onClose={() => setAbsentModal({ isOpen: false, target: null })} target={absentModal.target} onSubmit={(target, reason) => submitStatus(target, 'Absent', reason)} actionLoading={actionLoading} />
