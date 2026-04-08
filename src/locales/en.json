@@ -487,7 +487,7 @@
         "save_changes": "Save Changes",
         "saving_toast": "Saving preferences...",
         "success_toast": "Settings updated successfully!",
-        "error_toast": "Failed to save settings."
+        "error_toast": "Failed to save settings. Please try again."
     },
     "holiday_modal": {
         "title": "Mark as Holiday",
@@ -593,11 +593,11 @@
         "stat_present": "Present",
         "stat_late": "Late",
         "stat_absent": "Absent",
-        "stat_leaves": "Leaves",
         "stat_events": "Events",
         "timeline_title": "Timeline",
         "timeline_description": "Description:",
         "no_records": "No attendance records found for the last 30 days.",
+        "stat_leaves": "Leaves",
         "statuses": {
             "Present": "Present",
             "Late": "Late",
@@ -776,11 +776,11 @@
             "clear_error": "Failed to clear notifications."
         },
         "time": {
-            "years": "yrs ago",
-            "months": "mos ago",
+            "years": "years ago",
+            "months": "months ago",
             "days": "days ago",
-            "hours": "hrs ago",
-            "mins": "mins ago",
+            "hours": "hours ago",
+            "mins": "minutes ago",
             "now": "Just now"
         },
         "labels": {
@@ -864,7 +864,7 @@
             "category": "Category",
             "arrived": "Arrived",
             "departed": "Departed",
-            "on_site": "On-site",
+            "on_site": "On Site",
             "off_duty": "Off Duty",
             "pending": "Pending",
             "late_badge": "LATE",
@@ -873,8 +873,8 @@
         "status": {
             "event": "Event Live",
             "running": "Running",
-            "late": "Late",
             "on_leave": "On Leave",
+            "late": "Late",
             "completed": "Completed",
             "absent": "Absent",
             "holiday": "Holiday",
@@ -1086,14 +1086,14 @@
         "empty_title": "No Assignments Yet",
         "empty_desc": "You currently do not have any schools permanently assigned to your profile. Check back later!",
         "card_location": "Location",
-        "card_to": "to",
         "card_category": "Category",
-        "distance_away": "{{count}} km away",
-        "time_to": "to",
-        "view_history": "View Attendance History",
-        "na": "N/A",
         "absent": "Absent",
         "leave_record": "Leave Record",
+        "distance_away": "{{count}} km away",
+        "time_to": "to",
+        "card_to": "to",
+        "view_history": "View Attendance History",
+        "na": "N/A",
         "error_toast": "Failed to load your assigned schools. Please try again.",
         "weekdays": {
             "Mon": "M",
@@ -1106,6 +1106,10 @@
         }
     },
     "daily_report": {
+        "assigned_school": "Assigned School",
+        "label_band": "Band Category",
+        "junior_band": "Junior Band",
+        "senior_band": "Senior Band",
         "title": "End of Day Report",
         "subtitle": "Summarize your field visits, outline challenges, and document events.",
         "location_active": "Location context active",
@@ -1125,6 +1129,29 @@
         }
     },
     "employee_dashboard": {
+        "sos": {
+            "sent_title": "SOS SENT",
+            "sent_desc": "Help is being dispatched.",
+            "emergency_title": "Emergency SOS",
+            "release_cancel": "Release finger to cancel",
+            "toast_sent": "EMERGENCY SOS SENT!",
+            "toast_cancelled": "SOS Cancelled."
+        },
+        "location_help": {
+            "title": "Location Blocked",
+            "description": "Your browser is preventing us from accessing your location. You need to enable it manually.",
+            "step1_title": "Step 1",
+            "step1_desc_pwa": "Open your phone's main browser (like Chrome or Safari).",
+            "step1_desc_web": "Tap the Lock icon 🔒 in your browser's address bar at the top.",
+            "step2_title": "Step 2",
+            "step2_desc_pwa": "Go to this app's website address and tap the Lock icon 🔒 next to the URL.",
+            "step2_desc_web": "Find Permissions or Location and change it to Allow.",
+            "step3_title": "Step 3",
+            "step3_desc_pwa": "Tap Permissions or Site Settings, find Location, and change it to Allow.",
+            "final_step_title": "Final Step",
+            "final_step_desc": "Return here. We will auto-detect the change, or you can click below.",
+            "reload_btn": "Reload Page manually"
+        },
         "welcome": "Welcome, {{name}} 👋",
         "status_ooo": "You are officially Out of Office.",
         "status_route": "Here is your route for today.",
@@ -1156,6 +1183,9 @@
             "btn_check_out": "Complete & Check Out"
         },
         "toasts": {
+            "gps_denied": "Location permission blocked. Click the red GPS icon for help.",
+            "gps_retry": "Retrying location capture...",
+            "gps_error": "Failed to get GPS signal. Please step outside or check location permissions.",
             "load_error": "Failed to load your schedule.",
             "verifying_in": "Verifying location and checking in...",
             "check_in_success": "Checked in at {{school}}!",
@@ -1171,6 +1201,11 @@
             "h": "h",
             "m": "m"
         }
+    },
+    "sos_alert": {
+        "title": "🚨 URGENT: SOS TRIGGERED",
+        "description": "has triggered an emergency alert!",
+        "btn_view_location": "View Live Location"
     },
     "employee_notifications": {
         "title": "Notifications",
@@ -1228,9 +1263,9 @@
         "employee_fallback": "Employee",
         "toasts": {
             "updating": "Updating password...",
+            "success": "Password updated successfully!",
             "uploading_avatar": "Uploading Avatar...",
             "avatar_updated": "Avatar updated successfully!",
-            "success": "Password updated successfully!",
             "error": "Failed to update password."
         }
     },

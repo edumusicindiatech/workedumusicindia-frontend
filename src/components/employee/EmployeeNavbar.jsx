@@ -131,23 +131,26 @@ const EmployeeNavbar = () => {
             }
 
             toast.custom(
-                (t) => (
-                    <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-red-600 shadow-2xl rounded-xl pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
+                (toastObj) => (
+                    <div className={`${toastObj.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-red-600 shadow-2xl rounded-xl pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
                         <div className="flex-1 w-0 p-4">
                             <div className="flex items-start">
                                 <div className="ml-1 flex-1">
                                     <p className="text-lg font-black text-white drop-shadow-md">
-                                        🚨 URGENT: SOS TRIGGERED
+                                        {/* Translated Title */}
+                                        {t('sos_alert.title')}
                                     </p>
                                     <p className="mt-1 text-sm text-white/90 font-medium">
-                                        <strong>{senderName}</strong> has triggered an emergency alert!
+                                        {/* Translated Description */}
+                                        <strong>{senderName}</strong> {t('sos_alert.description')}
                                     </p>
                                     <Button
                                         size="sm"
                                         className="mt-3 bg-white text-red-600 hover:bg-gray-100 font-bold shadow-sm w-full"
                                         onClick={() => window.open(`https://maps.google.com/?q=${lat},${lng}`, '_blank')}
                                     >
-                                        View Live Location
+                                        {/* Translated Button */}
+                                        {t('sos_alert.btn_view_location')}
                                     </Button>
                                 </div>
                             </div>
@@ -155,7 +158,7 @@ const EmployeeNavbar = () => {
                         {/* FUNCTIONAL CLOSE BUTTON */}
                         <div className="flex border-l border-red-700/50">
                             <button
-                                onClick={() => toast.dismiss(t.id)}
+                                onClick={() => toast.dismiss(toastObj.id)}
                                 className="w-full border border-transparent rounded-none rounded-r-xl p-4 flex items-center justify-center text-white/80 hover:text-white hover:bg-red-700 focus:outline-none transition-colors"
                             >
                                 <X className="w-5 h-5" />

@@ -183,7 +183,7 @@ const EmployeeDashboard = () => {
 
                 if (err.code === err.PERMISSION_DENIED) {
                     setIsPermissionDenied(true);
-                    toast.error(t('employee_dashboard.toasts.gps_denied', 'Location permission blocked. Click the red GPS icon for help.'), { id: 'gps-denied-toast' });
+                    toast.error(t('employee_dashboard.toasts.gps_denied'), { id: 'gps-denied-toast' });
 
                     if (watchIdRef.current !== null) {
                         navigator.geolocation.clearWatch(watchIdRef.current);
@@ -270,7 +270,7 @@ const EmployeeDashboard = () => {
             if (!navigator.geolocation) return reject(new Error("GPS not supported."));
             navigator.geolocation.getCurrentPosition(
                 (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                (err) => reject(new Error(t('employee_dashboard.toasts.gps_error', 'Failed to get GPS signal. Please step outside or check location permissions.'))),
+                (err) => reject(new Error(t('employee_dashboard.toasts.gps_error'))),
                 { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 }
             );
         });
@@ -432,7 +432,7 @@ const EmployeeDashboard = () => {
                     lng: lastLocationRef.current?.lng
                 });
 
-                toast.error("EMERGENCY SOS SENT!", { icon: '🚨', id: 'sos-sent', duration: 6000 });
+                toast.error(t('employee_dashboard.sos.toast_sent'), { icon: '🚨', id: 'sos-sent', duration: 6000 });
 
                 setTimeout(() => {
                     setSosCountdown(null);
@@ -446,7 +446,7 @@ const EmployeeDashboard = () => {
             clearInterval(sosIntervalRef.current);
             sosIntervalRef.current = null;
             setSosCountdown(null);
-            toast("SOS Cancelled.", { icon: '🛑', id: 'sos-cancel' });
+            toast(t('employee_dashboard.sos.toast_cancelled'), { icon: '🛑', id: 'sos-cancel' });
 
             if (beepAudioRef.current) {
                 beepAudioRef.current.pause();
@@ -688,7 +688,7 @@ const EmployeeDashboard = () => {
                             if (isPermissionDenied) {
                                 setShowHelpModal(true);
                             } else {
-                                toast(t('employee_dashboard.toasts.gps_retry', 'Retrying location capture...'), { icon: '🔄' });
+                                toast(t('employee_dashboard.toasts.gps_retry'), { icon: '🔄' });
                                 startLocationTracking();
                             }
                         }
@@ -746,15 +746,15 @@ const EmployeeDashboard = () => {
 
                         {sosCountdown === "SENT" ? (
                             <>
-                                <h1 className="text-5xl sm:text-7xl font-black uppercase tracking-widest text-white">SOS SENT</h1>
-                                <p className="text-xl sm:text-2xl font-bold text-white/90 max-w-md">Help is being dispatched.</p>
+                                <h1 className="text-5xl sm:text-7xl font-black uppercase tracking-widest text-white">{t('employee_dashboard.sos.sent_title')}</h1>
+                                <p className="text-xl sm:text-2xl font-bold text-white/90 max-w-md">{t('employee_dashboard.sos.sent_desc')}</p>
                             </>
                         ) : (
                             <>
-                                <h2 className="text-2xl sm:text-4xl font-bold uppercase tracking-widest text-white/90">Emergency SOS</h2>
+                                <h2 className="text-2xl sm:text-4xl font-bold uppercase tracking-widest text-white/90">{t('employee_dashboard.sos.emergency_title')}</h2>
                                 <div className="text-8xl sm:text-9xl font-black text-white">{sosCountdown}</div>
                                 <div className="bg-black/20 px-6 py-3 rounded-full">
-                                    <p className="text-lg sm:text-xl font-bold text-white uppercase tracking-widest">Release finger to cancel</p>
+                                    <p className="text-lg sm:text-xl font-bold text-white uppercase tracking-widest">{t('employee_dashboard.sos.release_cancel')}</p>
                                 </div>
                             </>
                         )}
@@ -780,9 +780,9 @@ const EmployeeDashboard = () => {
                             </div>
 
                             <div className="text-center space-y-1.5 sm:space-y-2">
-                                <h3 className="text-xl sm:text-2xl font-bold text-foreground">Location Blocked</h3>
+                                <h3 className="text-xl sm:text-2xl font-bold text-foreground">{t('employee_dashboard.location_help.title')}</h3>
                                 <p className="text-xs sm:text-sm text-muted-foreground px-2">
-                                    Your browser is preventing us from accessing your location. You need to enable it manually.
+                                    {t('employee_dashboard.location_help.description')}
                                 </p>
                             </div>
 
@@ -794,8 +794,8 @@ const EmployeeDashboard = () => {
                                                 <Info className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
                                             </div>
                                             <div>
-                                                <p className="text-foreground font-bold">Step 1</p>
-                                                <p className="text-muted-foreground leading-snug">Open your phone's main browser (like <strong>Chrome</strong> or <strong>Safari</strong>).</p>
+                                                <p className="text-foreground font-bold">{t('employee_dashboard.location_help.step1_title')}</p>
+                                                <p className="text-muted-foreground leading-snug">{t('employee_dashboard.location_help.step1_desc_pwa')}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-3 sm:gap-4">
@@ -803,8 +803,8 @@ const EmployeeDashboard = () => {
                                                 <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
                                             </div>
                                             <div>
-                                                <p className="text-foreground font-bold">Step 2</p>
-                                                <p className="text-muted-foreground leading-snug">Go to this app's website address and tap the <strong className="text-foreground">Lock icon 🔒</strong> next to the URL.</p>
+                                                <p className="text-foreground font-bold">{t('employee_dashboard.location_help.step2_title')}</p>
+                                                <p className="text-muted-foreground leading-snug">{t('employee_dashboard.location_help.step2_desc_pwa')}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-3 sm:gap-4">
@@ -812,8 +812,8 @@ const EmployeeDashboard = () => {
                                                 <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
                                             </div>
                                             <div>
-                                                <p className="text-foreground font-bold">Step 3</p>
-                                                <p className="text-muted-foreground leading-snug">Tap <strong>Permissions</strong> or <strong>Site Settings</strong>, find Location, and change it to <strong className="text-emerald-600 dark:text-emerald-400">Allow</strong>.</p>
+                                                <p className="text-foreground font-bold">{t('employee_dashboard.location_help.step3_title')}</p>
+                                                <p className="text-muted-foreground leading-snug">{t('employee_dashboard.location_help.step3_desc_pwa')}</p>
                                             </div>
                                         </div>
                                     </>
@@ -824,8 +824,8 @@ const EmployeeDashboard = () => {
                                                 <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
                                             </div>
                                             <div>
-                                                <p className="text-foreground font-bold">Step 1</p>
-                                                <p className="text-muted-foreground leading-snug">Tap the <strong className="text-foreground">Lock icon 🔒</strong> in your browser's address bar at the top.</p>
+                                                <p className="text-foreground font-bold">{t('employee_dashboard.location_help.step1_title')}</p>
+                                                <p className="text-muted-foreground leading-snug">{t('employee_dashboard.location_help.step1_desc_web')}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-3 sm:gap-4">
@@ -833,8 +833,8 @@ const EmployeeDashboard = () => {
                                                 <Info className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
                                             </div>
                                             <div>
-                                                <p className="text-foreground font-bold">Step 2</p>
-                                                <p className="text-muted-foreground leading-snug">Find <strong>Permissions</strong> or <strong>Location</strong> and change it to <strong className="text-emerald-600 dark:text-emerald-400">Allow</strong>.</p>
+                                                <p className="text-foreground font-bold">{t('employee_dashboard.location_help.step2_title')}</p>
+                                                <p className="text-muted-foreground leading-snug">{t('employee_dashboard.location_help.step2_desc_web')}</p>
                                             </div>
                                         </div>
                                     </>
@@ -845,8 +845,8 @@ const EmployeeDashboard = () => {
                                         <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
                                     </div>
                                     <div>
-                                        <p className="text-foreground font-bold">Final Step</p>
-                                        <p className="text-muted-foreground leading-snug">Return here. We will <strong>auto-detect</strong> the change, or you can click below.</p>
+                                        <p className="text-foreground font-bold">{t('employee_dashboard.location_help.final_step_title')}</p>
+                                        <p className="text-muted-foreground leading-snug">{t('employee_dashboard.location_help.final_step_desc')}</p>
                                     </div>
                                 </div>
                             </div>
@@ -856,7 +856,7 @@ const EmployeeDashboard = () => {
                                     onClick={() => window.location.reload()}
                                     className="w-full h-11 sm:h-12 text-sm sm:text-base font-bold rounded-xl shadow-md"
                                 >
-                                    <RefreshCw className="w-4 h-4 mr-2" /> Reload Page manually
+                                    <RefreshCw className="w-4 h-4 mr-2" /> {t('employee_dashboard.location_help.reload_btn')}
                                 </Button>
                             </div>
                         </div>

@@ -8,12 +8,12 @@ import { Input } from "@/components/ui/input";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
 import { io } from "socket.io-client";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 const AdminReports = () => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation();
     const { user } = useSelector((state) => state.auth);
 
     const [activeTab, setActiveTab] = useState('daily');
@@ -32,6 +32,10 @@ const AdminReports = () => {
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [selectedMonth, setSelectedMonth] = useState(null);
 
+    // New states for the accordion behavior
+    const [expandedDate, setExpandedDate] = useState(null);
+    const [expandedReportId, setExpandedReportId] = useState(null);
+
     const [allEvents, setAllEvents] = useState([]);
     const [isLoadingEvents, setIsLoadingEvents] = useState(true);
     const [selectedSchoolEvents, setSelectedSchoolEvents] = useState(null);
@@ -44,7 +48,13 @@ const AdminReports = () => {
         const handleNewDailyReport = (newReport) => {
             if (selectedEmployee && newReport.teacher === selectedEmployee.id) {
                 setDailyRecords(prev => {
-                    const existsIndex = prev.findIndex(r => r.date === newReport.date);
+                    // UPDATED: Now checks Date AND School AND Band
+                    const existsIndex = prev.findIndex(r =>
+                        r.date === newReport.date &&
+                        r.schoolName === newReport.schoolName &&
+                        r.band === newReport.band
+                    );
+
                     if (existsIndex >= 0) {
                         const updated = [...prev];
                         updated[existsIndex] = newReport;
@@ -121,6 +131,22 @@ const AdminReports = () => {
         return dailyRecords.filter(r => r.date?.startsWith(selectedMonth)).sort((a, b) => new Date(b.date) - new Date(a.date));
     }, [dailyRecords, selectedMonth]);
 
+    // Grouping reports by date
+    const reportsByDate = useMemo(() => {
+        if (!reportsInMonth.length) return {};
+        const grouped = {};
+        reportsInMonth.forEach(report => {
+            if (!grouped[report.date]) grouped[report.date] = [];
+            grouped[report.date].push(report);
+        });
+        return grouped;
+    }, [reportsInMonth]);
+
+    // Sorting grouped dates in descending order
+    const sortedDates = useMemo(() => {
+        return Object.keys(reportsByDate).sort((a, b) => new Date(b) - new Date(a));
+    }, [reportsByDate]);
+
     const eventsBySchool = useMemo(() => {
         const grouped = {};
         allEvents.forEach(ev => {
@@ -137,8 +163,15 @@ const AdminReports = () => {
     const handleBack = () => {
         if (activeTab === 'events') setSelectedSchoolEvents(null);
         else {
-            if (selectedMonth) setSelectedMonth(null);
-            else { setSelectedEmployee(null); setDailyRecords([]); }
+            if (selectedMonth) {
+                setSelectedMonth(null);
+                setExpandedDate(null);
+                setExpandedReportId(null);
+            }
+            else {
+                setSelectedEmployee(null);
+                setDailyRecords([]);
+            }
         }
     };
 
@@ -198,7 +231,6 @@ const AdminReports = () => {
                 </div>
 
                 <div className="p-4 sm:p-6 flex-1 bg-background/50">
-
                     {activeTab === 'daily' && (
                         <>
                             {!selectedEmployee && (
@@ -252,7 +284,9 @@ const AdminReports = () => {
                                     {isLoadingDaily ? (
                                         <div className="col-span-full py-10 text-center text-muted-foreground">{t('admin_reports.daily.checking_status')}</div>
                                     ) : monthsAvailable.length === 0 ? (
-                                        <div className="col-span-full text-center py-10 text-muted-foreground bg-muted/10 rounded-2xl border border-dashed text-sm">{t('admin_reports.daily.no_reports')}</div>
+                                        <div className="col-span-full text-center py-10 text-muted-foreground bg-muted/10 rounded-2xl border border-dashed text-sm">
+                                            {t('admin_reports.daily.no_reports') || "No reports found for this employee."}
+                                        </div>
                                     ) : monthsAvailable.map(m => (
                                         <div key={m} onClick={() => setSelectedMonth(m)} className="p-5 border border-border/80 rounded-2xl flex items-center justify-between hover:bg-muted/30 cursor-pointer group bg-card transition-all">
                                             <div className="flex items-center gap-4">
@@ -268,28 +302,116 @@ const AdminReports = () => {
                             )}
 
                             {selectedMonth && (
-                                <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
-                                    {reportsInMonth.map(r => (
-                                        <div key={r._id} className="bg-card border border-border/80 rounded-2xl shadow-sm overflow-hidden hover:border-blue-500/30 transition-colors">
-                                            <div className="bg-muted/30 px-5 py-3 border-b border-border/50 flex flex-wrap items-center justify-between gap-3">
-                                                <div className="flex items-center gap-2">
-                                                    <FileText className="w-4 h-4 text-blue-500" />
-                                                    <span className="font-bold text-sm">{formatFullDate(r.date)}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-[10px] sm:text-xs font-semibold text-muted-foreground bg-background px-3 py-1 rounded-full border border-border/50 truncate max-w-50 sm:max-w-xs">
-                                                    <MapPin className="w-3 h-3 text-primary shrink-0" />
-                                                    <span className="truncate">{r.schoolName || t('admin_reports.daily.general_location')}</span>
-                                                </div>
-                                            </div>
-                                            <div className="p-5 text-sm space-y-4">
-                                                <span className="text-[10px] font-bold bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded uppercase">{r.category || t('admin_reports.daily.report_type')}</span>
-                                                <div>
-                                                    <p className="font-semibold text-blue-700/80 dark:text-blue-400 mb-1 text-xs uppercase">{t('admin_reports.daily.summary_label')}</p>
-                                                    <p className="leading-relaxed text-foreground/90">{r.summary}</p>
-                                                </div>
-                                            </div>
+                                <div className="space-y-4 animate-in fade-in slide-in-from-right-8">
+                                    {sortedDates.length === 0 ? (
+                                        <div className="text-center py-10 text-muted-foreground bg-muted/10 rounded-2xl border border-dashed text-sm">
+                                            {/* Fix 1: Added fallback text so it never renders empty */}
+                                            {t('admin_reports.daily.no_reports') || "No reports found for this month."}
                                         </div>
-                                    ))}
+                                    ) : (
+                                        sortedDates.map(dateStr => (
+                                            <div key={dateStr} className="bg-card border border-border/80 rounded-2xl shadow-sm overflow-hidden transition-all mb-4">
+
+                                                {/* Fix 2: RESTORED the Date Accordion Header that was missing! */}
+                                                <div
+                                                    className="p-4 bg-muted/30 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors"
+                                                    onClick={() => {
+                                                        setExpandedDate(prev => prev === dateStr ? null : dateStr);
+                                                        setExpandedReportId(null);
+                                                    }}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
+                                                            <CalendarDays className="w-4 h-4" />
+                                                        </div>
+                                                        <span className="font-bold text-foreground">{formatFullDate(dateStr)}</span>
+                                                        <span className="text-xs font-semibold text-muted-foreground bg-background px-2 py-0.5 rounded-full border border-border/50 shadow-sm">
+                                                            {reportsByDate[dateStr].length}
+                                                        </span>
+                                                    </div>
+                                                    <ChevronRight className={`w-5 h-5 text-muted-foreground transition-transform ${expandedDate === dateStr ? 'rotate-90' : ''}`} />
+                                                </div>
+
+                                                {/* Date Accordion Body */}
+                                                {expandedDate === dateStr && (
+                                                    <div className="p-4 border-t border-border/50 bg-background/50 space-y-3 animate-in fade-in duration-200">
+                                                        {reportsByDate[dateStr].map(r => {
+                                                            // Check if this specific report is an event
+                                                            const isEventReport = r.category?.toLowerCase() === 'event' ||
+                                                                r.type?.toLowerCase() === 'event' ||
+                                                                r.reportType?.toLowerCase() === 'event' ||
+                                                                r.eventName;
+
+                                                            return (
+                                                                <div key={r._id} className="border border-border/80 rounded-xl overflow-hidden shadow-sm hover:border-blue-500/30 transition-colors bg-card">
+                                                                    {/* Report Card Header */}
+                                                                    <div
+                                                                        className="p-3 sm:p-4 cursor-pointer flex items-center justify-between transition-colors hover:bg-muted/20"
+                                                                        onClick={() => setExpandedReportId(prev => prev === r._id ? null : r._id)}
+                                                                    >
+                                                                        <div className="flex items-center gap-3 overflow-hidden pr-2">
+                                                                            <div className="w-8 h-8 rounded-lg bg-blue-500/5 flex items-center justify-center shrink-0 border border-blue-500/10">
+                                                                                <School className="w-4 h-4 text-blue-500" />
+                                                                            </div>
+                                                                            {/* School Name */}
+                                                                            <span className="font-bold text-sm text-foreground truncate max-w-37.5 sm:max-w-62.5">
+                                                                                {r.schoolName || r.school?.name || r.school || t('admin_reports.daily.general_location') || "Unknown Location"}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                                                                            {/* Fix 3: Added the band to the badge! */}
+                                                                            <span className="text-[10px] font-bold bg-blue-500/10 text-blue-600 px-2 py-1 rounded uppercase shrink-0">
+                                                                                {r.category || r.reportType || r.type || 'Report'} {r.band ? `• ${r.band}` : ''}
+                                                                            </span>
+                                                                            <ChevronRight className={`w-4 h-4 text-muted-foreground/50 transition-transform ${expandedReportId === r._id ? 'rotate-90 text-blue-500' : ''}`} />
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Expanded Report Content */}
+                                                                    {expandedReportId === r._id && (
+                                                                        <div className="p-4 sm:p-5 border-t border-border/50 bg-muted/10 text-sm animate-in slide-in-from-top-2 duration-200">
+                                                                            {isEventReport ? (
+                                                                                /* EVENT REPORT UI */
+                                                                                <div className="space-y-3">
+                                                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/50 pb-3">
+                                                                                        <p className="font-bold text-base text-foreground">
+                                                                                            {r.eventName || 'Event Details'}
+                                                                                        </p>
+                                                                                        <p className="text-xs font-semibold flex items-center gap-1.5 text-muted-foreground bg-background px-2.5 py-1 rounded border border-border/50 w-fit">
+                                                                                            <CalendarDays className="w-3.5 h-3.5" />
+                                                                                            {r.eventDate ? formatFullDate(r.eventDate) : formatFullDate(r.date)}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <p className="font-semibold text-blue-700/80 dark:text-blue-400 mb-1.5 text-[10px] uppercase tracking-wider">
+                                                                                            Description
+                                                                                        </p>
+                                                                                        <p className="leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                                                                                            {r.description || r.summary || 'No description provided.'}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ) : (
+                                                                                /* REGULAR REPORT UI */
+                                                                                <div>
+                                                                                    <p className="font-semibold text-blue-700/80 dark:text-blue-400 mb-2 text-xs uppercase tracking-wider">
+                                                                                        {t('admin_reports.daily.summary_label') || 'Daily Summary'}
+                                                                                    </p>
+                                                                                    <p className="leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                                                                                        {r.summary || r.description || 'No summary provided.'}
+                                                                                    </p>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             )}
                         </>

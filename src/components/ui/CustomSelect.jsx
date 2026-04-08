@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 
-const CustomSelect = ({ value, onChange, options = [], disabled = false, icon: Icon }) => {
+const CustomSelect = ({ value, onChange, options = [], disabled = false, icon: Icon, onOpen, isLoading = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -20,6 +20,17 @@ const CustomSelect = ({ value, onChange, options = [], disabled = false, icon: I
     const selectedOption = options.find(opt => (typeof opt === 'string' ? opt : opt.value) === value);
     const displayLabel = selectedOption ? (typeof selectedOption === 'string' ? selectedOption : selectedOption.label) : "Select";
 
+    const handleToggle = () => {
+        if (!disabled) {
+            const nextState = !isOpen;
+            setIsOpen(nextState);
+            // Trigger the fetch function whenever the menu is opened
+            if (nextState && onOpen) {
+                onOpen();
+            }
+        }
+    };
+
     return (
         <div className="relative w-full" ref={dropdownRef}>
             {/* The Select Trigger (Input Box) */}
@@ -29,7 +40,7 @@ const CustomSelect = ({ value, onChange, options = [], disabled = false, icon: I
                 ${disabled ? "opacity-50 cursor-not-allowed bg-muted/50 border-border" : "cursor-pointer"}
                 ${!disabled && isOpen ? "bg-card border-primary ring-2 ring-primary/10 shadow-sm" : ""}
                 ${!disabled && !isOpen ? "bg-card border-border hover:border-primary/50 hover:bg-muted/30" : ""}`}
-                onClick={() => !disabled && setIsOpen(!isOpen)}
+                onClick={handleToggle}
             >
                 {/* Optional Icon */}
                 {Icon && (
@@ -49,31 +60,40 @@ const CustomSelect = ({ value, onChange, options = [], disabled = false, icon: I
 
             {/* The Dropdown Menu */}
             {isOpen && !disabled && (
-                <div className="absolute z-50 w-full mt-1.5 p-1 bg-card border border-border rounded-xl shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute z-50 w-full mt-1.5 p-1 bg-card border border-border rounded-xl shadow-lg animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 overflow-y-auto custom-scrollbar">
                     <ul className="flex flex-col gap-0.5">
-                        {options.map((option, idx) => {
-                            // Support both ["String", "String"] and [{value: "val", label: "lbl"}]
-                            const optValue = typeof option === 'string' ? option : option.value;
-                            const optLabel = typeof option === 'string' ? option : option.label;
-                            const isSelected = value === optValue;
+                        {isLoading ? (
+                            <li className="px-3 py-4 text-sm text-muted-foreground flex justify-center items-center">
+                                <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading...
+                            </li>
+                        ) : options.length > 0 ? (
+                            options.map((option, idx) => {
+                                const optValue = typeof option === 'string' ? option : option.value;
+                                const optLabel = typeof option === 'string' ? option : option.label;
+                                const isSelected = value === optValue;
 
-                            return (
-                                <li
-                                    key={optValue || idx}
-                                    onClick={() => {
-                                        if (onChange) onChange(optValue);
-                                        setIsOpen(false);
-                                    }}
-                                    className={`px-3 py-2 text-sm rounded-lg cursor-pointer transition-colors flex items-center
-                                    ${isSelected
-                                            ? "bg-primary text-primary-foreground font-medium shadow-sm"
-                                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                                        }`}
-                                >
-                                    {optLabel}
-                                </li>
-                            );
-                        })}
+                                return (
+                                    <li
+                                        key={optValue || idx}
+                                        onClick={() => {
+                                            if (onChange) onChange(optValue);
+                                            setIsOpen(false);
+                                        }}
+                                        className={`px-3 py-2 text-sm rounded-lg cursor-pointer transition-colors flex items-center
+                                        ${isSelected
+                                                ? "bg-primary text-primary-foreground font-medium shadow-sm"
+                                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                            }`}
+                                    >
+                                        {optLabel}
+                                    </li>
+                                );
+                            })
+                        ) : (
+                            <li className="px-3 py-3 text-sm text-muted-foreground text-center">
+                                No options available
+                            </li>
+                        )}
                     </ul>
                 </div>
             )}
