@@ -57,10 +57,15 @@ const EmployeeDashboard = () => {
     const watchIdRef = useRef(null);
 
     // --- GPS & PWA STATE TRACKING ---
-    const [locationState, setLocationState] = useState('loading'); // 'loading', 'active', 'error'
+    const [locationState, setLocationState] = useState('loading');
     const [isPermissionDenied, setIsPermissionDenied] = useState(false);
     const [showHelpModal, setShowHelpModal] = useState(false);
     const [isPWA, setIsPWA] = useState(false);
+
+    // --- NEW: SOS STATE TRACKING ---
+    const [sosCountdown, setSosCountdown] = useState(null);
+    const sosIntervalRef = useRef(null);
+    const beepAudioRef = useRef(new Audio('/sounds/beep.mp3'));
 
     const [checkInModal, setCheckInModal] = useState({ isOpen: false, visit: null, isLate: false });
     const [checkOutModal, setCheckOutModal] = useState({ isOpen: false, visit: null, overtimeMinutes: 0 });
@@ -255,7 +260,8 @@ const EmployeeDashboard = () => {
     const openGoogleMaps = (coords) => {
         if (!coords || coords.length < 2) return;
         const [lng, lat] = coords;
-        const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+        // OPTIMIZED MAPS LINK
+        const url = `https://maps.google.com/?q=$${lat},${lng}`;
         window.open(url, '_blank');
     };
 
@@ -374,6 +380,79 @@ const EmployeeDashboard = () => {
 
         const formattedMins = minutes ? minutes.padStart(2, '0') : '00';
         return `${hours}:${formattedMins} ${ampm}`;
+    };
+
+    // ==========================================
+    // SOS LOGIC
+    // ==========================================
+    const playBeep = () => {
+        try {
+            if (beepAudioRef.current) {
+                beepAudioRef.current.currentTime = 0;
+                beepAudioRef.current.play().catch(e => console.warn("Browser blocked audio play:", e));
+            }
+        } catch (error) {
+            console.warn("Audio play failed", error);
+        }
+    };
+
+    const handleSOSStart = (e) => {
+        if (locationState !== 'active') return;
+        if (sosIntervalRef.current) return;
+
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+
+        setSosCountdown(5);
+        playBeep();
+
+        let count = 5;
+        sosIntervalRef.current = setInterval(() => {
+            count -= 1;
+            if (count > 0) {
+                setSosCountdown(count);
+                playBeep();
+                if (navigator.vibrate) navigator.vibrate(200);
+            } else {
+                clearInterval(sosIntervalRef.current);
+                sosIntervalRef.current = null;
+                setSosCountdown("SENT");
+
+                if (beepAudioRef.current) {
+                    beepAudioRef.current.pause();
+                    beepAudioRef.current.currentTime = 0;
+                }
+
+                if (navigator.vibrate) navigator.vibrate(1000);
+
+                const currentUserId = user?.id || user?._id;
+
+                socket.emit("trigger_sos", {
+                    employeeId: currentUserId,
+                    lat: lastLocationRef.current?.lat,
+                    lng: lastLocationRef.current?.lng
+                });
+
+                toast.error("EMERGENCY SOS SENT!", { icon: '🚨', id: 'sos-sent', duration: 6000 });
+
+                setTimeout(() => {
+                    setSosCountdown(null);
+                }, 3000);
+            }
+        }, 1000);
+    };
+
+    const handleSOSCancel = () => {
+        if (sosIntervalRef.current) {
+            clearInterval(sosIntervalRef.current);
+            sosIntervalRef.current = null;
+            setSosCountdown(null);
+            toast("SOS Cancelled.", { icon: '🛑', id: 'sos-cancel' });
+
+            if (beepAudioRef.current) {
+                beepAudioRef.current.pause();
+                beepAudioRef.current.currentTime = 0;
+            }
+        }
     };
 
     if (loading) {
@@ -601,8 +680,8 @@ const EmployeeDashboard = () => {
                 )}
             </div>
 
-            {/* --- RESPONSIVE FLOATING GPS WIDGET --- */}
-            <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-40 animate-in slide-in-from-bottom-5 duration-500">
+            {/* --- RESPONSIVE FLOATING GPS WIDGET WITH SOS --- */}
+            <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] xl:bottom-8 right-4 xl:right-8 z-60 animate-in slide-in-from-bottom-5 duration-500">
                 <button
                     onClick={() => {
                         if (locationState === 'error') {
@@ -614,30 +693,62 @@ const EmployeeDashboard = () => {
                             }
                         }
                     }}
-                    disabled={locationState === 'loading' || locationState === 'active'}
+                    onMouseDown={handleSOSStart}
+                    onMouseUp={handleSOSCancel}
+                    onMouseLeave={handleSOSCancel}
+                    onTouchStart={handleSOSStart}
+                    onTouchEnd={handleSOSCancel}
+                    onContextMenu={(e) => {
+                        if (locationState === 'active') e.preventDefault();
+                    }}
+                    disabled={locationState === 'loading'}
                     className={`
-                        flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-xl 
-                        transition-all duration-300 ease-in-out border-[3px] sm:border-4 outline-none
+                        flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full shadow-2xl 
+                        transition-all duration-300 ease-in-out border-[3px] md:border-4 outline-none select-none
                         ${locationState === 'active'
-                            ? 'bg-emerald-500 border-emerald-200/50 hover:bg-emerald-600 cursor-default shadow-emerald-500/30'
+                            ? 'bg-red-600 dark:bg-red-600 border-red-300/60 dark:border-red-500/40 hover:bg-red-700 dark:hover:bg-red-700 cursor-pointer shadow-red-600/40 dark:shadow-red-900/60 hover:scale-105 active:scale-95'
                             : locationState === 'error'
-                                ? 'bg-destructive border-destructive/30 hover:bg-red-600 cursor-pointer shadow-red-500/30 hover:scale-105'
-                                : 'bg-amber-500 border-amber-200/50 cursor-wait shadow-amber-500/30 animate-pulse'
+                                ? 'bg-zinc-800 dark:bg-zinc-900 border-zinc-600/50 dark:border-zinc-700/50 hover:bg-zinc-700 dark:hover:bg-zinc-800 cursor-pointer shadow-zinc-900/30 dark:shadow-black/50 hover:scale-105 active:scale-95'
+                                : 'bg-amber-500 dark:bg-amber-600 border-amber-200/50 dark:border-amber-500/40 cursor-wait shadow-amber-500/30 dark:shadow-amber-900/40 animate-pulse'
                         }
                     `}
                     title={
                         locationState === 'active'
-                            ? 'GPS is active and tracking'
+                            ? 'Hold for 5 seconds to send SOS'
                             : locationState === 'error'
                                 ? 'GPS Error: Click to retry or fix'
                                 : 'Acquiring GPS signal...'
                     }
                 >
-                    {locationState === 'active' && <Satellite className="w-5 h-5 sm:w-6 sm:h-6 text-white" />}
-                    {locationState === 'error' && <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />}
-                    {locationState === 'loading' && <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 text-white animate-spin" />}
+                    {locationState === 'active' && <span className="font-black text-white text-base md:text-lg tracking-widest drop-shadow-md">SOS</span>}
+                    {locationState === 'error' && <AlertTriangle className="w-6 h-6 md:w-7 md:h-7 text-red-400 dark:text-red-500" />}
+                    {locationState === 'loading' && <Loader2 className="w-6 h-6 md:w-7 md:h-7 text-white animate-spin" />}
                 </button>
             </div>
+
+            {/* --- NEW: SOS FULL SCREEN OVERLAY --- */}
+            {sosCountdown !== null && (
+                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-red-600/95 backdrop-blur-md animate-in fade-in duration-200 pointer-events-none">
+                    <div className="text-white text-center space-y-6 flex flex-col items-center p-6">
+                        <AlertTriangle className="w-24 h-24 sm:w-32 sm:h-32 text-white animate-pulse" />
+
+                        {sosCountdown === "SENT" ? (
+                            <>
+                                <h1 className="text-5xl sm:text-7xl font-black uppercase tracking-widest text-white">SOS SENT</h1>
+                                <p className="text-xl sm:text-2xl font-bold text-white/90 max-w-md">Help is being dispatched.</p>
+                            </>
+                        ) : (
+                            <>
+                                <h2 className="text-2xl sm:text-4xl font-bold uppercase tracking-widest text-white/90">Emergency SOS</h2>
+                                <div className="text-8xl sm:text-9xl font-black text-white">{sosCountdown}</div>
+                                <div className="bg-black/20 px-6 py-3 rounded-full">
+                                    <p className="text-lg sm:text-xl font-bold text-white uppercase tracking-widest">Release finger to cancel</p>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* --- RESPONSIVE VISUAL HELP MODAL --- */}
             {showHelpModal && (

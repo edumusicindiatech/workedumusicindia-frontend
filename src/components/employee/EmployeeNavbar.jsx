@@ -12,13 +12,17 @@ import { useTranslation } from "react-i18next";
 import {
     Home, User, CalendarCheck, Bell, BarChartBig,
     Moon, Sun, LogOut, UserCircle, Settings, ListTodo, PlaySquare,
-    Trophy, BookOpen // <-- ADDED BookOpen HERE
+    Trophy, BookOpen, X // <-- Imported X for the close button
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import EmployeeSettingsModal from "../../modals/employee/EmployeeSettingsModal";
 
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
+
+// --- AUDIO SETUP ---
 const notificationSound = new Audio('/sounds/notification-ting.mp3');
+const sosBeepSound = new Audio('/sounds/beep.mp3'); // <-- Added SOS Beep
 
 const EmployeeNavbar = () => {
     const { t } = useTranslation();
@@ -37,6 +41,7 @@ const EmployeeNavbar = () => {
         pathnameRef.current = location.pathname;
     }, [location.pathname]);
 
+    // --- BROWSER AUDIO UNLOCKING ---
     useEffect(() => {
         const unlockAudio = () => {
             notificationSound.volume = 0;
@@ -44,9 +49,18 @@ const EmployeeNavbar = () => {
                 notificationSound.pause();
                 notificationSound.currentTime = 0;
                 notificationSound.volume = 1;
-                document.removeEventListener('click', unlockAudio);
-                document.removeEventListener('touchstart', unlockAudio);
-            }).catch(e => console.log("Still waiting for user interaction..."));
+            }).catch(() => { });
+
+            // Also unlock the SOS beep
+            sosBeepSound.volume = 0;
+            sosBeepSound.play().then(() => {
+                sosBeepSound.pause();
+                sosBeepSound.currentTime = 0;
+                sosBeepSound.volume = 1;
+            }).catch(() => { });
+
+            document.removeEventListener('click', unlockAudio);
+            document.removeEventListener('touchstart', unlockAudio);
         };
 
         document.addEventListener('click', unlockAudio);
@@ -99,14 +113,74 @@ const EmployeeNavbar = () => {
             }
         };
 
+        // --- INCOMING SOS LISTENER WITH CUSTOM TOAST ---
+        const handleIncomingSOS = (data) => {
+            const { senderName, lat, lng } = data;
+
+            try {
+                sosBeepSound.currentTime = 0;
+                sosBeepSound.play().catch(e => console.warn("Audio blocked", e));
+            } catch (e) {
+                console.error("Error playing sound:", e);
+            }
+
+            if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 1000]);
+
+            if (pathnameRef.current !== '/employee/notifications') {
+                setNotifCount(prev => prev + 1);
+            }
+
+            toast.custom(
+                (t) => (
+                    <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-red-600 shadow-2xl rounded-xl pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
+                        <div className="flex-1 w-0 p-4">
+                            <div className="flex items-start">
+                                <div className="ml-1 flex-1">
+                                    <p className="text-lg font-black text-white drop-shadow-md">
+                                        🚨 URGENT: SOS TRIGGERED
+                                    </p>
+                                    <p className="mt-1 text-sm text-white/90 font-medium">
+                                        <strong>{senderName}</strong> has triggered an emergency alert!
+                                    </p>
+                                    <Button
+                                        size="sm"
+                                        className="mt-3 bg-white text-red-600 hover:bg-gray-100 font-bold shadow-sm w-full"
+                                        onClick={() => window.open(`https://maps.google.com/?q=${lat},${lng}`, '_blank')}
+                                    >
+                                        View Live Location
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                        {/* FUNCTIONAL CLOSE BUTTON */}
+                        <div className="flex border-l border-red-700/50">
+                            <button
+                                onClick={() => toast.dismiss(t.id)}
+                                className="w-full border border-transparent rounded-none rounded-r-xl p-4 flex items-center justify-center text-white/80 hover:text-white hover:bg-red-700 focus:outline-none transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                ),
+                {
+                    duration: 30000,
+                    id: `emp-sos-alert-${senderName}`,
+                    position: "top-right"
+                }
+            );
+        };
+
         socket.on("new_notification", handleNewNotification);
         socket.on("leaderboard_refresh", handleNewNotification);
         socket.on('new_notification_for_user', handleNewNotification);
+        socket.on("sos_alert_received", handleIncomingSOS);
 
         return () => {
             socket.off("new_notification", handleNewNotification);
             socket.off("leaderboard_refresh", handleNewNotification);
             socket.off('new_notification_for_user', handleNewNotification);
+            socket.off("sos_alert_received", handleIncomingSOS);
         };
     }, [user, token, t]);
 
@@ -158,10 +232,7 @@ const EmployeeNavbar = () => {
         { path: "/employee/assignments", icon: <CalendarCheck className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.assignments') },
         { path: "/employee/optional", icon: <ListTodo className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.tasks') },
         { path: "/employee/media", icon: <PlaySquare className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.media') },
-
-        // ---> ADDED LEARNING HUB DESKTOP NAV ITEM <---
         { path: "/employee/learning-hub", icon: <BookOpen className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.learning_hub') || 'Learn' },
-
         { path: "/employee/leaderboard", icon: <Trophy className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.leaderboard') || 'Leaderboard' },
         { path: "/employee/report", icon: <BarChartBig className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.report') },
         {
@@ -244,7 +315,6 @@ const EmployeeNavbar = () => {
                                         </div>
                                     </div>
 
-                                    {/* ---> ADDED LEARNING HUB MOBILE DROPDOWN BUTTON <--- */}
                                     <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                         onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/learning-hub'); }}
                                     >
@@ -289,7 +359,6 @@ const EmployeeNavbar = () => {
                 </div>
             </header>
 
-            {/* ---> EDITED TASKBAR FILTER: Filters out Learning Hub as well to keep Bottom Nav at 5 items max <--- */}
             <nav className="xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] overflow-x-auto overflow-y-hidden">
                 {navItems.filter(item => !["/employee/profile", "/employee/leaderboard", "/employee/report", "/employee/learning-hub"].includes(item.path)).map((item) => (
                     <NavLink key={item.path} to={item.path} className={mobileNavClasses} title={item.label}>

@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import {
     LayoutDashboard, Users, Radio, MessageSquare, Shield,
     Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle, ClipboardCheck,
-    CalendarDays, Film, Trophy, BookOpen
+    CalendarDays, Film, Trophy, BookOpen, X // Make sure X is imported
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -14,9 +14,13 @@ import api from "../../api/axios";
 import { logout } from "../../store/slices/authSlice";
 import { toggleTheme } from "../../store/slices/themeSlice";
 import AdminSettingsModal from "../../modals/admin/AdminSettingsModal";
+import { Button } from "@/components/ui/button";
 
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
+
+// --- AUDIO SETUP ---
 const notificationSound = new Audio('/sounds/notification-ting.mp3');
+const sosBeepSound = new Audio('/sounds/beep.mp3'); // Added SOS sound
 
 const AdminSidebar = () => {
     const { t } = useTranslation();
@@ -49,6 +53,37 @@ const AdminSidebar = () => {
             setUserPreferences(user.preferences);
         }
     }, [user?.preferences]);
+
+    // --- NEW: BROWSER AUDIO UNLOCKING ---
+    // Browsers block audio unless the user interacts with the page first.
+    useEffect(() => {
+        const unlockAudio = () => {
+            notificationSound.volume = 0;
+            notificationSound.play().then(() => {
+                notificationSound.pause();
+                notificationSound.currentTime = 0;
+                notificationSound.volume = 1;
+            }).catch(() => { });
+
+            sosBeepSound.volume = 0;
+            sosBeepSound.play().then(() => {
+                sosBeepSound.pause();
+                sosBeepSound.currentTime = 0;
+                sosBeepSound.volume = 1;
+            }).catch(() => { });
+
+            document.removeEventListener('click', unlockAudio);
+            document.removeEventListener('touchstart', unlockAudio);
+        };
+
+        document.addEventListener('click', unlockAudio);
+        document.addEventListener('touchstart', unlockAudio);
+
+        return () => {
+            document.removeEventListener('click', unlockAudio);
+            document.removeEventListener('touchstart', unlockAudio);
+        };
+    }, []);
 
     useEffect(() => {
         if (!user) return;
@@ -88,9 +123,12 @@ const AdminSidebar = () => {
         }
 
         const currentUserId = user.id || user._id;
+
         const joinUserRoom = () => {
             socket.emit("join_room", currentUserId);
+            socket.emit("join_admin_room");
         };
+
         if (socket.connected) {
             joinUserRoom();
         }
@@ -116,12 +154,74 @@ const AdminSidebar = () => {
             }
         };
 
+        // --- INCOMING SOS LISTENER ---
+        const handleIncomingSOS = (data) => {
+            const { senderName, lat, lng } = data;
+
+            // Play the loud SOS beep
+            try {
+                sosBeepSound.currentTime = 0;
+                sosBeepSound.play().catch(e => console.warn("Audio blocked", e));
+            } catch (e) {
+                console.error("Error playing sound:", e);
+            }
+
+            if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 1000]);
+
+            if (pathnameRef.current !== '/admin/notifications') {
+                setUnreadCount(prev => prev + 1);
+            }
+
+            toast.custom(
+                (t) => (
+                    <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-red-600 shadow-2xl rounded-xl pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
+                        <div className="flex-1 w-0 p-4">
+                            <div className="flex items-start">
+                                <div className="ml-1 flex-1">
+                                    <p className="text-lg font-black text-white drop-shadow-md">
+                                        🚨 URGENT: SOS TRIGGERED
+                                    </p>
+                                    <p className="mt-1 text-sm text-white/90 font-medium">
+                                        <strong>{senderName}</strong> has triggered an emergency alert!
+                                    </p>
+                                    <Button
+                                        size="sm"
+                                        className="mt-3 bg-white text-red-600 hover:bg-gray-100 font-bold shadow-sm w-full"
+                                        onClick={() => window.open(`https://maps.google.com/?q=${lat},${lng}`, '_blank')}
+                                    >
+                                        View Live Location
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                        {/* THE PROPER CLOSE BUTTON */}
+                        <div className="flex border-l border-red-700/50">
+                            <button
+                                onClick={() => toast.dismiss(t.id)}
+                                className="w-full border border-transparent rounded-none rounded-r-xl p-4 flex items-center justify-center text-white/80 hover:text-white hover:bg-red-700 focus:outline-none transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                ),
+                {
+                    duration: 30000,
+                    id: `admin-sos-alert-${senderName}`, // Fixes duplicates (Only 1 per user)
+                    position: "top-right"
+                }
+            );
+        };
+
         socket.on("new_notification", handleNewNotification);
         socket.on("admin_leaderboard_refresh", handleNewNotification);
+        socket.on("sos_alert_received", handleIncomingSOS);
 
         return () => {
+            socket.off("connect", joinUserRoom);
             socket.off("new_notification", handleNewNotification);
             socket.off("admin_leaderboard_refresh", handleNewNotification);
+            socket.off("sos_alert_received", handleIncomingSOS);
         };
     }, [user, t]);
 
@@ -353,7 +453,6 @@ const AdminSidebar = () => {
             </header>
 
             {/* --- MOBILE BOTTOM NAVBAR --- */}
-            {/* The Learning Hub has been explicitly removed from here to keep it in the dropdown profile menu instead. */}
             <nav className="2xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe">
                 <NavLink to="/admin/dashboard" className={mobileNavClasses}>
                     <LayoutDashboard className="w-6 h-6" />
