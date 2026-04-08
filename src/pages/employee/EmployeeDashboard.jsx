@@ -672,16 +672,16 @@ const EmployeeDashboard = () => {
                                             </div>
                                             <div>
                                                 <p className="text-foreground font-bold">Step 1</p>
-                                                <p className="text-muted-foreground leading-snug">Go to your phone's <strong>Home Screen</strong>.</p>
+                                                <p className="text-muted-foreground leading-snug">Open your phone's main browser (like <strong>Chrome</strong> or <strong>Safari</strong>).</p>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-3 sm:gap-4">
                                             <div className="bg-background p-1.5 sm:p-2 rounded-lg shadow-sm border border-border mt-0.5 sm:mt-1 shrink-0">
-                                                <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
+                                                <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
                                             </div>
                                             <div>
                                                 <p className="text-foreground font-bold">Step 2</p>
-                                                <p className="text-muted-foreground leading-snug"><strong>Long-press</strong> this app's icon and tap <strong className="text-foreground">App Info (ⓘ)</strong> or Settings.</p>
+                                                <p className="text-muted-foreground leading-snug">Go to this app's website address and tap the <strong className="text-foreground">Lock icon 🔒</strong> next to the URL.</p>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-3 sm:gap-4">
@@ -690,7 +690,7 @@ const EmployeeDashboard = () => {
                                             </div>
                                             <div>
                                                 <p className="text-foreground font-bold">Step 3</p>
-                                                <p className="text-muted-foreground leading-snug">Tap <strong>Permissions</strong>, find <strong>Location</strong>, and change it to <strong className="text-emerald-600 dark:text-emerald-400">Allow</strong>.</p>
+                                                <p className="text-muted-foreground leading-snug">Tap <strong>Permissions</strong> or <strong>Site Settings</strong>, find Location, and change it to <strong className="text-emerald-600 dark:text-emerald-400">Allow</strong>.</p>
                                             </div>
                                         </div>
                                     </>
