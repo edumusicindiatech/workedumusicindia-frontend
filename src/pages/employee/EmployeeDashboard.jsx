@@ -681,7 +681,7 @@ const EmployeeDashboard = () => {
             </div>
 
             {/* --- RESPONSIVE FLOATING GPS WIDGET WITH SOS --- */}
-            <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] xl:bottom-8 right-4 xl:right-8 z-60 animate-in slide-in-from-bottom-5 duration-500">
+            <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] xl:bottom-8 right-4 xl:right-8 z-60">
                 <button
                     onClick={() => {
                         if (locationState === 'error') {
@@ -703,15 +703,19 @@ const EmployeeDashboard = () => {
                     }}
                     disabled={locationState === 'loading'}
                     className={`
-                        flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full shadow-2xl 
-                        transition-all duration-300 ease-in-out border-[3px] md:border-4 outline-none select-none
-                        ${locationState === 'active'
-                            ? 'bg-red-600 dark:bg-red-600 border-red-300/60 dark:border-red-500/40 hover:bg-red-700 dark:hover:bg-red-700 cursor-pointer shadow-red-600/40 dark:shadow-red-900/60 hover:scale-105 active:scale-95'
+            flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full shadow-2xl 
+            transition-all duration-300 ease-in-out border-[3px] md:border-4 outline-none select-none
+            origin-center transform-gpu
+            ${locationState === 'active'
+                            ? `bg-red-600 dark:bg-red-600 border-red-300/60 dark:border-red-500/40 
+                   hover:bg-red-700 dark:hover:bg-red-700 cursor-pointer shadow-red-600/40 
+                   dark:shadow-red-900/60 hover:scale-105 
+                   active:scale-125 active:shadow-red-500/50`
                             : locationState === 'error'
-                                ? 'bg-zinc-800 dark:bg-zinc-900 border-zinc-600/50 dark:border-zinc-700/50 hover:bg-zinc-700 dark:hover:bg-zinc-800 cursor-pointer shadow-zinc-900/30 dark:shadow-black/50 hover:scale-105 active:scale-95'
+                                ? 'bg-zinc-800 dark:bg-zinc-900 border-zinc-600/50 dark:border-zinc-700/50 hover:bg-zinc-700 dark:hover:bg-zinc-800 cursor-pointer shadow-zinc-900/30 dark:shadow-black/50 hover:scale-105 active:scale-105'
                                 : 'bg-amber-500 dark:bg-amber-600 border-amber-200/50 dark:border-amber-500/40 cursor-wait shadow-amber-500/30 dark:shadow-amber-900/40 animate-pulse'
                         }
-                    `}
+        `}
                     title={
                         locationState === 'active'
                             ? 'Hold for 5 seconds to send SOS'
@@ -720,9 +724,17 @@ const EmployeeDashboard = () => {
                                 : 'Acquiring GPS signal...'
                     }
                 >
-                    {locationState === 'active' && <span className="font-black text-white text-base md:text-lg tracking-widest drop-shadow-md">SOS</span>}
-                    {locationState === 'error' && <AlertTriangle className="w-6 h-6 md:w-7 md:h-7 text-red-400 dark:text-red-500" />}
-                    {locationState === 'loading' && <Loader2 className="w-6 h-6 md:w-7 md:h-7 text-white animate-spin" />}
+                    {locationState === 'active' && (
+                        <span className="font-black text-white text-base md:text-lg tracking-widest drop-shadow-md pointer-events-none">
+                            SOS
+                        </span>
+                    )}
+                    {locationState === 'error' && (
+                        <AlertTriangle className="w-6 h-6 md:w-7 md:h-7 text-red-400 dark:text-red-500 pointer-events-none" />
+                    )}
+                    {locationState === 'loading' && (
+                        <Loader2 className="w-6 h-6 md:w-7 md:h-7 text-white animate-spin pointer-events-none" />
+                    )}
                 </button>
             </div>
 
