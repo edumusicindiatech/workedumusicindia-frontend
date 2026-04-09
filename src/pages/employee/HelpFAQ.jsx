@@ -104,28 +104,30 @@ const iconMap = {
 // --- VISUAL UI EXAMPLES MAP ---
 const visualMap = {
     4: (
-        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-3 w-fit shadow-sm">
+        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-3 w-full sm:w-fit shadow-sm">
             <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Example:</span>
-            <button className="h-10 px-6 rounded-lg bg-emerald-600 text-white font-bold flex items-center gap-2 shadow-md"><MapPin className="w-4 h-4" /> Check-In</button>
+            <button className="h-10 px-6 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center gap-2 shadow-md"><MapPin className="w-4 h-4" /> Check-In</button>
         </div>
     ),
     9: (
-        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col items-center gap-3 w-fit shadow-sm">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Emergency Button:</span>
+        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col items-center gap-3 w-full sm:w-fit shadow-sm">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Emergency Button:</span>
             <div className="w-14 h-14 rounded-full bg-red-600 border-4 border-red-300 flex items-center justify-center text-white font-black tracking-widest shadow-[0_0_15px_rgba(220,38,38,0.5)] animate-pulse">SOS</div>
         </div>
     ),
     55: (
-        <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 rounded-xl flex items-center gap-4 w-fit shadow-sm">
-            <div className="flex flex-col items-center gap-1">
+        <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 rounded-xl flex flex-col sm:flex-row items-center sm:items-start gap-4 w-full sm:w-fit shadow-sm">
+            <div className="flex flex-col items-center gap-1 shrink-0">
                 <div className="w-12 h-12 rounded-full bg-zinc-800 border-4 border-zinc-600 flex items-center justify-center text-red-500"><AlertTriangle className="w-6 h-6" /></div>
                 <span className="text-[10px] font-black text-zinc-500 uppercase">Not Working</span>
             </div>
-            <div className="text-zinc-700 dark:text-zinc-300 text-sm font-bold">← If it looks like this, <br /> Location is OFF</div>
+            <div className="text-zinc-700 dark:text-zinc-300 text-sm font-bold text-center sm:text-left mt-2 sm:mt-0">
+                <span className="hidden sm:inline">← </span>If it looks like this, <br className="hidden sm:block" /> Location is OFF
+            </div>
         </div>
     ),
     56: (
-        <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-2xl space-y-4 shadow-inner max-w-sm">
+        <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-2xl space-y-4 shadow-inner w-full max-w-sm">
             <p className="text-xs font-black text-slate-500 uppercase tracking-widest border-b pb-2">Step-by-Step for Chrome:</p>
             <div className="flex flex-col gap-4 text-xs font-bold">
                 <div className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center shrink-0">1</div> <span>Tap 3 dots (⋮)</span></div>
@@ -136,34 +138,35 @@ const visualMap = {
         </div>
     ),
     58: (
-        <div className="mt-4 p-4 bg-background border border-border rounded-xl space-y-3 w-fit shadow-sm">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Shift Timeline:</span>
-            <div className="flex items-center gap-2">
-                <div className="w-24 h-2 bg-emerald-500 rounded-full" />
-                <div className="w-24 h-2 bg-amber-500 rounded-full" />
-                <div className="w-12 h-2 bg-red-500 rounded-full" />
+        <div className="mt-4 p-4 bg-background border border-border rounded-xl space-y-3 w-full max-w-sm shadow-sm overflow-hidden">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Shift Timeline:</span>
+            {/* Switched to responsive percentage widths */}
+            <div className="flex items-center gap-1 sm:gap-2 w-full">
+                <div className="w-[45%] h-2 bg-emerald-500 rounded-full" />
+                <div className="w-[40%] h-2 bg-amber-500 rounded-full" />
+                <div className="w-[15%] h-2 bg-red-500 rounded-full" />
             </div>
-            <div className="flex justify-between text-[10px] font-black uppercase text-muted-foreground">
+            {/* Added gap and text scaling so it doesn't squish together */}
+            <div className="flex justify-between text-[9px] sm:text-[10px] font-black uppercase text-muted-foreground gap-1">
                 <span>Start</span>
-                <span>1h 45m Late</span>
-                <span>2h (Absent)</span>
+                <span className="text-center">1h 45m Late</span>
+                <span className="text-right">Absent</span>
             </div>
         </div>
     ),
     61: (
         <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-xl space-y-3 w-full max-w-sm">
-            <span className="text-xs font-bold text-primary uppercase tracking-widest">Score Formula:</span>
+            <span className="text-xs font-bold text-primary uppercase tracking-widest block">Score Formula:</span>
             <div className="flex flex-col gap-2">
-                <div className="flex justify-between text-sm font-bold"><span>Attendance</span> <span className="text-emerald-600">50 pts</span></div>
-                <div className="flex justify-between text-sm font-bold"><span>Video Quality</span> <span className="text-blue-600">50 pts</span></div>
-                <div className="flex justify-between text-sm font-bold border-t pt-2 text-destructive"><span>Warnings</span> <span>-10 pts each</span></div>
+                <div className="flex justify-between items-center text-sm font-bold gap-2"><span className="truncate">Attendance</span> <span className="text-emerald-600 shrink-0">50 pts</span></div>
+                <div className="flex justify-between items-center text-sm font-bold gap-2"><span className="truncate">Video Quality</span> <span className="text-blue-600 shrink-0">50 pts</span></div>
+                <div className="flex justify-between items-center text-sm font-bold border-t pt-2 text-destructive gap-2"><span className="truncate">Warnings</span> <span className="shrink-0">-10 pts each</span></div>
             </div>
         </div>
     )
 };
 
 const HelpFAQ = () => {
-    // FIX 2: Extract i18n to listen for language changes
     const { t, i18n } = useTranslation();
     
     const [openIndex, setOpenIndex] = useState(null);
@@ -172,7 +175,6 @@ const HelpFAQ = () => {
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
 
-    // FIX 1: Add the missing toggleFAQ function
     const toggleFAQ = (id) => {
         setOpenIndex((prevIndex) => (prevIndex === id ? null : id));
     };
@@ -197,7 +199,6 @@ const HelpFAQ = () => {
             });
         }
         return list;
-    // FIX 2: Add i18n.language to the dependency array
     }, [t, i18n.language]);
 
     const filteredFaqs = useMemo(() => {
@@ -216,43 +217,45 @@ const HelpFAQ = () => {
     const currentCatObj = rawCategories.find(c => c.id === activeCategory) || rawCategories[0];
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto animate-in fade-in duration-500 pb-24">
+        <div className="p-3 sm:p-6 lg:p-8 w-full max-w-5xl mx-auto animate-in fade-in duration-500 pb-24 overflow-x-hidden">
 
             {/* Header */}
-            <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border/40">
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-primary/20"><HelpCircle className="w-7 h-7 text-primary" /></div>
+            <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 pb-6 border-b border-border/40">
+                <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-primary/20"><HelpCircle className="w-6 h-6 sm:w-7 sm:h-7 text-primary" /></div>
                     <div>
-                        <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">{t('help_faq.title')}</h1>
-                        <p className="text-muted-foreground text-sm sm:text-base font-medium mt-1">{t('help_faq.subtitle')}</p>
+                        <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">{t('help_faq.title')}</h1>
+                        <p className="text-muted-foreground text-xs sm:text-sm md:text-base font-medium mt-1">{t('help_faq.subtitle')}</p>
                     </div>
                 </div>
 
                 <div className="relative w-full md:w-80 shrink-0 group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                     <input
                         type="text" value={searchQuery}
                         onChange={(e) => { setSearchQuery(e.target.value); setOpenIndex(null); }}
                         placeholder={t('help_faq.search_placeholder')}
-                        className="w-full h-12 pl-12 pr-4 bg-card border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-sm transition-all"
+                        className="w-full h-10 sm:h-12 pl-10 sm:pl-12 pr-4 text-sm sm:text-base bg-card border border-border rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-sm transition-all"
                     />
-                    {searchQuery && <button onClick={() => setSearchQuery("")} className="absolute right-4 top-1/2 -translate-y-1/2 p-1 bg-muted hover:bg-destructive/10 hover:text-destructive text-muted-foreground rounded-full transition-colors"><XCircle className="w-4 h-4" /></button>}
+                    {searchQuery && <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 bg-muted hover:bg-destructive/10 hover:text-destructive text-muted-foreground rounded-full transition-colors"><XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></button>}
                 </div>
             </div>
 
             {/* Categorization */}
             {searchQuery === "" && (
                 <>
-                    <div className="md:hidden relative mb-6 z-20" ref={dropdownRef}>
+                    <div className="md:hidden relative mb-6 z-20 w-full" ref={dropdownRef}>
                         <button onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)} className="w-full h-12 bg-card border border-border rounded-xl flex items-center justify-between px-4 shadow-sm">
-                            <div className="flex items-center gap-3 text-foreground font-bold text-sm"><span className="p-1.5 bg-muted/50 rounded-lg text-primary">{currentCatObj.icon}</span>{t(`help_faq.categories.${currentCatObj.id}`)}</div>
-                            <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${isCategoryDropdownOpen ? 'rotate-180 text-primary' : ''}`} />
+                            <div className="flex items-center gap-3 text-foreground font-bold text-sm truncate"><span className="p-1.5 bg-muted/50 rounded-lg text-primary shrink-0">{currentCatObj.icon}</span><span className="truncate">{t(`help_faq.categories.${currentCatObj.id}`)}</span></div>
+                            <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-300 ${isCategoryDropdownOpen ? 'rotate-180 text-primary' : ''}`} />
                         </button>
                         <div className={`absolute top-full left-0 w-full mt-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden transition-all duration-200 origin-top ${isCategoryDropdownOpen ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 pointer-events-none'}`}>
                             <div className="p-1.5 flex flex-col gap-1 max-h-[50vh] overflow-y-auto custom-scrollbar">
                                 {rawCategories.map(cat => (
                                     <button key={cat.id} onClick={() => { setActiveCategory(cat.id); setOpenIndex(null); setIsCategoryDropdownOpen(false); }} className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all text-left ${activeCategory === cat.id ? 'bg-primary/10 text-primary font-bold' : 'text-foreground hover:bg-muted font-medium'}`}>
-                                        <span className={activeCategory === cat.id ? 'text-primary' : 'text-muted-foreground'}>{cat.icon}</span>{t(`help_faq.categories.${cat.id}`)}{activeCategory === cat.id && <CheckCircle2 className="w-4 h-4 ml-auto" />}
+                                        <span className={activeCategory === cat.id ? 'text-primary shrink-0' : 'text-muted-foreground shrink-0'}>{cat.icon}</span>
+                                        <span className="truncate">{t(`help_faq.categories.${cat.id}`)}</span>
+                                        {activeCategory === cat.id && <CheckCircle2 className="w-4 h-4 ml-auto shrink-0" />}
                                     </button>
                                 ))}
                             </div>
@@ -268,16 +271,27 @@ const HelpFAQ = () => {
 
             {/* List */}
             {filteredFaqs.length === 0 ? (
-                <div className="text-center py-16 bg-card border border-dashed border-border rounded-3xl"><Search className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" /><h3 className="text-xl font-bold text-foreground">{t('help_faq.no_results')} "{searchQuery}"</h3><button onClick={() => { setSearchQuery(""); setActiveCategory("all"); }} className="mt-4 px-6 py-2 bg-primary/10 text-primary font-bold rounded-xl">{t('help_faq.clear_search')}</button></div>
+                <div className="text-center py-12 sm:py-16 bg-card border border-dashed border-border rounded-3xl px-4"><Search className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/30 mx-auto mb-4" /><h3 className="text-lg sm:text-xl font-bold text-foreground wrap-break-word">{t('help_faq.no_results')} "{searchQuery}"</h3><button onClick={() => { setSearchQuery(""); setActiveCategory("all"); }} className="mt-4 px-6 py-2 bg-primary/10 text-primary font-bold rounded-xl">{t('help_faq.clear_search')}</button></div>
             ) : (
                 <div className="space-y-3">
                     {filteredFaqs.map((faq) => (
-                        <div key={faq.id} className={`bg-card border rounded-2xl overflow-hidden transition-all duration-300 shadow-sm ${openIndex === faq.id ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border hover:border-primary/30 hover:shadow-md'}`}>
-                            <button onClick={() => toggleFAQ(faq.id)} className="w-full flex items-center justify-between p-4 sm:p-5 text-left focus:outline-none">
-                                <div className="flex items-center gap-4 pr-4"><div className="shrink-0 p-2.5 bg-muted/50 rounded-xl border border-border/50">{faq.icon}</div><h3 className={`font-bold text-sm sm:text-base leading-snug transition-colors ${openIndex === faq.id ? 'text-primary' : 'text-foreground'}`}>{faq.question}</h3></div>
+                        <div key={faq.id} className={`bg-card border rounded-2xl transition-all duration-300 shadow-sm ${openIndex === faq.id ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border hover:border-primary/30 hover:shadow-md'}`}>
+                            <button onClick={() => toggleFAQ(faq.id)} className="w-full flex items-center justify-between p-3 sm:p-5 text-left focus:outline-none">
+                                <div className="flex items-center gap-3 sm:gap-4 pr-2 sm:pr-4 overflow-hidden">
+                                    <div className="shrink-0 p-2 sm:p-2.5 bg-muted/50 rounded-lg sm:rounded-xl border border-border/50">{faq.icon}</div>
+                                    <h3 className={`font-bold text-sm sm:text-base leading-snug wrap-break-word transition-colors ${openIndex === faq.id ? 'text-primary' : 'text-foreground'}`}>{faq.question}</h3>
+                                </div>
                                 <div className={`shrink-0 p-1.5 rounded-full transition-all duration-300 ${openIndex === faq.id ? 'bg-primary/10 text-primary rotate-180' : 'text-muted-foreground'}`}><ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" /></div>
                             </button>
-                            <div className={`grid transition-all duration-300 ease-in-out ${openIndex === faq.id ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}><div className="overflow-hidden"><div className="p-4 sm:p-5 pt-0 text-sm sm:text-base text-muted-foreground leading-relaxed whitespace-pre-line border-t border-border/50 ml-14 sm:ml-18">{faq.answer} {faq.visual && <div className="animate-in fade-in zoom-in-95 duration-500 delay-150">{faq.visual}</div>}</div></div></div>
+                            <div className={`grid transition-all duration-300 ease-in-out ${openIndex === faq.id ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                                <div className="overflow-hidden">
+                                    {/* Added break-words to handle long continuous text links in answers */}
+                                    <div className="p-3 sm:p-5 pt-0 text-xs sm:text-sm md:text-base text-muted-foreground leading-relaxed whitespace-pre-line wrap-break-word border-t border-border/50 ml-12 sm:ml-18">
+                                        {faq.answer} 
+                                        {faq.visual && <div className="animate-in fade-in zoom-in-95 duration-500 delay-150 w-full overflow-hidden">{faq.visual}</div>}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     ))}
                 </div>
