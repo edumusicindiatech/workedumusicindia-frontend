@@ -49,6 +49,9 @@ const EmployeeNotifications = lazy(() => import("./pages/employee/EmployeeNotifi
 const EmployeeResetPassword = lazy(() => import("./pages/employee/EmployeeResetPassword"));
 const EmployeeLeaderBoard = lazy(() => import("./pages/employee/EmployeeLeaderBoard"));
 
+// NEW: Added HelpFAQ Import
+const HelpFAQ = lazy(() => import("./pages/employee/HelpFAQ"));
+
 // ==========================================
 // 3. FALLBACK LOADER
 // ==========================================
@@ -223,6 +226,9 @@ function App() {
             <Route path="report" element={<DailyReport />} />
             <Route path="leaderboard" element={<EmployeeLeaderBoard />} />
             <Route path="notifications" element={<EmployeeNotifications />} />
+            
+            {/* NEW ROUTE: Help FAQ Page */}
+            <Route path="help" element={<HelpFAQ />} />
           </Route>
 
           {/* Admin Routes */}

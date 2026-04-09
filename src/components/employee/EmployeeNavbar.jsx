@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import {
     Home, User, CalendarCheck, Bell, BarChartBig,
     Moon, Sun, LogOut, UserCircle, Settings, ListTodo, PlaySquare,
-    Trophy, BookOpen, X // <-- Imported X for the close button
+    Trophy, BookOpen, X, HelpCircle // <-- Added HelpCircle
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 // --- AUDIO SETUP ---
 const notificationSound = new Audio('/sounds/notification-ting.mp3');
-const sosBeepSound = new Audio('/sounds/beep.mp3'); // <-- Added SOS Beep
+const sosBeepSound = new Audio('/sounds/beep.mp3');
 
 const EmployeeNavbar = () => {
     const { t } = useTranslation();
@@ -51,7 +51,6 @@ const EmployeeNavbar = () => {
                 notificationSound.volume = 1;
             }).catch(() => { });
 
-            // Also unlock the SOS beep
             sosBeepSound.volume = 0;
             sosBeepSound.play().then(() => {
                 sosBeepSound.pause();
@@ -137,11 +136,9 @@ const EmployeeNavbar = () => {
                             <div className="flex items-start">
                                 <div className="ml-1 flex-1">
                                     <p className="text-lg font-black text-white drop-shadow-md">
-                                        {/* Translated Title */}
                                         {t('sos_alert.title')}
                                     </p>
                                     <p className="mt-1 text-sm text-white/90 font-medium">
-                                        {/* Translated Description */}
                                         <strong>{senderName}</strong> {t('sos_alert.description')}
                                     </p>
                                     <Button
@@ -149,13 +146,11 @@ const EmployeeNavbar = () => {
                                         className="mt-3 bg-white text-red-600 hover:bg-gray-100 font-bold shadow-sm w-full"
                                         onClick={() => window.open(`https://maps.google.com/?q=${lat},${lng}`, '_blank')}
                                     >
-                                        {/* Translated Button */}
                                         {t('sos_alert.btn_view_location')}
                                     </Button>
                                 </div>
                             </div>
                         </div>
-                        {/* FUNCTIONAL CLOSE BUTTON */}
                         <div className="flex border-l border-red-700/50">
                             <button
                                 onClick={() => toast.dismiss(toastObj.id)}
@@ -238,6 +233,7 @@ const EmployeeNavbar = () => {
         { path: "/employee/learning-hub", icon: <BookOpen className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.learning_hub') || 'Learn' },
         { path: "/employee/leaderboard", icon: <Trophy className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.leaderboard') || 'Leaderboard' },
         { path: "/employee/report", icon: <BarChartBig className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.report') },
+        { path: "/employee/help", icon: <HelpCircle className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.help') || 'Help & FAQs' }, // <-- Added Help to Desktop Nav
         {
             path: "/employee/notifications",
             icon: <Bell className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />,
@@ -336,6 +332,13 @@ const EmployeeNavbar = () => {
                                         <Trophy className="w-4 h-4 text-primary" /> {t('navbar.leaderboard') || 'Leaderboard'}
                                     </button>
 
+                                    {/* NEW: Added HelpFAQ Link to Mobile Dropdown */}
+                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                        onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/help'); }}
+                                    >
+                                        <HelpCircle className="w-4 h-4 text-primary" /> {t('navbar.help') || 'Help & FAQs'}
+                                    </button>
+
                                     <NavLink to="/employee/profile" onClick={() => setIsMobileMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                                         <User className="w-4 h-4" /> {t('navbar.profile')}
                                     </NavLink>
@@ -363,7 +366,8 @@ const EmployeeNavbar = () => {
             </header>
 
             <nav className="xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] overflow-x-auto overflow-y-hidden">
-                {navItems.filter(item => !["/employee/profile", "/employee/leaderboard", "/employee/report", "/employee/learning-hub"].includes(item.path)).map((item) => (
+                {/* Ignore rendering profile, leaderboard, report, learning-hub, AND help on the bottom bar */}
+                {navItems.filter(item => !["/employee/profile", "/employee/leaderboard", "/employee/report", "/employee/learning-hub", "/employee/help"].includes(item.path)).map((item) => (
                     <NavLink key={item.path} to={item.path} className={mobileNavClasses} title={item.label}>
                         <div className="relative mt-1">
                             {item.icon}

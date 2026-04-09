@@ -29,6 +29,7 @@
         "light_mode": "Light Mode"
     },
     "navbar": {
+        "help": "Help",
         "brand": "WorkEduMusic",
         "new_notif_toast": "New Notification!",
         "dashboard": "Dashboard",
@@ -1595,6 +1596,243 @@
             "title_required": "Title is required",
             "file_required": "Please select a video file",
             "keep_app_open": "Please keep the app open until the upload finishes!"
+        }
+    },
+    "help_faq": {
+        "title": "Help & FAQs",
+        "subtitle": "Everything you need to know to use your daily dashboard.",
+        "search_placeholder": "Search for help, features, or answers...",
+        "no_results": "No results found for",
+        "clear_search": "Clear search",
+        "categories": {
+            "all": "All",
+            "dashboard": "Dashboard & Daily Ops",
+            "assignments": "Assignments & Attendance",
+            "tasks": "Optional Tasks",
+            "media": "Media & Uploads",
+            "learning": "Learning Hub",
+            "leaderboard": "Leaderboard & Stats",
+            "reports": "Daily Reports",
+            "notifications": "Alerts & Notifications",
+            "profile": "Profile & Settings"
+        },
+        "faqs": {
+            "1": {
+                "q": "What is this app used for?",
+                "a": "Think of this app as your daily digital diary. It tells you which schools you need to visit today, gives you directions, and lets you log your daily attendance (Check-In and Check-Out) using your phone's location."
+            },
+            "2": {
+                "q": "Where can I see my assigned schools for today?",
+                "a": "Right when you open the app! On the main screen (your Dashboard), you will see 'cards' for each school you need to visit. Each card shows the school's name, the address, your scheduled time, and whether you are teaching the Junior or Senior Band."
+            },
+            "3": {
+                "q": "How do I get directions to the school?",
+                "a": "Just look at the school card and tap the 'Directions' button. This will automatically open Google Maps on your phone and guide you exactly to the school's location."
+            },
+            "4": {
+                "q": "How do I Check-In when I arrive?",
+                "a": "Once you reach the school, tap the green 'Check-In' button on that school's card. \n\n*Important Note:* If you arrive past your scheduled time, the app will ask you to type a 'Late Reason' before it lets you check in. You can also add an optional note if there is a special event happening at the school."
+            },
+            "5": {
+                "q": "How do I Check-Out when I am done?",
+                "a": "When you finish your class and are ready to leave, open the app and tap the blue 'Check-Out' button. \n\n*Important Note:* If you stayed longer than your scheduled shift, the app will gently ask you to type an 'Overtime Reason' (for example: 'extra practice for annual day') before you check out."
+            },
+            "6": {
+                "q": "What do the 'Absent' and 'Holiday' buttons do on a school card?",
+                "a": "These buttons are used to cancel just ONE specific school visit:\n\n• Absent: Tap this if you cannot make it to this specific school (e.g., stuck in heavy traffic). You will need to type a quick reason.\n• Holiday: Tap this if you arrive and find out the school is unexpectedly closed. You will need to type a quick reason."
+            },
+            "7": {
+                "q": "What do 'Day Absent' and 'Day Holiday' mean at the top of the screen?",
+                "a": "Unlike the buttons on the cards, these buttons at the very top of your screen affect your ENTIRE DAY:\n\n• Day Absent: Tap this if you are sick or have a personal emergency and cannot visit any schools for the rest of the day.\n• Day Holiday: Tap this if today is a declared public holiday and you are not required to work at all."
+            },
+            "8": {
+                "q": "How do I apply for Leave (Vacation), and how do I know if it's approved?",
+                "a": "Tap the 'Request Leave' button at the top of your screen. Pick your start date, end date, and type a reason.\n\nTo check if your manager approved it, just tap that same button later! The screen will clearly show you if your request is Pending (still waiting), Approved (green checkmark), or Rejected (red cross). You can also click 'Revoke' to cancel your request if your plans change."
+            },
+            "9": {
+                "q": "What is the floating SOS button for?",
+                "a": "You will see a round button floating at the bottom corner of your screen. This is for Emergencies Only. If you are in trouble, press and hold this button for 5 seconds. Your phone will beep and vibrate, and an emergency alert with your exact live location will be sent directly to the admins and to your 3 nearest co-workers. This ensures help can reach you as quickly as possible!"
+            },
+            "10": {
+                "q": "Where can I see all the schools I am assigned to teach at?",
+                "a": "Tap the 'Assignments' icon at the bottom of your screen. Here, you will see a list of all your schools. Each card shows your class timings, which Band you are teaching (Junior or Senior), and highlights the specific days of the week you are supposed to go there (marked in green)."
+            },
+            "11": {
+                "q": "Why does the school card show a distance like '2 km' or '500 m'?",
+                "a": "The app uses your phone’s GPS to show exactly how far you currently are from the school! This helps you easily gauge your travel time before you start your journey."
+            },
+            "12": {
+                "q": "What do the red 'Absent' and yellow 'Leave Record' boxes at the top mean?",
+                "a": "These are your quick personal stats! They give you a quick glance at how many total Absences and Leaves you currently have on your record so you can keep track of your own attendance."
+            },
+            "13": {
+                "q": "How can I check my past attendance to see if I was marked Present or Late?",
+                "a": "Tap on any school card to open it, and look for your attendance history. You can filter by month and band category. It will show you a daily breakdown including your exact Check-In time, Check-Out time, your status (Present, Late, Absent, Holiday), and any notes you left for the admins."
+            },
+            "14": {
+                "q": "How do I register a future event in a school?",
+                "a": "If a school is hosting a special program (like an Annual Day or Sports Meet), you can log this into the system using the 'Add Event' feature! Just open the school's details, tap 'Add Event,' pick the date and times, and type a quick description. This lets the admins know your schedule has temporarily changed for that day."
+            },
+            "15": {
+                "q": "What is the Tasks page for?",
+                "a": "This page shows you any special, temporary, or optional tasks assigned to you by the admins (like a one-time workshop or a substitute class). You can review the details and decide whether to accept or decline them."
+            },
+            "16": {
+                "q": "How do I know if I have a new task waiting for me?",
+                "a": "If you have tasks that need your attention, you will see a blinking 'Pending' badge at the top of your screen telling you exactly how many tasks are waiting. The app also updates instantly if an admin sends you a new task while you are looking at the screen!"
+            },
+            "17": {
+                "q": "What information is shown on a task card?",
+                "a": "Each task card gives you everything you need to know: the school name, the exact location, which days you need to do it, the specific timing, and a blue 'Instructions' box with special notes from the admin explaining exactly what needs to be done."
+            },
+            "18": {
+                "q": "How do I Accept a task?",
+                "a": "If you are ready to take on the task, simply tap the green 'Accept' button at the bottom of the card. The card will turn green to confirm you have officially taken the job. \n\nOnce accepted, this task will automatically be added to your regular 'Assignments' page so you can get directions and Check-In just like your normal schools!"
+            },
+            "19": {
+                "q": "Can I say no to a task if I am busy?",
+                "a": "Yes! If you cannot do the task, tap the red 'Reject' button. The app will pop up a screen asking you to quickly type a reason (like 'I have another class at this time' or 'Too far to travel'). Once you submit your reason, the admins will be notified."
+            },
+            "20": {
+                "q": "What is the Media page for?",
+                "a": "The Media page is your personal video portfolio. Here you can upload videos of your band classes, view past performances, check the grades (scores) given to your videos by the admins, and see any feedback they left for you."
+            },
+            "21": {
+                "q": "How do I read the monthly video folders?",
+                "a": "Your videos are organized by month. When you tap to open a month, you will see a summary at the top showing how many total videos you uploaded that month and your Average Score (out of 10) for those videos."
+            },
+            "22": {
+                "q": "What do the numbers and badges on my videos mean?",
+                "a": "When you tap a specific video to open it, you will see:\n\n• The School Name and Band.\n• Number of students present.\n• Your Score (e.g., 8/10). If not graded yet, it will say 'Unscored'.\n• 'Your Note': What you wrote during upload.\n• 'Admin Feedback': Advice from the admin."
+            },
+            "23": {
+                "q": "Can I share or download my videos?",
+                "a": "Yes! Every video has three options:\n\n1. Copy Link: To paste the link anywhere.\n2. Download: Save the video to your phone.\n3. Share on WhatsApp: Send a link and message directly to a group or parent."
+            },
+            "24": {
+                "q": "How do I upload a new video?",
+                "a": "Tap the 'Upload Media' button at the top of the Media page. Select the school, band, date, and students present. Then, select up to 5 videos from your phone to start the process."
+            },
+            "25": {
+                "q": "Are there any limits on uploading videos?",
+                "a": "Yes, you can upload a maximum of 5 videos at a time, and their combined file size cannot exceed 500 MB. The app will warn you if your files are too large."
+            },
+            "26": {
+                "q": "Do I have to keep the app open while my video uploads?",
+                "a": "No! Once you hit 'Start Upload,' a 'Ghost Card' appears. You can safely browse other parts of the app while the video finishes uploading in the background."
+            },
+            "27": {
+                "q": "Can I delete a video if I uploaded the wrong one?",
+                "a": "Yes, but only if it has not been graded yet. Look for the red trash can icon. Once an admin gives it a score or feedback, it is permanently locked and cannot be deleted."
+            },
+            "28": {
+                "q": "What is the Learning Hub?",
+                "a": "The Learning Hub (also called the Training Vault) is your library for training materials. Admins and other verified teachers upload educational videos, tutorials, and reference materials here for you to watch and learn from."
+            },
+            "29": {
+                "q": "How do I play a video?",
+                "a": "To save your mobile data, videos don't load immediately. First, you will see a thumbnail image with a 'Click to Play' button. When you tap that button, the high-quality video will securely load and start playing."
+            },
+            "30": {
+                "q": "How do I read the details about a video?",
+                "a": "Underneath every video, you will see its Title and Date. Tap the little down arrow (˅) to expand the card. This will reveal the full description of the video, as well as the name and role (e.g., Admin, SuperAdmin) of the person who uploaded it."
+            },
+            "31": {
+                "q": "Can I save these training videos to my phone?",
+                "a": "Yes! Once you expand the video card, you will see a Download button. Tapping this will securely download the video file straight to your device so you can watch it offline later."
+            },
+            "32": {
+                "q": "How do I share a training video with someone else?",
+                "a": "You can share it directly via WhatsApp! Expand the video card and tap the green WhatsApp icon. The app will automatically draft a message with the video title and a link, ready for you to send to a colleague."
+            },
+            "33": {
+                "q": "(For Admins) How do I upload a new training video?",
+                "a": "If you have Admin privileges, you will see a blue 'Upload' button at the top of the Learning Hub. Clicking this opens a form where you can set a title, add a description, and select the video file to share with all employees."
+            },
+            "34": {
+                "q": "What is the Leaderboard?",
+                "a": "The Leaderboard is a friendly way to see how you are performing compared to other teachers. You earn points every week for being on time, completing your assigned sessions, and uploading high-quality training videos."
+            },
+            "35": {
+                "q": "How do I read my personal stats?",
+                "a": "At the top of the Leaderboard page, you will see a card highlighted just for you. It shows your current Rank (e.g., #4), your Total Score out of 100 points, and a little arrow showing if your score has gone up or down recently."
+            },
+            "36": {
+                "q": "What do the different color zones mean?",
+                "a": "Your performance is color-coded into 'Zones' so you can see how you're doing at a glance:\n\n• Green Zone: Excellent! You are a top performer with great attendance and high video scores.\n• Blue Zone: Good! You are consistent and performing well.\n• Red Zone: Needs Improvement. This usually means you might be arriving late or haven't uploaded videos recently."
+            },
+            "37": {
+                "q": "Can I see my past performance?",
+                "a": "Yes! On your personal stats card, tap the 'View Progress' button. A graph will slide open showing your performance history. You can toggle between 'Weekly' and 'Monthly' views to see how your scores have improved over time."
+            },
+            "38": {
+                "q": "Does the leaderboard update instantly?",
+                "a": "Yes! The leaderboard is completely live. If an admin grades one of your videos or if you successfully check-in to a school, you will hear a 'ting' sound and a notification will pop up as your points and rank update in real-time."
+            },
+            "39": {
+                "q": "How do I get on the Podium?",
+                "a": "The top 3 teachers of the week are featured on the animated podium at the very top of the page. To get there: always Check-In on time, never miss a session without a valid reason, and ensure your band videos show clear student progress so admins score them highly!"
+            },
+            "40": {
+                "q": "What is the Daily Report page for?",
+                "a": "This is where you write a quick summary of what you taught or did at a school on a specific day. This keeps the admins updated on your students' progress."
+            },
+            "41": {
+                "q": "How do I submit a regular daily report?",
+                "a": "First, choose the school you visited from the dropdown. Next, tap to select whether you taught the Junior or Senior Band. Make sure the category says 'Regular Report', type your notes in the Summary box, and tap the 'Submit Report' button!"
+            },
+            "42": {
+                "q": "What if I am reporting on a special event instead of a normal class?",
+                "a": "Tap on the 'Category' box and change it from 'Regular Report' to 'Event Report'. Two new boxes will instantly appear asking for the Event Name and the Event Date. Fill those in, write your summary, and hit Submit!"
+            },
+            "43": {
+                "q": "Why is the 'Submit Report' button greyed out?",
+                "a": "The button stays greyed out and unclickable until you have filled in all the required information. Double-check that you have selected a School, picked a Band category, and written something in the Summary box."
+            },
+            "44": {
+                "q": "What kind of alerts will I see on the Notifications page?",
+                "a": "This page is your personal inbox for app updates. You will get an alert here whenever your Leave Request is approved or rejected, when a new task is assigned to you, if an admin leaves feedback on your video, or if you receive a system warning."
+            },
+            "45": {
+                "q": "Do I also get emails for these alerts?",
+                "a": "Yes, absolutely! Every single time you get a notification in the app, a copy is instantly sent to your registered email address. Whether you Check-In, Check-Out, report Absent, request a Leave, or get a reply from an Admin—you will always have an email receipt for your records."
+            },
+            "46": {
+                "q": "What do the different colors and icons mean?",
+                "a": "To help you read your alerts quickly, they are color-coded:\n\n• Green (Checkmark): Good news! A new assignment, an approved leave, or a successful update.\n• Red (Warning Sign): Important! This means you received a warning, or an item/task was deleted or rejected.\n• Blue (Info Icon): General system information or updates."
+            },
+            "47": {
+                "q": "How do I clear my old notifications?",
+                "a": "The app automatically marks your new alerts as 'Read' the moment you open the Notifications page. If your inbox is getting too cluttered, you can simply tap the 'Clear All' button at the top to delete all your old alerts and start fresh."
+            },
+            "48": {
+                "q": "What information can I see on my Profile page?",
+                "a": "Your Profile page shows your personal details like your Employee ID, email, and phone number. It also shows your assigned Zone and a quick list of all the schools you teach at."
+            },
+            "49": {
+                "q": "How do I add or change my profile picture?",
+                "a": "Tap the little camera icon next to your name. You can then choose a photo from your phone to upload as your new profile picture."
+            },
+            "50": {
+                "q": "Can I remove my profile picture?",
+                "a": "Yes! If you have a picture uploaded, you will see a small red trash can icon next to it. Tap that to remove your photo and go back to showing just your initials."
+            },
+            "51": {
+                "q": "How do I change my password?",
+                "a": "Tap the 'Edit Password' button on your profile. A screen will pop up asking you to type a new password (it must be at least 6 letters or numbers) and confirm it. Tap 'Update' to save it!"
+            },
+            "52": {
+                "q": "How do I change the app's language?",
+                "a": "Tap the 'Settings' gear icon in your menu. You can switch the app language between English and Hindi. Select your preferred language and tap 'Save Changes'!"
+            },
+            "53": {
+                "q": "Can I turn off email notifications?",
+                "a": "You can turn them off in Settings, but we highly recommend keeping them turned ON. If you turn them off, you might miss important updates (like approved leaves, new tasks, or admin warnings) when the app is closed."
+            },
+            "54": {
+                "q": "Does the app have a Dark Mode?",
+                "a": "Yes! If the screen is too bright, you can easily switch to Dark Mode. Just open your main menu (or bottom bar) and tap the Sun/Moon icon to switch between Light and Dark themes instantly."
+            }
         }
     }
 }
