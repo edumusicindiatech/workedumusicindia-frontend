@@ -1,38 +1,39 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { 
-    HelpCircle, ChevronDown, MapPin, CheckCircle2, 
+import {
+    HelpCircle, ChevronDown, MapPin, CheckCircle2,
     LogOut, UserX, CalendarX, CalendarPlus, ShieldAlert,
     Map, Navigation, Activity, History, Sparkles,
     ListTodo, Bell, Info, CheckCircle, XCircle,
-    Film, FolderHeart, Share2, UploadCloud, HardDrive, Cloud, Trash2, 
+    Film, FolderHeart, Share2, UploadCloud, HardDrive, Cloud, Trash2,
     ClipboardList, BookOpen, PlayCircle, Download,
     Trophy, Target, Palette, LineChart, Zap, Crown,
     FileText, MessageSquare, Send, CheckSquare, BellRing, Mail,
-    User, Camera, Lock, Globe, Moon, Search, LayoutGrid, Clock
+    User, Camera, Lock, Globe, Moon, Search, LayoutGrid, Clock,
+    Settings, AlertTriangle, RefreshCw
 } from "lucide-react";
 
 // --- CUSTOM ICON ---
 function CalendarCheckIcon(props) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/>
-    </svg>
-  )
+    return (
+        <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /><path d="m9 16 2 2 4-4" />
+        </svg>
+    )
 }
 
 // --- CATEGORY STRUCTURE ---
 const rawCategories = [
-    { id: "all", icon: <LayoutGrid className="w-4 h-4" />, items: [] }, 
-    { id: "dashboard", icon: <HelpCircle className="w-4 h-4"/>, items: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
-    { id: "assignments", icon: <Map className="w-4 h-4"/>, items: [10, 11, 12, 13, 14] },
-    { id: "tasks", icon: <ListTodo className="w-4 h-4"/>, items: [15, 16, 17, 18, 19] },
-    { id: "media", icon: <Film className="w-4 h-4"/>, items: [20, 21, 22, 23, 24, 25, 26, 27] },
-    { id: "learning", icon: <BookOpen className="w-4 h-4"/>, items: [28, 29, 30, 31, 32, 33] },
-    { id: "leaderboard", icon: <Trophy className="w-4 h-4"/>, items: [34, 35, 36, 37, 38, 39] },
-    { id: "reports", icon: <FileText className="w-4 h-4"/>, items: [40, 41, 42, 43] },
-    { id: "notifications", icon: <BellRing className="w-4 h-4"/>, items: [44, 45, 46, 47] },
-    { id: "profile", icon: <User className="w-4 h-4"/>, items: [48, 49, 50, 51, 52, 53, 54] }
+    { id: "all", icon: <LayoutGrid className="w-4 h-4" />, items: [] },
+    { id: "dashboard", icon: <HelpCircle className="w-4 h-4" />, items: [1, 2, 3, 4, 5, 6, 7, 8, 9, 55, 56] },
+    { id: "assignments", icon: <Map className="w-4 h-4" />, items: [10, 11, 12, 13, 14] },
+    { id: "tasks", icon: <ListTodo className="w-4 h-4" />, items: [15, 16, 17, 18, 19] },
+    { id: "media", icon: <Film className="w-4 h-4" />, items: [20, 21, 22, 23, 24, 25, 26, 27] },
+    { id: "learning", icon: <BookOpen className="w-4 h-4" />, items: [28, 29, 30, 31, 32, 33] },
+    { id: "leaderboard", icon: <Trophy className="w-4 h-4" />, items: [34, 35, 36, 37, 38, 39] },
+    { id: "reports", icon: <FileText className="w-4 h-4" />, items: [40, 41, 42, 43] },
+    { id: "notifications", icon: <BellRing className="w-4 h-4" />, items: [44, 45, 46, 47] },
+    { id: "profile", icon: <User className="w-4 h-4" />, items: [48, 49, 50, 51, 52, 53, 54] }
 ];
 
 // --- ICONS MAP ---
@@ -90,7 +91,9 @@ const iconMap = {
     51: <Lock className="w-5 h-5 text-amber-500" />,
     52: <Globe className="w-5 h-5 text-indigo-500" />,
     53: <Mail className="w-5 h-5 text-rose-500" />,
-    54: <Moon className="w-5 h-5 text-slate-400" />
+    54: <Moon className="w-5 h-5 text-slate-400" />,
+    55: <ShieldAlert className="w-5 h-5 text-red-500" />,
+    56: <Settings className="w-5 h-5 text-indigo-500" />
 };
 
 // --- VISUAL UI EXAMPLES MAP ---
@@ -130,9 +133,9 @@ const visualMap = {
         <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-3 w-fit shadow-sm">
             <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Status Badges:</span>
             <div className="flex items-center gap-3 flex-wrap">
-                <span className="px-3 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded-md text-xs font-bold flex items-center gap-1.5"><Clock className="w-3.5 h-3.5"/> Pending</span>
-                <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 rounded-md text-xs font-bold flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5"/> Approved</span>
-                <span className="px-3 py-1 bg-destructive/10 text-destructive border border-destructive/20 rounded-md text-xs font-bold flex items-center gap-1.5"><XCircle className="w-3.5 h-3.5"/> Rejected</span>
+                <span className="px-3 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded-md text-xs font-bold flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Pending</span>
+                <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 rounded-md text-xs font-bold flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Approved</span>
+                <span className="px-3 py-1 bg-destructive/10 text-destructive border border-destructive/20 rounded-md text-xs font-bold flex items-center gap-1.5"><XCircle className="w-3.5 h-3.5" /> Rejected</span>
             </div>
         </div>
     ),
@@ -168,9 +171,56 @@ const visualMap = {
     36: (
         <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-2 w-fit shadow-sm">
             <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Performance Zones:</span>
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-500/10 px-3 py-1.5 rounded border border-emerald-500/20"><div className="w-2 h-2 rounded-full bg-emerald-500"/> Green Zone (Excellent)</div>
-            <div className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-500/10 px-3 py-1.5 rounded border border-blue-500/20"><div className="w-2 h-2 rounded-full bg-blue-500"/> Blue Zone (Good)</div>
-            <div className="flex items-center gap-2 text-xs font-bold text-destructive bg-destructive/10 px-3 py-1.5 rounded border border-destructive/20"><div className="w-2 h-2 rounded-full bg-destructive"/> Red Zone (Needs Improvement)</div>
+            <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-500/10 px-3 py-1.5 rounded border border-emerald-500/20"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Green Zone (Excellent)</div>
+            <div className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-500/10 px-3 py-1.5 rounded border border-blue-500/20"><div className="w-2 h-2 rounded-full bg-blue-500" /> Blue Zone (Good)</div>
+            <div className="flex items-center gap-2 text-xs font-bold text-destructive bg-destructive/10 px-3 py-1.5 rounded border border-destructive/20"><div className="w-2 h-2 rounded-full bg-destructive" /> Red Zone (Needs Improvement)</div>
+        </div>
+    ),
+    // SOS Error State Visual
+    55: (
+        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-4 w-fit shadow-sm">
+            <div className="flex flex-col items-center gap-1">
+                <div className="w-12 h-12 rounded-full bg-zinc-800 border-4 border-zinc-600 flex items-center justify-center text-red-500">
+                    <AlertTriangle className="w-6 h-6" />
+                </div>
+                <span className="text-[10px] font-black text-zinc-500 uppercase">Not Working</span>
+            </div>
+            <div className="text-zinc-700 text-sm font-bold">
+                ← If it looks like this, <br /> Location is OFF
+            </div>
+        </div>
+    ),
+    // Chrome Settings Step-by-Step Visual
+    56: (
+        <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-4 shadow-inner">
+            <p className="text-xs font-black text-slate-500 uppercase tracking-widest border-b pb-2">Step-by-Step Guide for Chrome:</p>
+            <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">1</div>
+                    <div className="p-1.5 bg-white border border-border rounded-md shadow-sm flex items-center gap-1 font-bold text-xs">
+                        workedumusic... <div className="flex gap-0.5 ml-1"><div className="w-1 h-1 bg-slate-400 rounded-full" /><div className="w-1 h-1 bg-slate-400 rounded-full" /><div className="w-1 h-1 bg-slate-400 rounded-full" /></div>
+                    </div>
+                    <span className="text-xs text-muted-foreground italic">Tap 3 dots</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">2</div>
+                    <div className="px-3 py-1.5 bg-white border border-border rounded-md shadow-sm font-bold text-xs flex items-center gap-2">
+                        <Settings className="w-3.5 h-3.5" /> Settings → Site Settings
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">3</div>
+                    <div className="px-3 py-1.5 bg-white border border-border rounded-md shadow-sm font-bold text-xs flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-500" /> Location → <span className="text-emerald-600 uppercase">Allow</span>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">4</div>
+                    <button className="px-3 py-1.5 bg-primary text-white rounded-md shadow-md font-bold text-xs flex items-center gap-2">
+                        <RefreshCw className="w-3.5 h-3.5" /> Refresh Page
+                    </button>
+                </div>
+            </div>
         </div>
     )
 };
@@ -180,7 +230,7 @@ const HelpFAQ = () => {
     const [openIndex, setOpenIndex] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [activeCategory, setActiveCategory] = useState("all");
-    
+
     // State & Ref for Mobile Category Dropdown
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -203,7 +253,7 @@ const HelpFAQ = () => {
     // Construct the full array dynamically using translations AND visual mockups
     const fullFaqList = useMemo(() => {
         const list = [];
-        for (let i = 1; i <= 54; i++) {
+        for (let i = 1; i <= 56; i++) {
             list.push({
                 id: i,
                 question: t(`help_faq.faqs.${i}.q`),
@@ -230,8 +280,8 @@ const HelpFAQ = () => {
         // 2. Filter by Search Query
         if (searchQuery.trim() !== "") {
             const query = searchQuery.toLowerCase();
-            results = results.filter(faq => 
-                faq.question.toLowerCase().includes(query) || 
+            results = results.filter(faq =>
+                faq.question.toLowerCase().includes(query) ||
                 faq.answer.toLowerCase().includes(query)
             );
         }
@@ -243,7 +293,7 @@ const HelpFAQ = () => {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto animate-in fade-in duration-500 pb-24">
-            
+
             {/* Header & Search */}
             <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border/40">
                 <div className="flex items-center gap-4">
@@ -258,7 +308,7 @@ const HelpFAQ = () => {
 
                 <div className="relative w-full md:w-80 shrink-0 group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <input 
+                    <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => {
@@ -269,7 +319,7 @@ const HelpFAQ = () => {
                         className="w-full h-12 pl-12 pr-4 bg-card border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-sm transition-all"
                     />
                     {searchQuery && (
-                        <button 
+                        <button
                             onClick={() => setSearchQuery("")}
                             className="absolute right-4 top-1/2 -translate-y-1/2 p-1 bg-muted hover:bg-destructive/10 hover:text-destructive text-muted-foreground rounded-full transition-colors"
                         >
@@ -310,11 +360,10 @@ const HelpFAQ = () => {
                                                 setOpenIndex(null);
                                                 setIsCategoryDropdownOpen(false);
                                             }}
-                                            className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all text-left ${
-                                                isActive
+                                            className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all text-left ${isActive
                                                 ? 'bg-primary/10 text-primary font-bold'
                                                 : 'text-foreground hover:bg-muted font-medium'
-                                            }`}
+                                                }`}
                                         >
                                             <span className={`${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
                                                 {cat.icon}
@@ -336,11 +385,10 @@ const HelpFAQ = () => {
                                 <button
                                     key={cat.id}
                                     onClick={() => { setActiveCategory(cat.id); setOpenIndex(null); }}
-                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm shrink-0 ${
-                                        isActive 
-                                        ? 'bg-primary text-primary-foreground border border-primary scale-105' 
+                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm shrink-0 ${isActive
+                                        ? 'bg-primary text-primary-foreground border border-primary scale-105'
                                         : 'bg-card text-muted-foreground border border-border hover:bg-muted hover:text-foreground'
-                                    }`}
+                                        }`}
                                 >
                                     {cat.icon}
                                     {t(`help_faq.categories.${cat.id}`)}
@@ -363,8 +411,8 @@ const HelpFAQ = () => {
                 <div className="text-center py-16 bg-card border border-dashed border-border rounded-3xl shadow-sm">
                     <Search className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
                     <h3 className="text-xl font-bold text-foreground">{t('help_faq.no_results')} "{searchQuery}"</h3>
-                    <button 
-                        onClick={() => { setSearchQuery(""); setActiveCategory("all"); }} 
+                    <button
+                        onClick={() => { setSearchQuery(""); setActiveCategory("all"); }}
                         className="mt-4 px-6 py-2 bg-primary/10 text-primary font-bold rounded-xl hover:bg-primary/20 transition-colors"
                     >
                         {t('help_faq.clear_search')}
@@ -376,8 +424,8 @@ const HelpFAQ = () => {
                         const isOpen = openIndex === faq.id;
 
                         return (
-                            <div 
-                                key={faq.id} 
+                            <div
+                                key={faq.id}
                                 className={`bg-card border rounded-2xl overflow-hidden transition-all duration-300 shadow-sm ${isOpen ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border hover:border-primary/30 hover:shadow-md'}`}
                             >
                                 <button

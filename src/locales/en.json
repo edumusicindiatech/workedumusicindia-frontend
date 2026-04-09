@@ -1832,6 +1832,14 @@
             "54": {
                 "q": "Does the app have a Dark Mode?",
                 "a": "Yes! If the screen is too bright, you can easily switch to Dark Mode. Just open your main menu (or bottom bar) and tap the Sun/Moon icon to switch between Light and Dark themes instantly."
+            },
+            "55": {
+                "q": "Why is my SOS button gray or showing an error icon?",
+                "a": "If your SOS button is not red, it means your phone's location (GPS) is turned off for this website. The app needs your location to mark attendance and send help during emergencies. Please follow the steps below to turn it on."
+            },
+            "56": {
+                "q": "How do I turn on Location Services in Chrome?",
+                "a": "1. Open Chrome and go to workedumusicindia.com.\n2. Tap the three dots (⋮) in the top right corner.\n3. Tap 'Settings', then scroll down to 'Site Settings'.\n4. Tap 'Location' and make sure it is turned ON.\n5. Refresh the page."
             }
         }
     }
