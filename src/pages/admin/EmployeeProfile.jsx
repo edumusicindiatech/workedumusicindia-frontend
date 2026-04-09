@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     ArrowLeft, School, ClipboardList, AlertTriangle,
     CalendarDays, MapPin, Pencil, Trash2, AlertCircle,
-    Mail, Phone, Briefcase
+    Mail, Phone, Briefcase, IdCard
 } from "lucide-react";
 import api from "../../api/axios";
 import { useTranslation } from "react-i18next";
@@ -154,6 +154,13 @@ const EmployeeProfile = () => {
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-4 sm:mt-5">
+                                {/* Employee ID Badge */}
+                                {employeeData.employeeId && (
+                                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-muted/60 text-muted-foreground border border-border/60 rounded-lg text-xs sm:text-sm font-medium">
+                                        <IdCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-70" />
+                                        ID: {employeeData.employeeId}
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary border border-primary/20 rounded-lg text-xs sm:text-sm font-semibold">
                                     <Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-80" />
                                     {employeeData.designation || t('employee_profile.staff_fallback')}
@@ -178,7 +185,6 @@ const EmployeeProfile = () => {
 
                     {/* --- TABS SECTION --- */}
                     <Tabs defaultValue="schools" className="space-y-6">
-                        {/* 👇 FIX APPLIED HERE: Added scrollbar hiding classes */}
                         <div className="w-full overflow-x-auto border-b border-border/40 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                             <TabsList className="bg-transparent w-max sm:w-full flex justify-start p-0 h-auto gap-6 sm:gap-8 rounded-none">
                                 <TabsTrigger
