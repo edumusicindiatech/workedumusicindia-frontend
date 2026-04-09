@@ -9,10 +9,10 @@ import {
     ClipboardList, BookOpen, PlayCircle, Download,
     Trophy, Target, Palette, LineChart, Zap, Crown,
     FileText, MessageSquare, Send, CheckSquare, BellRing, Mail,
-    User, Camera, Lock, Globe, Moon, Search, LayoutGrid
+    User, Camera, Lock, Globe, Moon, Search, LayoutGrid, Clock
 } from "lucide-react";
 
-// Helper component for the missing icon
+// --- CUSTOM ICON ---
 function CalendarCheckIcon(props) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -21,7 +21,7 @@ function CalendarCheckIcon(props) {
   )
 }
 
-// Map the icons and exact grouping structure
+// --- CATEGORY STRUCTURE ---
 const rawCategories = [
     { id: "all", icon: <LayoutGrid className="w-4 h-4" />, items: [] }, 
     { id: "dashboard", icon: <HelpCircle className="w-4 h-4"/>, items: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
@@ -35,7 +35,7 @@ const rawCategories = [
     { id: "profile", icon: <User className="w-4 h-4"/>, items: [48, 49, 50, 51, 52, 53, 54] }
 ];
 
-// Map the exact icon for each FAQ question ID
+// --- ICONS MAP ---
 const iconMap = {
     1: <HelpCircle className="w-5 h-5 text-blue-500" />,
     2: <CalendarCheckIcon className="w-5 h-5 text-indigo-500" />,
@@ -93,6 +93,88 @@ const iconMap = {
     54: <Moon className="w-5 h-5 text-slate-400" />
 };
 
+// --- VISUAL UI EXAMPLES MAP ---
+const visualMap = {
+    4: (
+        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-3 w-fit shadow-sm">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Example:</span>
+            <div className="flex items-center gap-3">
+                <button className="h-10 px-6 rounded-lg bg-emerald-600 text-white font-bold flex items-center gap-2 shadow-md">
+                    <MapPin className="w-4 h-4" /> Check-In
+                </button>
+            </div>
+        </div>
+    ),
+    5: (
+        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-3 w-fit shadow-sm">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Example:</span>
+            <button className="h-10 px-6 rounded-lg bg-blue-600 text-white font-bold flex items-center gap-2 shadow-md">
+                <LogOut className="w-4 h-4" /> Check-Out
+            </button>
+        </div>
+    ),
+    6: (
+        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-3 w-fit shadow-sm">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Example:</span>
+            <div className="flex flex-wrap gap-3">
+                <button className="h-10 px-4 rounded-lg border border-destructive/30 text-destructive bg-destructive/10 font-bold flex items-center gap-2">
+                    <UserX className="w-4 h-4" /> Absent
+                </button>
+                <button className="h-10 px-4 rounded-lg border border-amber-500/30 text-amber-600 bg-amber-500/10 font-bold flex items-center gap-2">
+                    <CalendarX className="w-4 h-4" /> Holiday
+                </button>
+            </div>
+        </div>
+    ),
+    8: (
+        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-3 w-fit shadow-sm">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Status Badges:</span>
+            <div className="flex items-center gap-3 flex-wrap">
+                <span className="px-3 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded-md text-xs font-bold flex items-center gap-1.5"><Clock className="w-3.5 h-3.5"/> Pending</span>
+                <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 rounded-md text-xs font-bold flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5"/> Approved</span>
+                <span className="px-3 py-1 bg-destructive/10 text-destructive border border-destructive/20 rounded-md text-xs font-bold flex items-center gap-1.5"><XCircle className="w-3.5 h-3.5"/> Rejected</span>
+            </div>
+        </div>
+    ),
+    9: (
+        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col items-center gap-3 w-fit shadow-sm">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Emergency Button:</span>
+            <div className="w-14 h-14 rounded-full bg-red-600 border-4 border-red-300 flex items-center justify-center text-white font-black tracking-widest shadow-[0_0_15px_rgba(220,38,38,0.5)] animate-pulse">
+                SOS
+            </div>
+        </div>
+    ),
+    18: (
+        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-3 w-fit shadow-sm">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Task Actions:</span>
+            <div className="flex gap-3">
+                <button className="h-10 px-4 rounded-lg bg-emerald-600 text-white font-bold flex items-center gap-2 shadow-md">
+                    <CheckCircle className="w-4 h-4" /> Accept
+                </button>
+            </div>
+        </div>
+    ),
+    29: (
+        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-3 w-fit shadow-sm">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Video Thumbnail:</span>
+            <div className="w-32 h-20 bg-slate-800 rounded-lg flex flex-col items-center justify-center relative overflow-hidden">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                    <PlayCircle className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-[10px] text-white/80 font-medium mt-1">Click to Play</span>
+            </div>
+        </div>
+    ),
+    36: (
+        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-2 w-fit shadow-sm">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Performance Zones:</span>
+            <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-500/10 px-3 py-1.5 rounded border border-emerald-500/20"><div className="w-2 h-2 rounded-full bg-emerald-500"/> Green Zone (Excellent)</div>
+            <div className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-500/10 px-3 py-1.5 rounded border border-blue-500/20"><div className="w-2 h-2 rounded-full bg-blue-500"/> Blue Zone (Good)</div>
+            <div className="flex items-center gap-2 text-xs font-bold text-destructive bg-destructive/10 px-3 py-1.5 rounded border border-destructive/20"><div className="w-2 h-2 rounded-full bg-destructive"/> Red Zone (Needs Improvement)</div>
+        </div>
+    )
+};
+
 const HelpFAQ = () => {
     const { t } = useTranslation();
     const [openIndex, setOpenIndex] = useState(null);
@@ -118,7 +200,7 @@ const HelpFAQ = () => {
         setOpenIndex(openIndex === index ? null : index);
     };
 
-    // Construct the full array dynamically using translations
+    // Construct the full array dynamically using translations AND visual mockups
     const fullFaqList = useMemo(() => {
         const list = [];
         for (let i = 1; i <= 54; i++) {
@@ -126,7 +208,8 @@ const HelpFAQ = () => {
                 id: i,
                 question: t(`help_faq.faqs.${i}.q`),
                 answer: t(`help_faq.faqs.${i}.a`),
-                icon: iconMap[i]
+                icon: iconMap[i],
+                visual: visualMap[i] || null // Inject the UI mockup if it exists
             });
         }
         return list;
@@ -316,8 +399,15 @@ const HelpFAQ = () => {
 
                                 <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                                     <div className="overflow-hidden">
-                                        <div className="p-4 sm:p-5 pt-0 text-sm sm:text-base text-muted-foreground leading-relaxed whitespace-pre-line border-t border-border/50 ml-[3.5rem] sm:ml-[4.5rem]">
+                                        <div className="p-4 sm:p-5 pt-0 text-sm sm:text-base text-muted-foreground leading-relaxed whitespace-pre-line border-t border-border/50 ml-14 sm:ml-18">
                                             {faq.answer}
+
+                                            {/* RENDER UI MOCKUP IF IT EXISTS */}
+                                            {faq.visual && (
+                                                <div className="animate-in fade-in zoom-in-95 duration-500 delay-150">
+                                                    {faq.visual}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
