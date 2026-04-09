@@ -446,8 +446,7 @@ const AttendanceFeed = () => {
                                 <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between lg:w-[22%] shrink-0 border-t lg:border-none border-border/50 pt-4 lg:pt-0 mt-2 lg:mt-0">
                                     <div className="flex flex-col items-start lg:items-end gap-2.5">
                                         <div className="flex flex-wrap gap-2 items-center">
-
-                                            {/* 1. Main Status Tag (FIXED: Now hides if the "LATE BY" badge is already doing the job) */}
+                                            {/* 1. Main Status Tag (Hides if the "LATE BY" badge is already doing the job) */}
                                             {!(uiStatus === 'Late' && arrivalDelayBadge) && (
                                                 <span className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider border flex items-center gap-1.5 shadow-sm ${statusConfig.color}`}>
                                                     {statusConfig.icon} {statusConfig.label}
@@ -461,16 +460,16 @@ const AttendanceFeed = () => {
                                                 </span>
                                             )}
 
-                                            {/* 3. The "LATE BY" Badge */}
+                                            {/* 3. The "LATE BY" Badge (Transparent finish matching the main tags) */}
                                             {arrivalDelayBadge && (
-                                                <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider text-white shadow-sm transition-all ${record.checkInTime ? 'bg-amber-600' : 'bg-amber-500 animate-pulse'}`}>
+                                                <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider shadow-sm transition-all border text-amber-500 bg-amber-500/10 border-amber-500/20 ${!record.checkInTime ? 'animate-pulse' : ''}`}>
                                                     {arrivalDelayBadge}
                                                 </span>
                                             )}
 
-                                            {/* 4. The "OVERDUE BY" Badge */}
+                                            {/* 4. The "OVERDUE BY" Badge (Transparent finish matching the main tags) */}
                                             {departureDelayBadge && (
-                                                <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider text-white shadow-sm transition-all ${record.checkOutTime ? 'bg-red-700' : 'bg-red-500 animate-pulse'}`}>
+                                                <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider shadow-sm transition-all border text-red-500 bg-red-500/10 border-red-500/20 ${!record.checkOutTime ? 'animate-pulse' : ''}`}>
                                                     {departureDelayBadge}
                                                 </span>
                                             )}
