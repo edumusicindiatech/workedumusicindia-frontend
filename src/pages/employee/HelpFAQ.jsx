@@ -9,8 +9,7 @@ import {
     ClipboardList, BookOpen, PlayCircle, Download,
     Trophy, Target, Palette, LineChart, Zap, Crown,
     FileText, MessageSquare, Send, CheckSquare, BellRing, Mail,
-    User, Camera, Lock, Globe, Moon, Search, LayoutGrid, Clock,
-    Settings, AlertTriangle, RefreshCw
+    User, Camera, Lock, Globe, Moon, Search, LayoutGrid, Clock, AlertTriangle, RefreshCw, Cpu, Settings
 } from "lucide-react";
 
 // --- CUSTOM ICON ---
@@ -33,7 +32,8 @@ const rawCategories = [
     { id: "leaderboard", icon: <Trophy className="w-4 h-4" />, items: [34, 35, 36, 37, 38, 39] },
     { id: "reports", icon: <FileText className="w-4 h-4" />, items: [40, 41, 42, 43] },
     { id: "notifications", icon: <BellRing className="w-4 h-4" />, items: [44, 45, 46, 47] },
-    { id: "profile", icon: <User className="w-4 h-4" />, items: [48, 49, 50, 51, 52, 53, 54] }
+    { id: "profile", icon: <User className="w-4 h-4" />, items: [48, 49, 50, 51, 52, 53, 54] },
+    { id: "system", icon: <Cpu className="w-4 h-4" />, items: [57, 58, 59, 60, 61] }
 ];
 
 // --- ICONS MAP ---
@@ -93,7 +93,12 @@ const iconMap = {
     53: <Mail className="w-5 h-5 text-rose-500" />,
     54: <Moon className="w-5 h-5 text-slate-400" />,
     55: <ShieldAlert className="w-5 h-5 text-red-500" />,
-    56: <Settings className="w-5 h-5 text-indigo-500" />
+    56: <Settings className="w-5 h-5 text-indigo-500" />,
+    57: <Clock className="w-5 h-5 text-amber-500" />,
+    58: <UserX className="w-5 h-5 text-red-500" />,
+    59: <LogOut className="w-5 h-5 text-blue-500" />,
+    60: <AlertTriangle className="w-5 h-5 text-red-600" />,
+    61: <Trophy className="w-5 h-5 text-primary" />
 };
 
 // --- VISUAL UI EXAMPLES MAP ---
@@ -101,191 +106,110 @@ const visualMap = {
     4: (
         <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-3 w-fit shadow-sm">
             <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Example:</span>
-            <div className="flex items-center gap-3">
-                <button className="h-10 px-6 rounded-lg bg-emerald-600 text-white font-bold flex items-center gap-2 shadow-md">
-                    <MapPin className="w-4 h-4" /> Check-In
-                </button>
-            </div>
-        </div>
-    ),
-    5: (
-        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-3 w-fit shadow-sm">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Example:</span>
-            <button className="h-10 px-6 rounded-lg bg-blue-600 text-white font-bold flex items-center gap-2 shadow-md">
-                <LogOut className="w-4 h-4" /> Check-Out
-            </button>
-        </div>
-    ),
-    6: (
-        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-3 w-fit shadow-sm">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Example:</span>
-            <div className="flex flex-wrap gap-3">
-                <button className="h-10 px-4 rounded-lg border border-destructive/30 text-destructive bg-destructive/10 font-bold flex items-center gap-2">
-                    <UserX className="w-4 h-4" /> Absent
-                </button>
-                <button className="h-10 px-4 rounded-lg border border-amber-500/30 text-amber-600 bg-amber-500/10 font-bold flex items-center gap-2">
-                    <CalendarX className="w-4 h-4" /> Holiday
-                </button>
-            </div>
-        </div>
-    ),
-    8: (
-        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-3 w-fit shadow-sm">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Status Badges:</span>
-            <div className="flex items-center gap-3 flex-wrap">
-                <span className="px-3 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded-md text-xs font-bold flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Pending</span>
-                <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 rounded-md text-xs font-bold flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Approved</span>
-                <span className="px-3 py-1 bg-destructive/10 text-destructive border border-destructive/20 rounded-md text-xs font-bold flex items-center gap-1.5"><XCircle className="w-3.5 h-3.5" /> Rejected</span>
-            </div>
+            <button className="h-10 px-6 rounded-lg bg-emerald-600 text-white font-bold flex items-center gap-2 shadow-md"><MapPin className="w-4 h-4" /> Check-In</button>
         </div>
     ),
     9: (
         <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col items-center gap-3 w-fit shadow-sm">
             <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Emergency Button:</span>
-            <div className="w-14 h-14 rounded-full bg-red-600 border-4 border-red-300 flex items-center justify-center text-white font-black tracking-widest shadow-[0_0_15px_rgba(220,38,38,0.5)] animate-pulse">
-                SOS
-            </div>
+            <div className="w-14 h-14 rounded-full bg-red-600 border-4 border-red-300 flex items-center justify-center text-white font-black tracking-widest shadow-[0_0_15px_rgba(220,38,38,0.5)] animate-pulse">SOS</div>
         </div>
     ),
-    18: (
-        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-3 w-fit shadow-sm">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Task Actions:</span>
-            <div className="flex gap-3">
-                <button className="h-10 px-4 rounded-lg bg-emerald-600 text-white font-bold flex items-center gap-2 shadow-md">
-                    <CheckCircle className="w-4 h-4" /> Accept
-                </button>
-            </div>
-        </div>
-    ),
-    29: (
-        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-3 w-fit shadow-sm">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Video Thumbnail:</span>
-            <div className="w-32 h-20 bg-slate-800 rounded-lg flex flex-col items-center justify-center relative overflow-hidden">
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                    <PlayCircle className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-[10px] text-white/80 font-medium mt-1">Click to Play</span>
-            </div>
-        </div>
-    ),
-    36: (
-        <div className="mt-4 p-4 bg-background border border-border rounded-xl flex flex-col gap-2 w-fit shadow-sm">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Performance Zones:</span>
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-500/10 px-3 py-1.5 rounded border border-emerald-500/20"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Green Zone (Excellent)</div>
-            <div className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-500/10 px-3 py-1.5 rounded border border-blue-500/20"><div className="w-2 h-2 rounded-full bg-blue-500" /> Blue Zone (Good)</div>
-            <div className="flex items-center gap-2 text-xs font-bold text-destructive bg-destructive/10 px-3 py-1.5 rounded border border-destructive/20"><div className="w-2 h-2 rounded-full bg-destructive" /> Red Zone (Needs Improvement)</div>
-        </div>
-    ),
-    // SOS Error State Visual
     55: (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-4 w-fit shadow-sm">
+        <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 rounded-xl flex items-center gap-4 w-fit shadow-sm">
             <div className="flex flex-col items-center gap-1">
-                <div className="w-12 h-12 rounded-full bg-zinc-800 border-4 border-zinc-600 flex items-center justify-center text-red-500">
-                    <AlertTriangle className="w-6 h-6" />
-                </div>
+                <div className="w-12 h-12 rounded-full bg-zinc-800 border-4 border-zinc-600 flex items-center justify-center text-red-500"><AlertTriangle className="w-6 h-6" /></div>
                 <span className="text-[10px] font-black text-zinc-500 uppercase">Not Working</span>
             </div>
-            <div className="text-zinc-700 text-sm font-bold">
-                ← If it looks like this, <br /> Location is OFF
+            <div className="text-zinc-700 dark:text-zinc-300 text-sm font-bold">← If it looks like this, <br /> Location is OFF</div>
+        </div>
+    ),
+    56: (
+        <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-2xl space-y-4 shadow-inner max-w-sm">
+            <p className="text-xs font-black text-slate-500 uppercase tracking-widest border-b pb-2">Step-by-Step for Chrome:</p>
+            <div className="flex flex-col gap-4 text-xs font-bold">
+                <div className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center shrink-0">1</div> <span>Tap 3 dots (⋮)</span></div>
+                <div className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center shrink-0">2</div> <span>Settings → Site Settings</span></div>
+                <div className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center shrink-0">3</div> <span>Location → <span className="text-emerald-600 uppercase">Allow</span></span></div>
+                <div className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center shrink-0">4</div> <button className="px-3 py-1 bg-primary text-white rounded-md flex items-center gap-2"><RefreshCw className="w-3.5 h-3.5" /> Refresh</button></div>
             </div>
         </div>
     ),
-    // Chrome Settings Step-by-Step Visual
-    56: (
-        <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-4 shadow-inner">
-            <p className="text-xs font-black text-slate-500 uppercase tracking-widest border-b pb-2">Step-by-Step Guide for Chrome:</p>
-            <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">1</div>
-                    <div className="p-1.5 bg-white border border-border rounded-md shadow-sm flex items-center gap-1 font-bold text-xs">
-                        workedumusic... <div className="flex gap-0.5 ml-1"><div className="w-1 h-1 bg-slate-400 rounded-full" /><div className="w-1 h-1 bg-slate-400 rounded-full" /><div className="w-1 h-1 bg-slate-400 rounded-full" /></div>
-                    </div>
-                    <span className="text-xs text-muted-foreground italic">Tap 3 dots</span>
-                </div>
-                <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">2</div>
-                    <div className="px-3 py-1.5 bg-white border border-border rounded-md shadow-sm font-bold text-xs flex items-center gap-2">
-                        <Settings className="w-3.5 h-3.5" /> Settings → Site Settings
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">3</div>
-                    <div className="px-3 py-1.5 bg-white border border-border rounded-md shadow-sm font-bold text-xs flex items-center gap-2">
-                        <MapPin className="w-3.5 h-3.5 text-emerald-500" /> Location → <span className="text-emerald-600 uppercase">Allow</span>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">4</div>
-                    <button className="px-3 py-1.5 bg-primary text-white rounded-md shadow-md font-bold text-xs flex items-center gap-2">
-                        <RefreshCw className="w-3.5 h-3.5" /> Refresh Page
-                    </button>
-                </div>
+    58: (
+        <div className="mt-4 p-4 bg-background border border-border rounded-xl space-y-3 w-fit shadow-sm">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Shift Timeline:</span>
+            <div className="flex items-center gap-2">
+                <div className="w-24 h-2 bg-emerald-500 rounded-full" />
+                <div className="w-24 h-2 bg-amber-500 rounded-full" />
+                <div className="w-12 h-2 bg-red-500 rounded-full" />
+            </div>
+            <div className="flex justify-between text-[10px] font-black uppercase text-muted-foreground">
+                <span>Start</span>
+                <span>1h 45m Late</span>
+                <span>2h (Absent)</span>
+            </div>
+        </div>
+    ),
+    61: (
+        <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-xl space-y-3 w-full max-w-sm">
+            <span className="text-xs font-bold text-primary uppercase tracking-widest">Score Formula:</span>
+            <div className="flex flex-col gap-2">
+                <div className="flex justify-between text-sm font-bold"><span>Attendance</span> <span className="text-emerald-600">50 pts</span></div>
+                <div className="flex justify-between text-sm font-bold"><span>Video Quality</span> <span className="text-blue-600">50 pts</span></div>
+                <div className="flex justify-between text-sm font-bold border-t pt-2 text-destructive"><span>Warnings</span> <span>-10 pts each</span></div>
             </div>
         </div>
     )
 };
 
 const HelpFAQ = () => {
-    const { t } = useTranslation();
+    // FIX 2: Extract i18n to listen for language changes
+    const { t, i18n } = useTranslation();
+    
     const [openIndex, setOpenIndex] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [activeCategory, setActiveCategory] = useState("all");
-
-    // State & Ref for Mobile Category Dropdown
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
 
-    // Close dropdown when clicking outside
+    // FIX 1: Add the missing toggleFAQ function
+    const toggleFAQ = (id) => {
+        setOpenIndex((prevIndex) => (prevIndex === id ? null : id));
+    };
+
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsCategoryDropdownOpen(false);
-            }
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setIsCategoryDropdownOpen(false);
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const toggleFAQ = (index) => {
-        setOpenIndex(openIndex === index ? null : index);
-    };
-
-    // Construct the full array dynamically using translations AND visual mockups
     const fullFaqList = useMemo(() => {
         const list = [];
-        for (let i = 1; i <= 56; i++) {
+        for (let i = 1; i <= 61; i++) {
             list.push({
                 id: i,
                 question: t(`help_faq.faqs.${i}.q`),
                 answer: t(`help_faq.faqs.${i}.a`),
                 icon: iconMap[i],
-                visual: visualMap[i] || null // Inject the UI mockup if it exists
+                visual: visualMap[i] || null
             });
         }
         return list;
-    }, [t]);
+    // FIX 2: Add i18n.language to the dependency array
+    }, [t, i18n.language]);
 
-    // Perform Magical Filtering
     const filteredFaqs = useMemo(() => {
         let results = fullFaqList;
-
-        // 1. Filter by Category if not "all"
         if (activeCategory !== "all") {
             const categoryData = rawCategories.find(c => c.id === activeCategory);
-            if (categoryData) {
-                results = results.filter(faq => categoryData.items.includes(faq.id));
-            }
+            if (categoryData) results = results.filter(faq => categoryData.items.includes(faq.id));
         }
-
-        // 2. Filter by Search Query
         if (searchQuery.trim() !== "") {
             const query = searchQuery.toLowerCase();
-            results = results.filter(faq =>
-                faq.question.toLowerCase().includes(query) ||
-                faq.answer.toLowerCase().includes(query)
-            );
+            results = results.filter(faq => faq.question.toLowerCase().includes(query) || faq.answer.toLowerCase().includes(query));
         }
-
         return results;
     }, [searchQuery, activeCategory, fullFaqList]);
 
@@ -294,12 +218,10 @@ const HelpFAQ = () => {
     return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto animate-in fade-in duration-500 pb-24">
 
-            {/* Header & Search */}
+            {/* Header */}
             <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border/40">
                 <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-primary/20">
-                        <HelpCircle className="w-7 h-7 text-primary" />
-                    </div>
+                    <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-primary/20"><HelpCircle className="w-7 h-7 text-primary" /></div>
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">{t('help_faq.title')}</h1>
                         <p className="text-muted-foreground text-sm sm:text-base font-medium mt-1">{t('help_faq.subtitle')}</p>
@@ -309,159 +231,55 @@ const HelpFAQ = () => {
                 <div className="relative w-full md:w-80 shrink-0 group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                     <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => {
-                            setSearchQuery(e.target.value);
-                            setOpenIndex(null); // Close any open FAQ when searching
-                        }}
+                        type="text" value={searchQuery}
+                        onChange={(e) => { setSearchQuery(e.target.value); setOpenIndex(null); }}
                         placeholder={t('help_faq.search_placeholder')}
                         className="w-full h-12 pl-12 pr-4 bg-card border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-sm transition-all"
                     />
-                    {searchQuery && (
-                        <button
-                            onClick={() => setSearchQuery("")}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 bg-muted hover:bg-destructive/10 hover:text-destructive text-muted-foreground rounded-full transition-colors"
-                        >
-                            <XCircle className="w-4 h-4" />
-                        </button>
-                    )}
+                    {searchQuery && <button onClick={() => setSearchQuery("")} className="absolute right-4 top-1/2 -translate-y-1/2 p-1 bg-muted hover:bg-destructive/10 hover:text-destructive text-muted-foreground rounded-full transition-colors"><XCircle className="w-4 h-4" /></button>}
                 </div>
             </div>
 
-            {/* Categorization Logic (Hidden if searching heavily) */}
+            {/* Categorization */}
             {searchQuery === "" && (
                 <>
-                    {/* MOBILE VIEW: Elegant Dropdown */}
                     <div className="md:hidden relative mb-6 z-20" ref={dropdownRef}>
-                        <button
-                            onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                            className="w-full h-12 bg-card border border-border rounded-xl flex items-center justify-between px-4 focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm transition-colors hover:border-primary/50"
-                        >
-                            <div className="flex items-center gap-3 text-foreground font-bold text-sm">
-                                <span className="p-1.5 bg-muted/50 rounded-lg text-primary">
-                                    {currentCatObj.icon}
-                                </span>
-                                {t(`help_faq.categories.${currentCatObj.id}`)}
-                            </div>
+                        <button onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)} className="w-full h-12 bg-card border border-border rounded-xl flex items-center justify-between px-4 shadow-sm">
+                            <div className="flex items-center gap-3 text-foreground font-bold text-sm"><span className="p-1.5 bg-muted/50 rounded-lg text-primary">{currentCatObj.icon}</span>{t(`help_faq.categories.${currentCatObj.id}`)}</div>
                             <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${isCategoryDropdownOpen ? 'rotate-180 text-primary' : ''}`} />
                         </button>
-
-                        {/* Dropdown Menu */}
-                        <div className={`absolute top-full left-0 w-full mt-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden transition-all duration-200 ease-in-out origin-top ${isCategoryDropdownOpen ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 pointer-events-none'}`}>
+                        <div className={`absolute top-full left-0 w-full mt-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden transition-all duration-200 origin-top ${isCategoryDropdownOpen ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 pointer-events-none'}`}>
                             <div className="p-1.5 flex flex-col gap-1 max-h-[50vh] overflow-y-auto custom-scrollbar">
-                                {rawCategories.map(cat => {
-                                    const isActive = activeCategory === cat.id;
-                                    return (
-                                        <button
-                                            key={cat.id}
-                                            onClick={() => {
-                                                setActiveCategory(cat.id);
-                                                setOpenIndex(null);
-                                                setIsCategoryDropdownOpen(false);
-                                            }}
-                                            className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all text-left ${isActive
-                                                ? 'bg-primary/10 text-primary font-bold'
-                                                : 'text-foreground hover:bg-muted font-medium'
-                                                }`}
-                                        >
-                                            <span className={`${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
-                                                {cat.icon}
-                                            </span>
-                                            {t(`help_faq.categories.${cat.id}`)}
-                                            {isActive && <CheckCircle2 className="w-4 h-4 ml-auto" />}
-                                        </button>
-                                    );
-                                })}
+                                {rawCategories.map(cat => (
+                                    <button key={cat.id} onClick={() => { setActiveCategory(cat.id); setOpenIndex(null); setIsCategoryDropdownOpen(false); }} className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all text-left ${activeCategory === cat.id ? 'bg-primary/10 text-primary font-bold' : 'text-foreground hover:bg-muted font-medium'}`}>
+                                        <span className={activeCategory === cat.id ? 'text-primary' : 'text-muted-foreground'}>{cat.icon}</span>{t(`help_faq.categories.${cat.id}`)}{activeCategory === cat.id && <CheckCircle2 className="w-4 h-4 ml-auto" />}
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     </div>
-
-                    {/* DESKTOP VIEW: Wrapped Pills */}
                     <div className="hidden md:flex flex-wrap items-center gap-2.5 pb-2 mb-8">
-                        {rawCategories.map(cat => {
-                            const isActive = activeCategory === cat.id;
-                            return (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => { setActiveCategory(cat.id); setOpenIndex(null); }}
-                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm shrink-0 ${isActive
-                                        ? 'bg-primary text-primary-foreground border border-primary scale-105'
-                                        : 'bg-card text-muted-foreground border border-border hover:bg-muted hover:text-foreground'
-                                        }`}
-                                >
-                                    {cat.icon}
-                                    {t(`help_faq.categories.${cat.id}`)}
-                                </button>
-                            );
-                        })}
+                        {rawCategories.map(cat => (
+                            <button key={cat.id} onClick={() => { setActiveCategory(cat.id); setOpenIndex(null); }} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm shrink-0 ${activeCategory === cat.id ? 'bg-primary text-primary-foreground border border-primary scale-105' : 'bg-card text-muted-foreground border border-border hover:bg-muted hover:text-foreground'}`}>{cat.icon}{t(`help_faq.categories.${cat.id}`)}</button>
+                        ))}
                     </div>
                 </>
             )}
 
-            {/* Search Results Summary */}
-            {searchQuery !== "" && (
-                <p className="text-sm font-bold text-primary mb-4 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" /> Found {filteredFaqs.length} results
-                </p>
-            )}
-
-            {/* FAQ List */}
+            {/* List */}
             {filteredFaqs.length === 0 ? (
-                <div className="text-center py-16 bg-card border border-dashed border-border rounded-3xl shadow-sm">
-                    <Search className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-foreground">{t('help_faq.no_results')} "{searchQuery}"</h3>
-                    <button
-                        onClick={() => { setSearchQuery(""); setActiveCategory("all"); }}
-                        className="mt-4 px-6 py-2 bg-primary/10 text-primary font-bold rounded-xl hover:bg-primary/20 transition-colors"
-                    >
-                        {t('help_faq.clear_search')}
-                    </button>
-                </div>
+                <div className="text-center py-16 bg-card border border-dashed border-border rounded-3xl"><Search className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" /><h3 className="text-xl font-bold text-foreground">{t('help_faq.no_results')} "{searchQuery}"</h3><button onClick={() => { setSearchQuery(""); setActiveCategory("all"); }} className="mt-4 px-6 py-2 bg-primary/10 text-primary font-bold rounded-xl">{t('help_faq.clear_search')}</button></div>
             ) : (
-                <div className="space-y-3 z-0 relative">
-                    {filteredFaqs.map((faq) => {
-                        const isOpen = openIndex === faq.id;
-
-                        return (
-                            <div
-                                key={faq.id}
-                                className={`bg-card border rounded-2xl overflow-hidden transition-all duration-300 shadow-sm ${isOpen ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border hover:border-primary/30 hover:shadow-md'}`}
-                            >
-                                <button
-                                    onClick={() => toggleFAQ(faq.id)}
-                                    className="w-full flex items-center justify-between p-4 sm:p-5 text-left focus:outline-none"
-                                >
-                                    <div className="flex items-center gap-4 pr-4">
-                                        <div className="shrink-0 p-2.5 bg-muted/50 rounded-xl border border-border/50">
-                                            {faq.icon}
-                                        </div>
-                                        <h3 className={`font-bold text-sm sm:text-base leading-snug transition-colors ${isOpen ? 'text-primary' : 'text-foreground'}`}>
-                                            {faq.question}
-                                        </h3>
-                                    </div>
-                                    <div className={`shrink-0 p-1.5 rounded-full transition-all duration-300 ${isOpen ? 'bg-primary/10 text-primary rotate-180' : 'text-muted-foreground'}`}>
-                                        <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
-                                    </div>
-                                </button>
-
-                                <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-                                    <div className="overflow-hidden">
-                                        <div className="p-4 sm:p-5 pt-0 text-sm sm:text-base text-muted-foreground leading-relaxed whitespace-pre-line border-t border-border/50 ml-14 sm:ml-18">
-                                            {faq.answer}
-
-                                            {/* RENDER UI MOCKUP IF IT EXISTS */}
-                                            {faq.visual && (
-                                                <div className="animate-in fade-in zoom-in-95 duration-500 delay-150">
-                                                    {faq.visual}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
+                <div className="space-y-3">
+                    {filteredFaqs.map((faq) => (
+                        <div key={faq.id} className={`bg-card border rounded-2xl overflow-hidden transition-all duration-300 shadow-sm ${openIndex === faq.id ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border hover:border-primary/30 hover:shadow-md'}`}>
+                            <button onClick={() => toggleFAQ(faq.id)} className="w-full flex items-center justify-between p-4 sm:p-5 text-left focus:outline-none">
+                                <div className="flex items-center gap-4 pr-4"><div className="shrink-0 p-2.5 bg-muted/50 rounded-xl border border-border/50">{faq.icon}</div><h3 className={`font-bold text-sm sm:text-base leading-snug transition-colors ${openIndex === faq.id ? 'text-primary' : 'text-foreground'}`}>{faq.question}</h3></div>
+                                <div className={`shrink-0 p-1.5 rounded-full transition-all duration-300 ${openIndex === faq.id ? 'bg-primary/10 text-primary rotate-180' : 'text-muted-foreground'}`}><ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+                            </button>
+                            <div className={`grid transition-all duration-300 ease-in-out ${openIndex === faq.id ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}><div className="overflow-hidden"><div className="p-4 sm:p-5 pt-0 text-sm sm:text-base text-muted-foreground leading-relaxed whitespace-pre-line border-t border-border/50 ml-14 sm:ml-18">{faq.answer} {faq.visual && <div className="animate-in fade-in zoom-in-95 duration-500 delay-150">{faq.visual}</div>}</div></div></div>
+                        </div>
+                    ))}
                 </div>
             )}
         </div>

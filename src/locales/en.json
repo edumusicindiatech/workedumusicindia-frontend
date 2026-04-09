@@ -1614,7 +1614,8 @@
             "leaderboard": "Leaderboard & Stats",
             "reports": "Daily Reports",
             "notifications": "Alerts & Notifications",
-            "profile": "Profile & Settings"
+            "profile": "Profile & Settings",
+            "system": "System & Troubleshooting"
         },
         "faqs": {
             "1": {
@@ -1840,6 +1841,26 @@
             "56": {
                 "q": "How do I turn on Location Services in Chrome?",
                 "a": "1. Open Chrome and go to workedumusicindia.com.\n2. Tap the three dots (⋮) in the top right corner.\n3. Tap 'Settings', then scroll down to 'Site Settings'.\n4. Tap 'Location' and make sure it is turned ON.\n5. Refresh the page."
+            },
+            "57": {
+                "q": "Why did I get a reminder 15 minutes before my shift?",
+                "a": "The system automatically checks if you are ready to start. If you haven't checked in 15 minutes before your scheduled start time, we send a friendly reminder to your app and email so you aren't late."
+            },
+            "58": {
+                "q": "What is the 2-hour Auto-Absent rule?",
+                "a": "To keep records accurate, if you are more than 2 hours late and haven't checked in, the system will automatically mark you as 'Absent' for that shift. You will receive a warning 15 minutes before this happens."
+            },
+            "59": {
+                "q": "Why does the app remind me to Check-Out?",
+                "a": "If you forget to Check-Out, the system sends an alert to you and the Admin 10 minutes after your shift ends. This ensures your working hours are logged correctly."
+            },
+            "60": {
+                "q": "When is the deadline to submit my Daily Report?",
+                "a": "All reports must be submitted by 8:00 PM IST every day. If a report is missing by this time, the system will automatically issue a 'Written Warning' to your profile and alert the Admin."
+            },
+            "61": {
+                "q": "How is my Weekly Score calculated?",
+                "a": "Every Saturday at 9:00 PM, the system calculates your performance:\n• 50% Attendance (Punctuality)\n• 50% Media Score (Video Quality)\n• Penalty: -10 points for every Warning received."
             }
         }
     }
