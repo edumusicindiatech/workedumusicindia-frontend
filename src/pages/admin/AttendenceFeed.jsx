@@ -33,6 +33,47 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
     }
 };
 
+// --- HELPER FUNCTION: Calculate Time Difference (Handles freezing to a specific comparison date) ---
+const calculateTimeDiff = (targetTimeStr, compareDate = new Date()) => {
+    if (!targetTimeStr) return null;
+
+    let hours, minutes;
+
+    // Support for 12-hour AM/PM format
+    let match = targetTimeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+
+    if (match) {
+        hours = parseInt(match[1], 10);
+        minutes = parseInt(match[2], 10);
+        const ampm = match[3].toUpperCase();
+        if (ampm === 'PM' && hours < 12) hours += 12;
+        if (ampm === 'AM' && hours === 12) hours = 0;
+    } else {
+        // Support for 24-hour format
+        match = targetTimeStr.match(/(\d+):(\d+)/);
+        if (!match) return null;
+        hours = parseInt(match[1], 10);
+        minutes = parseInt(match[2], 10);
+    }
+
+    // Set the expected time on the same calendar day as the comparison date
+    const expectedTime = new Date(compareDate);
+    expectedTime.setHours(hours, minutes, 0, 0);
+
+    const diffMs = compareDate - expectedTime;
+
+    // Only return a string if the compare date is strictly AFTER the expected time
+    if (diffMs > 0) {
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+        if (diffHours > 0 && diffMins > 0) return `${diffHours}h ${diffMins}m`;
+        if (diffHours > 0) return `${diffHours}h`;
+        if (diffMins > 0) return `${diffMins}m`;
+    }
+    return null;
+};
+
 const AttendanceFeed = () => {
     const { t } = useTranslation();
     const { user } = useSelector((state) => state.auth);
@@ -298,6 +339,38 @@ const AttendanceFeed = () => {
                             );
                         }
 
+                        // --- CALCULATE DELAYS (ARRIVAL & DEPARTURE) ---
+                        let arrivalDelayBadge = null;
+                        let departureDelayBadge = null;
+
+                        if (!isAbsent && !isHoliday && !isOnLeave) {
+                            // 1. ARRIVAL DELAY
+                            if (record.expectedStartTime) {
+                                if (!record.checkInTime) {
+                                    // SCENARIO A: Hasn't arrived yet. Calculate against CURRENT TIME.
+                                    const delay = calculateTimeDiff(record.expectedStartTime);
+                                    if (delay) arrivalDelayBadge = `LATE BY ${delay}`;
+                                } else {
+                                    // SCENARIO B: Has arrived. Calculate against ACTUAL CHECK-IN TIME.
+                                    const delay = calculateTimeDiff(record.expectedStartTime, new Date(record.checkInTime));
+                                    if (delay) arrivalDelayBadge = `LATE BY ${delay}`;
+                                }
+                            }
+
+                            // 2. DEPARTURE OVERDUE
+                            if (record.expectedEndTime) {
+                                if (['Running', 'Late'].includes(uiStatus)) {
+                                    // SCENARIO C: Actively working past end time. Calculate against CURRENT TIME.
+                                    const delay = calculateTimeDiff(record.expectedEndTime);
+                                    if (delay) departureDelayBadge = `OVERDUE BY ${delay}`;
+                                } else if (uiStatus === 'Completed' && record.checkOutTime) {
+                                    // SCENARIO D: Shift finished. Calculate against ACTUAL CHECK-OUT TIME.
+                                    const delay = calculateTimeDiff(record.expectedEndTime, new Date(record.checkOutTime));
+                                    if (delay) departureDelayBadge = `OVERDUE BY ${delay}`;
+                                }
+                            }
+                        }
+
                         return (
                             <div
                                 key={record._id}
@@ -358,7 +431,7 @@ const AttendanceFeed = () => {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    window.open(`https://www.google.com/maps?q=${employeeLocation.lat},${employeeLocation.lng}`, '_blank');
+                                                    window.open(`https://www.google.com/maps?q=$${employeeLocation.lat},${employeeLocation.lng}`, '_blank');
                                                 }}
                                                 className="bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-white hover:shadow-md px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all duration-300 animate-in fade-in zoom-in"
                                             >
@@ -373,16 +446,49 @@ const AttendanceFeed = () => {
                                 <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between lg:w-[22%] shrink-0 border-t lg:border-none border-border/50 pt-4 lg:pt-0 mt-2 lg:mt-0">
                                     <div className="flex flex-col items-start lg:items-end gap-2.5">
                                         <div className="flex flex-wrap gap-2 items-center">
-                                            <span className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider border flex items-center gap-1.5 shadow-sm ${statusConfig.color}`}>
-                                                {statusConfig.icon} {statusConfig.label}
-                                            </span>
-                                            {isLate && <span className="px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider bg-amber-500 text-white shadow-sm animate-pulse">{t('attendance_feed.card.late_badge')}</span>}
-                                            {hadEvent && uiStatus === 'Completed' && <span className="px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider bg-violet-500 text-white shadow-sm">{t('attendance_feed.card.event_badge')}</span>}
+
+                                            {/* 1. Main Status Tag (FIXED: Now hides if the "LATE BY" badge is already doing the job) */}
+                                            {!(uiStatus === 'Late' && arrivalDelayBadge) && (
+                                                <span className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider border flex items-center gap-1.5 shadow-sm ${statusConfig.color}`}>
+                                                    {statusConfig.icon} {statusConfig.label}
+                                                </span>
+                                            )}
+
+                                            {/* 2. Event Tag */}
+                                            {hadEvent && uiStatus === 'Completed' && (
+                                                <span className="px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider bg-violet-500 text-white shadow-sm">
+                                                    {t('attendance_feed.card.event_badge')}
+                                                </span>
+                                            )}
+
+                                            {/* 3. The "LATE BY" Badge */}
+                                            {arrivalDelayBadge && (
+                                                <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider text-white shadow-sm transition-all ${record.checkInTime ? 'bg-amber-600' : 'bg-amber-500 animate-pulse'}`}>
+                                                    {arrivalDelayBadge}
+                                                </span>
+                                            )}
+
+                                            {/* 4. The "OVERDUE BY" Badge */}
+                                            {departureDelayBadge && (
+                                                <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider text-white shadow-sm transition-all ${record.checkOutTime ? 'bg-red-700' : 'bg-red-500 animate-pulse'}`}>
+                                                    {departureDelayBadge}
+                                                </span>
+                                            )}
                                         </div>
-                                        <div className="text-[11px] sm:text-xs font-semibold text-muted-foreground flex flex-col sm:flex-row lg:flex-col gap-1 sm:gap-2 lg:gap-0.5 items-start lg:items-end">
-                                            <span>{record.checkInTime ? `${t('attendance_feed.card.arrived')}: ${formatTime(record.checkInTime)}` : ((isAbsent || isHoliday || isOnLeave) ? t('attendance_feed.card.off_duty') : t('attendance_feed.card.pending'))}</span>
-                                            {record.checkOutTime && <span className="hidden sm:inline lg:hidden">•</span>}
-                                            {record.checkOutTime && <span>{t('attendance_feed.card.departed')}: {formatTime(record.checkOutTime)}</span>}
+
+                                        <div className="flex flex-col items-start lg:items-end gap-1 w-full lg:w-auto">
+                                            {/* Scheduled Times Label */}
+                                            {(record.expectedStartTime || record.expectedEndTime) && (
+                                                <div className="text-[10px] font-bold text-primary/80 mb-0.5 bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
+                                                    Sched: {record.expectedStartTime || '--'} - {record.expectedEndTime || '--'}
+                                                </div>
+                                            )}
+
+                                            <div className="text-[11px] sm:text-xs font-semibold text-muted-foreground flex flex-col sm:flex-row lg:flex-col gap-1 sm:gap-2 lg:gap-0.5 items-start lg:items-end">
+                                                <span>{record.checkInTime ? `${t('attendance_feed.card.arrived')}: ${formatTime(record.checkInTime)}` : ((isAbsent || isHoliday || isOnLeave) ? t('attendance_feed.card.off_duty') : t('attendance_feed.card.pending'))}</span>
+                                                {record.checkOutTime && <span className="hidden sm:inline lg:hidden">•</span>}
+                                                {record.checkOutTime && <span>{t('attendance_feed.card.departed')}: {formatTime(record.checkOutTime)}</span>}
+                                            </div>
                                         </div>
                                     </div>
                                     <div className={`hidden lg:flex w-10 h-10 rounded-full items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-sm ${hadEvent ? 'bg-violet-500/15 text-violet-600' : (isAbsent ? 'bg-red-500/10 text-red-600' : (isHoliday ? 'bg-teal-500/10 text-teal-600' : (isOnLeave ? 'bg-pink-500/10 text-pink-600' : 'bg-primary/10 text-primary')))}`}>
@@ -406,7 +512,6 @@ const AttendanceFeed = () => {
                 </div>
             )}
 
-            {/* Modal remains visually unchanged to preserve reliable interaction */}
             {selectedNoteRecord && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={closeAndResetModal}>
                     <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-border flex flex-col overflow-y-auto max-h-[90vh] animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
