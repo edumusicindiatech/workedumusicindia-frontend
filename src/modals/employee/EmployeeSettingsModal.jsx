@@ -99,7 +99,7 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
     };
 
     return (
-        <div className={`fixed inset-0 z-[200] flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleClose}>
+        <div className={`fixed inset-0 z-200 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleClose}>
             <div 
                 className={`bg-card w-full max-w-md rounded-t-[2.5rem] md:rounded-3xl shadow-2xl border-t md:border border-border/50 flex flex-col relative max-h-[90vh] md:max-h-[85vh] overflow-hidden ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95' : ''}`}
                 style={{ transform: `translateY(${dragOffset}px)` }}
@@ -165,7 +165,7 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
                             <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {t('employee_settings.notifications_section', 'Notifications & Alerts')}
                         </Label>
 
-                        <div className="flex items-center justify-between p-3 sm:p-5 rounded-2xl sm:rounded-[2rem] border border-border/60 bg-muted/20 hover:border-primary/30 transition-colors shadow-sm group">
+                        <div className="flex items-center justify-between p-3 sm:p-5 rounded-2xl sm:rounded-4xl border border-border/60 bg-muted/20 hover:border-primary/30 transition-colors shadow-sm group">
                             <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-card border border-border/50 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-sm">
                                     <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
