@@ -920,6 +920,7 @@
         "subtitle": "Instantly broadcast announcements and alerts to your WorkEduMusic Team.",
         "new_broadcast": "New Broadcast",
         "step_target": "1. Select Target Group",
+        "selected": "Selected",
         "targets": {
             "all": "All Employees",
             "zone": "By Zone",
