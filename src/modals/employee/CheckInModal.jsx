@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MapPin, AlertCircle, PartyPopper, Loader2, MessageSquareWarning, CalendarDays } from "lucide-react";
+import { MapPin, AlertCircle, PartyPopper, Loader2, MessageSquareWarning, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -10,12 +10,12 @@ const CheckInModal = ({ isOpen, onClose, visit, isLate, onSubmit, actionLoading 
     const { t } = useTranslation();
     const [lateReason, setLateReason] = useState("");
     const [eventNote, setEventNote] = useState("");
-
-    // Swipe & Animation states
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragOffset, setDragOffset] = useState(0);
     const [isClosing, setIsClosing] = useState(false);
+
+    // High-Performance Animation Refs (Replaces State)
+    const modalRef = useRef(null);
     const dragStartY = useRef(0);
+    const currentDragY = useRef(0);
 
     // Reset fields when modal opens
     useEffect(() => {
@@ -23,40 +23,75 @@ const CheckInModal = ({ isOpen, onClose, visit, isLate, onSubmit, actionLoading 
             setLateReason("");
             setEventNote("");
             setIsClosing(false);
-            setDragOffset(0);
+            
+            // Reset position when opened
+            if (modalRef.current) {
+                modalRef.current.style.transform = 'translateY(0px)';
+                modalRef.current.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+            }
         }
     }, [isOpen]);
 
     if (!isOpen || !visit) return null;
 
-    // --- ANIMATION HANDLERS ---
-    const handleClose = () => {
-        if (actionLoading) return; // Prevent closing while processing
-        setIsClosing(true);
-        setDragOffset(window.innerHeight);
-        setTimeout(() => {
-            onClose();
-            setIsClosing(false);
-            setDragOffset(0);
-        }, 300);
-    };
-
+    // --- NATIVE 60FPS DRAG HANDLERS ---
     const handleTouchStart = (e) => { 
+        // Prevent dragging if the user is interacting with form elements
         if (e.target.closest('button') || e.target.closest('textarea')) return;
+        
         dragStartY.current = e.touches[0].clientY; 
-        setIsDragging(true); 
+        if (modalRef.current) {
+            // Remove transition during drag for 1:1 finger tracking (Zero lag)
+            modalRef.current.style.transition = 'none';
+        }
     };
 
     const handleTouchMove = (e) => {
-        if (!isDragging) return;
+        if (dragStartY.current === 0) return; // Prevent stray moves
+
         const delta = e.touches[0].clientY - dragStartY.current;
-        if (delta > 0) setDragOffset(delta);
+        
+        // Only allow dragging downwards
+        if (delta > 0) {
+            currentDragY.current = delta;
+            if (modalRef.current) {
+                // Direct GPU manipulation bypassing React lifecycle
+                modalRef.current.style.transform = `translateY(${delta}px)`;
+            }
+        }
     };
 
     const handleTouchEnd = () => {
-        setIsDragging(false);
-        if (dragOffset > 120) handleClose();
-        else setDragOffset(0);
+        dragStartY.current = 0;
+
+        if (modalRef.current) {
+            // Re-enable smooth spring transition for the snap
+            modalRef.current.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+            
+            // If dragged down more than 120px, close it. Otherwise, snap back up.
+            if (currentDragY.current > 120 && !actionLoading) {
+                handleClose();
+            } else {
+                modalRef.current.style.transform = 'translateY(0px)';
+            }
+        }
+        currentDragY.current = 0;
+    };
+
+    const handleClose = () => {
+        if (actionLoading) return; // Prevent closing while processing
+        setIsClosing(true);
+        
+        // Trigger exit animation natively
+        if (modalRef.current) {
+            modalRef.current.style.transition = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)';
+            modalRef.current.style.transform = 'translateY(100%)';
+        }
+
+        setTimeout(() => {
+            onClose();
+            setIsClosing(false);
+        }, 300);
     };
 
     const handleSubmit = () => {
@@ -75,38 +110,46 @@ const CheckInModal = ({ isOpen, onClose, visit, isLate, onSubmit, actionLoading 
     };
 
     return (
-        <div className={`fixed inset-0 z-200 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleClose}>
+        <div className={`fixed inset-0 z-200 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none pointer-events-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleClose}>
+            
             <div 
-                className={`bg-card w-full max-w-sm rounded-t-[2.5rem] md:rounded-3xl shadow-2xl border-t md:border border-border/50 flex flex-col relative overflow-hidden ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95' : ''}`} 
-                style={{ transform: `translateY(${dragOffset}px)` }} 
+                ref={modalRef}
+                className={`bg-card w-full max-w-sm rounded-t-[2.5rem] md:rounded-3xl shadow-2xl border-t md:border border-border/50 flex flex-col relative overflow-hidden will-change-transform ${!isClosing ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 md:zoom-in-95' : ''}`} 
                 onClick={e => e.stopPropagation()}
             >
                 {/* Primary Accent Border */}
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20 rounded-t-[inherit] pointer-events-none" />
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20 pointer-events-none" />
 
-                {/* Mobile Drag Handle */}
-                <div className="w-full flex justify-center pt-3 pb-1 md:hidden touch-none" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
-                    <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
+                {/* --- HEADER SECTION (Drag Target Area) --- */}
+                <div 
+                    className="w-full touch-none cursor-grab active:cursor-grabbing shrink-0"
+                    onTouchStart={handleTouchStart} 
+                    onTouchMove={handleTouchMove} 
+                    onTouchEnd={handleTouchEnd}
+                >
+                    {/* Mobile Drag Handle */}
+                    <div className="w-full flex justify-center pt-4 pb-1 md:hidden">
+                        <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
+                    </div>
+
+                    <div className="p-6 md:p-8 text-center pt-2 md:pt-10 pointer-events-none">
+                        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary mx-auto mb-6 shadow-inner border border-primary/20 relative pointer-events-auto">
+                            <div className="absolute inset-0 bg-primary/10 rounded-full animate-ping opacity-40" />
+                            <MapPin className="w-10 h-10 relative z-10" />
+                        </div>
+                        
+                        <h2 className="text-2xl font-extrabold text-foreground mb-4 tracking-tight">
+                            {t('check_in_modal.title', 'Check In')}
+                        </h2>
+                        
+                        <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-xl bg-muted border border-border/60 text-xs font-bold text-muted-foreground uppercase tracking-widest truncate max-w-full">
+                            {visit.schoolName} ({visit.category})
+                        </div>
+                    </div>
                 </div>
 
-                {/* HEADER SECTION */}
-                <div className="p-6 md:p-8 text-center pt-6 md:pt-10">
-                    <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary mx-auto mb-6 shadow-inner border border-primary/20 relative">
-                        <div className="absolute inset-0 bg-primary/10 rounded-full animate-ping opacity-40" />
-                        <MapPin className="w-10 h-10 relative z-10" />
-                    </div>
-                    
-                    <h2 className="text-2xl font-extrabold text-foreground mb-2 tracking-tight">
-                        {t('check_in_modal.title', 'Check In')}
-                    </h2>
-                    
-                    <div className="inline-flex items-center justify-center px-3 py-1 rounded-lg bg-muted border border-border/60 text-xs font-bold text-muted-foreground uppercase tracking-widest truncate max-w-full">
-                        {visit.schoolName} ({visit.category})
-                    </div>
-                </div>
-
-                {/* BODY / FORM SECTION */}
-                <div className="px-6 md:px-8 pb-8 space-y-5 text-center">
+                {/* --- BODY / FORM SECTION --- */}
+                <div className="px-6 md:px-8 pb-8 space-y-5 text-center overflow-y-auto max-h-[50vh] custom-scrollbar">
                     
                     {/* Mandatory Late Reason if Late */}
                     {isLate && (
@@ -129,7 +172,7 @@ const CheckInModal = ({ isOpen, onClose, visit, isLate, onSubmit, actionLoading 
                                 <Textarea
                                     value={lateReason}
                                     onChange={(e) => setLateReason(e.target.value)}
-                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onPointerDown={(e) => e.stopPropagation()} // Prevents drag events when selecting text
                                     placeholder={t('check_in_modal.late_reason_placeholder', 'Why was the arrival delayed?')}
                                     disabled={actionLoading}
                                     className="w-full min-h-25 p-4 rounded-2xl border border-border/80 bg-muted/20 text-sm focus-visible:ring-amber-500/30 resize-none transition-all shadow-sm font-medium disabled:opacity-50"
@@ -150,7 +193,7 @@ const CheckInModal = ({ isOpen, onClose, visit, isLate, onSubmit, actionLoading 
                         <Textarea
                             value={eventNote}
                             onChange={(e) => setEventNote(e.target.value)}
-                            onPointerDown={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()} // Prevents drag events when selecting text
                             placeholder={t('check_in_modal.event_note_placeholder', 'Are there any special events happening today?')}
                             disabled={actionLoading}
                             className="w-full min-h-25 p-4 rounded-2xl border border-border/80 bg-muted/20 text-sm focus-visible:ring-primary/30 resize-none transition-all shadow-sm font-medium disabled:opacity-50"
@@ -158,8 +201,8 @@ const CheckInModal = ({ isOpen, onClose, visit, isLate, onSubmit, actionLoading 
                     </div>
                 </div>
 
-                {/* FOOTER ACTION BUTTONS */}
-                <div className="bg-muted/10 p-5 border-t border-border/50 flex flex-col gap-3 rounded-b-3xl pb-safe">
+                {/* --- FOOTER ACTION BUTTONS --- */}
+                <div className="bg-muted/10 p-5 border-t border-border/50 flex flex-col gap-3 rounded-b-[inherit] pb-safe shrink-0">
                     <Button
                         className="w-full h-12 rounded-xl text-sm font-black uppercase tracking-widest bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none"
                         onClick={handleSubmit}

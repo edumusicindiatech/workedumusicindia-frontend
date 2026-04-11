@@ -14,52 +14,83 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
     // Modal States
     const [eventModalData, setEventModalData] = useState({ isOpen: false, categoryName: null });
     const [isSavingEvent, setIsSavingEvent] = useState(false);
-
-    // Swipe & Animation states
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragOffset, setDragOffset] = useState(0);
     const [isClosing, setIsClosing] = useState(false);
+
+    // High-Performance Animation Refs (Replaces State)
+    const modalRef = useRef(null);
     const dragStartY = useRef(0);
+    const currentDragY = useRef(0);
 
     useEffect(() => {
         if (isOpen) {
             setActiveCategory(null);
             setEventModalData({ isOpen: false, categoryName: null });
             setIsClosing(false);
-            setDragOffset(0);
+            
+            // Reset position when opened
+            if (modalRef.current) {
+                modalRef.current.style.transform = 'translateY(0px)';
+                modalRef.current.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+            }
         }
     }, [isOpen, school]);
 
     if (!isOpen || !school) return null;
 
-    // --- ANIMATION HANDLERS ---
-    const handleCloseModal = () => {
-        if (isSavingEvent) return;
-        setIsClosing(true);
-        setDragOffset(window.innerHeight);
-        setTimeout(() => {
-            onClose();
-            setIsClosing(false);
-            setDragOffset(0);
-        }, 300);
-    };
-
+    // --- NATIVE 60FPS DRAG HANDLERS ---
     const handleTouchStart = (e) => {
-        if (e.target.closest('button') || e.target.closest('.overflow-y-auto')) return;
+        // Only allow drag if not clicking a button
+        if (e.target.closest('button')) return;
+        
         dragStartY.current = e.touches[0].clientY;
-        setIsDragging(true);
+        if (modalRef.current) {
+            // Remove transition during drag for 1:1 finger tracking (Zero lag)
+            modalRef.current.style.transition = 'none';
+        }
     };
 
     const handleTouchMove = (e) => {
-        if (!isDragging) return;
         const delta = e.touches[0].clientY - dragStartY.current;
-        if (delta > 0) setDragOffset(delta);
+        
+        // Only allow dragging downwards
+        if (delta > 0) {
+            currentDragY.current = delta;
+            if (modalRef.current) {
+                // Direct GPU manipulation bypassing React lifecycle
+                modalRef.current.style.transform = `translateY(${delta}px)`;
+            }
+        }
     };
 
     const handleTouchEnd = () => {
-        setIsDragging(false);
-        if (dragOffset > 120) handleCloseModal();
-        else setDragOffset(0);
+        if (modalRef.current) {
+            // Re-enable smooth spring transition for the snap
+            modalRef.current.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+            
+            // If dragged down more than 150px, close it. Otherwise, snap back up.
+            if (currentDragY.current > 150) {
+                handleCloseModal();
+            } else {
+                modalRef.current.style.transform = 'translateY(0px)';
+            }
+        }
+        currentDragY.current = 0;
+    };
+
+    const handleCloseModal = () => {
+        if (isSavingEvent) return;
+        setIsClosing(true);
+        
+        // Trigger exit animation natively
+        if (modalRef.current) {
+            modalRef.current.style.transition = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)';
+            modalRef.current.style.transform = 'translateY(100%)';
+        }
+
+        setTimeout(() => {
+            onClose();
+            setIsClosing(false);
+        }, 300);
     };
 
     const handleSaveEvent = async (eventData) => {
@@ -84,48 +115,54 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
     };
 
     return (
-        <div className={`fixed inset-0 z-100 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleCloseModal}>
+        <div className={`fixed inset-0 z-100 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none pointer-events-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleCloseModal}>
             <div 
-                className={`bg-card w-full max-w-3xl rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl border-t md:border border-border/50 flex flex-col relative max-h-[90vh] md:max-h-[85vh] overflow-hidden ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95' : ''}`} 
-                style={{ transform: `translateY(${dragOffset}px)` }} 
+                ref={modalRef}
+                className={`bg-card w-full max-w-3xl rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl border-t md:border border-border/50 flex flex-col relative max-h-[90vh] md:max-h-[85vh] overflow-hidden will-change-transform ${!isClosing ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 md:zoom-in-95' : ''}`} 
                 onClick={e => e.stopPropagation()}
             >
-                {/* Top Accent Line */}
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20 rounded-t-[inherit] pointer-events-none" />
 
-                {/* Mobile Drag Handle */}
-                <div className="w-full flex justify-center pt-3 pb-1 md:hidden touch-none" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
-                    <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
-                </div>
-
-                {/* HEADER */}
-                <div className="sticky top-0 bg-card/90 backdrop-blur-md z-10 px-6 py-5 border-b border-border/50 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-4 pr-4">
-                        {activeCategory ? (
-                            <button onClick={() => setActiveCategory(null)} className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-muted/50 hover:bg-muted flex items-center justify-center shrink-0 border border-border/60 transition-colors group">
-                                <ChevronLeft className="w-5 h-5 text-muted-foreground group-hover:text-foreground group-hover:-translate-x-0.5 transition-transform" />
-                            </button>
-                        ) : (
-                            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-inner">
-                                <School className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-                            </div>
-                        )}
-                        <div className="min-w-0">
-                            <h2 className="text-lg sm:text-xl font-black text-foreground truncate leading-tight tracking-tight">
-                                {school.name}
-                            </h2>
-                            <p className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-widest truncate flex items-center gap-1.5 mt-0.5">
-                                <MapPin className="w-3 h-3 text-primary/70 shrink-0" /> {school.address}
-                            </p>
-                        </div>
+                {/* HEADER (Drag Target Area) */}
+                {/* Touch events are placed ONLY here. This prevents scrolling conflicts with the body content */}
+                <div 
+                    className="sticky top-0 bg-card/95 backdrop-blur-md z-10 border-b border-border/50 touch-none cursor-grab active:cursor-grabbing shrink-0"
+                    onTouchStart={handleTouchStart} 
+                    onTouchMove={handleTouchMove} 
+                    onTouchEnd={handleTouchEnd}
+                >
+                    {/* Mobile Drag Handle */}
+                    <div className="w-full flex justify-center pt-3 pb-1 md:hidden">
+                        <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
                     </div>
-                    <button onClick={handleCloseModal} className="p-2.5 hover:bg-muted rounded-full bg-muted/50 border border-border shrink-0 hidden md:flex transition-colors">
-                        <X className="w-5 h-5 text-muted-foreground" />
-                    </button>
+
+                    <div className="px-5 sm:px-6 pb-5 pt-2 md:pt-6 flex items-center justify-between pointer-events-none">
+                        <div className="flex items-center gap-4 pr-4 pointer-events-auto w-full min-w-0">
+                            {activeCategory ? (
+                                <button onClick={() => setActiveCategory(null)} className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-muted/50 hover:bg-muted flex items-center justify-center shrink-0 border border-border/60 transition-colors group">
+                                    <ChevronLeft className="w-5 h-5 text-muted-foreground group-hover:text-foreground group-hover:-translate-x-0.5 transition-transform" />
+                                </button>
+                            ) : (
+                                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-inner">
+                                    <School className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                                </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                                <h2 className="text-lg sm:text-xl font-black text-foreground truncate leading-tight tracking-tight">
+                                    {school.name}
+                                </h2>
+                                <p className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-widest truncate flex items-center gap-1.5 mt-0.5">
+                                    <MapPin className="w-3 h-3 text-primary/70 shrink-0" /> {school.address}
+                                </p>
+                            </div>
+                        </div>
+                        <button onClick={handleCloseModal} className="p-2.5 hover:bg-muted rounded-full bg-muted/50 border border-border shrink-0 hidden md:flex transition-colors pointer-events-auto">
+                            <X className="w-5 h-5 text-muted-foreground" />
+                        </button>
+                    </div>
                 </div>
 
-                {/* SCROLLABLE BODY */}
-                <div className="p-6 overflow-y-auto flex-1 custom-scrollbar bg-card">
+                {/* SCROLLABLE BODY (No drag events here) */}
+                <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar bg-card">
 
                     {/* VIEW 1: CATEGORY SELECTION */}
                     {!activeCategory ? (
@@ -142,7 +179,7 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                                                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/10">
                                                     <Users className="w-5 h-5 text-primary" />
                                                 </div>
-                                                <div className="min-w-0">
+                                                <div className="min-w-0 flex-1">
                                                     <h4 className="font-extrabold text-base sm:text-lg text-foreground group-hover:text-primary transition-colors truncate">
                                                         {category.name}
                                                     </h4>
@@ -176,13 +213,13 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                         /* VIEW 2: 30-DAY CATEGORY RECORD */
                         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
                             
-                            <div className="flex items-center justify-between gap-4 flex-wrap bg-muted/20 p-4 sm:p-5 rounded-4xl border border-border/50">
-                                <div className="flex items-center gap-3.5">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 flex-wrap bg-muted/20 p-4 sm:p-5 rounded-4xl border border-border/50">
+                                <div className="flex items-center gap-3.5 w-full sm:w-auto">
                                     <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
                                         <Users className="w-6 h-6 text-primary" />
                                     </div>
-                                    <div>
-                                        <h3 className="font-black text-lg text-foreground tracking-tight">{activeCategory.name}</h3>
+                                    <div className="min-w-0 flex-1">
+                                        <h3 className="font-black text-lg text-foreground tracking-tight truncate">{activeCategory.name}</h3>
                                         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{t('school_details.last_30_days')}</p>
                                     </div>
                                 </div>
@@ -195,28 +232,28 @@ const SchoolDetailsModal = ({ isOpen, onClose, school, onRefresh }) => {
                             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                                 <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm">
                                     <CheckCircle2 className="w-5 h-5 text-emerald-500 mb-2" />
-                                    <p className="text-3xl font-black text-emerald-500 leading-none">{activeCategory.stats.present || 0}</p>
-                                    <p className="text-[10px] uppercase font-black text-emerald-600/80 dark:text-emerald-400/80 mt-1.5 tracking-widest">{t('school_details.stat_present') || 'PRESENT'}</p>
+                                    <p className="text-2xl sm:text-3xl font-black text-emerald-500 leading-none">{activeCategory.stats.present || 0}</p>
+                                    <p className="text-[9px] sm:text-[10px] uppercase font-black text-emerald-600/80 dark:text-emerald-400/80 mt-1.5 tracking-widest">{t('school_details.stat_present') || 'PRESENT'}</p>
                                 </div>
                                 <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm">
                                     <Clock className="w-5 h-5 text-amber-500 mb-2" />
-                                    <p className="text-3xl font-black text-amber-500 leading-none">{activeCategory.stats.late || 0}</p>
-                                    <p className="text-[10px] uppercase font-black text-amber-600/80 dark:text-amber-400/80 mt-1.5 tracking-widest">{t('school_details.stat_late') || 'LATE'}</p>
+                                    <p className="text-2xl sm:text-3xl font-black text-amber-500 leading-none">{activeCategory.stats.late || 0}</p>
+                                    <p className="text-[9px] sm:text-[10px] uppercase font-black text-amber-600/80 dark:text-amber-400/80 mt-1.5 tracking-widest">{t('school_details.stat_late') || 'LATE'}</p>
                                 </div>
                                 <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm">
                                     <UserX className="w-5 h-5 text-destructive mb-2" />
-                                    <p className="text-3xl font-black text-destructive leading-none">{activeCategory.stats.absent || 0}</p>
-                                    <p className="text-[10px] uppercase font-black text-destructive/80 dark:text-red-400/80 mt-1.5 tracking-widest">{t('school_details.stat_absent') || 'ABSENT'}</p>
+                                    <p className="text-2xl sm:text-3xl font-black text-destructive leading-none">{activeCategory.stats.absent || 0}</p>
+                                    <p className="text-[9px] sm:text-[10px] uppercase font-black text-destructive/80 dark:text-red-400/80 mt-1.5 tracking-widest">{t('school_details.stat_absent') || 'ABSENT'}</p>
                                 </div>
                                 <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm">
                                     <CalendarOff className="w-5 h-5 text-purple-500 mb-2" />
-                                    <p className="text-3xl font-black text-purple-500 leading-none">{activeCategory.stats.leaves || 0}</p>
-                                    <p className="text-[10px] uppercase font-black text-purple-600/80 dark:text-purple-400/80 mt-1.5 tracking-widest">{t('school_details.stat_leaves') || 'LEAVES'}</p>
+                                    <p className="text-2xl sm:text-3xl font-black text-purple-500 leading-none">{activeCategory.stats.leaves || 0}</p>
+                                    <p className="text-[9px] sm:text-[10px] uppercase font-black text-purple-600/80 dark:text-purple-400/80 mt-1.5 tracking-widest">{t('school_details.stat_leaves') || 'LEAVES'}</p>
                                 </div>
                                 <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm col-span-2 sm:col-span-1">
                                     <PartyPopper className="w-5 h-5 text-blue-500 mb-2" />
-                                    <p className="text-3xl font-black text-blue-500 leading-none">{activeCategory.stats.events || 0}</p>
-                                    <p className="text-[10px] uppercase font-black text-blue-600/80 dark:text-blue-400/80 mt-1.5 tracking-widest">{t('school_details.stat_events') || 'EVENTS'}</p>
+                                    <p className="text-2xl sm:text-3xl font-black text-blue-500 leading-none">{activeCategory.stats.events || 0}</p>
+                                    <p className="text-[9px] sm:text-[10px] uppercase font-black text-blue-600/80 dark:text-blue-400/80 mt-1.5 tracking-widest">{t('school_details.stat_events') || 'EVENTS'}</p>
                                 </div>
                             </div>
 

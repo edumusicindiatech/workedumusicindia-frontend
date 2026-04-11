@@ -137,24 +137,24 @@ const DailyReport = () => {
     };
 
     if (loading) {
-        return <div className="p-8 h-96 bg-muted/20 animate-pulse rounded-[2.5rem] max-w-4xl mx-auto mt-4" />;
+        return <div className="p-4 sm:p-8 h-96 bg-muted/20 animate-pulse rounded-3xl sm:rounded-[2.5rem] max-w-4xl mx-auto mt-4" />;
     }
 
     return (
         <div className="animate-in fade-in duration-700 pb-24 md:pb-12 max-w-3xl mx-auto p-4 sm:p-6 lg:p-8 mt-2 md:mt-4">
             
             {/* Header */}
-            <div className="mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
-                        <FileText className="w-7 h-7 text-primary" />
+            <div className="mb-8 sm:mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4 sm:gap-5">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner shrink-0">
+                        <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
                     </div>
                     <div className="space-y-1">
-                        <h1 className="text-3xl font-black text-foreground tracking-tight uppercase">
+                        <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight uppercase">
                             {t('daily_report.title', 'Daily Report')}
                         </h1>
-                        <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                           <Calendar className="w-3.5 h-3.5 text-primary" /> {todayFormatted}
+                        <p className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                           <Calendar className="w-3.5 h-3.5 text-primary shrink-0" /> <span className="truncate">{todayFormatted}</span>
                         </p>
                     </div>
                 </div>
@@ -163,27 +163,27 @@ const DailyReport = () => {
             {/* Success Notification */}
             {successMsg && (
                 <div className="mb-6 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 shadow-sm">
-                    <CheckCircle className="w-6 h-6 shrink-0" />
-                    <p className="font-extrabold text-sm uppercase tracking-wider">{successMsg}</p>
+                    <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
+                    <p className="font-extrabold text-xs sm:text-sm uppercase tracking-wider leading-snug">{successMsg}</p>
                 </div>
             )}
 
             {/* Main Form Card */}
-            <div className="bg-card rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-border/60 relative overflow-hidden flex flex-col">
+            <div className="bg-card rounded-3xl sm:rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-border/60 relative overflow-hidden flex flex-col">
                 <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20" />
                 
-                <div className="p-6 sm:p-10 space-y-8">
+                <div className="p-5 sm:p-8 lg:p-10 space-y-6 sm:space-y-8">
                     
                     {/* Assigned School Selection */}
-                    <div className="space-y-3 relative z-30">
-                        <Label className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
+                    <div className="space-y-2.5 sm:space-y-3 relative z-30">
+                        <Label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
                             {t('daily_report.assigned_school', 'Assigned Location')} <span className="text-destructive">*</span>
                         </Label>
                         <div className="relative">
                             <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
-                                <MapPin className="w-4.5 h-4.5 text-primary/70" />
+                                <MapPin className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-primary/70" />
                             </div>
-                            <div className="w-full [&>div]:h-13 [&>div]:rounded-2xl [&>div]:bg-muted/20 [&>div]:border-border/60 [&>div]:pl-11">
+                            <div className="w-full [&>div]:h-12 sm:[&>div]:h-14 [&>div]:rounded-2xl [&>div]:bg-muted/20 [&>div]:border-border/60 [&>div]:pl-10 sm:[&>div]:pl-11">
                                 <CustomSelect 
                                     value={currentSelectedName} 
                                     onChange={handleSchoolSelect} 
@@ -196,11 +196,12 @@ const DailyReport = () => {
                     </div>
 
                     {/* Band Category Selection */}
-                    <div className="space-y-3 z-20">
-                        <Label className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
+                    <div className="space-y-2.5 sm:space-y-3 z-20">
+                        <Label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
                             {t('daily_report.label_band', 'Category')} <span className="text-destructive">*</span>
                         </Label>
-                        <div className="flex bg-muted/20 border border-border/60 p-1.5 rounded-2xl">
+                        {/* Flex-col on mobile so buttons stack neatly, row on sm screens */}
+                        <div className="flex flex-col sm:flex-row bg-muted/20 border border-border/60 p-1.5 rounded-2xl gap-1.5 sm:gap-0">
                             {['Junior Band', 'Senior Band'].map((b) => {
                                 const isActive = band === b;
                                 return (
@@ -208,14 +209,16 @@ const DailyReport = () => {
                                         key={b}
                                         type="button"
                                         onClick={() => setBand(b)}
-                                        className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+                                        className={`flex-1 py-3 text-xs sm:text-sm font-bold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
                                             isActive
-                                                ? 'bg-primary text-primary-foreground shadow-md scale-[0.98]'
+                                                ? 'bg-primary text-primary-foreground shadow-md sm:scale-[0.98]'
                                                 : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                                         }`}
                                     >
-                                        {isActive && <Check className="w-4 h-4" />}
-                                        {b === 'Junior Band' ? (t('daily_report.junior_band', 'Junior Band')) : (t('daily_report.senior_band', 'Senior Band'))}
+                                        {isActive && <Check className="w-4 h-4 shrink-0" />}
+                                        <span className="truncate">
+                                            {b === 'Junior Band' ? (t('daily_report.junior_band', 'Junior Band')) : (t('daily_report.senior_band', 'Senior Band'))}
+                                        </span>
                                     </button>
                                 );
                             })}
@@ -223,25 +226,27 @@ const DailyReport = () => {
                     </div>
 
                     {/* Category Selection Dropdown */}
-                    <div className="space-y-3 relative z-10" ref={dropdownRef}>
-                        <Label className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
+                    <div className="space-y-2.5 sm:space-y-3 relative z-10" ref={dropdownRef}>
+                        <Label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
                             {t('daily_report.label_category', 'Report Type')} <span className="text-destructive">*</span>
                         </Label>
 
                         <button
                             type="button"
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                            className="w-full h-13 rounded-2xl border border-border/60 bg-muted/20 px-5 text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all hover:bg-muted/30"
+                            className="w-full h-12 sm:h-14 rounded-2xl border border-border/60 bg-muted/20 px-4 sm:px-5 text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all hover:bg-muted/30"
                         >
                             <span className="text-foreground font-bold flex items-center gap-2.5">
-                                <Tag className="w-4 h-4 text-primary/70" />
-                                {category === "Regular Report" ? (t('daily_report.categories.regular', 'Regular Report')) : (t('daily_report.categories.event', 'Event Report'))}
+                                <Tag className="w-4 h-4 text-primary/70 shrink-0" />
+                                <span className="truncate">
+                                    {category === "Regular Report" ? (t('daily_report.categories.regular', 'Regular Report')) : (t('daily_report.categories.event', 'Event Report'))}
+                                </span>
                             </span>
-                            <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
+                            <ChevronDown className={`w-4 h-4 shrink-0 text-muted-foreground transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
                         </button>
 
                         {isDropdownOpen && (
-                            <div className="absolute top-full left-0 w-full mt-2 bg-card border border-border/60 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-100">
+                            <div className="absolute top-full left-0 w-full mt-2 bg-card border border-border/60 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-100 max-h-60 overflow-y-auto">
                                 <div className="p-2 flex flex-col gap-1">
                                     {[
                                         { label: t('daily_report.categories.regular', 'Regular Report'), value: "Regular Report", icon: FileText },
@@ -260,10 +265,10 @@ const DailyReport = () => {
                                             }`}
                                         >
                                             <span className="flex items-center gap-2.5">
-                                                <option.icon className={`w-4 h-4 ${category === option.value ? 'text-primary' : 'text-muted-foreground'}`} />
-                                                {option.label}
+                                                <option.icon className={`w-4 h-4 shrink-0 ${category === option.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                                                <span className="truncate">{option.label}</span>
                                             </span>
-                                            {category === option.value && <Check className="w-4 h-4" />}
+                                            {category === option.value && <Check className="w-4 h-4 shrink-0" />}
                                         </button>
                                     ))}
                                 </div>
@@ -273,7 +278,7 @@ const DailyReport = () => {
 
                     {/* Conditional Event Inputs */}
                     {category === "Event Report" && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 animate-in fade-in slide-in-from-top-4 z-0 p-5 bg-muted/10 border border-border/40 rounded-4xl">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 animate-in fade-in slide-in-from-top-4 z-0 p-4 sm:p-5 bg-muted/10 border border-border/40 rounded-3xl sm:rounded-4xl">
                             <div className="space-y-2.5">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-foreground ml-1">
                                     {t('daily_report.label_event_name', 'Event Name')} <span className="text-destructive">*</span>
@@ -304,31 +309,31 @@ const DailyReport = () => {
                     )}
 
                     {/* Summary Area */}
-                    <div className="space-y-3 z-0">
-                        <Label className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
+                    <div className="space-y-2.5 sm:space-y-3 z-0">
+                        <Label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
                             {t('daily_report.label_summary', 'Daily Summary')} <span className="text-destructive">*</span>
                         </Label>
                         <Textarea
                             value={summary}
                             onChange={(e) => setSummary(e.target.value)}
                             placeholder={t('daily_report.placeholder_summary', 'Write a detailed summary of your activities today...')}
-                            className="w-full min-h-50 rounded-3xl border border-border/60 bg-muted/20 p-5 text-base font-medium resize-none focus-visible:ring-primary/30 focus:bg-background transition-all leading-relaxed shadow-inner"
+                            className="w-full min-h-37.5 sm:min-h-50 rounded-3xl border border-border/60 bg-muted/20 p-4 sm:p-5 text-sm sm:text-base font-medium resize-none focus-visible:ring-primary/30 focus:bg-background transition-all leading-relaxed shadow-inner"
                         />
                     </div>
                 </div>
 
                 {/* Footer / Submit Button */}
-                <div className="p-6 sm:p-8 bg-muted/10 border-t border-border/50">
+                <div className="p-5 sm:p-8 bg-muted/10 border-t border-border/50 shrink-0">
                     <Button
                         type="button"
                         onClick={handleSubmit}
                         disabled={!isFormValid() || isSubmitting}
-                        className="w-full h-14 rounded-2xl font-black uppercase tracking-widest text-base shadow-xl shadow-primary/20 hover:shadow-primary/30 active:scale-[0.98] transition-all gap-3"
+                        className="w-full h-12 sm:h-14 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-sm sm:text-base shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-[0.98] transition-all gap-2 sm:gap-3"
                     >
                         {isSubmitting ? (
-                            <><Loader2 className="w-5 h-5 animate-spin" /> {t('daily_report.btn_submitting', 'Submitting...')}</>
+                            <><Loader2 className="w-5 h-5 animate-spin shrink-0" /> <span className="truncate">{t('daily_report.btn_submitting', 'Submitting...')}</span></>
                         ) : (
-                            <>{t('daily_report.btn_submit', 'Submit Report')} <Send className="w-5 h-5" /></>
+                            <><span className="truncate">{t('daily_report.btn_submit', 'Submit Report')}</span> <Send className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" /></>
                         )}
                     </Button>
                 </div>
