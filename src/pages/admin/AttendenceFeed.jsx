@@ -258,6 +258,18 @@ const AttendanceFeed = () => {
         setOverrideReason("");
     };
 
+    const formatTime12Hour = (time) => {
+        if (!time) return "";
+        const [hourString, minute] = time.split(":");
+        if (!hourString || !minute) return time; // Fallback if it's not "HH:MM"
+        let hour = parseInt(hourString, 10);
+        const ampm = hour >= 12 ? "PM" : "AM";
+        hour = hour % 12;
+        hour = hour ? hour : 12; // 0 becomes 12
+        const formattedHour = hour < 10 ? `0${hour}` : hour;
+        return `${formattedHour}:${minute} ${ampm}`;
+    };
+
     return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto animate-fade-in pb-24 md:pb-8 h-full">
             {/* Header Section */}
@@ -479,7 +491,7 @@ const AttendanceFeed = () => {
                                             {/* Scheduled Times Label */}
                                             {(record.expectedStartTime || record.expectedEndTime) && (
                                                 <div className="text-[10px] font-bold text-primary/80 mb-0.5 bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
-                                                    Sched: {record.expectedStartTime || '--'} - {record.expectedEndTime || '--'}
+                                                    Sched: {record.expectedStartTime ? formatTime12Hour(record.expectedStartTime) : '--'} - {record.expectedEndTime ? formatTime12Hour(record.expectedEndTime) : '--'}
                                                 </div>
                                             )}
 

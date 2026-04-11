@@ -2,17 +2,45 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     School, MapPin, Plus, Clock, CalendarDays,
-    Pencil, Trash2, CheckCircle2, Sparkles
+    Pencil, Trash2, CheckCircle2, Sparkles, Copy
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import AssignSchoolModal from "../../../modals/admin/AssignSchoolModals";
 import ManageAssignedSchoolModal from "../../../modals/admin/ManageAssignedSchoolModal";
 
+// --- Helper function to convert 24h to 12h AM/PM format ---
+const formatTime12Hour = (time) => {
+    if (!time) return "";
+    const [hourString, minute] = time.split(":");
+    if (!hourString || !minute) return time;
+    let hour = parseInt(hourString, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12;
+    hour = hour ? hour : 12; // 0 becomes 12
+    const formattedHour = hour < 10 ? `0${hour}` : hour;
+    return `${formattedHour}:${minute} ${ampm}`;
+};
+
 const AssignmentsTab = ({ schools, employeeId, onSuccess }) => {
     const { t } = useTranslation();
+    
+    // States for Modals
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [manageModalData, setManageModalData] = useState({ isOpen: false, assignment: null });
+    
+    // --- NEW: State to hold the data of the assignment we want to clone ---
+    const [cloneData, setCloneData] = useState(null);
+
+    const openNewAssignmentModal = () => {
+        setCloneData(null); // Ensure form is empty for a truly "new" assignment
+        setIsAssignModalOpen(true);
+    };
+
+    const handleClone = (assignment) => {
+        setCloneData(assignment); // Pass existing data to the modal
+        setIsAssignModalOpen(true);
+    };
 
     return (
         <div className="bg-card rounded-4xl shadow-sm border border-border overflow-hidden animate-in fade-in duration-500">
@@ -28,7 +56,7 @@ const AssignmentsTab = ({ schools, employeeId, onSuccess }) => {
                 </h3>
                 <Button
                     className="w-full sm:w-auto gap-2 shadow-lg shadow-primary/20 rounded-xl font-bold h-11 bg-primary hover:bg-primary/90 text-primary-foreground transition-all active:scale-95"
-                    onClick={() => setIsAssignModalOpen(true)}
+                    onClick={openNewAssignmentModal}
                 >
                     <Plus className="w-5 h-5 shrink-0" />
                     <span className="hidden sm:inline">{t('assignments_tab.btn_assign_desktop')}</span>
@@ -53,7 +81,7 @@ const AssignmentsTab = ({ schools, employeeId, onSuccess }) => {
                         </p>
                         <Button
                             variant="outline"
-                            onClick={() => setIsAssignModalOpen(true)}
+                            onClick={openNewAssignmentModal}
                             className="rounded-xl border-primary/20 text-primary hover:bg-primary/10 font-bold"
                         >
                             <Sparkles className="w-4 h-4 mr-2" /> Assign School
@@ -93,7 +121,7 @@ const AssignmentsTab = ({ schools, employeeId, onSuccess }) => {
                                                 {assignment.category}
                                             </span>
                                             <span className="px-3 py-1 bg-muted rounded-lg border border-border/50 text-xs font-bold text-foreground flex items-center gap-1.5">
-                                                <Clock className="w-3.5 h-3.5 text-amber-500" /> {assignment.startTime} - {assignment.endTime}
+                                                <Clock className="w-3.5 h-3.5 text-amber-500" /> {formatTime12Hour(assignment.startTime)} - {formatTime12Hour(assignment.endTime)}
                                             </span>
                                             {assignment.allowedDays && assignment.allowedDays.length > 0 && (
                                                 <span className="px-3 py-1 bg-muted rounded-lg border border-border/50 text-xs font-bold text-foreground flex items-center gap-1.5">
@@ -105,6 +133,16 @@ const AssignmentsTab = ({ schools, employeeId, onSuccess }) => {
 
                                     {/* Actions Section */}
                                     <div className="flex flex-row xl:flex-col items-center xl:items-end justify-start xl:justify-start gap-2.5 shrink-0 pt-4 xl:pt-0 border-t border-border/50 xl:border-transparent mt-2 xl:mt-0">
+                                        
+                                        {/* --- NEW: Clone Button --- */}
+                                        <Button
+                                            variant="outline"
+                                            className="h-10 rounded-xl gap-2 font-bold text-muted-foreground hover:text-primary border-border/80 hover:border-primary/30 transition-all flex-1 xl:flex-none"
+                                            onClick={() => handleClone(assignment)}
+                                        >
+                                            <Copy className="w-4 h-4" /> {t('assignments_tab.btn_clone', 'Clone')}
+                                        </Button>
+
                                         <Button
                                             variant="outline"
                                             className="h-10 rounded-xl gap-2 font-bold text-muted-foreground hover:text-primary border-border/80 hover:border-primary/30 transition-all flex-1 xl:flex-none"
@@ -132,6 +170,7 @@ const AssignmentsTab = ({ schools, employeeId, onSuccess }) => {
                 isOpen={isAssignModalOpen}
                 onClose={() => setIsAssignModalOpen(false)}
                 employeeId={employeeId}
+                initialData={cloneData} // Pass the clone data down to the modal
                 onSuccess={() => {
                     setIsAssignModalOpen(false);
                     if (onSuccess) onSuccess();

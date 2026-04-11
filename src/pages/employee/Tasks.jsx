@@ -4,7 +4,7 @@ import api from "../../api/axios";
 import {
     MapPin, Calendar, Clock, ClipboardList,
     CheckCircle, XCircle, Info, Loader2, Tags,
-    CheckCircle2, Sparkles, CheckSquare, School
+    CheckCircle2, Sparkles, CheckSquare, School, Trash2 // Added Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
@@ -20,11 +20,11 @@ const convertTo12HourFormat = (timeStr) => {
     const times = timeStr.split('-').map(t => t.trim());
     return times.map(t => {
         const [hourStr, minuteStr] = t.split(':');
-        if (!hourStr || !minuteStr) return t; 
+        if (!hourStr || !minuteStr) return t;
         let hour = parseInt(hourStr, 10);
         const ampm = hour >= 12 ? 'PM' : 'AM';
         hour = hour % 12;
-        hour = hour ? hour : 12; 
+        hour = hour ? hour : 12;
         return `${hour}:${minuteStr} ${ampm}`;
     }).join(' - ');
 };
@@ -100,6 +100,25 @@ const Tasks = () => {
             closeRejectModal();
         } catch (error) {
             toast.error(error.response?.data?.message || t('tasks.toasts.respond_error'), { id: loadingToast });
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    // --- NEW: Handle deleting a resolved task ---
+    const handleDeleteTask = async (taskId) => {
+        setActionLoading(true);
+        const loadingToast = toast.loading(t('tasks.toasts.deleting', 'Removing task...'));
+
+        try {
+            await api.delete(`/employee/tasks/${taskId}`);
+
+            // Remove from local state
+            setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId && task._id !== taskId));
+
+            toast.success(t('tasks.toasts.delete_success', 'Task removed'), { id: loadingToast });
+        } catch (error) {
+            toast.error(error.response?.data?.message || t('tasks.toasts.delete_error', 'Failed to remove task'), { id: loadingToast });
         } finally {
             setActionLoading(false);
         }
@@ -197,13 +216,14 @@ const Tasks = () => {
                         const isPending = task.status === "pending";
                         const isAccepted = task.status === "accepted";
                         const isRejected = task.status === "rejected";
+                        const isResolved = isAccepted || isRejected;
 
                         return (
                             <div
-                                key={task.id}
+                                key={task.id || task._id}
                                 className={`group relative rounded-3xl border p-5 sm:p-6 lg:p-8 flex flex-col h-full transition-all duration-300 overflow-hidden ${isPending ? "bg-card border-primary/30 shadow-lg hover:shadow-xl hover:border-primary/60 lg:hover:-translate-y-1" :
-                                    isAccepted ? "bg-emerald-500/5 border-emerald-500/20 shadow-sm" :
-                                        "bg-card/40 border-border opacity-80 grayscale-[0.15] shadow-none hover:grayscale-0"
+                                        isAccepted ? "bg-emerald-500/5 border-emerald-500/20 shadow-sm opacity-90" :
+                                            "bg-card/40 border-border opacity-80 shadow-none hover:opacity-100"
                                     }`}
                             >
                                 {isPending && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 sm:w-40 h-1.5 bg-primary rounded-b-full shadow-[0_0_15px_rgba(var(--primary),0.8)]" />}
@@ -215,10 +235,9 @@ const Tasks = () => {
                                         <div className={`p-3 sm:p-4 rounded-2xl shrink-0 mt-0.5 ${isPending ? 'bg-primary/10 dark:bg-primary/20' : 'bg-muted'}`}>
                                             <School className={`w-6 h-6 sm:w-7 sm:h-7 ${isPending ? 'text-primary' : 'text-muted-foreground'}`} />
                                         </div>
-                                        
-                                        {/* FIXED HERE: Removed overflow-hidden from parent, removed truncate from h2 */}
+
                                         <div className="flex-1 min-w-0">
-                                            <h2 className="text-xl sm:text-2xl font-bold text-foreground leading-tight pb-1 wrap-break-word">
+                                            <h2 className={`text-xl sm:text-2xl font-bold leading-tight pb-1 wrap-break-word ${isResolved ? 'text-muted-foreground' : 'text-foreground'}`}>
                                                 {task.schoolName}
                                             </h2>
                                             <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -228,21 +247,19 @@ const Tasks = () => {
                                                 </p>
                                             </div>
                                         </div>
-
                                     </div>
-                                    <span className={`self-start sm:self-auto text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shrink-0 flex items-center gap-1.5 border shadow-sm ${isPending ? 'bg-primary text-primary-foreground border-primary/20' : 'bg-muted text-muted-foreground border-border'
-                                        }`}>
+                                    <span className={`self-start sm:self-auto text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shrink-0 flex items-center gap-1.5 border shadow-sm ${isPending ? 'bg-primary text-primary-foreground border-primary/20' : 'bg-muted text-muted-foreground border-border'}`}>
                                         <Tags className="w-3 h-3" /> {task.category}
                                     </span>
                                 </div>
 
                                 {/* Scheduling Info */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 bg-muted/40 dark:bg-muted/20 p-4 sm:p-5 rounded-2xl border border-border/50">
+                                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 p-4 sm:p-5 rounded-2xl border ${isResolved ? 'bg-muted/10 border-border/30' : 'bg-muted/40 dark:bg-muted/20 border-border/50'}`}>
                                     <div className="space-y-1.5">
                                         <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-bold uppercase tracking-wider">
                                             <Calendar className="w-4 h-4 text-primary/70" /> {t('tasks.card.days')}
                                         </div>
-                                        <p className="text-sm sm:text-base font-bold text-foreground flex items-center flex-wrap gap-2">
+                                        <p className={`text-sm sm:text-base font-bold flex items-center flex-wrap gap-2 ${isResolved ? 'text-muted-foreground' : 'text-foreground'}`}>
                                             <span>{task.daysAllotted.join(", ")}</span>
                                             <span className="text-muted-foreground font-medium text-xs bg-background border border-border/50 px-2.5 py-0.5 rounded-full shadow-sm">
                                                 {task.duration}
@@ -253,7 +270,7 @@ const Tasks = () => {
                                         <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-bold uppercase tracking-wider">
                                             <Clock className="w-4 h-4 text-amber-500" /> {t('tasks.card.timing')}
                                         </div>
-                                        <p className="text-sm sm:text-base font-bold text-foreground">
+                                        <p className={`text-sm sm:text-base font-bold ${isResolved ? 'text-muted-foreground' : 'text-foreground'}`}>
                                             {convertTo12HourFormat(task.timing)}
                                         </p>
                                     </div>
@@ -261,11 +278,11 @@ const Tasks = () => {
 
                                 {/* Instructions */}
                                 <div className="mb-6 flex-1">
-                                    <div className="flex items-center gap-2 text-foreground font-bold mb-2.5">
-                                        <ClipboardList className="w-4 h-4 text-primary" />
+                                    <div className={`flex items-center gap-2 font-bold mb-2.5 ${isResolved ? 'text-muted-foreground' : 'text-foreground'}`}>
+                                        <ClipboardList className={`w-4 h-4 ${isResolved ? 'text-muted-foreground' : 'text-primary'}`} />
                                         {t('tasks.card.instructions')}
                                     </div>
-                                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed bg-card border border-border/50 p-4 sm:p-5 rounded-xl">
+                                    <p className={`text-sm sm:text-base leading-relaxed rounded-xl p-4 sm:p-5 ${isResolved ? 'text-muted-foreground/80 bg-transparent p-0' : 'text-muted-foreground bg-card border border-border/50'}`}>
                                         {task.taskDescription}
                                     </p>
                                 </div>
@@ -275,7 +292,7 @@ const Tasks = () => {
                                     {isPending && (
                                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                                             <Button
-                                                onClick={() => openRejectModal(task.id)}
+                                                onClick={() => openRejectModal(task.id || task._id)}
                                                 disabled={actionLoading}
                                                 variant="outline"
                                                 className="w-full sm:w-auto sm:flex-1 border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive hover:text-destructive font-bold h-12 sm:h-14 rounded-xl transition-all"
@@ -283,7 +300,7 @@ const Tasks = () => {
                                                 <XCircle className="w-5 h-5 mr-2" /> {t('tasks.card.btn_reject')}
                                             </Button>
                                             <Button
-                                                onClick={() => handleAccept(task.id)}
+                                                onClick={() => handleAccept(task.id || task._id)}
                                                 disabled={actionLoading}
                                                 className="w-full sm:w-auto sm:flex-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 sm:h-14 rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
                                             >
@@ -292,21 +309,42 @@ const Tasks = () => {
                                         </div>
                                     )}
 
-                                    {isAccepted && (
-                                        <div className="flex items-center justify-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold py-3.5 sm:py-4 rounded-xl shadow-sm transition-all hover:bg-emerald-500/15">
-                                            <CheckCircle2 className="w-5 h-5" /> {t('tasks.card.status_accepted')}
-                                        </div>
-                                    )}
+                                    {/* --- RESOLVED STATES (Accepted/Rejected) + DELETE BUTTON --- */}
+                                    {isResolved && (
+                                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                            {isAccepted ? (
+                                                <div className="flex flex-col w-full sm:w-auto">
+                                                    <div className="flex items-center justify-center sm:justify-start gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold py-2 sm:py-3 px-4 rounded-xl shadow-sm transition-all hover:bg-emerald-500/15">
+                                                        <CheckCircle2 className="w-5 h-5" /> {t('tasks.card.status_accepted', 'Task Accepted')}
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground mt-2 text-center sm:text-left flex items-center justify-center sm:justify-start gap-1">
+                                                        <Info className="w-3.5 h-3.5" /> {t('tasks.card.info_allocated', 'This school has been added to your Active Assignments.')}
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col w-full sm:w-auto space-y-3">
+                                                    <div className="flex items-center justify-center sm:justify-start gap-2 bg-destructive/10 border border-destructive/20 text-destructive font-bold py-2 sm:py-3 px-4 rounded-xl transition-all hover:bg-destructive/15">
+                                                        <XCircle className="w-5 h-5" /> {t('tasks.card.status_rejected')}
+                                                    </div>
+                                                    {task.rejectReason && (
+                                                        <div className="text-xs sm:text-sm text-destructive/80 bg-destructive/5 dark:bg-destructive/10 p-3 rounded-xl border border-destructive/10 flex items-start gap-2">
+                                                            <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                                                            <span className="leading-relaxed"><strong>{t('tasks.card.reason_label')}</strong> {task.rejectReason}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
 
-                                    {isRejected && (
-                                        <div className="space-y-3">
-                                            <div className="flex items-center justify-center gap-2 bg-destructive/10 border border-destructive/20 text-destructive font-bold py-3.5 sm:py-4 rounded-xl transition-all hover:bg-destructive/15">
-                                                <XCircle className="w-5 h-5" /> {t('tasks.card.status_rejected')}
-                                            </div>
-                                            <div className="text-sm sm:text-base text-destructive/80 bg-destructive/5 dark:bg-destructive/10 p-3.5 sm:p-4 rounded-xl border border-destructive/10 flex items-start gap-3">
-                                                <Info className="w-5 h-5 shrink-0 mt-0.5" />
-                                                <span className="leading-relaxed"><strong>{t('tasks.card.reason_label')}</strong> {task.rejectReason}</span>
-                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={() => handleDeleteTask(task.id || task._id)}
+                                                disabled={actionLoading}
+                                                className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-all shrink-0 mt-2 sm:mt-0"
+                                                title={t('tasks.card.btn_delete', 'Remove from feed')}
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </Button>
                                         </div>
                                     )}
                                 </div>

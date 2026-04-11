@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 import api from "../../api/axios";
 import {
     School, MapPin, ChevronRight, Loader2, Map,
-    Clock, Navigation, CalendarDays, UserX, CalendarOff
+    Clock, Navigation, CalendarDays, UserX, CalendarOff, ClipboardList
 } from "lucide-react";
 import toast from "react-hot-toast";
 import SchoolDetailsModal from "../../modals/employee/SchoolDetailsModal";
@@ -14,7 +14,7 @@ const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 // --- HELPER FUNCTIONS ---
 
-// UPDATED: Calculates in meters and formats automatically
+// Calculates in meters and formats automatically
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return null;
 
@@ -61,7 +61,7 @@ const AssignedSchools = () => {
     // Note: You can populate these with real data from your API later
     const [leaveStats, setLeaveStats] = useState({ absent: 0, leaves: 0 });
 
-    // UPDATED: Real-time GPS Watcher
+    // Real-time GPS Watcher
     useEffect(() => {
         if (!navigator.geolocation) {
             console.warn("Geolocation is not supported by this browser.");
@@ -150,7 +150,6 @@ const AssignedSchools = () => {
                     </p>
                 </div>
 
-                {/* --- FIXED: COMPACT & RESPONSIVE ABSENT & LEAVE RECORD BOXES --- */}
                 <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                     <div className="flex-1 sm:flex-none bg-destructive/10 text-destructive border border-destructive/20 px-3 py-1.5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm whitespace-nowrap cursor-default">
                         <UserX className="w-3.5 h-3.5 shrink-0" />
@@ -215,16 +214,25 @@ const AssignedSchools = () => {
                                                 userLocation.lat, userLocation.lng,
                                                 cat.geofence.latitude, cat.geofence.longitude
                                             );
-                                            // The calculator already formats the unit (m or km)
                                             if (dist) distanceText = dist;
                                         }
 
                                         return (
                                             <div key={idx} className="bg-muted/30 dark:bg-muted/20 border border-border/50 rounded-2xl p-4 transition-colors group-hover:bg-muted/50 w-full">
+
                                                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                                                    <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wider uppercase shadow-sm whitespace-nowrap">
-                                                        {cat.name}
-                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wider uppercase shadow-sm whitespace-nowrap">
+                                                            {cat.name}
+                                                        </span>
+                                                        {/* --- NEW: TASK BADGE --- */}
+                                                        {cat.isTask && (
+                                                            <span className="bg-violet-500 text-white px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wider uppercase shadow-sm flex items-center gap-1.5 whitespace-nowrap">
+                                                                <ClipboardList className="w-3 h-3" /> {t('assigned_schools.task_badge', 'Task')}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
                                                     {distanceText && (
                                                         <span className="flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20 whitespace-nowrap animate-in fade-in zoom-in duration-300">
                                                             <Navigation className="w-3.5 h-3.5" />

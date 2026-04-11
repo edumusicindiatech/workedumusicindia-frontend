@@ -1,20 +1,32 @@
 import { useState, useEffect, useRef } from "react";
-import { ClipboardList, X, MapPin, Calendar, Clock, Edit2, Trash2, Save, AlertTriangle, Loader2, Check, Info } from "lucide-react";
+import { ClipboardList, X, MapPin, Map, Calendar, Clock, Edit2, Trash2, Save, AlertTriangle, Loader2, Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
-import { useTranslation, Trans } from "react-i18next"; // <-- Added imports
+import { useTranslation, Trans } from "react-i18next";
+
+// --- Helper function to convert 24h to 12h AM/PM format ---
+const formatTime12Hour = (time) => {
+    if (!time) return "";
+    const [hourString, minute] = time.split(":");
+    if (!hourString || !minute) return time;
+    let hour = parseInt(hourString, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12;
+    hour = hour ? hour : 12; // 0 becomes 12
+    const formattedHour = hour < 10 ? `0${hour}` : hour;
+    return `${formattedHour}:${minute} ${ampm}`;
+};
 
 const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation();
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState({});
     const [isLoading, setIsLoading] = useState(false);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false });
 
-    // Swipe & Animation states
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState(0);
     const [isClosing, setIsClosing] = useState(false);
@@ -22,27 +34,44 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
 
     const isRejected = task?.status?.toLowerCase() === "rejected";
 
-    // Initialize form when modal opens
     useEffect(() => {
         if (isOpen && task) {
-            let parsedStartDate = "";
-            let parsedEndDate = "";
-            if (task.duration) {
+            setIsEditing(false);
+
+            // Safely extract coordinates depending on if it's new GeoJSON or legacy format
+            let lat = "";
+            let lng = "";
+            if (task.school?.location?.coordinates) {
+                lng = task.school.location.coordinates[0];
+                lat = task.school.location.coordinates[1];
+            } else if (task.school?.geofence) {
+                lat = task.school.geofence.latitude;
+                lng = task.school.geofence.longitude;
+            }
+
+            // Fallbacks for legacy schema (duration/timing) vs new schema
+            let parsedStartDate = task.startDate ? task.startDate.split('T')[0] : "";
+            let parsedEndDate = task.endDate ? task.endDate.split('T')[0] : "";
+            if (!parsedStartDate && task.duration) {
                 const durationParts = task.duration.split(" to ");
                 parsedStartDate = durationParts[0] || "";
                 parsedEndDate = durationParts[1] || "";
             }
 
-            let parsedTimeFrom = "";
-            let parsedTimeTo = "";
-            if (task.timing) {
+            let parsedTimeFrom = task.startTime || "";
+            let parsedTimeTo = task.endTime || "";
+            if (!parsedTimeFrom && task.timing) {
+                // If using the very old "09:00 AM - 03:00 PM" format, it will need to be re-entered.
                 const timeParts = task.timing.split(" - ");
                 parsedTimeFrom = timeParts[0] || "";
                 parsedTimeTo = timeParts[1] || "";
             }
 
-            setIsEditing(false);
             setEditForm({
+                schoolName: task.school?.schoolName || "",
+                schoolAddress: task.school?.address || "",
+                latitude: lat,
+                longitude: lng,
                 taskDescription: task.taskDescription || "",
                 category: task.category || "Junior Band",
                 startDate: parsedStartDate,
@@ -60,7 +89,6 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
     const schoolName = task.school?.schoolName || task.schoolName || t('manage_task.unknown_school');
     const schoolAddress = task.school?.address || task.location || t('manage_task.no_address');
 
-    // --- ANIMATION HANDLERS ---
     const handleClose = () => {
         setIsClosing(true);
         setDragOffset(window.innerHeight);
@@ -87,17 +115,28 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
         setEditForm(prev => ({ ...prev, days: prev.days?.includes(day) ? prev.days.filter(d => d !== day) : [...(prev.days || []), day] }));
     };
 
-    // --- API HANDLERS ---
     const handleSaveEdit = async () => {
+        if ((editForm.latitude && !editForm.longitude) || (!editForm.latitude && editForm.longitude)) {
+            toast.error(t('manage_assigned_school.coord_error', 'Both Latitude and Longitude must be provided together.'));
+            return;
+        }
+
         setIsLoading(true);
         const loadingToast = toast.loading(t('manage_task.updating_toast'));
+        
         try {
             const payload = {
+                schoolName: editForm.schoolName,
+                schoolAddress: editForm.schoolAddress,
+                latitude: editForm.latitude,
+                longitude: editForm.longitude,
                 taskDescription: editForm.taskDescription,
                 category: editForm.category,
                 daysAllotted: editForm.days,
-                duration: editForm.endDate ? `${editForm.startDate} to ${editForm.endDate}` : editForm.startDate,
-                timing: `${editForm.timeFrom} - ${editForm.timeTo}`
+                startDate: editForm.startDate,
+                endDate: editForm.endDate,
+                startTime: editForm.timeFrom,
+                endTime: editForm.timeTo
             };
 
             await api.put(`/admin/tasks/${task._id || task.id}`, payload);
@@ -218,7 +257,9 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="bg-muted/20 p-4 rounded-2xl border border-border/50">
                                     <p className="text-xs text-muted-foreground font-bold flex items-center gap-1.5 uppercase tracking-wider mb-2"><Clock className="w-3.5 h-3.5" /> {t('manage_task.timings')}</p>
-                                    <p className="text-sm font-bold text-foreground">{editForm.timeFrom} - {editForm.timeTo}</p>
+                                    <p className="text-sm font-bold text-foreground">
+                                        {formatTime12Hour(editForm.timeFrom)} - {formatTime12Hour(editForm.timeTo)}
+                                    </p>
                                 </div>
                                 <div className="bg-muted/20 p-4 rounded-2xl border border-border/50">
                                     <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-2">{t('manage_task.days')}</p>
@@ -232,6 +273,19 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
                         </div>
                     ) : (
                         <div className="space-y-6 animate-in slide-in-from-right-4 duration-300 bg-muted/10 p-5 rounded-2xl border border-border/50">
+                            
+                            {/* --- NEW: School Info Edit Block --- */}
+                            <div className="space-y-4 mb-4 pb-4 border-b border-border/50">
+                                <div className="space-y-2.5">
+                                    <Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1">{t('manage_task.school_name_label', 'School Name')}</Label>
+                                    <Input value={editForm.schoolName} onChange={(e) => setEditForm({ ...editForm, schoolName: e.target.value })} className="h-12 rounded-xl bg-card border-border/60" />
+                                </div>
+                                <div className="space-y-2.5">
+                                    <Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1">{t('manage_task.address_label', 'School Address')}</Label>
+                                    <Input value={editForm.schoolAddress} onChange={(e) => setEditForm({ ...editForm, schoolAddress: e.target.value })} className="h-12 rounded-xl bg-card border-border/60" />
+                                </div>
+                            </div>
+
                             <div className="space-y-2.5">
                                 <Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1">{t('manage_task.primary_objective_label')}</Label>
                                 <Input value={editForm.taskDescription} onChange={(e) => setEditForm({ ...editForm, taskDescription: e.target.value })} className="h-12 rounded-xl bg-card border-border/60 focus:border-primary/50 focus:ring-primary/10" />
@@ -269,6 +323,22 @@ const ManageTaskModal = ({ isOpen, onClose, task, employeeId, onSuccess }) => {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* --- NEW: Geofence Block --- */}
+                            <div className="space-y-4 pt-4 border-t border-border/50">
+                                <Label className="text-xs flex items-center gap-1.5 font-bold uppercase tracking-wider ml-1"><Map className="w-3.5 h-3.5" /> {t('manage_task.geofence_label', 'Geofence Coordinates')}</Label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] uppercase text-muted-foreground">{t('manage_task.latitude_label', 'Latitude')}</Label>
+                                        <Input value={editForm.latitude} onChange={(e) => setEditForm({ ...editForm, latitude: e.target.value })} className="h-12 rounded-xl bg-card border-border/60" placeholder="e.g. 23.2156" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] uppercase text-muted-foreground">{t('manage_task.longitude_label', 'Longitude')}</Label>
+                                        <Input value={editForm.longitude} onChange={(e) => setEditForm({ ...editForm, longitude: e.target.value })} className="h-12 rounded-xl bg-card border-border/60" placeholder="e.g. 72.6369" />
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     )}
                 </div>

@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import {
     ClipboardList, MapPin, Plus, CheckCircle2,
     AlertCircle, XCircle, CalendarDays, Clock,
-    Pencil, Trash2, CheckSquare, Info, Sparkles
+    Pencil, Trash2, CheckSquare, Info, Sparkles, Copy
 } from "lucide-react";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next"; 
 
 import AssignTaskModal from "../../../modals/admin/AssignTaskModal";
 import ManageTaskModal from "../../../modals/admin/ManageTaskModal";
@@ -15,12 +15,28 @@ import ManageTaskModal from "../../../modals/admin/ManageTaskModal";
 import { io } from "socket.io-client";
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
+// --- Helper function to convert 24h to 12h AM/PM format ---
+const formatTime12Hour = (time) => {
+    if (!time) return "";
+    const [hourString, minute] = time.split(":");
+    if (!hourString || !minute) return time;
+    let hour = parseInt(hourString, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12;
+    hour = hour ? hour : 12; // 0 becomes 12
+    const formattedHour = hour < 10 ? `0${hour}` : hour;
+    return `${formattedHour}:${minute} ${ampm}`;
+};
+
 const TasksTab = ({ tasks, employeeId, onSuccess }) => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation(); 
     const { user } = useSelector((state) => state.auth);
 
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [manageModalData, setManageModalData] = useState({ isOpen: false, task: null });
+    
+    // --- NEW: State to hold the task data to be cloned ---
+    const [cloneData, setCloneData] = useState(null);
 
     useEffect(() => {
         if (!user) return;
@@ -38,6 +54,16 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
             socket.off("new_notification", handleRealTimeUpdate);
         };
     }, [user, onSuccess]);
+
+    const openNewTaskModal = () => {
+        setCloneData(null); // Ensure form is empty
+        setIsAssignModalOpen(true);
+    };
+
+    const handleClone = (task) => {
+        setCloneData(task); // Pass existing task data
+        setIsAssignModalOpen(true);
+    };
 
     // --- UI Helpers ---
     const getStatusIcon = (status) => {
@@ -68,7 +94,7 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
                 </h3>
                 <Button
                     className="w-full sm:w-auto gap-2 shadow-lg shadow-primary/20 rounded-xl font-bold h-11 bg-primary hover:bg-primary/90 text-primary-foreground transition-all active:scale-95"
-                    onClick={() => setIsAssignModalOpen(true)}
+                    onClick={openNewTaskModal}
                 >
                     <Plus className="w-5 h-5 shrink-0" /> {t('tasks_tab.btn_assign')}
                 </Button>
@@ -77,7 +103,6 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
             {/* --- TASK LIST --- */}
             <div className="p-4 sm:p-6">
                 {(!tasks || tasks.length === 0) ? (
-                    /* --- EMPTY STATE --- */
                     <div className="border border-dashed border-border/60 rounded-4xl p-10 sm:p-14 text-center flex flex-col items-center relative overflow-hidden group hover:bg-muted/5 transition-colors">
                         <div className="w-20 h-20 mb-5 relative">
                             <div className="absolute inset-0 bg-primary/10 rounded-full animate-ping opacity-50" />
@@ -91,7 +116,7 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
                         </p>
                         <Button
                             variant="outline"
-                            onClick={() => setIsAssignModalOpen(true)}
+                            onClick={openNewTaskModal}
                             className="rounded-xl border-primary/20 text-primary hover:bg-primary/10 font-bold"
                         >
                             <Sparkles className="w-4 h-4 mr-2" /> {t('tasks_tab.empty_action')}
@@ -102,6 +127,7 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
                         {tasks.map((task) => {
                             const isPending = task.status.toLowerCase() === "pending";
                             const isRejected = task.status.toLowerCase() === "rejected";
+                            const isAccepted = task.status.toLowerCase() === "accepted";
 
                             return (
                                 <div
@@ -148,11 +174,17 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
                                                 <span className="px-3 py-1 bg-primary/10 rounded-lg border border-primary/10 text-xs font-bold text-primary flex items-center gap-1.5">
                                                     {task.category || t('tasks_tab.task_placeholder')}
                                                 </span>
-                                                {task.timing && (
+                                                
+                                                {(task.startTime && task.endTime) ? (
+                                                    <span className="px-3 py-1 bg-muted rounded-lg border border-border/50 text-xs font-bold text-foreground flex items-center gap-1.5">
+                                                        <Clock className="w-3.5 h-3.5 text-amber-500" /> {formatTime12Hour(task.startTime)} - {formatTime12Hour(task.endTime)}
+                                                    </span>
+                                                ) : task.timing ? (
                                                     <span className="px-3 py-1 bg-muted rounded-lg border border-border/50 text-xs font-bold text-foreground flex items-center gap-1.5">
                                                         <Clock className="w-3.5 h-3.5 text-amber-500" /> {task.timing}
                                                     </span>
-                                                )}
+                                                ) : null}
+
                                                 {task.daysAllotted && task.daysAllotted.length > 0 && (
                                                     <span className="px-3 py-1 bg-muted rounded-lg border border-border/50 text-xs font-bold text-foreground flex items-center gap-1.5">
                                                         <CalendarDays className="w-3.5 h-3.5 text-blue-500" /> {task.daysAllotted.join(', ')}
@@ -162,32 +194,43 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
                                         </div>
 
                                         {/* Actions Section */}
-                                        <div className="flex flex-row xl:flex-col items-center xl:items-end justify-start xl:justify-start gap-2.5 shrink-0 pt-4 xl:pt-0 border-t border-border/50 xl:border-transparent mt-2 xl:mt-0">
-                                            {task.status.toLowerCase() === "accepted" ? (
-                                                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-2 rounded-xl border border-emerald-500/20">
+                                        <div className="flex flex-col items-start xl:items-end justify-start gap-2.5 shrink-0 pt-4 xl:pt-0 border-t border-border/50 xl:border-transparent mt-2 xl:mt-0">
+                                            
+                                            {isAccepted && (
+                                                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-2 rounded-xl border border-emerald-500/20 mb-1 xl:mb-2 w-full xl:w-auto justify-center xl:justify-start">
                                                     <CheckCircle2 className="w-4 h-4" />
                                                     {t('tasks_tab.added_to_schedule')}
                                                 </div>
-                                            ) : (
-                                                <>
-                                                    {!isRejected && (
-                                                        <Button
-                                                            variant="outline"
-                                                            className="h-10 rounded-xl gap-2 font-bold text-muted-foreground hover:text-primary border-border/80 hover:border-primary/30 transition-all flex-1 xl:flex-none"
-                                                            onClick={() => setManageModalData({ isOpen: true, task: task })}
-                                                        >
-                                                            <Pencil className="w-4 h-4" /> {t('tasks_tab.btn_edit')}
-                                                        </Button>
-                                                    )}
+                                            )}
+
+                                            <div className="flex flex-wrap xl:flex-col gap-2 w-full xl:w-auto">
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-10 rounded-xl gap-2 font-bold text-muted-foreground hover:text-primary border-border/80 hover:border-primary/30 transition-all flex-1 xl:flex-none"
+                                                    onClick={() => handleClone(task)}
+                                                >
+                                                    <Copy className="w-4 h-4" /> {t('tasks_tab.btn_clone', 'Clone')}
+                                                </Button>
+
+                                                {/* Only show Edit if it's strictly Pending (not accepted/rejected) */}
+                                                {!isRejected && !isAccepted && (
                                                     <Button
                                                         variant="outline"
-                                                        className="h-10 rounded-xl gap-2 font-bold text-destructive hover:bg-destructive hover:text-white border-destructive/20 hover:border-destructive transition-all flex-1 xl:flex-none"
+                                                        className="h-10 rounded-xl gap-2 font-bold text-muted-foreground hover:text-primary border-border/80 hover:border-primary/30 transition-all flex-1 xl:flex-none"
                                                         onClick={() => setManageModalData({ isOpen: true, task: task })}
                                                     >
-                                                        <Trash2 className="w-4 h-4" /> {t('tasks_tab.btn_delete')}
+                                                        <Pencil className="w-4 h-4" /> {t('tasks_tab.btn_edit')}
                                                     </Button>
-                                                </>
-                                            )}
+                                                )}
+
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-10 rounded-xl gap-2 font-bold text-destructive hover:bg-destructive hover:text-white border-destructive/20 hover:border-destructive transition-all flex-1 xl:flex-none"
+                                                    onClick={() => setManageModalData({ isOpen: true, task: task })}
+                                                >
+                                                    <Trash2 className="w-4 h-4" /> {t('tasks_tab.btn_delete')}
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -213,6 +256,7 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
                 isOpen={isAssignModalOpen}
                 onClose={() => setIsAssignModalOpen(false)}
                 employeeId={employeeId}
+                initialData={cloneData} // Pass cloned data down
                 onSuccess={() => {
                     setIsAssignModalOpen(false);
                     if (onSuccess) onSuccess();

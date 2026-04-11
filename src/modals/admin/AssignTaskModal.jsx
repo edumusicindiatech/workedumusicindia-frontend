@@ -1,14 +1,14 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ClipboardList, X, Map, MapPin, ExternalLink, Loader2, Calendar, Clock, ArrowRight, Check } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 
-const AssignTaskModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
-    const { t } = useTranslation(); // <-- Initialize hook
+const AssignTaskModal = ({ isOpen, onClose, employeeId, initialData, onSuccess }) => {
+    const { t } = useTranslation();
     const [isLoading, setIsLoading] = useState(false);
 
     // Swipe & Animation states
@@ -23,6 +23,59 @@ const AssignTaskModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
         days: [], latitude: "", longitude: ""
     });
 
+    // --- NEW: Pre-fill the form when cloned data is passed ---
+    useEffect(() => {
+        if (isOpen) {
+            if (initialData) {
+                // Safely extract coordinates (Handles new GeoJSON or legacy format)
+                let lat = "";
+                let lng = "";
+                if (initialData.school?.location?.coordinates) {
+                    lng = initialData.school.location.coordinates[0];
+                    lat = initialData.school.location.coordinates[1];
+                } else if (initialData.school?.geofence) {
+                    lat = initialData.school.geofence.latitude;
+                    lng = initialData.school.geofence.longitude;
+                }
+
+                // Fallbacks for legacy schema (duration/timing) vs new schema
+                let parsedStartDate = initialData.startDate ? initialData.startDate.split('T')[0] : "";
+                let parsedEndDate = initialData.endDate ? initialData.endDate.split('T')[0] : "";
+                if (!parsedStartDate && initialData.duration) {
+                    const durationParts = initialData.duration.split(" to ");
+                    parsedStartDate = durationParts[0] || "";
+                    parsedEndDate = durationParts[1] || "";
+                }
+
+                let parsedTimeFrom = initialData.startTime || "";
+                let parsedTimeTo = initialData.endTime || "";
+                if (!parsedTimeFrom && initialData.timing) {
+                    const timeParts = initialData.timing.split(" - ");
+                    parsedTimeFrom = timeParts[0] || "";
+                    parsedTimeTo = timeParts[1] || "";
+                }
+
+                setTaskForm({
+                    task: initialData.taskDescription || "",
+                    schoolName: initialData.school?.schoolName || initialData.schoolName || "",
+                    location: initialData.school?.address || initialData.location || "",
+                    category: initialData.category || "Junior Band",
+                    startDate: parsedStartDate,
+                    endDate: parsedEndDate,
+                    timeFrom: parsedTimeFrom || "08:00",
+                    timeTo: parsedTimeTo || "14:00",
+                    days: initialData.daysAllotted || [],
+                    latitude: lat,
+                    longitude: lng
+                });
+            } else {
+                setTaskForm({
+                    task: "", schoolName: "", location: "", category: "Junior Band", startDate: "", endDate: "", timeFrom: "08:00", timeTo: "14:00", days: [], latitude: "", longitude: ""
+                });
+            }
+        }
+    }, [isOpen, initialData]);
+
     if (!isOpen) return null;
 
     const handleClose = () => {
@@ -32,9 +85,6 @@ const AssignTaskModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
             onClose();
             setIsClosing(false);
             setDragOffset(0);
-            setTaskForm({
-                task: "", schoolName: "", location: "", category: "Junior Band", startDate: "", endDate: "", timeFrom: "08:00", timeTo: "14:00", days: [], latitude: "", longitude: ""
-            });
         }, 300);
     };
 
@@ -56,10 +106,14 @@ const AssignTaskModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
         }));
     };
 
-
     const handleSave = async () => {
-        if (!taskForm.task || !taskForm.schoolName) {
-            toast.error(t('assign_task.error_fields'));
+        if (!taskForm.task || !taskForm.schoolName || !taskForm.startDate || !taskForm.latitude || !taskForm.longitude) {
+            toast.error(t('assign_task.error_fields', 'Please fill in all required fields including geofence.'));
+            return;
+        }
+
+        if (taskForm.days.length === 0) {
+            toast.error(t('assign_task.error_days', 'Please select at least one working day.'));
             return;
         }
 
@@ -75,8 +129,10 @@ const AssignTaskModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                 taskDescription: taskForm.task,
                 category: taskForm.category,
                 daysAllotted: taskForm.days,
-                duration: taskForm.endDate ? `${taskForm.startDate} to ${taskForm.endDate}` : taskForm.startDate,
-                timing: `${taskForm.timeFrom} - ${taskForm.timeTo}`
+                startDate: taskForm.startDate,
+                endDate: taskForm.endDate,
+                startTime: taskForm.timeFrom,
+                endTime: taskForm.timeTo
             };
 
             await api.post(`/admin/employees/${employeeId}/assign-task`, payload);
@@ -102,7 +158,8 @@ const AssignTaskModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                     <div className="w-full flex justify-center pt-3 pb-1 md:hidden"><div className="w-12 h-1.5 bg-muted rounded-full"></div></div>
                     <div className="flex items-center justify-between px-6 pb-4 pt-2 md:pt-6">
                         <h2 className="text-xl font-bold flex items-center gap-2">
-                            <ClipboardList className="w-5 h-5 text-primary" /> {t('assign_task.title')}
+                            <ClipboardList className="w-5 h-5 text-primary" />
+                            {initialData ? t('assign_task.title_clone', 'Clone Task') : t('assign_task.title', 'Assign New Task')}
                         </h2>
                         <button onClick={handleClose} disabled={isLoading} className="p-2 hover:bg-muted rounded-full transition-colors hidden md:block">
                             <X className="w-5 h-5 text-muted-foreground" />
@@ -164,7 +221,7 @@ const AssignTaskModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                             <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3 block">{t('assign_task.working_days')}</Label>
                             <div className="flex flex-wrap gap-2">
                                 {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-                                    <button key={day} type="button" onClick={() => toggleDay(day)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${taskForm.days.includes(day) ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'bg-background text-muted-foreground border-border hover:bg-muted'}`}>{t(`assign_task.days.${day}`)}</button>
+                                    <button key={day} type="button" onClick={() => toggleDay(day)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${taskForm.days.includes(day) ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'bg-background text-muted-foreground border-border hover:bg-muted'}`}>{t(`assign_task.days.${day}`, day)}</button>
                                 ))}
                             </div>
                         </div>
@@ -180,7 +237,7 @@ const AssignTaskModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
                             </div>
                             <Button
                                 type="button"
-                                onClick={() => window.open("https://www.google.com/maps/", "_blank", "noopener,noreferrer")}
+                                onClick={() => window.open(`http://googleusercontent.com/maps.google.com/6${taskForm.latitude || 0},${taskForm.longitude || 0}`, "_blank", "noopener,noreferrer")}
                                 variant="outline"
                                 className="gap-2 text-sm font-medium h-10 px-4 bg-muted hover:bg-muted/80 text-foreground rounded-xl transition-colors shrink-0 border border-border w-full md:w-auto"
                             >
@@ -209,4 +266,4 @@ const AssignTaskModal = ({ isOpen, onClose, employeeId, onSuccess }) => {
     );
 };
 
-export default AssignTaskModal;
+export default AssignTaskModal; 
