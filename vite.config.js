@@ -61,7 +61,25 @@ export default defineConfig(({ mode }) => ({
             type: 'image/png',
             purpose: 'any maskable'
           }
+        ],
+        // --- ADDED SHORTCUTS FOR HOME SCREEN LONG-PRESS ---
+        shortcuts: [
+          {
+            name: "Check In / Out",
+            short_name: "Clock In",
+            description: "Log your current school visit",
+            url: "/clock-in", 
+            icons: [{ src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" }] 
+          },
+          {
+            name: "Next School Visit",
+            short_name: "Next Visit",
+            description: "View your upcoming schedule",
+            url: "/schedule", 
+            icons: [{ src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" }] 
+          }
         ]
+        // ----------------------------------------------------
       }
     })
   ].filter(Boolean),
