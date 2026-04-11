@@ -2,9 +2,12 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { useSelector } from "react-redux";
 import {
     Radio, Clock, MapPin, School, Users, FileText,
-    AlertCircle, CheckCircle2, XCircle, Coffee, Star, X, Timer, Filter, ChevronDown, LogOut, Settings2, Navigation
+    AlertCircle, CheckCircle2, XCircle, Coffee, Star, X, Timer, 
+    Filter, ChevronDown, LogOut, Settings2, Navigation, Loader2, Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
 import { useTranslation } from "react-i18next";
@@ -15,33 +18,20 @@ const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 // --- HELPER FUNCTION: Calculate Live Distance ---
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return null;
-
-    const R = 6371e3; // Earth's radius in METERS
+    const R = 6371e3;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
     const distanceInMeters = R * c;
-
-    if (distanceInMeters < 1000) {
-        return `${Math.round(distanceInMeters)} m`;
-    } else {
-        return `${(distanceInMeters / 1000).toFixed(2)} km`;
-    }
+    return distanceInMeters < 1000 ? `${Math.round(distanceInMeters)} m` : `${(distanceInMeters / 1000).toFixed(2)} km`;
 };
 
-// --- HELPER FUNCTION: Calculate Time Difference (Handles freezing to a specific comparison date) ---
+// --- HELPER FUNCTION: Calculate Time Difference ---
 const calculateTimeDiff = (targetTimeStr, compareDate = new Date()) => {
     if (!targetTimeStr) return null;
-
     let hours, minutes;
-
-    // Support for 12-hour AM/PM format
     let match = targetTimeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-
     if (match) {
         hours = parseInt(match[1], 10);
         minutes = parseInt(match[2], 10);
@@ -49,24 +39,17 @@ const calculateTimeDiff = (targetTimeStr, compareDate = new Date()) => {
         if (ampm === 'PM' && hours < 12) hours += 12;
         if (ampm === 'AM' && hours === 12) hours = 0;
     } else {
-        // Support for 24-hour format
         match = targetTimeStr.match(/(\d+):(\d+)/);
         if (!match) return null;
         hours = parseInt(match[1], 10);
         minutes = parseInt(match[2], 10);
     }
-
-    // Set the expected time on the same calendar day as the comparison date
     const expectedTime = new Date(compareDate);
     expectedTime.setHours(hours, minutes, 0, 0);
-
     const diffMs = compareDate - expectedTime;
-
-    // Only return a string if the compare date is strictly AFTER the expected time
     if (diffMs > 0) {
         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
         const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
         if (diffHours > 0 && diffMins > 0) return `${diffHours}h ${diffMins}m`;
         if (diffHours > 0) return `${diffHours}h`;
         if (diffMins > 0) return `${diffMins}m`;
@@ -82,47 +65,46 @@ const AttendanceFeed = () => {
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState("All");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
-
-    // State to store live GPS coordinates for each employee
     const [liveLocations, setLiveLocations] = useState({});
 
+    // Modal States
     const [selectedNoteRecord, setSelectedNoteRecord] = useState(null);
     const [overrideMode, setOverrideMode] = useState(false);
     const [overrideAction, setOverrideAction] = useState("");
     const [overrideReason, setOverrideReason] = useState("");
     const [isSubmittingOverride, setIsSubmittingOverride] = useState(false);
 
+    // Animation & Swipe states for Modal
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragOffset, setDragOffset] = useState(0);
+    const [isClosing, setIsClosing] = useState(false);
+    const dragStartY = useRef(0);
     const filterRef = useRef(null);
+
+    const getDerivedStatus = (record) => {
+        if (!record) return 'Pending';
+        if (record.status === 'Absent') return 'Absent';
+        if (record.status === 'Holiday') return 'Holiday';
+        if (record.status === 'On Leave') return 'On Leave';
+        if (record.checkOutTime) return 'Completed';
+        if (record.status === 'Event' || (record.eventNote && !record.checkOutTime)) return 'Event';
+        if (record.checkInTime) return record.status === 'Late' ? 'Late' : 'Running';
+        return 'Pending';
+    };
 
     const fetchFeed = useCallback(async (showLoader = true) => {
         if (showLoader) setLoading(true);
         try {
             const queryStatus = activeFilter.toLowerCase();
             const response = await api.get(`/admin/daily-feed?status=${queryStatus}`);
-
             if (response.data.success) {
                 setLiveData(response.data.data);
-
-                setSelectedNoteRecord((prevRecord) => {
-                    if (!prevRecord) return null;
-                    const freshData = response.data.data;
-                    let updatedRecord = freshData.find(r => r._id === prevRecord._id);
-                    if (!updatedRecord) {
-                        const prevTeacherId = prevRecord.teacher?._id || prevRecord.teacher;
-                        const prevSchoolId = prevRecord.school?._id || prevRecord.school;
-                        updatedRecord = freshData.find(r => {
-                            const currentTeacherId = r.teacher?._id || r.teacher;
-                            const currentSchoolId = r.school?._id || r.school;
-                            return currentTeacherId === prevTeacherId &&
-                                currentSchoolId === prevSchoolId &&
-                                r.date === prevRecord.date;
-                        });
-                    }
-                    return updatedRecord || null;
+                setSelectedNoteRecord((prev) => {
+                    if (!prev) return null;
+                    return response.data.data.find(r => r._id === prev._id) || prev;
                 });
             }
         } catch (error) {
-            console.error("Failed to fetch live feed:", error);
             toast.error(t('attendance_feed.toasts.load_error'));
         } finally {
             if (showLoader) setLoading(false);
@@ -139,24 +121,8 @@ const AttendanceFeed = () => {
 
     useEffect(() => {
         if (!currentUserId) return;
-
         socket.emit("join_room", currentUserId);
         socket.emit("join_admin_room");
-
-        const handleRealTimeUpdate = (data) => {
-            fetchFeed(false);
-        };
-
-        const handleLocationUpdate = (data) => {
-            setLiveLocations(prev => ({
-                ...prev,
-                [data.employeeId]: {
-                    lat: data.lat,
-                    lng: data.lng,
-                    timestamp: data.timestamp
-                }
-            }));
-        };
 
         socket.on("new_notification", (data) => {
             if (data.type === 'DailyReport') toast.success(t('attendance_feed.toasts.new_report'));
@@ -164,34 +130,73 @@ const AttendanceFeed = () => {
             fetchFeed(false);
         });
 
-        socket.on("operations_update", handleRealTimeUpdate);
-        socket.on("employee_location_changed", handleLocationUpdate);
+        socket.on("operations_update", () => fetchFeed(false));
+        socket.on("employee_location_changed", (data) => {
+            setLiveLocations(prev => ({ ...prev, [data.employeeId]: { lat: data.lat, lng: data.lng, timestamp: data.timestamp } }));
+        });
 
         return () => {
             socket.off("new_notification");
-            socket.off("operations_update", handleRealTimeUpdate);
-            socket.off("employee_location_changed", handleLocationUpdate);
+            socket.off("operations_update");
+            socket.off("employee_location_changed");
         };
     }, [currentUserId, fetchFeed, t]);
 
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (filterRef.current && !filterRef.current.contains(event.target)) {
-                setIsFilterOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+    const handleCloseModal = () => {
+        if (isSubmittingOverride) return;
+        setIsClosing(true);
+        setDragOffset(window.innerHeight);
+        setTimeout(() => {
+            setSelectedNoteRecord(null);
+            setOverrideMode(false);
+            setOverrideAction("");
+            setOverrideReason("");
+            setIsClosing(false);
+            setDragOffset(0);
+        }, 300);
+    };
 
-    const getDerivedStatus = (record) => {
-        if (record.status === 'Absent') return 'Absent';
-        if (record.status === 'Holiday') return 'Holiday';
-        if (record.status === 'On Leave') return 'On Leave';
-        if (record.checkOutTime) return 'Completed';
-        if (record.status === 'Event' || (record.eventNote && !record.checkOutTime)) return 'Event';
-        if (record.checkInTime) return record.status === 'Late' ? 'Late' : 'Running';
-        return 'Pending';
+    const handleTouchStart = (e) => {
+        if (e.target.closest('button') || e.target.closest('textarea')) return;
+        dragStartY.current = e.touches[0].clientY;
+        setIsDragging(true);
+    };
+
+    const handleTouchMove = (e) => {
+        if (!isDragging) return;
+        const delta = e.touches[0].clientY - dragStartY.current;
+        if (delta > 0) setDragOffset(delta);
+    };
+
+    const handleTouchEnd = () => {
+        setIsDragging(false);
+        if (dragOffset > 120) handleCloseModal();
+        else setDragOffset(0);
+    };
+
+    const handleOverrideSubmit = async () => {
+        if (!overrideAction) return;
+        setIsSubmittingOverride(true);
+        const toastId = toast.loading(t('attendance_feed.toasts.applying_override'));
+        try {
+            const res = await api.put(`/admin/attendance/${selectedNoteRecord._id}/override`, {
+                action: overrideAction,
+                reason: overrideReason,
+                teacherId: selectedNoteRecord.teacher?._id,
+                schoolId: selectedNoteRecord.school?._id,
+                band: selectedNoteRecord.band,
+                date: selectedNoteRecord.date || new Date().toISOString().split('T')[0]
+            });
+            if (res.data.success) {
+                toast.success(t('attendance_feed.toasts.override_success'), { id: toastId });
+                fetchFeed(false);
+                handleCloseModal();
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || t('attendance_feed.toasts.override_error'), { id: toastId });
+        } finally {
+            setIsSubmittingOverride(false);
+        }
     };
 
     const getStatusConfig = (status) => {
@@ -213,98 +218,63 @@ const AttendanceFeed = () => {
         else if (activeFilter === "Running") filtered = liveData.filter(r => ["Running", "Late", "Event"].includes(getDerivedStatus(r)));
         else if (activeFilter === "Completed") filtered = liveData.filter(r => getDerivedStatus(r) === "Completed");
         else if (activeFilter === "Exceptions") filtered = liveData.filter(r => ["Absent", "Holiday", "On Leave"].includes(getDerivedStatus(r)));
-
         return filtered.sort((a, b) => new Date(b.checkInTime || b.createdAt || b.date) - new Date(a.checkInTime || a.createdAt || a.date));
     }, [liveData, activeFilter]);
 
-    const formatTime = (dateString) => {
-        if (!dateString) return null;
-        return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
-
-    const handleOverrideSubmit = async () => {
-        if (!overrideAction) return;
-        setIsSubmittingOverride(true);
-        const toastId = toast.loading(t('attendance_feed.toasts.applying_override'));
-
-        try {
-            const res = await api.put(`/admin/attendance/${selectedNoteRecord._id}/override`, {
-                action: overrideAction,
-                reason: overrideReason,
-                teacherId: selectedNoteRecord.teacher?._id,
-                schoolId: selectedNoteRecord.school?._id,
-                band: selectedNoteRecord.band,
-                date: selectedNoteRecord.date || new Date().toISOString().split('T')[0]
-            });
-            if (res.data.success) {
-                setOverrideMode(false);
-                setOverrideAction("");
-                setOverrideReason("");
-                toast.success(t('attendance_feed.toasts.override_success'), { id: toastId });
-                fetchFeed(false);
-            }
-        } catch (error) {
-            console.error("Override failed:", error);
-            toast.error(error.response?.data?.message || t('attendance_feed.toasts.override_error'), { id: toastId });
-        } finally {
-            setIsSubmittingOverride(false);
-        }
-    };
-
-    const closeAndResetModal = () => {
-        setSelectedNoteRecord(null);
-        setOverrideMode(false);
-        setOverrideAction("");
-        setOverrideReason("");
-    };
+    const formatTime = (dateString) => dateString ? new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
 
     const formatTime12Hour = (time) => {
         if (!time) return "";
         const [hourString, minute] = time.split(":");
-        if (!hourString || !minute) return time; // Fallback if it's not "HH:MM"
         let hour = parseInt(hourString, 10);
         const ampm = hour >= 12 ? "PM" : "AM";
-        hour = hour % 12;
-        hour = hour ? hour : 12; // 0 becomes 12
-        const formattedHour = hour < 10 ? `0${hour}` : hour;
-        return `${formattedHour}:${minute} ${ampm}`;
+        hour = hour % 12 || 12;
+        return `${hour < 10 ? `0${hour}` : hour}:${minute} ${ampm}`;
     };
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto animate-fade-in pb-24 md:pb-8 h-full">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-24 h-full mt-2 md:mt-0">
             {/* Header Section */}
-            <div className="flex items-center justify-between mb-6 sm:mb-8 relative">
-                <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex items-center justify-between mb-8 relative">
+                <div className="flex items-center gap-4">
                     <div className="relative flex items-center justify-center shrink-0">
-                        <div className="absolute w-5 h-5 rounded-full bg-emerald-500/20 animate-ping" />
-                        <div className="relative w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
+                        <div className="absolute w-8 h-8 rounded-full bg-emerald-500/20 animate-ping" />
+                        <div className="relative w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.6)]" />
                     </div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">{t('attendance_feed.title')}</h1>
+                    <div className="space-y-0.5">
+                        <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight uppercase">{t('attendance_feed.title')}</h1>
+                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                           <Radio className="w-3 h-3 text-destructive animate-pulse" /> Live Monitoring Active
+                        </p>
+                    </div>
                 </div>
 
-                <div className="relative z-30" ref={filterRef}>
-                    <button
+                <div className="relative z-60" ref={filterRef}>
+                    <Button
                         onClick={() => setIsFilterOpen(!isFilterOpen)}
-                        className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:scale-105 transition-all active:scale-95"
+                        className="gap-2 h-11 px-5 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all active:scale-95"
                     >
-                        <Filter className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0" />
-                        <span className="text-sm font-bold hidden sm:inline">{t(`attendance_feed.filter_${activeFilter.toLowerCase()}`)}</span>
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-300 shrink-0 ${isFilterOpen ? 'rotate-180' : ''}`} />
-                    </button>
+                        <Filter className="w-4 h-4 shrink-0" />
+                        <span className="text-sm font-black uppercase tracking-wider hidden sm:inline">
+                            {t(`attendance_feed.filter_${activeFilter.toLowerCase()}`)}
+                        </span>
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isFilterOpen ? 'rotate-180' : ''}`} />
+                    </Button>
 
                     {isFilterOpen && (
-                        <div className="absolute right-0 mt-3 w-64 sm:w-80 bg-card border border-border shadow-2xl rounded-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                            <div className="p-4 grid grid-cols-2 gap-2">
+                        <div className="absolute right-0 mt-3 w-64 sm:w-72 bg-card border border-border shadow-2xl rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-100">
+                            <div className="p-3 grid grid-cols-1 gap-1">
                                 {["All", "Pending", "Running", "Completed", "Exceptions"].map((f) => (
                                     <button
                                         key={f}
                                         onClick={() => { setActiveFilter(f); setIsFilterOpen(false); }}
-                                        className={`px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all border text-center ${activeFilter === f
-                                            ? "bg-primary/10 text-primary border-primary shadow-sm"
-                                            : "bg-muted/30 text-muted-foreground border-transparent hover:bg-muted"
-                                            } ${f === 'Exceptions' ? 'col-span-2' : ''}`}
+                                        className={`flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all ${activeFilter === f
+                                            ? "bg-primary text-primary-foreground shadow-md"
+                                            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                                        }`}
                                     >
-                                        {t(`attendance_feed.filter_${f.toLowerCase()}`)}
+                                        <span className="uppercase tracking-widest">{t(`attendance_feed.filter_${f.toLowerCase()}`)}</span>
+                                        {activeFilter === f && <CheckCircle2 className="w-4 h-4" />}
                                     </button>
                                 ))}
                             </div>
@@ -313,73 +283,32 @@ const AttendanceFeed = () => {
                 </div>
             </div>
 
+            {/* List Section */}
             {loading ? (
-                <div className="space-y-4 animate-in fade-in duration-500">
+                <div className="space-y-4 animate-in fade-in">
                     {[...Array(5)].map((_, i) => (
-                        <div key={i} className="bg-card rounded-2xl border border-border/40 p-5 h-32 sm:h-24 animate-pulse" />
+                        <div key={i} className="bg-card rounded-4xl border border-border/40 p-6 h-28 animate-pulse" />
                     ))}
                 </div>
             ) : (
-                <div className="space-y-4 sm:space-y-5">
+                <div className="space-y-4">
                     {filteredAndSortedData.map((record) => {
                         const uiStatus = getDerivedStatus(record);
                         const statusConfig = getStatusConfig(uiStatus);
-                        const isLate = record.status === 'Late' || !!record.lateReason;
-                        const hadEvent = !!record.eventNote;
-                        const isAbsent = uiStatus === 'Absent';
-                        const isHoliday = uiStatus === 'Holiday';
-                        const isOnLeave = uiStatus === 'On Leave';
-
+                        const teacherId = record.teacher?._id?.toString() || record.teacher?.id?.toString() || record.teacher;
+                        const employeeLocation = liveLocations[teacherId];
                         const isActiveOrPending = ["Pending", "Running", "Late"].includes(uiStatus);
 
-                        const teacherId = record.teacher?._id?.toString() || record.teacher?.id?.toString() || (typeof record.teacher === 'string' ? record.teacher : null);
-                        const employeeLocation = liveLocations[teacherId];
-
-                        const rawLng = record.school?.location?.coordinates?.[0] || record.school?.coordinates?.[0] || record.school?.longitude;
-                        const rawLat = record.school?.location?.coordinates?.[1] || record.school?.coordinates?.[1] || record.school?.latitude;
-
-                        const schoolLng = parseFloat(rawLng);
-                        const schoolLat = parseFloat(rawLat);
-
-                        let liveDistance = null;
-                        if (isActiveOrPending && employeeLocation && !isNaN(schoolLat) && !isNaN(schoolLng)) {
-                            liveDistance = calculateDistance(
-                                employeeLocation.lat,
-                                employeeLocation.lng,
-                                schoolLat,
-                                schoolLng
-                            );
-                        }
-
-                        // --- CALCULATE DELAYS (ARRIVAL & DEPARTURE) ---
                         let arrivalDelayBadge = null;
                         let departureDelayBadge = null;
-
-                        if (!isAbsent && !isHoliday && !isOnLeave) {
-                            // 1. ARRIVAL DELAY
+                        if (!["Absent", "Holiday", "On Leave"].includes(uiStatus)) {
                             if (record.expectedStartTime) {
-                                if (!record.checkInTime) {
-                                    // SCENARIO A: Hasn't arrived yet. Calculate against CURRENT TIME.
-                                    const delay = calculateTimeDiff(record.expectedStartTime);
-                                    if (delay) arrivalDelayBadge = `LATE BY ${delay}`;
-                                } else {
-                                    // SCENARIO B: Has arrived. Calculate against ACTUAL CHECK-IN TIME.
-                                    const delay = calculateTimeDiff(record.expectedStartTime, new Date(record.checkInTime));
-                                    if (delay) arrivalDelayBadge = `LATE BY ${delay}`;
-                                }
+                                const delay = calculateTimeDiff(record.expectedStartTime, record.checkInTime ? new Date(record.checkInTime) : new Date());
+                                if (delay) arrivalDelayBadge = `+ ${delay}`;
                             }
-
-                            // 2. DEPARTURE OVERDUE
                             if (record.expectedEndTime) {
-                                if (['Running', 'Late'].includes(uiStatus)) {
-                                    // SCENARIO C: Actively working past end time. Calculate against CURRENT TIME.
-                                    const delay = calculateTimeDiff(record.expectedEndTime);
-                                    if (delay) departureDelayBadge = `OVERDUE BY ${delay}`;
-                                } else if (uiStatus === 'Completed' && record.checkOutTime) {
-                                    // SCENARIO D: Shift finished. Calculate against ACTUAL CHECK-OUT TIME.
-                                    const delay = calculateTimeDiff(record.expectedEndTime, new Date(record.checkOutTime));
-                                    if (delay) departureDelayBadge = `OVERDUE BY ${delay}`;
-                                }
+                                const overdue = calculateTimeDiff(record.expectedEndTime, record.checkOutTime ? new Date(record.checkOutTime) : new Date());
+                                if (overdue) departureDelayBadge = `+ ${overdue}`;
                             }
                         }
 
@@ -387,275 +316,235 @@ const AttendanceFeed = () => {
                             <div
                                 key={record._id}
                                 onClick={() => setSelectedNoteRecord(record)}
-                                className={`bg-card rounded-2xl border p-4 sm:p-5 shadow-sm transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6 cursor-pointer hover:shadow-md hover:border-primary/40 group active:scale-[0.99] overflow-hidden relative
-                                    ${hadEvent ? 'border-violet-500/40 bg-violet-500/5' : 'border-border'}
-                                    ${isAbsent ? 'border-destructive/30 bg-destructive/5' : ''}
-                                    ${isHoliday ? 'border-teal-500/30 bg-teal-500/5' : ''} 
-                                    ${isOnLeave ? 'border-pink-500/30 bg-pink-500/5' : ''} 
+                                className={`group bg-card rounded-4xl border p-4 sm:p-5 transition-all duration-300 flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6 cursor-pointer hover:border-primary/50 hover:bg-blue-500/2 hover:shadow-xl hover:shadow-blue-500/10 active:scale-[0.98] relative overflow-hidden
+                                    ${record.status === 'Event' ? 'border-violet-500/30' : 'border-border/60'}
+                                    ${uiStatus === 'Absent' ? 'border-destructive/30' : ''}
                                 `}
                             >
-                                {/* Left Section: Profile Info */}
-                                <div className="flex items-center gap-3 sm:gap-4 lg:w-[22%] shrink-0">
-                                    <div className={`w-11 h-11 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-inner overflow-hidden border-2 border-background ${hadEvent ? 'bg-violet-600' : (isAbsent ? 'bg-destructive' : (isHoliday ? 'bg-teal-500' : (isOnLeave ? 'bg-pink-500' : 'bg-primary')))}`}>
-                                        {record?.teacher?.profilePicture ? (
-                                            typeof record?.teacher?.profilePicture === 'string' && record?.teacher?.profilePicture.startsWith('http')
-                                                ? <img src={record?.teacher?.profilePicture} alt={record?.teacher?.profilePicture} className="w-full h-full object-cover" />
-                                                : record?.teacher?.profilePicture
-                                        ) : (
-                                            record?.teacher?.name?.charAt(0).toUpperCase() || "U"
+                                <div className="flex items-center gap-4 lg:w-[25%] shrink-0">
+                                    <div className="relative">
+                                        <div className={`w-14 h-14 rounded-2xl bg-linear-to-br from-primary to-primary/80 flex items-center justify-center text-white text-xl font-black shadow-lg overflow-hidden border-2 border-background
+                                            ${uiStatus === 'Absent' ? 'from-destructive to-destructive/80' : ''}
+                                            ${uiStatus === 'Holiday' ? 'from-teal-500 to-teal-500/80' : ''}
+                                        `}>
+                                            {record.teacher?.profilePicture ? (
+                                                <img src={record.teacher.profilePicture} className="w-full h-full object-cover" alt="" />
+                                            ) : record.teacher?.name?.charAt(0) || "U"}
+                                        </div>
+                                        {["Running", "Late"].includes(uiStatus) && (
+                                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-card flex items-center justify-center shadow-sm">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                            </div>
                                         )}
                                     </div>
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="font-extrabold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors truncate">
-                                            {record.teacher?.name || "Unknown"}
-                                        </span>
-                                        <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground flex items-center gap-1 mt-0.5">
-                                            <MapPin className="w-3 h-3 text-primary/70 shrink-0" /> <span className="truncate">{record.teacher?.zone || "Unassigned"}</span>
-                                        </span>
+                                    <div className="min-w-0">
+                                        <h3 className="font-extrabold text-base text-foreground truncate group-hover:text-primary transition-colors">{record.teacher?.name || "Unknown Staff"}</h3>
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                            <MapPin className="w-3 h-3 text-primary/60" />
+                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">{record.teacher?.zone || "Global"}</span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Middle Section: School Info & Tracking */}
-                                <div className="flex-1 flex flex-col gap-2.5 min-w-0">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-muted/40 dark:bg-muted/20 p-3.5 rounded-xl border border-border/40 group-hover:bg-muted/60 transition-colors">
-                                        <div className="min-w-0 flex flex-col justify-center">
-                                            <span className="text-[9px] font-extrabold uppercase tracking-widest text-muted-foreground block mb-1">School</span>
-                                            <span className="text-xs sm:text-sm font-bold text-foreground truncate block flex-1">{record.school?.schoolName || "Unknown"}</span>
-                                        </div>
-                                        <div className="min-w-0 sm:border-l border-border/60 sm:pl-4 flex flex-col justify-center">
-                                            <span className="text-[9px] font-extrabold uppercase tracking-widest text-muted-foreground block mb-1">Category</span>
-                                            <span className="text-xs sm:text-sm font-bold text-foreground truncate block">{record.band}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Live Tracking Dynamic Bar */}
-                                    {isActiveOrPending && employeeLocation && (
-                                        <div className="flex flex-wrap items-center gap-2.5 mt-0.5">
-                                            {liveDistance && (
-                                                <div className="bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 animate-in fade-in zoom-in duration-300 backdrop-blur-sm">
-                                                    <div className="relative flex items-center justify-center w-2 h-2">
-                                                        <div className="absolute w-2 h-2 rounded-full bg-blue-500 animate-ping opacity-75" />
-                                                        <div className="relative w-1.5 h-1.5 rounded-full bg-blue-600" />
-                                                    </div>
-                                                    {liveDistance}
-                                                </div>
-                                            )}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    window.open(`https://www.google.com/maps?q=$${employeeLocation.lat},${employeeLocation.lng}`, '_blank');
-                                                }}
-                                                className="bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-white hover:shadow-md px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all duration-300 animate-in fade-in zoom-in"
-                                            >
-                                                <Navigation className="w-3.5 h-3.5" />
-                                                {t('attendance_feed.card.live_map', 'Locate Employee')}
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Right Section: Status & Timestamps */}
-                                <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between lg:w-[22%] shrink-0 border-t lg:border-none border-border/50 pt-4 lg:pt-0 mt-2 lg:mt-0">
-                                    <div className="flex flex-col items-start lg:items-end gap-2.5">
-                                        <div className="flex flex-wrap gap-2 items-center">
-                                            {/* 1. Main Status Tag (Hides if the "LATE BY" badge is already doing the job) */}
-                                            {!(uiStatus === 'Late' && arrivalDelayBadge) && (
-                                                <span className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider border flex items-center gap-1.5 shadow-sm ${statusConfig.color}`}>
-                                                    {statusConfig.icon} {statusConfig.label}
-                                                </span>
-                                            )}
-
-                                            {/* 2. Event Tag */}
-                                            {hadEvent && uiStatus === 'Completed' && (
-                                                <span className="px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider bg-violet-500 text-white shadow-sm">
-                                                    {t('attendance_feed.card.event_badge')}
-                                                </span>
-                                            )}
-
-                                            {/* 3. The "LATE BY" Badge (Transparent finish matching the main tags) */}
-                                            {arrivalDelayBadge && (
-                                                <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider shadow-sm transition-all border text-amber-500 bg-amber-500/10 border-amber-500/20 ${!record.checkInTime ? 'animate-pulse' : ''}`}>
-                                                    {arrivalDelayBadge}
-                                                </span>
-                                            )}
-
-                                            {/* 4. The "OVERDUE BY" Badge (Transparent finish matching the main tags) */}
-                                            {departureDelayBadge && (
-                                                <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider shadow-sm transition-all border text-red-500 bg-red-500/10 border-red-500/20 ${!record.checkOutTime ? 'animate-pulse' : ''}`}>
-                                                    {departureDelayBadge}
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        <div className="flex flex-col items-start lg:items-end gap-1 w-full lg:w-auto">
-                                            {/* Scheduled Times Label */}
-                                            {(record.expectedStartTime || record.expectedEndTime) && (
-                                                <div className="text-[10px] font-bold text-primary/80 mb-0.5 bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
-                                                    Sched: {record.expectedStartTime ? formatTime12Hour(record.expectedStartTime) : '--'} - {record.expectedEndTime ? formatTime12Hour(record.expectedEndTime) : '--'}
-                                                </div>
-                                            )}
-
-                                            <div className="text-[11px] sm:text-xs font-semibold text-muted-foreground flex flex-col sm:flex-row lg:flex-col gap-1 sm:gap-2 lg:gap-0.5 items-start lg:items-end">
-                                                <span>{record.checkInTime ? `${t('attendance_feed.card.arrived')}: ${formatTime(record.checkInTime)}` : ((isAbsent || isHoliday || isOnLeave) ? t('attendance_feed.card.off_duty') : t('attendance_feed.card.pending'))}</span>
-                                                {record.checkOutTime && <span className="hidden sm:inline lg:hidden">•</span>}
-                                                {record.checkOutTime && <span>{t('attendance_feed.card.departed')}: {formatTime(record.checkOutTime)}</span>}
+                                <div className="flex-1 min-w-0">
+                                    <div className="bg-muted/30 rounded-2xl p-3 sm:p-4 border border-border/40 group-hover:bg-muted/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div className="min-w-0 flex items-center gap-3">
+                                            <div className="p-2 bg-background rounded-xl border border-border/50 shadow-sm shrink-0">
+                                                <School className="w-4 h-4 text-primary" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <span className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground block leading-none mb-1">Assigned Location</span>
+                                                <p className="text-sm font-extrabold text-foreground truncate">{record.school?.schoolName || "Not Found"}</p>
                                             </div>
                                         </div>
+
+                                        {isActiveOrPending && employeeLocation && (
+                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 rounded-xl border border-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-wider animate-in slide-in-from-right-4">
+                                                <Navigation className="w-3 h-3 animate-pulse" /> Live tracking
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className={`hidden lg:flex w-10 h-10 rounded-full items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-sm ${hadEvent ? 'bg-violet-500/15 text-violet-600' : (isAbsent ? 'bg-red-500/10 text-red-600' : (isHoliday ? 'bg-teal-500/10 text-teal-600' : (isOnLeave ? 'bg-pink-500/10 text-pink-600' : 'bg-primary/10 text-primary')))}`}>
-                                        {hadEvent ? <Star className="w-5 h-5 fill-current" /> : (isAbsent ? <XCircle className="w-5 h-5" /> : (isHoliday ? <Coffee className="w-5 h-5" /> : (isOnLeave ? <Timer className="w-5 h-5" /> : <FileText className="w-5 h-5" />)))}
+                                </div>
+
+                                <div className="flex items-center justify-between lg:justify-end gap-4 lg:w-[25%] shrink-0">
+                                    <div className="flex flex-col items-end gap-1.5">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm flex items-center gap-1.5 ${statusConfig.color}`}>
+                                                {statusConfig.icon} {statusConfig.label}
+                                            </span>
+                                            {arrivalDelayBadge && (
+                                                <span className="px-2 py-1 bg-amber-500 text-white rounded-lg text-[9px] font-black shadow-sm shadow-amber-500/20 animate-in zoom-in">{arrivalDelayBadge}</span>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
+                                            <Clock className="w-3 h-3" />
+                                            {record.checkInTime ? formatTime(record.checkInTime) : "PENDING"} 
+                                            {record.checkOutTime && ` → ${formatTime(record.checkOutTime)}`}
+                                        </div>
                                     </div>
+                                    <ChevronDown className="w-5 h-5 text-muted-foreground/30 group-hover:text-primary transition-all group-hover:translate-y-0.5 -rotate-90" />
                                 </div>
                             </div>
                         );
                     })}
 
                     {filteredAndSortedData.length === 0 && (
-                        <div className="py-20 flex flex-col items-center justify-center text-center px-4 border border-dashed border-border rounded-4xl bg-muted/10 shadow-inner">
-                            <div className="w-20 h-20 rounded-full bg-background border border-border shadow-sm flex items-center justify-center mb-5 relative">
-                                <div className="absolute inset-0 rounded-full border border-primary/20 animate-ping opacity-20"></div>
+                        <div className="py-24 text-center border-2 border-dashed border-border/60 rounded-[3rem] bg-muted/10">
+                            <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <Clock className="w-10 h-10 text-muted-foreground/40" />
                             </div>
-                            <h3 className="text-xl font-extrabold text-foreground mb-2 tracking-tight">{t('attendance_feed.no_records_title')}</h3>
-                            <p className="text-sm font-medium text-muted-foreground max-w-md leading-relaxed">{t('attendance_feed.no_records_desc')}</p>
+                            <h3 className="text-2xl font-black text-foreground mb-2 uppercase">{t('attendance_feed.no_records_title')}</h3>
+                            <p className="text-muted-foreground text-sm font-medium">{t('attendance_feed.no_records_desc')}</p>
                         </div>
                     )}
                 </div>
             )}
 
+            {/* DETAIL & OVERRIDE MODAL */}
             {selectedNoteRecord && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={closeAndResetModal}>
-                    <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-border flex flex-col overflow-y-auto max-h-[90vh] animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                <div className={`fixed inset-0 z-150 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleCloseModal}>
+                    <div 
+                        className={`bg-card w-full max-w-lg rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl border-t md:border border-border/50 flex flex-col relative overflow-hidden ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95' : ''}`} 
+                        style={{ transform: `translateY(${dragOffset}px)` }} 
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20 rounded-t-[inherit] pointer-events-none" />
 
-                        <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-muted/30 sticky top-0 z-10 backdrop-blur-md">
+                        <div className="w-full flex justify-center pt-3 pb-1 md:hidden touch-none" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+                            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
+                        </div>
+
+                        <div className="sticky top-0 bg-card/90 backdrop-blur-md z-10 px-6 py-5 border-b border-border/50 flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-primary-foreground shadow-sm ${!!selectedNoteRecord.eventNote ? 'bg-violet-600' : (selectedNoteRecord.status === 'Absent' ? 'bg-destructive' : (selectedNoteRecord.status === 'On Leave' ? 'bg-pink-500' : 'bg-primary'))}`}>
-                                    {!!selectedNoteRecord.eventNote ? <Star className="w-5 h-5 fill-current" /> : (selectedNoteRecord.status === 'Absent' ? <XCircle className="w-5 h-5" /> : (selectedNoteRecord.status === 'On Leave' ? <Timer className="w-5 h-5" /> : <FileText className="w-5 h-5" />))}
+                                <div className={`w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-inner
+                                    ${selectedNoteRecord.status === 'Absent' ? 'bg-destructive/10 text-destructive' : 'text-primary'}
+                                `}>
+                                    {selectedNoteRecord.status === 'Absent' ? <XCircle className="w-6 h-6" /> : <FileText className="w-6 h-6" />}
                                 </div>
-                                <div>
-                                    <h3 className="font-extrabold text-lg leading-tight text-foreground">{t('attendance_feed.modal.title')}</h3>
-                                    <p className="text-xs font-medium text-muted-foreground mt-0.5 truncate max-w-50 sm:max-w-xs">
-                                        {selectedNoteRecord.teacher?.name} • {selectedNoteRecord.school?.schoolName}
-                                    </p>
+                                <div className="min-w-0">
+                                    <h3 className="font-black text-lg text-foreground truncate leading-tight uppercase">{selectedNoteRecord.teacher?.name}</h3>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] truncate">{selectedNoteRecord.school?.schoolName}</p>
                                 </div>
                             </div>
-                            <button onClick={closeAndResetModal} className="p-2.5 hover:bg-muted rounded-full text-muted-foreground transition-colors">
-                                <X className="w-5 h-5" />
+                            <button onClick={handleCloseModal} className="p-2.5 hover:bg-muted rounded-full bg-muted/50 border border-border shrink-0 hidden md:flex transition-colors">
+                                <X className="w-5 h-5 text-muted-foreground" />
                             </button>
                         </div>
 
-                        <div className="p-6 space-y-6">
-                            {selectedNoteRecord.eventNote && (
-                                <div className="p-5 bg-violet-500/10 border border-violet-500/20 rounded-2xl shadow-sm">
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-2.5 flex items-center gap-2">
-                                        <Star className="w-3.5 h-3.5 fill-current" /> {t('attendance_feed.modal.event_highlights')}
-                                    </h4>
-                                    <p className="text-sm font-medium leading-relaxed text-foreground">"{selectedNoteRecord.eventNote}"</p>
-                                </div>
-                            )}
-
-                            {(selectedNoteRecord.status === 'Absent' || selectedNoteRecord.status === 'On Leave' || !!selectedNoteRecord.lateReason || !!selectedNoteRecord.teacherNote) && (
-                                <div className="p-5 bg-muted/30 border border-border rounded-2xl space-y-4 shadow-sm">
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                                        <AlertCircle className="w-4 h-4" /> {t('attendance_feed.modal.ops_intel')}
-                                    </h4>
-
-                                    {selectedNoteRecord.status === 'Absent' && (
-                                        <div className="bg-destructive/5 p-4 rounded-xl border border-destructive/10 border-l-4 border-l-destructive">
-                                            <span className="font-bold text-[10px] uppercase tracking-wider text-destructive block mb-1">{t('attendance_feed.modal.absence_reason')}</span>
-                                            <p className="text-sm font-medium text-foreground">"{selectedNoteRecord.teacherNote || t('attendance_feed.modal.no_reason')}"</p>
-                                        </div>
-                                    )}
-
-                                    {selectedNoteRecord.status === 'On Leave' && (
-                                        <div className="bg-pink-500/5 p-4 rounded-xl border border-pink-500/10 border-l-4 border-l-pink-500">
-                                            <span className="font-bold text-[10px] uppercase tracking-wider text-pink-600 dark:text-pink-500 block mb-1">{t('attendance_feed.status.on_leave')}</span>
-                                            <p className="text-sm font-medium text-foreground">"{selectedNoteRecord.teacherNote || 'Approved Leave'}"</p>
+                        <div className="p-6 overflow-y-auto flex-1 custom-scrollbar space-y-6">
+                            {(selectedNoteRecord.eventNote || selectedNoteRecord.lateReason || selectedNoteRecord.teacherNote) && (
+                                <div className="space-y-4">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">Field Intelligence</Label>
+                                    
+                                    {selectedNoteRecord.eventNote && (
+                                        <div className="p-4 bg-violet-500/5 border border-violet-500/20 rounded-2xl animate-in slide-in-from-top-2">
+                                            <p className="text-[9px] font-black uppercase tracking-tighter text-violet-600 mb-1 flex items-center gap-1.5">
+                                                <Star className="w-3 h-3 fill-current" /> Event Highlights
+                                            </p>
+                                            <p className="text-sm font-semibold text-foreground italic">"{selectedNoteRecord.eventNote}"</p>
                                         </div>
                                     )}
 
                                     {selectedNoteRecord.lateReason && (
-                                        <div className="bg-amber-500/5 p-4 rounded-xl border border-amber-500/10 border-l-4 border-l-amber-500">
-                                            <span className="font-bold text-[10px] uppercase tracking-wider text-amber-600 dark:text-amber-500 block mb-1">{t('attendance_feed.modal.delayed_arrival')}</span>
-                                            <p className="text-sm font-medium text-foreground">"{selectedNoteRecord.lateReason}"</p>
+                                        <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl animate-in slide-in-from-top-2">
+                                            <p className="text-[9px] font-black uppercase tracking-tighter text-amber-600 mb-1 flex items-center gap-1.5">
+                                                <AlertCircle className="w-3 h-3" /> Delay Justification
+                                            </p>
+                                            <p className="text-sm font-semibold text-foreground italic">"{selectedNoteRecord.lateReason}"</p>
                                         </div>
                                     )}
 
-                                    {selectedNoteRecord.teacherNote && selectedNoteRecord.status !== 'Absent' && selectedNoteRecord.status !== 'On Leave' && (
-                                        <div className="p-1">
-                                            <span className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground block mb-1.5">{t('attendance_feed.modal.standard_report')}</span>
-                                            <p className="text-sm font-medium text-foreground leading-relaxed">"{selectedNoteRecord.teacherNote}"</p>
+                                    {selectedNoteRecord.teacherNote && (
+                                        <div className="p-4 bg-muted/30 border border-border rounded-2xl animate-in slide-in-from-top-2">
+                                            <p className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground mb-1 flex items-center gap-1.5">
+                                                <FileText className="w-3 h-3" /> Operations Report
+                                            </p>
+                                            <p className="text-sm font-semibold text-foreground italic">"{selectedNoteRecord.teacherNote}"</p>
                                         </div>
                                     )}
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-2 gap-4 p-5 bg-card border border-border rounded-2xl shadow-sm">
-                                <div>
-                                    <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase flex items-center gap-1.5 mb-1">
-                                        <Clock className="w-3 h-3" /> {t('attendance_feed.card.arrived')}
-                                    </span>
-                                    <p className="text-base font-bold text-foreground">{formatTime(selectedNoteRecord.checkInTime) || "—"}</p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 block mb-1">Arrival</span>
+                                    <p className="text-lg font-black text-foreground tabular-nums">
+                                        {formatTime(selectedNoteRecord.checkInTime) || "Pending"}
+                                    </p>
                                 </div>
-                                <div className="border-l border-border pl-4">
-                                    <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase flex items-center gap-1.5 mb-1">
-                                        <LogOut className="w-3 h-3" /> {t('attendance_feed.card.departed')}
-                                    </span>
-                                    <p className="text-base font-bold text-foreground">{formatTime(selectedNoteRecord.checkOutTime) || (selectedNoteRecord.checkInTime ? t('attendance_feed.card.on_site') : "—")}</p>
+                                <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 block mb-1">Departure</span>
+                                    <p className="text-lg font-black text-foreground tabular-nums">
+                                        {formatTime(selectedNoteRecord.checkOutTime) || (selectedNoteRecord.checkInTime ? "On Site" : "Pending")}
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* OVERRIDE SECTION */}
-                            <div className="mt-6 pt-6 border-t border-border border-dashed">
+                            <div className="pt-6 border-t border-dashed border-border/60">
                                 <div className="flex items-center justify-between mb-5">
-                                    <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
-                                        <Settings2 className="w-4 h-4 text-primary" /> {t('attendance_feed.modal.override_title')}
-                                    </h4>
-                                    <button
+                                    <div className="flex items-center gap-2 text-foreground font-black uppercase tracking-tighter">
+                                        <Settings2 className="w-5 h-5 text-primary" /> System Override
+                                    </div>
+                                    <button 
                                         onClick={() => { setOverrideMode(!overrideMode); setOverrideAction(""); }}
-                                        className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors shadow-sm"
+                                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm
+                                            ${overrideMode ? 'bg-destructive text-white' : 'bg-muted text-muted-foreground hover:bg-border'}
+                                        `}
                                     >
-                                        {overrideMode ? t('attendance_feed.modal.btn_cancel_override') : t('attendance_feed.modal.btn_enable_edit')}
+                                        {overrideMode ? "Cancel Override" : "Enable Edit Mode"}
                                     </button>
                                 </div>
 
                                 {overrideMode && (
-                                    <div className="bg-muted/40 p-5 rounded-2xl border border-border space-y-5 animate-in fade-in slide-in-from-top-2 shadow-sm">
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                                            {!selectedNoteRecord.checkInTime && (
-                                                <button onClick={() => setOverrideAction("CheckIn")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'CheckIn' ? 'bg-emerald-500 text-white border-emerald-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-emerald-500'}`}>{t('attendance_feed.modal.actions.CheckIn')}</button>
-                                            )}
-                                            {selectedNoteRecord.checkInTime && !selectedNoteRecord.checkOutTime && (
-                                                <button onClick={() => setOverrideAction("CheckOut")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'CheckOut' ? 'bg-blue-500 text-white border-blue-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-blue-500'}`}>{t('attendance_feed.modal.actions.CheckOut')}</button>
-                                            )}
-                                            <button onClick={() => setOverrideAction("Absent")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Absent' ? 'bg-destructive text-white border-red-700 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-destructive'}`}>{t('attendance_feed.modal.actions.Absent')}</button>
-                                            <button onClick={() => setOverrideAction("Late")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Late' ? 'bg-amber-500 text-white border-amber-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-amber-500'}`}>{t('attendance_feed.modal.actions.Late')}</button>
-                                            <button onClick={() => setOverrideAction("Event")} className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Event' ? 'bg-violet-500 text-white border-violet-600 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-violet-500'}`}>{t('attendance_feed.modal.actions.Event')}</button>
-                                            <button
-                                                onClick={() => setOverrideAction("Revoke")}
-                                                className={`px-3 py-2.5 text-xs font-bold rounded-xl border transition-all ${overrideAction === 'Revoke' ? 'bg-slate-800 text-white border-slate-900 shadow-inner scale-[0.98]' : 'bg-card text-foreground hover:border-slate-500'}`}
-                                            >
-                                                {selectedNoteRecord.checkOutTime ? t('attendance_feed.modal.actions.Revoke_Undo') : t('attendance_feed.modal.actions.Revoke_All')}
-                                            </button>
+                                    <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {[
+                                                { id: "CheckIn", label: "Check In", color: "hover:border-emerald-500", active: "bg-emerald-500 text-white border-emerald-600" },
+                                                { id: "CheckOut", label: "Check Out", color: "hover:border-blue-500", active: "bg-blue-500 text-white border-blue-600" },
+                                                { id: "Absent", label: "Absent", color: "hover:border-destructive", active: "bg-destructive text-white border-destructive/60" },
+                                                { id: "Late", label: "Late", color: "hover:border-amber-500", active: "bg-amber-500 text-white border-amber-600" },
+                                                { id: "Event", label: "Event", color: "hover:border-violet-500", active: "bg-violet-500 text-white border-violet-600" },
+                                                { id: "Revoke", label: "Revoke", color: "hover:border-slate-800", active: "bg-slate-800 text-white border-black" },
+                                            ].map((action) => {
+                                                if (action.id === 'CheckIn' && selectedNoteRecord.checkInTime) return null;
+                                                if (action.id === 'CheckOut' && (!selectedNoteRecord.checkInTime || selectedNoteRecord.checkOutTime)) return null;
+
+                                                return (
+                                                    <button
+                                                        key={action.id}
+                                                        onClick={() => setOverrideAction(action.id)}
+                                                        className={`p-3 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-xs
+                                                            ${overrideAction === action.id ? action.active : `bg-background border-border/80 text-muted-foreground ${action.color}`}
+                                                        `}
+                                                    >
+                                                        {action.label}
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
 
                                         {overrideAction && (
-                                            <div className="space-y-4 animate-in fade-in">
-                                                <div>
-                                                    <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-2">{t('attendance_feed.modal.optional_note')}</label>
-                                                    <textarea
+                                            <div className="space-y-4 animate-in fade-in zoom-in-95">
+                                                <div className="space-y-2">
+                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Administrative Note (Required)</Label>
+                                                    <Textarea 
                                                         value={overrideReason}
                                                         onChange={(e) => setOverrideReason(e.target.value)}
-                                                        placeholder={t('attendance_feed.modal.placeholder_note', { action: t(`attendance_feed.modal.actions.${overrideAction === 'Revoke' ? (selectedNoteRecord.checkOutTime ? 'Revoke_Undo' : 'Revoke_All') : overrideAction}`).toLowerCase() })}
-                                                        className="w-full bg-card border border-border rounded-xl p-4 text-sm font-medium focus:ring-2 focus:ring-primary outline-none resize-none h-24 placeholder:text-muted-foreground/40 transition-all shadow-sm"
+                                                        placeholder="Explain why this override is being performed..."
+                                                        className="rounded-3xl bg-muted/20 border-border/80 focus-visible:ring-primary/30 p-4 min-h-25 text-sm font-medium"
                                                     />
                                                 </div>
-                                                <Button
-                                                    className="w-full font-extrabold h-12 rounded-xl text-base shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
+                                                <Button 
                                                     onClick={handleOverrideSubmit}
-                                                    disabled={isSubmittingOverride}
+                                                    disabled={isSubmittingOverride || !overrideReason.trim()}
+                                                    className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 active:scale-[0.98] transition-all"
                                                 >
-                                                    {isSubmittingOverride ? t('attendance_feed.modal.btn_applying') : t('attendance_feed.modal.btn_confirm', { action: t(`attendance_feed.modal.actions.${overrideAction === 'Revoke' ? (selectedNoteRecord.checkOutTime ? 'Revoke_Undo' : 'Revoke_All') : overrideAction}`) })}
+                                                    {isSubmittingOverride ? (
+                                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                                    ) : (
+                                                        "Confirm Override"
+                                                    )}
                                                 </Button>
                                             </div>
                                         )}
@@ -663,6 +552,8 @@ const AttendanceFeed = () => {
                                 )}
                             </div>
                         </div>
+
+                        <div className="pb-safe" />
                     </div>
                 </div>
             )}
