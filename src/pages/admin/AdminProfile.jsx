@@ -1,46 +1,83 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Mail, Phone, ShieldCheck, User, Camera, Loader2, Trash2, AlertCircle, Edit2, ShieldAlert } from "lucide-react";
+import { Mail, Phone, ShieldCheck, User, Camera, Loader2, Trash2, AlertCircle, Edit2, ShieldAlert, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
-import ChangePasswordModal from "../../modals/employee/ChangePasswordModal"; // You can reuse the same modal
-import { useTranslation } from "react-i18next";
+import ChangePasswordModal from "../../modals/admin/AdminChangePasswordModal";
+import { useTranslation, Trans } from "react-i18next";
 import { updateProfilePicture } from "../../store/slices/authSlice";
+import { Button } from "@/components/ui/button";
 
 // --- SOCKET SETUP ---
 import { io } from "socket.io-client";
+import { Label } from "recharts";
+import AdminChangePasswordModal from "../../modals/admin/AdminChangePasswordModal";
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
-// --- DELETE MODAL COMPONENT ---
+// --- REFACTORED DELETE MODAL ---
 const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, loading }) => {
+    const { t } = useTranslation();
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragOffset, setDragOffset] = useState(0);
+    const [isClosing, setIsClosing] = useState(false);
+    const dragStartY = useRef(0);
+
+    const handleClose = () => {
+        if (loading) return;
+        setIsClosing(true);
+        setDragOffset(window.innerHeight);
+        setTimeout(() => {
+            onClose();
+            setIsClosing(false);
+            setDragOffset(0);
+        }, 300);
+    };
+
+    const handleTouchStart = (e) => { 
+        if (e.target.closest('button')) return;
+        dragStartY.current = e.touches[0].clientY; 
+        setIsDragging(true); 
+    };
+    const handleTouchMove = (e) => {
+        if (!isDragging) return;
+        const delta = e.touches[0].clientY - dragStartY.current;
+        if (delta > 0) setDragOffset(delta);
+    };
+    const handleTouchEnd = () => {
+        setIsDragging(false);
+        if (dragOffset > 120) handleClose();
+        else setDragOffset(0);
+    };
+
     if (!isOpen) return null;
+
     return (
-        <div className="fixed inset-0 z-150 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-card dark:bg-[#181d29] border border-border dark:border-slate-800 rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 duration-300 relative overflow-hidden">
-                <div className="flex flex-col items-center text-center space-y-4">
-                    <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center border border-destructive/20">
-                        <AlertCircle className="w-7 h-7 text-destructive" />
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-bold text-foreground">Remove Picture?</h3>
-                        <p className="text-sm text-muted-foreground mt-2">
-                            This will delete your profile picture permanently and revert to your initials.
-                        </p>
-                    </div>
+        <div className={`fixed inset-0 z-200 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0' : 'opacity-100 backdrop-blur-sm animate-in fade-in'}`} onClick={handleClose}>
+            <div 
+                className={`bg-card w-full max-w-sm rounded-t-[2.5rem] md:rounded-3xl shadow-2xl border-t md:border border-border/50 flex flex-col relative overflow-hidden ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95' : ''}`} 
+                style={{ transform: `translateY(${dragOffset}px)` }} 
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-destructive/40 via-destructive to-destructive/40 z-20 rounded-t-[inherit]" />
+                <div className="w-full flex justify-center pt-3 pb-1 md:hidden touch-none" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+                    <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
                 </div>
-                <div className="flex items-center gap-3 mt-8">
-                    <button
-                        onClick={onClose}
-                        className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold bg-muted hover:bg-muted/80 text-foreground transition-all active:scale-95"
-                    >
-                        Cancel
+                <div className="p-6 md:p-8 text-center pt-6 md:pt-10">
+                    <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center text-destructive mx-auto mb-5 relative">
+                        <div className="absolute inset-0 bg-destructive/10 rounded-full animate-ping opacity-40" />
+                        <Trash2 className="w-7 h-7 relative z-10" />
+                    </div>
+                    <h3 className="text-xl font-extrabold text-foreground mb-2">Remove Picture?</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                        This will permanently delete your profile photo and revert to your initials.
+                    </p>
+                </div>
+                <div className="bg-muted/10 p-5 border-t border-border/50 flex flex-col gap-2 rounded-b-3xl pb-safe">
+                    <button onClick={onConfirm} disabled={loading} className="w-full flex items-center justify-center gap-2 h-12 text-sm font-bold bg-destructive text-white hover:bg-destructive/90 rounded-xl transition-all shadow-lg shadow-destructive/20 active:scale-95">
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Yes, Remove Photo"}
                     </button>
-                    <button
-                        onClick={onConfirm}
-                        disabled={loading}
-                        className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold bg-destructive hover:bg-destructive/90 text-destructive-foreground transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
-                    >
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Yes, Remove"}
+                    <button onClick={handleClose} disabled={loading} className="w-full h-12 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors">
+                        Cancel
                     </button>
                 </div>
             </div>
@@ -53,23 +90,17 @@ const AdminProfile = () => {
     const { user } = useSelector((state) => state.auth);
     const dispatch = useDispatch();
 
-    // Modal & Action States
     const [loading, setLoading] = useState(true);
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // Avatar Upload/Delete States
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const [isDeletingAvatar, setIsDeletingAvatar] = useState(false);
     const fileInputRef = useRef(null);
-
-    // Local Data States
     const [localUser, setLocalUser] = useState(user || {});
 
     const fetchFreshData = useCallback(async () => {
         try {
-            // Note: Update this endpoint if your backend uses a different one for admins (e.g., /admin/profile)
             const profileRes = await api.get('/admin/me/profile').catch(() => null);
             if (profileRes && profileRes.data.success) {
                 setLocalUser(profileRes.data.user);
@@ -113,18 +144,13 @@ const AdminProfile = () => {
     const handleAvatarUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error(t('admin_profile.toasts.file_too_large'));
-            return;
-        }
+        if (file.size > 5 * 1024 * 1024) return toast.error(t('admin_profile.toasts.file_too_large'));
+
         setIsUploadingAvatar(true);
         const toastId = toast.loading(t('admin_profile.toasts.uploading_avatar'));
         try {
             const extension = file.name.split('.').pop().toLowerCase();
-            const presignRes = await api.post('/admin/profile-picture/presign', {
-                fileType: file.type,
-                extension
-            });
+            const presignRes = await api.post('/admin/profile-picture/presign', { fileType: file.type, extension });
             const { presignedUrl, publicUrl } = presignRes.data;
             await fetch(presignedUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
             await api.put('/admin/profile-picture/confirm', { publicUrl });
@@ -161,104 +187,111 @@ const AdminProfile = () => {
     if (loading) {
         return (
             <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in pb-24 p-4">
-                <div className="h-9 w-48 bg-muted rounded-lg animate-pulse" />
-                <div className="bg-card rounded-3xl h-96 animate-pulse" />
+                <div className="h-12 w-48 bg-muted rounded-2xl animate-pulse" />
+                <div className="bg-card rounded-[2.5rem] h-96 animate-pulse border border-border/50" />
             </div>
         );
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 md:space-y-8 animate-in fade-in duration-500 pb-24 p-4 sm:p-6 lg:p-8 mt-2 md:mt-0">
-            <div>
-                <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground flex items-center gap-3">
-                    <ShieldAlert className="w-7 h-7 text-primary hidden sm:block" />
-                    {t('admin_profile.title')}
+        <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700 pb-24 p-4 sm:p-6 lg:p-8 mt-2 md:mt-0">
+            {/* Header */}
+            <div className="space-y-2">
+                <h1 className="text-3xl md:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-linear-to-r from-primary to-primary/60">
+                    {t('admin_profile.title', 'My Profile')}
                 </h1>
-                <p className="text-muted-foreground mt-1.5 sm:ml-10 text-sm sm:text-base">{t('admin_profile.subtitle')}</p>
+                <p className="text-muted-foreground font-medium text-sm sm:text-base flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4 text-primary/70" />
+                    {t('admin_profile.subtitle', 'Manage your administrative identity and security')}
+                </p>
             </div>
 
-            <div className="bg-card rounded-3xl shadow-sm border border-border/60 p-6 md:p-8 relative overflow-hidden h-full group">
-                <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/10 transition-colors duration-700"></div>
-
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 mb-8 pb-8 relative z-10 border-b border-border/60">
-                    <div className="flex items-center gap-4 sm:gap-5 w-full sm:w-auto">
-                        <div className="relative group/avatar shrink-0">
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-linear-to-br from-primary to-primary/80 flex items-center justify-center text-primary-foreground text-2xl sm:text-3xl font-extrabold shadow-lg shadow-primary/20 border-4 border-background overflow-hidden relative">
+            {/* Profile Card */}
+            <div className="bg-card rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-border/60 p-6 md:p-10 relative overflow-hidden group">
+                <div className="absolute -top-24 -right-24 w-80 h-80 bg-primary/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/10 transition-colors duration-1000" />
+                
+                {/* Header Section: Avatar & Role */}
+                <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-6 mb-10 pb-10 border-b border-border/50 relative z-10">
+                    <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+                        <div className="relative">
+                            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-[2.5rem] bg-linear-to-br from-primary to-primary/80 flex items-center justify-center text-primary-foreground text-4xl sm:text-5xl font-black shadow-2xl shadow-primary/30 border-4 border-background overflow-hidden relative group/avatar transition-transform hover:scale-[1.02]">
                                 {localUser.profilePicture ? (
                                     <img src={localUser.profilePicture} alt={localUser.name} className="w-full h-full object-cover" />
                                 ) : (
                                     <span>{localUser.name?.charAt(0).toUpperCase() || "A"}</span>
                                 )}
-                                <div
+                                <div 
                                     onClick={() => !isUploadingAvatar && fileInputRef.current?.click()}
-                                    className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity cursor-pointer"
+                                    className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-all cursor-pointer text-white"
                                 >
-                                    {isUploadingAvatar ? <Loader2 className="w-6 h-6 text-white animate-spin" /> : <Camera className="w-6 h-6 text-white" />}
+                                    {isUploadingAvatar ? <Loader2 className="w-8 h-8 animate-spin" /> : <Camera className="w-8 h-8" />}
+                                    <span className="text-[10px] font-bold uppercase mt-1">Change</span>
                                 </div>
                             </div>
 
                             {localUser.profilePicture && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setIsDeleteModalOpen(true); }}
-                                    className="absolute -top-1 -right-1 p-1.5 bg-destructive text-destructive-foreground rounded-full border-2 border-background shadow-md hover:scale-110 transition-transform z-20"
+                                    className="absolute -top-2 -right-2 p-2 bg-destructive text-white rounded-2xl border-4 border-card shadow-lg hover:scale-110 active:scale-95 transition-all z-20"
+                                    title="Remove Picture"
                                 >
-                                    <Trash2 className="w-3 h-3" />
+                                    <Trash2 className="w-4 h-4" />
                                 </button>
                             )}
-
-                            <button
-                                onClick={() => !isUploadingAvatar && fileInputRef.current?.click()}
-                                className="absolute bottom-0 right-0 p-1.5 bg-primary text-primary-foreground rounded-full border-2 border-background shadow-md hover:scale-110 transition-transform z-10"
-                            >
-                                {isUploadingAvatar ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
-                            </button>
 
                             <input type="file" ref={fileInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/*" />
                         </div>
 
-                        <div className="min-w-0 flex-1">
-                            <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-foreground truncate leading-tight">{localUser.name}</h2>
-                            <p className="text-xs sm:text-sm font-bold text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full w-fit mt-2 uppercase tracking-wide">
-                                {localUser.role || 'Admin'}
-                            </p>
+                        <div className="space-y-1.5">
+                            <h2 className="text-3xl sm:text-4xl font-black text-foreground tracking-tight">{localUser.name}</h2>
+                            <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+                                <span className="text-xs font-black bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 rounded-full uppercase tracking-widest">
+                                    {localUser.role || 'Admin'}
+                                </span>
+                                <span className="text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 px-4 py-1.5 rounded-full flex items-center gap-1.5 uppercase tracking-wide">
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Verified
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    <button
+                    <Button
                         onClick={() => setIsPasswordModalOpen(true)}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-background hover:bg-primary/5 text-foreground hover:text-primary border border-border hover:border-primary/30 rounded-xl transition-all font-bold text-sm shadow-sm active:scale-95"
+                        variant="outline"
+                        className="w-full sm:w-auto h-12 rounded-2xl gap-2 font-bold px-6 shadow-sm hover:border-primary/40 hover:bg-primary/5 active:scale-95 transition-all"
                     >
                         <Edit2 className="w-4 h-4" />
-                        <span>{t('admin_profile.btn_edit_password')}</span>
-                    </button>
+                        <span>{t('admin_profile.btn_edit_password', 'Security Settings')}</span>
+                    </Button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 relative z-10">
+                {/* Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                     <div className="space-y-5">
-                        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                            <User className="w-4 h-4 text-primary/70" /> {t('admin_profile.personal_info')}
-                        </h3>
+                        <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-2 ml-1">
+                            <User className="w-4 h-4 text-primary/60" /> Account Identity
+                        </Label>
                         <div className="space-y-3">
-                            <ProfileDetailItem icon={<Mail className="text-blue-500/80" />} label={t('admin_profile.label_email')} value={localUser.email} />
-                            <ProfileDetailItem icon={<Phone className="text-emerald-500/80" />} label={t('admin_profile.label_phone')} value={localUser.mobile || t('admin_profile.not_provided')} />
+                            <ProfileDetailItem icon={<Mail className="text-blue-500" />} label="Email Address" value={localUser.email} />
+                            <ProfileDetailItem icon={<Phone className="text-emerald-500" />} label="Mobile Number" value={localUser.mobile || "Not Linked"} />
                         </div>
                     </div>
 
                     <div className="space-y-5">
-                        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                            <ShieldCheck className="w-4 h-4 text-primary/70" /> {t('admin_profile.system_access')}
-                        </h3>
-                        <div className="space-y-3 h-full flex flex-col">
-                            <ProfileDetailItem icon={<ShieldCheck className="text-amber-500/80" />} label={t('admin_profile.label_role')} value={localUser.role || 'System Administrator'} />
-                            <div className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 border border-border/50 transition-colors flex-1">
-                                <div className="p-2.5 bg-background rounded-xl shrink-0 shadow-sm border border-border/50">
-                                    <ShieldAlert className="w-5 h-5 text-indigo-500/80" />
+                        <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-2 ml-1">
+                            <ShieldCheck className="w-4 h-4 text-primary/60" /> System Permissions
+                        </Label>
+                        <div className="space-y-3">
+                            <ProfileDetailItem icon={<ShieldCheck className="text-amber-500" />} label="Access Level" value={localUser.role === 'SuperAdmin' ? 'Unrestricted Admin' : 'Staff Admin'} />
+                            <div className="flex items-center gap-4 p-5 rounded-3xl bg-muted/30 border border-border/50 transition-all hover:border-indigo-500/30">
+                                <div className="p-3 bg-card rounded-2xl shrink-0 shadow-sm border border-border/50">
+                                    <ShieldAlert className="w-5 h-5 text-indigo-500" />
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-0.5">{t('admin_profile.label_status')}</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                                        <p className="text-sm font-bold text-foreground">Active & Verified</p>
+                                <div className="min-w-0">
+                                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-1">Account Status</p>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        <p className="text-sm sm:text-base font-bold text-foreground">Active & Protected</p>
                                     </div>
                                 </div>
                             </div>
@@ -267,7 +300,12 @@ const AdminProfile = () => {
                 </div>
             </div>
 
-            <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} onSubmit={handlePasswordChange} actionLoading={isSubmitting} />
+            <AdminChangePasswordModal
+                isOpen={isPasswordModalOpen} 
+                onClose={() => setIsPasswordModalOpen(false)} 
+                onSubmit={handlePasswordChange} 
+                actionLoading={isSubmitting} 
+            />
 
             <DeleteConfirmationModal
                 isOpen={isDeleteModalOpen}
@@ -280,10 +318,10 @@ const AdminProfile = () => {
 };
 
 const ProfileDetailItem = ({ icon, label, value }) => (
-    <div className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
-        <div className="p-2.5 bg-background rounded-xl shrink-0 shadow-sm border border-border/50">{icon}</div>
+    <div className="flex items-center gap-4 p-5 rounded-3xl bg-muted/30 border border-border/50 hover:bg-muted/50 hover:border-primary/20 transition-all group/item">
+        <div className="p-3 bg-card rounded-2xl shrink-0 shadow-sm border border-border/50 group-hover/item:scale-110 transition-transform">{icon}</div>
         <div className="min-w-0 flex-1">
-            <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-0.5">{label}</p>
+            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-1">{label}</p>
             <p className="text-sm sm:text-base font-bold text-foreground truncate">{value}</p>
         </div>
     </div>

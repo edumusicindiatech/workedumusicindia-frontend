@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { Mail, Phone, ShieldCheck, MapPin, School, Edit2, User, Camera, Loader2, Trash2, AlertCircle, X } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
-import ChangePasswordModal from "../../modals/employee/ChangePasswordModal";
+import ChangePasswordModal from "../../modals/admin/AdminChangePasswordModal";
 import { useTranslation } from "react-i18next";
 import { updateProfilePicture } from "../../store/slices/authSlice";
 
