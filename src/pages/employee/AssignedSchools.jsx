@@ -221,14 +221,15 @@ const AssignedSchools = () => {
                                             <div key={idx} className="bg-muted/30 dark:bg-muted/20 border border-border/50 rounded-2xl p-4 transition-colors group-hover:bg-muted/50 w-full">
 
                                                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex flex-wrap items-center gap-2">
                                                         <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wider uppercase shadow-sm whitespace-nowrap">
                                                             {cat.name}
                                                         </span>
-                                                        {/* --- NEW: TASK BADGE --- */}
+                                                        
+                                                        {/* --- PROPER VISUAL TASK BADGE --- */}
                                                         {cat.isTask && (
-                                                            <span className="bg-violet-500 text-white px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wider uppercase shadow-sm flex items-center gap-1.5 whitespace-nowrap">
-                                                                <ClipboardList className="w-3 h-3" /> {t('assigned_schools.task_badge', 'Task')}
+                                                            <span className="bg-violet-500 text-white px-3 py-1 rounded-full border border-violet-600 text-[10px] sm:text-xs font-bold tracking-wider uppercase shadow-sm flex items-center gap-1.5 whitespace-nowrap">
+                                                                <ClipboardList className="w-3.5 h-3.5" /> {t('assigned_schools.task_badge', 'Task')}
                                                             </span>
                                                         )}
                                                     </div>

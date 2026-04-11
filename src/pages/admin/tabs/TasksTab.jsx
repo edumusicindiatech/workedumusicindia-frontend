@@ -6,7 +6,7 @@ import {
     AlertCircle, XCircle, CalendarDays, Clock,
     Pencil, Trash2, CheckSquare, Info, Sparkles, Copy
 } from "lucide-react";
-import { useTranslation } from "react-i18next"; 
+import { useTranslation } from "react-i18next";
 
 import AssignTaskModal from "../../../modals/admin/AssignTaskModal";
 import ManageTaskModal from "../../../modals/admin/ManageTaskModal";
@@ -29,13 +29,12 @@ const formatTime12Hour = (time) => {
 };
 
 const TasksTab = ({ tasks, employeeId, onSuccess }) => {
-    const { t } = useTranslation(); 
+    const { t } = useTranslation();
     const { user } = useSelector((state) => state.auth);
 
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [manageModalData, setManageModalData] = useState({ isOpen: false, task: null });
-    
-    // --- NEW: State to hold the task data to be cloned ---
+
     const [cloneData, setCloneData] = useState(null);
 
     useEffect(() => {
@@ -90,13 +89,13 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
                     <div className="p-2 bg-primary/10 rounded-xl">
                         <ClipboardList className="w-5 h-5 text-primary shrink-0" />
                     </div>
-                    {t('tasks_tab.title')}
+                    {t('tasks_tab.title', 'Assigned Tasks')}
                 </h3>
                 <Button
                     className="w-full sm:w-auto gap-2 shadow-lg shadow-primary/20 rounded-xl font-bold h-11 bg-primary hover:bg-primary/90 text-primary-foreground transition-all active:scale-95"
                     onClick={openNewTaskModal}
                 >
-                    <Plus className="w-5 h-5 shrink-0" /> {t('tasks_tab.btn_assign')}
+                    <Plus className="w-5 h-5 shrink-0" /> {t('tasks_tab.btn_assign', 'Assign New Task')}
                 </Button>
             </div>
 
@@ -110,16 +109,16 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
                                 <CheckSquare className="w-8 h-8 text-muted-foreground/50" />
                             </div>
                         </div>
-                        <h3 className="text-xl sm:text-2xl font-extrabold text-foreground mb-2">{t('tasks_tab.empty_title')}</h3>
+                        <h3 className="text-xl sm:text-2xl font-extrabold text-foreground mb-2">{t('tasks_tab.empty_title', 'No Tasks Assigned')}</h3>
                         <p className="text-muted-foreground mb-6 max-w-sm text-sm sm:text-base">
-                            {t('tasks_tab.empty_desc')}
+                            {t('tasks_tab.empty_desc', 'This employee has no temporary tasks assigned to them right now.')}
                         </p>
                         <Button
                             variant="outline"
                             onClick={openNewTaskModal}
                             className="rounded-xl border-primary/20 text-primary hover:bg-primary/10 font-bold"
                         >
-                            <Sparkles className="w-4 h-4 mr-2" /> {t('tasks_tab.empty_action')}
+                            <Sparkles className="w-4 h-4 mr-2" /> {t('tasks_tab.empty_action', 'Assign a Task')}
                         </Button>
                     </div>
                 ) : (
@@ -151,7 +150,7 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
                                                             <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                                                         </span>
                                                     )}
-                                                    {getStatusIcon(task.status)} {t(`tasks_tab.status.${task.status.toLowerCase()}`)}
+                                                    {getStatusIcon(task.status)} {t(`tasks_tab.status.${task.status.toLowerCase()}`, task.status)}
                                                 </span>
                                             </div>
 
@@ -162,19 +161,24 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
                                             <div className="flex items-start sm:items-center gap-2 text-sm text-muted-foreground">
                                                 <MapPin className="w-4 h-4 shrink-0 text-muted-foreground/70" />
                                                 <span className="font-semibold text-foreground/80">
-                                                    {task.school?.schoolName || task.schoolName || t('tasks_tab.unknown_location')}
+                                                    {task.school?.schoolName || task.schoolName || t('tasks_tab.unknown_location', 'Unknown Location')}
                                                 </span>
                                                 <span className="hidden sm:block opacity-40 shrink-0">•</span>
                                                 <span className="leading-snug opacity-90 truncate">
-                                                    {task.school?.address || task.location || t('tasks_tab.no_address')}
+                                                    {task.school?.address || task.location || t('tasks_tab.no_address', 'No Address')}
                                                 </span>
                                             </div>
 
                                             <div className="flex flex-wrap gap-2.5 pt-2">
                                                 <span className="px-3 py-1 bg-primary/10 rounded-lg border border-primary/10 text-xs font-bold text-primary flex items-center gap-1.5">
-                                                    {task.category || t('tasks_tab.task_placeholder')}
+                                                    {task.category || t('tasks_tab.task_placeholder', 'Category')}
                                                 </span>
-                                                
+
+                                                {/* --- NEW: EXPLICIT TASK BADGE --- */}
+                                                <span className="px-3 py-1 bg-violet-500 text-white rounded-lg border border-violet-600 text-xs font-bold flex items-center gap-1.5 shadow-sm tracking-wide uppercase">
+                                                    <ClipboardList className="w-3.5 h-3.5" /> {t('tasks_tab.task_badge', 'Task')}
+                                                </span>
+
                                                 {(task.startTime && task.endTime) ? (
                                                     <span className="px-3 py-1 bg-muted rounded-lg border border-border/50 text-xs font-bold text-foreground flex items-center gap-1.5">
                                                         <Clock className="w-3.5 h-3.5 text-amber-500" /> {formatTime12Hour(task.startTime)} - {formatTime12Hour(task.endTime)}
@@ -195,11 +199,11 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
 
                                         {/* Actions Section */}
                                         <div className="flex flex-col items-start xl:items-end justify-start gap-2.5 shrink-0 pt-4 xl:pt-0 border-t border-border/50 xl:border-transparent mt-2 xl:mt-0">
-                                            
+
                                             {isAccepted && (
                                                 <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-2 rounded-xl border border-emerald-500/20 mb-1 xl:mb-2 w-full xl:w-auto justify-center xl:justify-start">
                                                     <CheckCircle2 className="w-4 h-4" />
-                                                    {t('tasks_tab.added_to_schedule')}
+                                                    {t('tasks_tab.added_to_schedule', 'Added to Schedule')}
                                                 </div>
                                             )}
 
@@ -219,7 +223,7 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
                                                         className="h-10 rounded-xl gap-2 font-bold text-muted-foreground hover:text-primary border-border/80 hover:border-primary/30 transition-all flex-1 xl:flex-none"
                                                         onClick={() => setManageModalData({ isOpen: true, task: task })}
                                                     >
-                                                        <Pencil className="w-4 h-4" /> {t('tasks_tab.btn_edit')}
+                                                        <Pencil className="w-4 h-4" /> {t('tasks_tab.btn_edit', 'Edit')}
                                                     </Button>
                                                 )}
 
@@ -228,7 +232,7 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
                                                     className="h-10 rounded-xl gap-2 font-bold text-destructive hover:bg-destructive hover:text-white border-destructive/20 hover:border-destructive transition-all flex-1 xl:flex-none"
                                                     onClick={() => setManageModalData({ isOpen: true, task: task })}
                                                 >
-                                                    <Trash2 className="w-4 h-4" /> {t('tasks_tab.btn_delete')}
+                                                    <Trash2 className="w-4 h-4" /> {t('tasks_tab.btn_delete', 'Delete')}
                                                 </Button>
                                             </div>
                                         </div>
@@ -239,7 +243,7 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
                                         <div className="mt-4 p-3.5 bg-destructive/5 border border-destructive/10 rounded-xl text-sm text-destructive flex items-start gap-2.5">
                                             <Info className="w-5 h-5 shrink-0 mt-0.5" />
                                             <div>
-                                                <strong className="block text-xs uppercase tracking-wider opacity-80 mb-0.5">{t('tasks_tab.rejection_label')}</strong>
+                                                <strong className="block text-xs uppercase tracking-wider opacity-80 mb-0.5">{t('tasks_tab.rejection_label', 'Reason for Rejection')}</strong>
                                                 <span className="font-medium">{task.rejectReason}</span>
                                             </div>
                                         </div>
@@ -256,7 +260,7 @@ const TasksTab = ({ tasks, employeeId, onSuccess }) => {
                 isOpen={isAssignModalOpen}
                 onClose={() => setIsAssignModalOpen(false)}
                 employeeId={employeeId}
-                initialData={cloneData} // Pass cloned data down
+                initialData={cloneData}
                 onSuccess={() => {
                     setIsAssignModalOpen(false);
                     if (onSuccess) onSuccess();

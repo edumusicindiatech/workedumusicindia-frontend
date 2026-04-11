@@ -1,37 +1,34 @@
 import { useState, useRef, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { startBackgroundUpload } from "../../store/slices/uploadSlice";
-import { X, UploadCloud, CheckCircle2 } from "lucide-react";
+import { X, UploadCloud, CheckCircle2, Video, FileText, Type, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
-// Generates a lightweight Base64 image in the browser (Zero backend CPU needed!)
+// --- Browser-side HD Thumbnail Generator ---
 const generateHDThumbnail = (file) => {
     return new Promise((resolve) => {
         const video = document.createElement("video");
         const url = URL.createObjectURL(file);
-
         video.src = url;
         video.muted = true;
         video.playsInline = true;
-
         video.onloadeddata = () => {
             video.currentTime = Math.min(1, video.duration || 0.1);
         };
-
         video.onseeked = () => {
             const canvas = document.createElement("canvas");
-            // 640x360 keeps the payload tiny while looking perfectly crisp on cards
             canvas.width = 640;
             canvas.height = 360;
             const ctx = canvas.getContext("2d");
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            // Compress to JPEG at 70% quality (Results in ~30kb payload)
             resolve(canvas.toDataURL("image/jpeg", 0.7));
             URL.revokeObjectURL(url);
         };
-
         video.onerror = () => {
             URL.revokeObjectURL(url);
             resolve(null);
@@ -42,10 +39,18 @@ const generateHDThumbnail = (file) => {
 const LearningMediaUploadModal = ({ isOpen, onClose }) => {
     const { t } = useTranslation();
     const dispatch = useDispatch();
+
+    // Form States
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
-    const [files, setFiles] = useState([]); // Now stores array of { file, thumbnail }
+    const [files, setFiles] = useState([]);
+    const [isProcessing, setIsProcessing] = useState(false);
 
+    // Swipe & Animation states
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragOffset, setDragOffset] = useState(0);
+    const [isClosing, setIsClosing] = useState(false);
+    const dragStartY = useRef(0);
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -53,26 +58,59 @@ const LearningMediaUploadModal = ({ isOpen, onClose }) => {
             setTitle("");
             setDescription("");
             setFiles([]);
+            setIsClosing(false);
+            setDragOffset(0);
         }
     }, [isOpen]);
 
     if (!isOpen) return null;
 
+    // --- ANIMATION HANDLERS ---
+    const handleClose = () => {
+        if (isProcessing) return;
+        setIsClosing(true);
+        setDragOffset(window.innerHeight);
+        setTimeout(() => {
+            onClose();
+            setIsClosing(false);
+            setDragOffset(0);
+        }, 300);
+    };
+
+    const handleTouchStart = (e) => {
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea')) return;
+        dragStartY.current = e.touches[0].clientY;
+        setIsDragging(true);
+    };
+
+    const handleTouchMove = (e) => {
+        if (!isDragging) return;
+        const delta = e.touches[0].clientY - dragStartY.current;
+        if (delta > 0) setDragOffset(delta);
+    };
+
+    const handleTouchEnd = () => {
+        setIsDragging(false);
+        if (dragOffset > 120) handleClose();
+        else setDragOffset(0);
+    };
+
+    // --- FILE HANDLERS ---
     const handleFileSelect = async (e) => {
         const selectedFiles = Array.from(e.target.files);
         if (!selectedFiles.length) return;
 
+        setIsProcessing(true);
         const MAX_COMBINED_SIZE = 500 * 1024 * 1024; // 500 MB
         let runningTotalSize = files.reduce((total, f) => total + f.file.size, 0);
 
         const validItems = [];
-        const toastId = toast.loading("Processing videos...");
+        const toastId = toast.loading("Generating HD Previews...");
 
         for (const f of selectedFiles) {
             if (runningTotalSize + f.size > MAX_COMBINED_SIZE) {
-                toast.error(`Cannot add "${f.name}". Max combined limit is 500MB.`);
+                toast.error(`"${f.name}" exceeds 500MB limit.`, { id: toastId });
             } else {
-                // Extract thumbnail instantly
                 const thumbBase64 = await generateHDThumbnail(f);
                 validItems.push({ file: f, thumbnail: thumbBase64 });
                 runningTotalSize += f.size;
@@ -80,12 +118,9 @@ const LearningMediaUploadModal = ({ isOpen, onClose }) => {
         }
 
         toast.dismiss(toastId);
-
-        if (validItems.length > 0) {
-            setFiles((prev) => [...prev, ...validItems]);
-        }
-
+        if (validItems.length > 0) setFiles((prev) => [...prev, ...validItems]);
         if (fileInputRef.current) fileInputRef.current.value = "";
+        setIsProcessing(false);
     };
 
     const removeFile = (indexToRemove) => {
@@ -97,7 +132,6 @@ const LearningMediaUploadModal = ({ isOpen, onClose }) => {
         if (!title.trim()) return toast.error(t('learning_hub.toasts.title_required'));
         if (files.length === 0) return toast.error(t('learning_hub.toasts.file_required'));
 
-        // Separate raw files for Uppy, and stringify thumbnails for Metadata
         const rawFiles = files.map(item => item.file);
         const base64Thumbnails = files.map(item => item.thumbnail);
 
@@ -107,58 +141,90 @@ const LearningMediaUploadModal = ({ isOpen, onClose }) => {
             metadata: {
                 title,
                 description,
-                thumbnails: JSON.stringify(base64Thumbnails) // Pack it into metadata
+                thumbnails: JSON.stringify(base64Thumbnails)
             }
         }));
 
-        onClose();
+        handleClose();
     };
 
     return (
-        <div className="fixed inset-0 z-100 flex items-center justify-center sm:p-4 p-0 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-card sm:border border-border sm:rounded-3xl rounded-none w-full max-w-lg shadow-2xl relative overflow-hidden flex flex-col h-dvh sm:h-auto sm:max-h-[90vh]">
+        <div className={`fixed inset-0 z-100 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleClose}>
+            <div
+                className={`bg-card w-full max-w-lg rounded-t-[2.5rem] md:rounded-4xl shadow-2xl border-t md:border border-border/50 flex flex-col max-h-[95vh] md:max-h-[90vh] relative overflow-hidden ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95' : ''}`}
+                style={{ transform: `translateY(${dragOffset}px)` }}
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Top Border Accent */}
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20 rounded-t-[inherit] pointer-events-none" />
 
-                <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border bg-muted/20 shrink-0">
-                    <div>
-                        <h2 className="text-xl font-black text-foreground">{t('learning_hub.upload_modal.title')}</h2>
-                        <p className="text-xs font-medium text-muted-foreground mt-1">{t('learning_hub.upload_modal.subtitle')}</p>
+                {/* HEADER */}
+                <div className="sticky top-0 bg-card/90 backdrop-blur-md z-10 touch-none border-b border-border/50 pt-2" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+                    <div className="w-full flex justify-center pt-3 pb-1 md:hidden">
+                        <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full"></div>
                     </div>
-                    <button onClick={onClose} className="p-2 bg-muted/50 hover:bg-muted text-muted-foreground rounded-xl transition-colors">
-                        <X className="w-5 h-5" />
-                    </button>
+
+                    <div className="px-6 pb-5 pt-2 md:pt-6 flex items-center justify-between">
+                        <div className="flex items-center gap-4 pr-4">
+                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-inner">
+                                <UploadCloud className="w-6 h-6 text-primary" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl sm:text-2xl font-extrabold text-foreground line-clamp-1 tracking-tight">
+                                    {t('learning_hub.upload_modal.title', 'Upload Lesson')}
+                                </h2>
+                                <p className="text-sm text-muted-foreground mt-0.5 font-medium line-clamp-1">
+                                    {t('learning_hub.upload_modal.subtitle', 'Share new learning media')}
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={handleClose}
+                            onTouchStart={(e) => e.stopPropagation()}
+                            className="p-2.5 hover:bg-muted rounded-full bg-muted/50 border border-border shrink-0 hidden md:flex transition-colors"
+                        >
+                            <X className="w-5 h-5 text-muted-foreground" />
+                        </button>
+                    </div>
                 </div>
 
-                <form id="learning-upload-form" onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-5 overflow-y-auto custom-scrollbar grow">
+                {/* BODY */}
+                <form id="learning-upload-form" onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar bg-card">
+
+                    {/* Lesson Title */}
                     <div className="space-y-2">
-                        <label className="block text-[13px] font-bold uppercase tracking-wider text-foreground">
-                            {t('learning_hub.upload_modal.lesson_title')} <span className="text-destructive">*</span>
-                        </label>
-                        <input
-                            type="text"
+                        <Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1 flex items-center gap-2">
+                            <Type className="w-3.5 h-3.5 text-primary/70" /> {t('learning_hub.upload_modal.lesson_title', 'Lesson Title')} <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            placeholder={t('learning_hub.upload_modal.title_placeholder')}
-                            className="w-full h-11 px-4 bg-background border border-input rounded-xl text-sm font-medium focus:border-primary outline-none transition-all"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            placeholder={t('learning_hub.upload_modal.title_placeholder', 'e.g. Basic Violin Posture')}
+                            className="h-12 rounded-xl bg-muted/20 border-border/60 focus-visible:ring-primary/30"
                         />
                     </div>
 
+                    {/* Description */}
                     <div className="space-y-2">
-                        <label className="block text-[13px] font-bold uppercase tracking-wider text-foreground">
-                            {t('learning_hub.upload_modal.description')} <span className="text-muted-foreground lowercase font-medium tracking-normal">{t('learning_hub.upload_modal.optional')}</span>
-                        </label>
-                        <textarea
-                            rows="3"
+                        <Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1 flex items-center gap-2">
+                            <FileText className="w-3.5 h-3.5 text-primary/70" /> {t('learning_hub.upload_modal.description', 'Description')}
+                        </Label>
+                        <Textarea
+                            rows={3}
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            placeholder={t('learning_hub.upload_modal.desc_placeholder')}
-                            className="w-full p-4 bg-background border border-input rounded-xl text-sm font-medium focus:border-primary outline-none transition-all resize-none"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            placeholder={t('learning_hub.upload_modal.desc_placeholder', 'Briefly explain what students will learn...')}
+                            className="rounded-2xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 resize-none p-4"
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="block text-[13px] font-bold uppercase tracking-wider text-foreground">
-                            {t('learning_hub.upload_modal.video_file')} <span className="text-destructive">*</span>
-                        </label>
+                    {/* Video Selection */}
+                    <div className="space-y-3">
+                        <Label className="text-xs font-bold text-foreground uppercase tracking-wider ml-1 flex items-center gap-2">
+                            <Video className="w-3.5 h-3.5 text-primary/70" /> {t('learning_hub.upload_modal.video_file', 'Video Content')} <span className="text-destructive">*</span>
+                        </Label>
 
                         <input
                             type="file"
@@ -170,53 +236,81 @@ const LearningMediaUploadModal = ({ isOpen, onClose }) => {
                         />
 
                         {files.length === 0 ? (
-                            <div onClick={() => fileInputRef.current?.click()} className="w-full flex flex-col items-center justify-center py-8 px-4 border-2 border-dashed border-primary/30 bg-primary/5 rounded-2xl hover:bg-primary/10 hover:border-primary/60 cursor-pointer transition-all duration-300">
-                                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-3">
-                                    <UploadCloud className="w-6 h-6 text-primary" />
+                            <div
+                                onClick={() => !isProcessing && fileInputRef.current?.click()}
+                                className="w-full flex flex-col items-center justify-center py-10 px-4 border-2 border-dashed border-primary/20 bg-primary/5 rounded-4xl hover:bg-primary/10 hover:border-primary/40 cursor-pointer transition-all duration-300 group"
+                            >
+                                <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-inner">
+                                    <UploadCloud className="w-8 h-8 text-primary" />
                                 </div>
-                                <p className="text-sm font-bold text-foreground text-center">{t('learning_hub.upload_modal.click_to_select')}</p>
-                                <p className="text-xs text-muted-foreground mt-1 text-center">{t('learning_hub.upload_modal.file_limits')}</p>
+                                <p className="text-sm font-extrabold text-foreground text-center">{t('learning_hub.upload_modal.click_to_select', 'Tap to select videos')}</p>
+                                <p className="text-[11px] font-bold text-muted-foreground mt-1.5 text-center uppercase tracking-tighter opacity-60">Max 500MB combined</p>
                             </div>
                         ) : (
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 {files.map((item, index) => (
-                                    <div key={index} className="flex items-center justify-between p-3 bg-muted/30 border border-border rounded-xl animate-in slide-in-from-bottom-2">
-                                        <div className="flex items-center gap-3 overflow-hidden">
-
-                                            {/* Pre-rendered Image instead of calculating it again */}
-                                            <img
-                                                src={item.thumbnail}
-                                                alt="Video Thumbnail"
-                                                className="w-12 h-12 object-cover rounded-lg shrink-0 border border-border bg-black"
-                                            />
-
+                                    <div key={index} className="flex items-center justify-between p-3.5 bg-muted/20 border border-border/60 rounded-2xl animate-in slide-in-from-bottom-2 duration-300">
+                                        <div className="flex items-center gap-4 overflow-hidden">
+                                            <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-border/50 bg-black shadow-sm">
+                                                <img src={item.thumbnail} alt="Preview" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                                    <Video className="w-4 h-4 text-white/80" />
+                                                </div>
+                                            </div>
                                             <div className="overflow-hidden">
-                                                <p className="text-sm font-bold truncate">{item.file.name}</p>
-                                                <p className="text-xs text-muted-foreground">{(item.file.size / (1024 * 1024)).toFixed(1)} MB</p>
+                                                <p className="text-sm font-extrabold text-foreground truncate max-w-45 sm:max-w-60">{item.file.name}</p>
+                                                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{(item.file.size / (1024 * 1024)).toFixed(1)} MB</p>
                                             </div>
                                         </div>
-                                        <button type="button" onClick={() => removeFile(index)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors shrink-0">
-                                            <X className="w-4 h-4" />
-                                        </button>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => removeFile(index)}
+                                            onTouchStart={(e) => e.stopPropagation()}
+                                            className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-colors shrink-0"
+                                        >
+                                            <X className="w-5 h-5" />
+                                        </Button>
                                     </div>
                                 ))}
 
-                                <button
+                                <Button
                                     type="button"
+                                    variant="outline"
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="text-[13px] text-primary font-bold hover:underline mt-2 flex items-center gap-1"
+                                    onTouchStart={(e) => e.stopPropagation()}
+                                    className="w-full h-12 rounded-xl border-dashed border-primary/30 text-primary font-bold hover:bg-primary/5 hover:border-primary/50"
                                 >
                                     + Add another video
-                                </button>
+                                </Button>
                             </div>
                         )}
                     </div>
                 </form>
 
-                <div className="p-4 sm:p-5 border-t border-border bg-muted/20 shrink-0 pb-safe sm:pb-5">
-                    <button type="submit" form="learning-upload-form" disabled={files.length === 0 || !title.trim()} className="w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none">
-                        <CheckCircle2 className="w-5 h-5" /> {t('learning_hub.upload_modal.start_upload_btn')}
-                    </button>
+                {/* FOOTER */}
+                <div className="p-4 sm:p-6 border-t border-border/50 bg-muted/10 flex flex-col items-center gap-3 shrink-0 pb-safe">
+                    <Button
+                        type="submit"
+                        form="learning-upload-form"
+                        disabled={files.length === 0 || !title.trim() || isProcessing}
+                        className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/20 active:scale-[0.98] disabled:opacity-50"
+                    >
+                        {isProcessing ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                            <CheckCircle2 className="w-5 h-5" />
+                        )}
+                        {t('learning_hub.upload_modal.start_upload_btn', 'Start Upload')}
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        onClick={handleClose}
+                        className="md:hidden text-muted-foreground font-bold"
+                    >
+                        {t('learning_hub.upload_modal.cancel', 'Cancel')}
+                    </Button>
                 </div>
             </div>
         </div>

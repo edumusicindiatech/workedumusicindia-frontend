@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Plus, User, Calendar, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Plus, User, Calendar, ShieldAlert, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import IssueWarningModal from '../../../modals/admin/IssueWarningModal'
@@ -30,7 +30,7 @@ const WarningsTab = ({ warningsList, employeeId, onSuccess }) => {
                     <div className="p-2 bg-destructive/10 rounded-xl">
                         <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
                     </div>
-                    {t('warnings_tab.title')}
+                    {t('warnings_tab.title', 'Warnings & Infractions')}
                 </h3>
                 <Button
                     variant="destructive"
@@ -38,8 +38,8 @@ const WarningsTab = ({ warningsList, employeeId, onSuccess }) => {
                     onClick={() => setIsIssueModalOpen(true)}
                 >
                     <Plus className="w-5 h-5 shrink-0" />
-                    <span className="hidden sm:inline">{t('warnings_tab.btn_issue')}</span>
-                    <span className="sm:hidden">{t('warnings_tab.btn_issue_short')}</span>
+                    <span className="hidden sm:inline">{t('warnings_tab.btn_issue', 'Issue Warning')}</span>
+                    <span className="sm:hidden">{t('warnings_tab.btn_issue_short', 'Issue')}</span>
                 </Button>
             </div>
 
@@ -65,49 +65,70 @@ const WarningsTab = ({ warningsList, employeeId, onSuccess }) => {
                             onClick={() => setIsIssueModalOpen(true)}
                             className="rounded-xl border-destructive/20 text-destructive hover:bg-destructive/10 font-bold"
                         >
-                            <AlertTriangle className="w-4 h-4 mr-2" /> Issue First Warning
+                            <Sparkles className="w-4 h-4 mr-2" /> {t('warnings_tab.btn_issue', 'Issue Warning')}
                         </Button>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mt-2">
                         {warningsList.map((w) => {
                             const level = w.level || w.type;
                             return (
                                 <div
                                     key={w._id || w.id}
-                                    className="relative group flex flex-col p-5 sm:p-6 rounded-2xl border transition-all duration-300 bg-muted/10 border-border hover:bg-muted/30"
+                                    className="group relative rounded-3xl border p-5 sm:p-6 lg:p-8 flex flex-col h-full transition-all duration-300 overflow-hidden bg-card border-border/60 hover:shadow-lg hover:border-border lg:hover:-translate-y-1"
                                 >
-                                    <div className="min-w-0 flex-1 space-y-3">
+                                    {/* Top Border Accent */}
+                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 sm:w-40 h-1.5 bg-destructive rounded-b-full shadow-[0_0_15px_rgba(var(--destructive),0.8)] opacity-60" />
 
-                                        {/* Type & Badge */}
-                                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider flex items-center border ${getWarningColor(level)}`}>
-                                                <AlertTriangle className="w-3.5 h-3.5 mr-1.5" />
-                                                {t('warnings_tab.level_label')}: {level}
-                                            </span>
+                                    {/* Card Header */}
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pt-2">
+                                        <div className="flex-1 min-w-0 flex items-start gap-4">
+                                            <div className="p-3 sm:p-4 rounded-2xl shrink-0 mt-0.5 bg-destructive/10">
+                                                <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7 text-destructive" />
+                                            </div>
+                                            
+                                            <div className="flex-1 min-w-0">
+                                                <h2 className="text-xl sm:text-2xl font-bold leading-tight pb-1 wrap-break-word text-foreground">
+                                                    {level} {t('warnings_tab.warning_suffix', 'Warning')}
+                                                </h2>
+                                                <div className="flex flex-wrap items-center gap-2 mt-1">
+                                                    <p className="flex items-center gap-1.5 text-sm sm:text-base text-muted-foreground leading-relaxed truncate">
+                                                        {t('warnings_tab.issued_by', 'Issued By')}: {w.issuedBy?.name || t('warnings_tab.admin_default', 'Admin')}
+                                                    </p>
+                                                </div>
+                                            </div>
                                         </div>
+                                        
+                                        <span className={`self-start sm:self-auto text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shrink-0 flex items-center gap-1.5 border shadow-sm ${getWarningColor(level)}`}>
+                                            <ShieldAlert className="w-3 h-3" /> {level}
+                                        </span>
+                                    </div>
 
-                                        <h4 className="font-extrabold text-lg sm:text-xl text-foreground leading-tight">
-                                            {level} {t('warnings_tab.warning_suffix')}
-                                        </h4>
-
-                                        {/* Reason */}
-                                        <p className="text-sm text-foreground/90 leading-relaxed font-medium bg-background p-3 rounded-lg border border-border/50">
+                                    {/* Reason Box */}
+                                    <div className="mb-6 flex-1">
+                                        <div className="flex items-center gap-2 text-foreground font-bold mb-2.5">
+                                            <AlertTriangle className="w-4 h-4 text-destructive/70" />
+                                            {t('warnings_tab.reason_label', 'Reason for Warning')}
+                                        </div>
+                                        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed bg-muted/40 dark:bg-muted/20 border border-border/50 p-4 sm:p-5 rounded-xl font-medium">
                                             "{w.reason}"
                                         </p>
+                                    </div>
 
-                                        {/* Meta Info (Date & Issuer) */}
-                                        <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-muted-foreground pt-2">
-                                            <div className="flex items-center gap-1.5 bg-muted px-2.5 py-1 rounded-md border border-border/50">
-                                                <Calendar className="w-3.5 h-3.5" />
-                                                {new Date(w.dateIssued || w.date || w.createdAt).toLocaleDateString()}
-                                            </div>
-                                            <div className="flex items-center gap-1.5 bg-muted px-2.5 py-1 rounded-md border border-border/50">
-                                                <User className="w-3.5 h-3.5" />
-                                                {t('warnings_tab.issued_by')}: {w.issuedBy?.name || t('warnings_tab.admin_default')}
-                                            </div>
+                                    <div className="flex-1" />
+
+                                    {/* Meta Info (Date & Issuer) */}
+                                    <div className="pt-5 border-t border-border/60 mt-auto flex flex-wrap items-center gap-3 text-xs font-bold text-muted-foreground">
+                                        <div className="flex items-center gap-1.5 bg-card px-3 py-2 rounded-lg border border-border/50 shadow-sm flex-1 sm:flex-none justify-center sm:justify-start">
+                                            <Calendar className="w-4 h-4 text-primary/70" />
+                                            {new Date(w.dateIssued || w.date || w.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 bg-card px-3 py-2 rounded-lg border border-border/50 shadow-sm flex-1 sm:flex-none justify-center sm:justify-start">
+                                            <User className="w-4 h-4 text-primary/70" />
+                                            <span className="truncate max-w-30">{w.issuedBy?.name || t('warnings_tab.admin_default')}</span>
                                         </div>
                                     </div>
+
                                 </div>
                             );
                         })}

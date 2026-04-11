@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     School, MapPin, Plus, Clock, CalendarDays,
-    Pencil, Trash2, CheckCircle2, Sparkles, Copy
+    Pencil, Trash2, CheckCircle2, Sparkles, Copy, Tags
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -29,7 +29,7 @@ const AssignmentsTab = ({ schools, employeeId, onSuccess }) => {
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [manageModalData, setManageModalData] = useState({ isOpen: false, assignment: null });
     
-    // --- NEW: State to hold the data of the assignment we want to clone ---
+    // State to hold the data of the assignment we want to clone
     const [cloneData, setCloneData] = useState(null);
 
     const openNewAssignmentModal = () => {
@@ -52,15 +52,15 @@ const AssignmentsTab = ({ schools, employeeId, onSuccess }) => {
                     <div className="p-2 bg-primary/10 rounded-xl">
                         <School className="w-5 h-5 text-primary shrink-0" />
                     </div>
-                    {t('assignments_tab.title')}
+                    {t('assignments_tab.title', 'Permanent Assignments')}
                 </h3>
                 <Button
                     className="w-full sm:w-auto gap-2 shadow-lg shadow-primary/20 rounded-xl font-bold h-11 bg-primary hover:bg-primary/90 text-primary-foreground transition-all active:scale-95"
                     onClick={openNewAssignmentModal}
                 >
                     <Plus className="w-5 h-5 shrink-0" />
-                    <span className="hidden sm:inline">{t('assignments_tab.btn_assign_desktop')}</span>
-                    <span className="sm:hidden">{t('assignments_tab.btn_assign_mobile')}</span>
+                    <span className="hidden sm:inline">{t('assignments_tab.btn_assign_desktop', 'Assign School')}</span>
+                    <span className="sm:hidden">{t('assignments_tab.btn_assign_mobile', 'Assign')}</span>
                 </Button>
             </div>
 
@@ -75,89 +75,100 @@ const AssignmentsTab = ({ schools, employeeId, onSuccess }) => {
                                 <School className="w-8 h-8 text-muted-foreground/50" />
                             </div>
                         </div>
-                        <h3 className="text-xl sm:text-2xl font-extrabold text-foreground mb-2">No Assignments</h3>
+                        <h3 className="text-xl sm:text-2xl font-extrabold text-foreground mb-2">{t('assignments_tab.empty_title', 'No Assignments')}</h3>
                         <p className="text-muted-foreground mb-6 max-w-sm text-sm sm:text-base">
-                            {t('assignments_tab.empty_msg')}
+                            {t('assignments_tab.empty_msg', 'This employee has no permanently assigned schools yet.')}
                         </p>
                         <Button
                             variant="outline"
                             onClick={openNewAssignmentModal}
                             className="rounded-xl border-primary/20 text-primary hover:bg-primary/10 font-bold"
                         >
-                            <Sparkles className="w-4 h-4 mr-2" /> Assign School
+                            <Sparkles className="w-4 h-4 mr-2" /> {t('assignments_tab.btn_assign_desktop', 'Assign School')}
                         </Button>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mt-2">
                         {schools.map((assignment) => (
                             <div
                                 key={assignment._id}
-                                className="relative group flex flex-col p-5 sm:p-6 rounded-2xl border transition-all duration-300 bg-muted/10 border-border hover:bg-muted/30"
+                                className="group relative rounded-3xl border p-5 sm:p-6 lg:p-8 flex flex-col h-full transition-all duration-300 overflow-hidden bg-card border-primary/30 shadow-lg hover:shadow-xl hover:border-primary/60 lg:hover:-translate-y-1"
                             >
-                                <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-5">
+                                {/* Top Border Accent */}
+                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 sm:w-40 h-1.5 bg-primary rounded-b-full shadow-[0_0_15px_rgba(var(--primary),0.8)]" />
 
-                                    {/* Details Section */}
-                                    <div className="min-w-0 flex-1 space-y-3">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider flex items-center border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
-                                                <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                                                {t('assignments_tab.status_active', 'Active Assignment')}
-                                            </span>
+                                {/* Card Header */}
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pt-2">
+                                    <div className="flex-1 min-w-0 flex items-start gap-4">
+                                        <div className="p-3 sm:p-4 rounded-2xl shrink-0 mt-0.5 bg-primary/10 dark:bg-primary/20">
+                                            <School className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
                                         </div>
-
-                                        <h4 className="font-extrabold text-lg sm:text-xl text-foreground leading-tight">
-                                            {assignment.school?.schoolName || t('assignments_tab.unknown_school')}
-                                        </h4>
-
-                                        <div className="flex items-start sm:items-center gap-2 text-sm text-muted-foreground">
-                                            <MapPin className="w-4 h-4 shrink-0 text-muted-foreground/70" />
-                                            <span className="leading-snug opacity-90 truncate">
-                                                {assignment.school?.address || t('assignments_tab.no_address')}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex flex-wrap gap-2.5 pt-2">
-                                            <span className="px-3 py-1 bg-primary/10 rounded-lg border border-primary/10 text-xs font-bold text-primary flex items-center gap-1.5">
-                                                {assignment.category}
-                                            </span>
-                                            <span className="px-3 py-1 bg-muted rounded-lg border border-border/50 text-xs font-bold text-foreground flex items-center gap-1.5">
-                                                <Clock className="w-3.5 h-3.5 text-amber-500" /> {formatTime12Hour(assignment.startTime)} - {formatTime12Hour(assignment.endTime)}
-                                            </span>
-                                            {assignment.allowedDays && assignment.allowedDays.length > 0 && (
-                                                <span className="px-3 py-1 bg-muted rounded-lg border border-border/50 text-xs font-bold text-foreground flex items-center gap-1.5">
-                                                    <CalendarDays className="w-3.5 h-3.5 text-blue-500" /> {assignment.allowedDays.join(', ')}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Actions Section */}
-                                    <div className="flex flex-row xl:flex-col items-center xl:items-end justify-start xl:justify-start gap-2.5 shrink-0 pt-4 xl:pt-0 border-t border-border/50 xl:border-transparent mt-2 xl:mt-0">
                                         
-                                        {/* --- NEW: Clone Button --- */}
-                                        <Button
-                                            variant="outline"
-                                            className="h-10 rounded-xl gap-2 font-bold text-muted-foreground hover:text-primary border-border/80 hover:border-primary/30 transition-all flex-1 xl:flex-none"
-                                            onClick={() => handleClone(assignment)}
-                                        >
-                                            <Copy className="w-4 h-4" /> {t('assignments_tab.btn_clone', 'Clone')}
-                                        </Button>
-
-                                        <Button
-                                            variant="outline"
-                                            className="h-10 rounded-xl gap-2 font-bold text-muted-foreground hover:text-primary border-border/80 hover:border-primary/30 transition-all flex-1 xl:flex-none"
-                                            onClick={() => setManageModalData({ isOpen: true, assignment: assignment })}
-                                        >
-                                            <Pencil className="w-4 h-4" /> {t('assignments_tab.btn_edit')}
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            className="h-10 rounded-xl gap-2 font-bold text-destructive hover:bg-destructive hover:text-white border-destructive/20 hover:border-destructive transition-all flex-1 xl:flex-none"
-                                            onClick={() => setManageModalData({ isOpen: true, assignment: assignment })}
-                                        >
-                                            <Trash2 className="w-4 h-4" /> {t('assignments_tab.btn_delete', 'Delete')}
-                                        </Button>
+                                        <div className="flex-1 min-w-0">
+                                            <h2 className="text-xl sm:text-2xl font-bold leading-tight pb-1 wrap-break-word text-foreground">
+                                                {assignment.school?.schoolName || t('assignments_tab.unknown_school', 'Unknown School')}
+                                            </h2>
+                                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                                                <p className="flex items-center gap-1.5 text-sm sm:text-base text-muted-foreground leading-relaxed truncate">
+                                                    <MapPin className="w-4 h-4 shrink-0 text-muted-foreground/70" />
+                                                    <span className="truncate">{assignment.school?.address || t('assignments_tab.no_address', 'No Address Provided')}</span>
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
+                                    
+                                    <span className="self-start sm:self-auto text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shrink-0 flex items-center gap-1.5 border shadow-sm bg-primary text-primary-foreground border-primary/20">
+                                        <Tags className="w-3 h-3" /> {assignment.category}
+                                    </span>
+                                </div>
+
+                                {/* Scheduling Info */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 bg-muted/40 dark:bg-muted/20 p-4 sm:p-5 rounded-2xl border border-border/50">
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-bold uppercase tracking-wider">
+                                            <CalendarDays className="w-4 h-4 text-primary/70" /> {t('tasks.card.days', 'Days')}
+                                        </div>
+                                        <p className="text-sm sm:text-base font-bold text-foreground flex items-center flex-wrap gap-2">
+                                            <span>{assignment.allowedDays?.join(", ") || "N/A"}</span>
+                                        </p>
+                                    </div>
+                                    <div className="space-y-1.5 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l border-border/60 sm:pl-4">
+                                        <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-bold uppercase tracking-wider">
+                                            <Clock className="w-4 h-4 text-amber-500" /> {t('tasks.card.timing', 'Timing')}
+                                        </div>
+                                        <p className="text-sm sm:text-base font-bold text-foreground">
+                                            {formatTime12Hour(assignment.startTime)} - {formatTime12Hour(assignment.endTime)}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1" /> {/* Pushes footer to bottom */}
+
+                                {/* Actions Section */}
+                                <div className="pt-5 border-t border-border/60 mt-auto flex flex-wrap sm:flex-nowrap gap-3">
+                                    <Button
+                                        variant="outline"
+                                        className="h-11 rounded-xl gap-2 font-bold text-muted-foreground hover:text-primary border-border/80 hover:border-primary/30 transition-all flex-1"
+                                        onClick={() => handleClone(assignment)}
+                                    >
+                                        <Copy className="w-4 h-4" /> {t('assignments_tab.btn_clone', 'Clone')}
+                                    </Button>
+
+                                    <Button
+                                        variant="outline"
+                                        className="h-11 rounded-xl gap-2 font-bold text-muted-foreground hover:text-primary border-border/80 hover:border-primary/30 transition-all flex-1"
+                                        onClick={() => setManageModalData({ isOpen: true, assignment: assignment })}
+                                    >
+                                        <Pencil className="w-4 h-4" /> {t('assignments_tab.btn_edit', 'Edit')}
+                                    </Button>
+
+                                    <Button
+                                        variant="outline"
+                                        className="h-11 rounded-xl gap-2 font-bold text-destructive hover:bg-destructive hover:text-white border-destructive/20 hover:border-destructive transition-all flex-1"
+                                        onClick={() => setManageModalData({ isOpen: true, assignment: assignment })}
+                                    >
+                                        <Trash2 className="w-4 h-4" /> {t('assignments_tab.btn_delete', 'Delete')}
+                                    </Button>
                                 </div>
                             </div>
                         ))}
