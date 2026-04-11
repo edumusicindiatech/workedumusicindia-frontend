@@ -1,14 +1,19 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
     UploadCloud, X, Film, Info, MapPin,
-    CalendarDays, ChevronRight, Users, CheckCircle2
+    CalendarDays, ChevronRight, Users, CheckCircle2,
+    Loader2, Video
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { startBackgroundUpload } from "../../store/slices/uploadSlice";
 import CustomSelect from "../../components/ui/CustomSelect";
 import { useTranslation } from "react-i18next";
 import api from "../../api/axios";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 // Generates a lightweight Base64 image in the browser (Zero backend CPU needed!)
 const generateHDThumbnail = (file) => {
@@ -55,18 +60,24 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
     const [eventName, setEventName] = useState("");
     const [eventDate, setEventDate] = useState("");
     const [studentsCount, setStudentsCount] = useState("");
-    const [files, setFiles] = useState([]); // Now stores array of { file, thumbnail }
+    const [files, setFiles] = useState([]); // Stores array of { file, thumbnail }
     const [description, setDescription] = useState("");
     const [liveSchools, setLiveSchools] = useState([]);
     const [isFetchingSchools, setIsFetchingSchools] = useState(false);
 
     const fileInputRef = useRef(null);
 
+    // Swipe & Animation states
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragOffset, setDragOffset] = useState(0);
+    const [isClosing, setIsClosing] = useState(false);
+    const dragStartY = useRef(0);
+
     useEffect(() => {
-        const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+        const handleEsc = (e) => { if (e.key === 'Escape' && !isUploading) handleCloseModal(); };
         if (isOpen) window.addEventListener('keydown', handleEsc);
         return () => window.removeEventListener('keydown', handleEsc);
-    }, [isOpen, onClose]);
+    }, [isOpen, isUploading]);
 
     useEffect(() => {
         if (!isOpen && !isUploading) {
@@ -77,6 +88,8 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
             setBand("");
             setSelectedSchoolId("");
             setDescription("");
+            setIsClosing(false);
+            setDragOffset(0);
         }
     }, [isOpen, isUploading]);
 
@@ -99,6 +112,37 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
         fetchFreshSchools();
     }, [isOpen]);
 
+    // --- ANIMATION HANDLERS ---
+    const handleCloseModal = () => {
+        if (isUploading) return;
+        setIsClosing(true);
+        setDragOffset(window.innerHeight);
+        setTimeout(() => {
+            onClose();
+            setIsClosing(false);
+            setDragOffset(0);
+        }, 300);
+    };
+
+    const handleTouchStart = (e) => {
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('.custom-scrollbar')) return;
+        dragStartY.current = e.touches[0].clientY;
+        setIsDragging(true);
+    };
+
+    const handleTouchMove = (e) => {
+        if (!isDragging) return;
+        const delta = e.touches[0].clientY - dragStartY.current;
+        if (delta > 0) setDragOffset(delta);
+    };
+
+    const handleTouchEnd = () => {
+        setIsDragging(false);
+        if (dragOffset > 120) handleCloseModal();
+        else setDragOffset(0);
+    };
+
+    // --- DATA HANDLERS ---
     const schoolOptions = liveSchools.map(item => item.school?.schoolName || "Unnamed School") || [];
 
     const currentSelectedName = liveSchools.find(
@@ -128,7 +172,6 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
             if (runningTotalSize + f.size > MAX_COMBINED_SIZE) {
                 toast.error(`Cannot add "${f.name}". Max combined limit is 500MB.`);
             } else {
-                // Extract thumbnail instantly
                 const thumbBase64 = await generateHDThumbnail(f);
                 validItems.push({ file: f, thumbnail: thumbBase64 });
                 runningTotalSize += f.size;
@@ -159,7 +202,6 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
         if (!studentsCount) return toast.error(t('upload_modal.students_count_toast'));
         if (files.length === 0) return toast.error(t('upload_modal.add_video_toast'));
 
-        // Separate raw files for Uppy, and stringify thumbnails for Metadata
         const rawFiles = files.map(item => item.file);
         const base64Thumbnails = files.map(item => item.thumbnail);
 
@@ -171,68 +213,88 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                 schoolName: currentSelectedName,
                 band, eventName, eventDate, studentsCount,
                 description,
-                thumbnails: JSON.stringify(base64Thumbnails) // Pack it into metadata
+                thumbnails: JSON.stringify(base64Thumbnails)
             }
         }));
 
-        onClose();
+        handleCloseModal();
     };
 
-    const visibilityClass = isOpen
-        ? "opacity-100 pointer-events-auto z-60"
-        : "opacity-0 pointer-events-none -z-50";
+    if (!isOpen) return null;
 
     return (
-        <div className={`fixed inset-0 flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-sm transition-all duration-300 ${visibilityClass}`}>
-            <div className="bg-card dark:bg-[#181d29] border border-border dark:border-slate-700/50 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl relative overflow-hidden">
+        <div className={`fixed inset-0 z-100 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleCloseModal}>
+            <div 
+                className={`bg-card w-full max-w-2xl rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl border-t md:border border-border/50 flex flex-col max-h-[95vh] md:max-h-[90vh] relative overflow-hidden ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95' : ''}`} 
+                style={{ transform: `translateY(${dragOffset}px)` }} 
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Top Accent Line */}
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20 rounded-t-[inherit] pointer-events-none" />
 
-                <div className="flex items-center justify-between p-6 border-b border-border dark:border-slate-800 bg-muted/20 shrink-0">
-                    <div>
-                        <h2 className="text-xl font-extrabold text-foreground tracking-tight">{t('upload_modal.title')}</h2>
-                        <p className="text-xs font-medium text-muted-foreground mt-1">{t('upload_modal.subtitle')}</p>
+                {/* HEADER */}
+                <div className="sticky top-0 bg-card/90 backdrop-blur-md z-20 touch-none border-b border-border/50 pt-2" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+                    <div className="w-full flex justify-center pt-3 pb-1 md:hidden">
+                        <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2.5 rounded-xl bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-all duration-300"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
+                    
+                    <div className="px-6 pb-5 pt-2 md:pt-6 flex items-center justify-between">
+                        <div className="flex items-center gap-4 pr-4">
+                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-inner">
+                                <UploadCloud className="w-6 h-6 text-primary" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">
+                                    {t('upload_modal.title', 'Upload Media')}
+                                </h2>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5 line-clamp-1">
+                                    {t('upload_modal.subtitle', 'Share session videos to the Vault')}
+                                </p>
+                            </div>
+                        </div>
+                        <button onClick={handleCloseModal} disabled={isUploading} className="p-2.5 hover:bg-muted rounded-full bg-muted/50 border border-border shrink-0 hidden md:flex transition-colors">
+                            <X className="w-5 h-5 text-muted-foreground" />
+                        </button>
+                    </div>
                 </div>
 
-                <form id="media-upload-form" onSubmit={handleSubmit} className="overflow-y-auto p-6 pb-40 space-y-6 custom-scrollbar">
-                    <div className="p-5 rounded-2xl bg-background/50 dark:bg-[#0d1117]/50 border border-border dark:border-slate-800 space-y-5">
-
-                        <div className="relative z-100">
-                            <label className="block text-[13px] font-bold text-foreground mb-2 uppercase tracking-wider">
-                                {t('upload_modal.assigned_school')} <span className="text-destructive">*</span>
-                            </label>
+                {/* BODY */}
+                <form id="media-upload-form" onSubmit={handleSubmit} className="overflow-y-auto p-6 md:p-8 space-y-8 custom-scrollbar bg-card">
+                    
+                    <div className="space-y-6">
+                        {/* School Selection */}
+                        <div className="space-y-2.5">
+                            <Label className="text-xs font-bold uppercase tracking-widest text-foreground ml-1">
+                                {t('upload_modal.assigned_school', 'Assigned School')} <span className="text-destructive">*</span>
+                            </Label>
                             {isHydrating || isFetchingSchools ? (
-                                <div className="h-10.5 flex items-center px-4 bg-background dark:bg-[#12141c] border border-input dark:border-slate-700 rounded-lg text-sm text-muted-foreground">
-                                    {t('upload_modal.loading_schools')}
+                                <div className="h-13 flex items-center px-4 bg-muted/20 border border-border/60 rounded-2xl text-sm font-medium text-muted-foreground animate-pulse">
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t('upload_modal.loading_schools', 'Loading assignments...')}
                                 </div>
                             ) : (
-                                <div className="flex items-center relative">
-                                    <div className="absolute left-3 z-10 pointer-events-none">
-                                        <MapPin className="w-4 h-4 text-primary" />
+                                <div className="relative">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                                        <MapPin className="w-4.5 h-4.5 text-primary/70" />
                                     </div>
-                                    <div className="w-full pl-8">
+                                    <div className="w-full [&>div]:h-13 [&>div]:rounded-2xl [&>div]:bg-muted/20 [&>div]:border-border/60 [&>div]:pl-10">
                                         <CustomSelect value={currentSelectedName} onChange={handleSchoolSelect} options={schoolOptions} />
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                        <div className="relative z-10">
-                            <label className="block text-[13px] font-bold text-foreground mb-2 uppercase tracking-wider">
-                                {t('upload_modal.band_category')} <span className="text-destructive">*</span>
-                            </label>
-                            <div className="flex bg-background dark:bg-[#12141c] border border-input dark:border-slate-700 p-1 rounded-xl">
+                        {/* Band/Category Selection */}
+                        <div className="space-y-2.5">
+                            <Label className="text-xs font-bold uppercase tracking-widest text-foreground ml-1">
+                                {t('upload_modal.band_category', 'Category')} <span className="text-destructive">*</span>
+                            </Label>
+                            <div className="flex bg-muted/20 border border-border/60 p-1.5 rounded-2xl">
                                 {['Junior Band', 'Senior Band'].map((b) => {
                                     const isActive = band === b;
                                     return (
                                         <button
                                             key={b} type="button" onClick={() => setBand(b)}
-                                            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${isActive ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+                                            className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${isActive ? 'bg-primary text-primary-foreground shadow-md scale-[0.98]' : 'text-muted-foreground hover:text-foreground hover:bg-background/50'}`}
                                         >
                                             {isActive && <CheckCircle2 className="w-4 h-4" />}
                                             {b === 'Junior Band' ? t('upload_modal.junior_band') : t('upload_modal.senior_band')}
@@ -241,90 +303,120 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                                 })}
                             </div>
                         </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 p-5 rounded-2xl bg-background/50 dark:bg-[#0d1117]/50 border border-border dark:border-slate-800">
-                        <div className="space-y-2">
-                            <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">{t('upload_modal.event_name')} <span className="text-muted-foreground lowercase font-medium tracking-normal">{t('upload_modal.optional')}</span></label>
-                            <div className="relative">
-                                <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500" />
-                                <input type="text" value={eventName} onChange={(e) => setEventName(e.target.value)} placeholder={t('upload_modal.placeholder_event')} className="w-full h-11 pl-11 pr-4 bg-background dark:bg-[#12141c] border border-input dark:border-slate-700 focus:border-primary rounded-xl text-sm font-semibold text-foreground outline-none transition-all placeholder:text-muted-foreground/50" />
+                        {/* Event Details Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+                            <div className="space-y-2.5">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 flex items-center gap-1.5">
+                                    {t('upload_modal.event_name', 'Event Name')} <span className="lowercase font-medium tracking-normal opacity-70">({t('upload_modal.optional')})</span>
+                                </Label>
+                                <Input 
+                                    type="text" 
+                                    value={eventName} 
+                                    onChange={(e) => setEventName(e.target.value)} 
+                                    placeholder={t('upload_modal.placeholder_event', 'e.g. Annual Function')} 
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    className="h-12 rounded-xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-sm font-medium" 
+                                />
+                            </div>
+                            
+                            <div className="space-y-2.5">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 flex items-center gap-1.5">
+                                    {t('upload_modal.event_date', 'Event Date')} {eventName && <span className="text-destructive">*</span>}
+                                </Label>
+                                <div className="relative">
+                                    <CalendarDays className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                                    <Input 
+                                        type="date" 
+                                        value={eventDate} 
+                                        onChange={(e) => setEventDate(e.target.value)} 
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        className="h-12 pl-10 rounded-xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-sm font-medium scheme-light dark:scheme-dark" 
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2.5 sm:col-span-2">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-foreground ml-1">
+                                    {t('upload_modal.students_present', 'Students Present')} <span className="text-destructive">*</span>
+                                </Label>
+                                <div className="relative sm:w-1/2">
+                                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/70 pointer-events-none" />
+                                    <Input 
+                                        type="number" 
+                                        value={studentsCount} 
+                                        onChange={(e) => setStudentsCount(e.target.value)} 
+                                        placeholder="0" 
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        className="h-12 pl-10 rounded-xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-sm font-medium" 
+                                    />
+                                </div>
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">{t('upload_modal.event_date')} {eventName && <span className="text-destructive">*</span>}</label>
-                            <div className="relative">
-                                <input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} className="w-full h-11 px-4 bg-background dark:bg-[#12141c] border border-input dark:border-slate-700 focus:border-primary rounded-xl text-sm font-semibold text-foreground outline-none transition-all scheme-light dark:scheme-dark" />
-                            </div>
-                        </div>
-                        <div className="sm:col-span-2 space-y-2">
-                            <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">
-                                {t('upload_modal.students_present')} <span className="text-destructive">*</span>
-                            </label>
-                            <div className="relative sm:w-1/2">
-                                <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500" />
-                                <input type="number" value={studentsCount} onChange={(e) => setStudentsCount(e.target.value)} placeholder="0" className="w-full h-11 pl-11 pr-4 bg-background dark:bg-[#12141c] border border-input dark:border-slate-700 focus:border-primary rounded-xl text-sm font-semibold text-foreground outline-none transition-all placeholder:text-muted-foreground/50" />
-                            </div>
-                        </div>
-                        <div className="sm:col-span-2 space-y-2 mt-2">
-                            <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">
-                                {t('upload_modal.instructor_note')} <span className="text-muted-foreground lowercase font-medium tracking-normal">{t('upload_modal.optional')}</span>
-                            </label>
-                            <textarea
-                                rows="3"
+
+                        <div className="space-y-2.5">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 flex justify-between">
+                                <span>{t('upload_modal.instructor_note', 'Instructor Note')} <span className="lowercase font-medium tracking-normal opacity-70">({t('upload_modal.optional')})</span></span>
+                            </Label>
+                            <Textarea
+                                rows={3}
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
-                                placeholder={t('upload_modal.placeholder_desc')}
-                                className="w-full p-4 bg-background dark:bg-[#12141c] border border-input dark:border-slate-700 focus:border-primary rounded-xl text-sm font-semibold text-foreground outline-none transition-all placeholder:text-muted-foreground/50 resize-none"
+                                placeholder={t('upload_modal.placeholder_desc', 'Add brief details about the session...')}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                className="w-full p-4 min-h-25 rounded-2xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-sm font-medium resize-none shadow-sm"
                             />
                         </div>
                     </div>
 
-                    <div>
-                        <div className="flex items-center justify-between mb-3">
-                            <label className="block text-[13px] font-bold text-foreground uppercase tracking-wider">
-                                {t('upload_modal.video_files')} <span className="text-destructive">*</span>
-                            </label>
-                            <span className="text-[11px] font-black text-primary px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+                    <div className="border-t border-border/50 border-dashed pt-6 space-y-4">
+                        <div className="flex items-center justify-between ml-1">
+                            <Label className="text-xs font-bold uppercase tracking-widest text-foreground flex items-center gap-2">
+                                <Video className="w-3.5 h-3.5 text-primary/70" /> {t('upload_modal.video_files', 'Video Files')} <span className="text-destructive">*</span>
+                            </Label>
+                            <span className="text-[10px] font-black text-primary px-3 py-1 bg-primary/10 rounded-full border border-primary/20 uppercase tracking-widest">
                                 {files.length} / 5
                             </span>
                         </div>
 
                         <div
                             onClick={() => files.length < 5 && fileInputRef.current?.click()}
-                            className={`w-full flex flex-col items-center justify-center py-10 px-4 border-2 border-dashed rounded-2xl transition-all duration-300 ${files.length >= 5 ? 'border-border bg-muted/30 opacity-50 cursor-not-allowed' : 'border-primary/30 bg-primary/5 hover:border-primary/60 hover:bg-primary/10 cursor-pointer'}`}
+                            className={`w-full flex flex-col items-center justify-center py-10 px-4 border-2 border-dashed rounded-4xl transition-all duration-300 group
+                                ${files.length >= 5 ? 'border-border bg-muted/30 opacity-50 cursor-not-allowed' : 'border-primary/30 bg-primary/5 hover:border-primary/60 hover:bg-primary/10 cursor-pointer'}`}
                         >
-                            <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mb-3">
-                                <UploadCloud className="w-7 h-7 text-primary" />
+                            <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-inner">
+                                <UploadCloud className="w-8 h-8 text-primary" />
                             </div>
-                            <p className="text-sm font-bold text-foreground mb-1">{t('upload_modal.click_to_browse')}</p>
-                            <p className="text-[11px] text-muted-foreground font-medium">{t('upload_modal.file_limits')}</p>
+                            <p className="text-sm font-extrabold text-foreground mb-1">{t('upload_modal.click_to_browse', 'Tap to select videos')}</p>
+                            <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-widest">{t('upload_modal.file_limits', 'Max 5 videos, 500MB Total')}</p>
                             <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple accept="video/*" className="hidden" disabled={files.length >= 5} />
                         </div>
 
                         {files.length > 0 && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                                 {files.map((item, i) => (
-                                    <div key={i} className="flex items-center justify-between bg-muted/30 p-3 rounded-xl border border-border dark:border-slate-800 animate-in slide-in-from-bottom-2">
-                                        <div className="flex items-center gap-3 overflow-hidden">
-                                            {/* Pre-rendered Image instead of the default generic icon */}
-                                            <img
-                                                src={item.thumbnail}
-                                                alt="Video Thumbnail"
-                                                className="w-12 h-12 object-cover rounded-lg shrink-0 border border-border bg-black"
-                                            />
+                                    <div key={i} className="flex items-center justify-between bg-muted/20 p-3 rounded-2xl border border-border/60 animate-in slide-in-from-bottom-2 duration-300">
+                                        <div className="flex items-center gap-3.5 overflow-hidden">
+                                            <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-border/50 bg-black shadow-sm">
+                                                <img src={item.thumbnail} alt="Thumbnail" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                                    <Film className="w-4 h-4 text-white/80" />
+                                                </div>
+                                            </div>
                                             <div className="flex flex-col overflow-hidden">
-                                                <span className="text-[13px] font-bold text-foreground truncate">{item.file.name}</span>
-                                                <span className="text-[10px] text-muted-foreground font-medium">{(item.file.size / (1024 * 1024)).toFixed(1)} MB</span>
+                                                <span className="text-[13px] font-extrabold text-foreground truncate max-w-37.5">{item.file.name}</span>
+                                                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{(item.file.size / (1024 * 1024)).toFixed(1)} MB</span>
                                             </div>
                                         </div>
-                                        <button
+                                        <Button
                                             type="button"
+                                            variant="ghost"
+                                            size="icon"
                                             onClick={(e) => { e.stopPropagation(); removeFile(i); }}
-                                            className="p-1.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-lg transition-colors shrink-0"
+                                            className="w-9 h-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-colors shrink-0 mr-1"
                                         >
                                             <X className="w-4 h-4" />
-                                        </button>
+                                        </Button>
                                     </div>
                                 ))}
                             </div>
@@ -332,22 +424,34 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                     </div>
                 </form>
 
-                <div className="bg-muted/30 dark:bg-[#121620] p-5 md:px-7 flex items-center justify-between border-t border-border dark:border-slate-800 shrink-0">
-                    <div className="hidden sm:flex items-center gap-2 text-muted-foreground bg-background/50 px-3 py-1.5 rounded-lg border border-border dark:border-slate-800">
+                {/* FOOTER */}
+                <div className="bg-muted/10 p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between border-t border-border/50 shrink-0 gap-4 rounded-b-3xl pb-safe">
+                    <div className="hidden sm:flex items-center gap-2 text-muted-foreground bg-card px-3.5 py-2 rounded-xl border border-border/60 shadow-sm">
                         <Info className="w-4 h-4 text-primary" />
-                        <span className="text-[11px] font-bold tracking-wide">{t('upload_modal.cloud_enabled')}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest">{t('upload_modal.cloud_enabled', 'Cloud Storage Ready')}</span>
                     </div>
 
-                    <button
-                        type="submit"
-                        form="media-upload-form"
-                        disabled={files.length === 0}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 rounded-xl font-bold text-sm disabled:opacity-50 disabled:grayscale transition-all duration-300 active:scale-95 shadow-md"
-                    >
-                        {t('upload_modal.start_upload')}
-                        <ChevronRight className="w-4 h-4" />
-                    </button>
+                    <div className="flex gap-3 w-full sm:w-auto">
+                        <Button 
+                            variant="ghost" 
+                            onClick={handleCloseModal} 
+                            disabled={isUploading} 
+                            className="flex-1 sm:flex-none h-12 sm:hidden rounded-xl font-bold text-muted-foreground"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            form="media-upload-form"
+                            disabled={files.length === 0}
+                            className="flex-2 sm:flex-none h-12 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-8 rounded-xl font-black uppercase tracking-wider text-sm disabled:opacity-50 transition-all duration-300 active:scale-[0.98] shadow-lg shadow-primary/20"
+                        >
+                            {t('upload_modal.start_upload', 'Start Upload')}
+                            <ChevronRight className="w-4 h-4" />
+                        </Button>
+                    </div>
                 </div>
+
             </div>
         </div>
     );

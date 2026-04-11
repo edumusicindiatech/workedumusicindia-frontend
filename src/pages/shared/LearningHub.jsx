@@ -1,10 +1,14 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
-import { BookOpen, UploadCloud, GraduationCap, X, Loader2, Trash2, Download, Edit2, CalendarDays, ChevronDown } from "lucide-react";
+import { BookOpen, UploadCloud, GraduationCap, X, Loader2, Trash2, Download, Edit2, CalendarDays, ChevronDown, PlayCircle, AlertTriangle } from "lucide-react";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 import LearningMediaUploadModal from "../../modals/admin/LearningMediaUploadModal";
 
@@ -24,22 +28,14 @@ const VideoPlayer = ({ src, thumbnailUrl }) => {
     if (!isLoaded) {
         return (
             <div
-                className="absolute top-0 left-0 w-full h-full bg-black flex flex-col items-center justify-center cursor-pointer group bg-cover bg-center"
+                className="absolute inset-0 w-full h-full bg-black flex flex-col items-center justify-center cursor-pointer group bg-cover bg-center"
                 style={{ backgroundImage: `url(${thumbnailUrl || 'https://via.placeholder.com/1280x720/000000/FFFFFF/?text=EduMusic+Video'})` }}
                 onClick={() => setIsLoaded(true)}
             >
-                {/* Dark Overlay for better button visibility */}
                 <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-300"></div>
-
-                {/* Play Button UI */}
-                <div className="relative z-10 w-16 h-16 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary transition-all duration-300 backdrop-blur-md border border-white/30 shadow-2xl">
-                    <svg className="w-8 h-8 text-white ml-1 group-hover:text-primary-foreground transition-colors" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z" />
-                    </svg>
+                <div className="relative z-10 w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-primary/80 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary transition-all duration-300 backdrop-blur-md shadow-xl shadow-primary/30 border border-white/20">
+                    <PlayCircle className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                 </div>
-                <span className="relative z-10 text-white/80 text-sm mt-3 font-medium tracking-wide group-hover:text-white transition-colors drop-shadow-md">
-                    Click to Play
-                </span>
             </div>
         );
     }
@@ -54,7 +50,7 @@ const VideoPlayer = ({ src, thumbnailUrl }) => {
             controlsList="nodownload"
             preload="auto"
             playsInline
-            className="absolute top-0 left-0 w-full h-full object-contain bg-black animate-in fade-in duration-300"
+            className="absolute inset-0 w-full h-full object-contain bg-black animate-in fade-in duration-300"
         />
     );
 };
@@ -68,8 +64,14 @@ const LearningHub = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    
+    // Modal Drag states
     const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, videoId: null });
     const [editModalOpen, setEditModalOpen] = useState(false);
+    const [modalDragOffset, setModalDragOffset] = useState(0);
+    const [isModalClosing, setIsModalClosing] = useState(false);
+    const modalDragStartY = useRef(0);
+
     const [editingVideo, setEditingVideo] = useState(null);
     const [editTitle, setEditTitle] = useState("");
     const [editDescription, setEditDescription] = useState("");
@@ -80,6 +82,49 @@ const LearningHub = () => {
     const [expandedCards, setExpandedCards] = useState({});
 
     const isLearningUploadActive = isUploading && jobQueue?.uploadType === 'learning-hub';
+    const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
+
+    // --- ANIMATION HANDLERS FOR MODALS ---
+    const handleCloseEditModal = () => {
+        setIsModalClosing(true);
+        setModalDragOffset(window.innerHeight);
+        setTimeout(() => {
+            setEditModalOpen(false);
+            setEditingVideo(null);
+            setIsModalClosing(false);
+            setModalDragOffset(0);
+        }, 300);
+    };
+
+    const handleCloseDeleteModal = () => {
+        setIsModalClosing(true);
+        setModalDragOffset(window.innerHeight);
+        setTimeout(() => {
+            setDeleteDialog({ isOpen: false, videoId: null });
+            setIsModalClosing(false);
+            setModalDragOffset(0);
+        }, 300);
+    };
+
+    const handleTouchStart = (e) => { 
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea')) return;
+        modalDragStartY.current = e.touches[0].clientY; 
+    };
+
+    const handleTouchMove = (e) => {
+        const delta = e.touches[0].clientY - modalDragStartY.current;
+        if (delta > 0) setModalDragOffset(delta);
+    };
+
+    const handleTouchEndEdit = () => {
+        if (modalDragOffset > 120) handleCloseEditModal();
+        else setModalDragOffset(0);
+    };
+
+    const handleTouchEndDelete = () => {
+        if (modalDragOffset > 120) handleCloseDeleteModal();
+        else setModalDragOffset(0);
+    };
 
     const fetchVideos = async () => {
         setIsLoading(true);
@@ -89,7 +134,7 @@ const LearningHub = () => {
                 setVideos(response.data.data);
             }
         } catch (error) {
-            toast.error(t('learning_hub.toasts.load_failed'));
+            toast.error(t('learning_hub.toasts.load_failed', 'Failed to load videos'));
         } finally {
             setIsLoading(false);
         }
@@ -127,7 +172,7 @@ const LearningHub = () => {
         const handleProgress = (e) => setUploadProgress(e.detail);
         const handleRefresh = () => fetchVideos();
         const handleSuccess = () => toast.success(t('learning_hub.toasts.update_success', 'Lesson uploaded successfully!'));
-        const handleError = (e) => toast.error(e.detail || t('learning_hub.toasts.upload_failed'));
+        const handleError = (e) => toast.error(e.detail || t('learning_hub.toasts.upload_failed', 'Upload failed'));
 
         window.addEventListener('learning-upload-progress', handleProgress);
         window.addEventListener('refreshLearningHub', handleRefresh);
@@ -156,7 +201,7 @@ const LearningHub = () => {
     const handleCancelUpload = (e) => {
         e.stopPropagation();
         window.dispatchEvent(new CustomEvent('learning-upload-cancel'));
-        toast.error(t('learning_hub.toasts.upload_cancelled'));
+        toast.error(t('learning_hub.toasts.upload_cancelled', 'Upload cancelled'));
     };
 
     const formatDate = (dateString) => {
@@ -171,17 +216,17 @@ const LearningHub = () => {
     const confirmDelete = async () => {
         if (!deleteDialog.videoId) return;
 
-        const toastId = toast.loading(t('learning_hub.toasts.deleting'));
+        const toastId = toast.loading(t('learning_hub.toasts.deleting', 'Deleting...'));
         try {
             const response = await api.delete(`/learning/${deleteDialog.videoId}`);
             if (response.data.success) {
-                toast.success(t('learning_hub.toasts.delete_success'), { id: toastId });
+                toast.success(t('learning_hub.toasts.delete_success', 'Video deleted'), { id: toastId });
                 setVideos(prev => prev.filter(v => v._id !== deleteDialog.videoId));
             }
         } catch (error) {
-            toast.error(t('learning_hub.toasts.delete_failed'), { id: toastId });
+            toast.error(t('learning_hub.toasts.delete_failed', 'Failed to delete'), { id: toastId });
         } finally {
-            setDeleteDialog({ isOpen: false, videoId: null });
+            handleCloseDeleteModal();
         }
     };
 
@@ -194,9 +239,9 @@ const LearningHub = () => {
 
     const submitEdit = async (e) => {
         e.preventDefault();
-        if (!editTitle.trim()) return toast.error(t('learning_hub.toasts.title_required'));
+        if (!editTitle.trim()) return toast.error(t('learning_hub.toasts.title_required', 'Title is required'));
 
-        const toastId = toast.loading(t('learning_hub.toasts.updating'));
+        const toastId = toast.loading(t('learning_hub.toasts.updating', 'Updating...'));
         try {
             const res = await api.put(`/learning/${editingVideo._id}`, {
                 title: editTitle,
@@ -204,17 +249,17 @@ const LearningHub = () => {
             });
 
             if (res.data.success) {
-                toast.success(t('learning_hub.toasts.update_success'), { id: toastId });
+                toast.success(t('learning_hub.toasts.update_success', 'Updated successfully'), { id: toastId });
                 setVideos(prev => prev.map(v => v._id === editingVideo._id ? res.data.data : v));
-                setEditModalOpen(false);
+                handleCloseEditModal();
             }
         } catch (error) {
-            toast.error(t('learning_hub.toasts.update_failed'), { id: toastId });
+            toast.error(t('learning_hub.toasts.update_failed', 'Failed to update'), { id: toastId });
         }
     };
 
     const handleDownload = async (video) => {
-        const toastId = toast.loading(t('learning_hub.toasts.preparing_download'));
+        const toastId = toast.loading(t('learning_hub.toasts.preparing_download', 'Preparing download...'));
         try {
             const safeTitle = video.title.replace(/[^a-zA-Z0-9]/g, '_');
             const ext = video.fileUrl.split('.').pop() || 'mp4';
@@ -231,12 +276,12 @@ const LearningHub = () => {
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                toast.success(t('learning_hub.toasts.download_started'), { id: toastId });
+                toast.success(t('learning_hub.toasts.download_started', 'Download started'), { id: toastId });
             } else {
                 throw new Error("Failed to get download link");
             }
         } catch (error) {
-            toast.error(t('learning_hub.toasts.download_failed'), { id: toastId });
+            toast.error(t('learning_hub.toasts.download_failed', 'Download failed'), { id: toastId });
         }
     };
 
@@ -253,164 +298,97 @@ const LearningHub = () => {
         }));
     };
 
-    const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
-
     return (
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 mt-4 pb-24">
+        <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 pb-24 p-4 sm:p-6 lg:p-8 mt-2 md:mt-0">
 
-            <LearningMediaUploadModal
-                isOpen={isUploadModalOpen}
-                onClose={() => setIsUploadModalOpen(false)}
-            />
-
-            {/* --- EDIT DIALOG --- */}
-            {editModalOpen && (
-                <div className="fixed inset-0 z-120 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-card border-t sm:border border-border rounded-t-3xl sm:rounded-3xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 flex flex-col max-h-[90vh]">
-                        <div className="flex items-center justify-between mb-6 shrink-0">
-                            <h3 className="text-xl font-black text-foreground">{t('learning_hub.edit_dialog.title')}</h3>
-                            <button onClick={() => setEditModalOpen(false)} className="p-2 bg-muted/50 hover:bg-muted text-muted-foreground rounded-xl transition-colors">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={submitEdit} className="space-y-4 overflow-y-auto custom-scrollbar grow pb-safe">
-                            <div className="space-y-2">
-                                <label className="block text-[13px] font-bold uppercase tracking-wider text-foreground">{t('learning_hub.edit_dialog.lesson_title')} <span className="text-destructive">*</span></label>
-                                <input
-                                    type="text"
-                                    value={editTitle}
-                                    onChange={(e) => setEditTitle(e.target.value)}
-                                    className="w-full h-11 px-4 bg-background border border-input rounded-xl text-sm font-medium focus:border-primary outline-none transition-all"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="block text-[13px] font-bold uppercase tracking-wider text-foreground">{t('learning_hub.edit_dialog.description')}</label>
-                                <textarea
-                                    rows="3"
-                                    value={editDescription}
-                                    onChange={(e) => setEditDescription(e.target.value)}
-                                    className="w-full p-4 bg-background border border-input rounded-xl text-sm font-medium focus:border-primary outline-none transition-all resize-none"
-                                />
-                            </div>
-
-                            <div className="pt-4 flex items-center justify-end gap-3 border-t border-border mt-6 shrink-0">
-                                <button type="button" onClick={() => setEditModalOpen(false)} className="px-5 py-2.5 rounded-xl text-sm font-bold text-foreground bg-muted hover:bg-muted/80 transition-colors">
-                                    {t('learning_hub.edit_dialog.cancel_btn')}
-                                </button>
-                                <button type="submit" disabled={!editTitle.trim()} className="px-5 py-2.5 rounded-xl text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-colors shadow-md disabled:opacity-50">
-                                    {t('learning_hub.edit_dialog.save_btn')}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* --- DELETE DIALOG --- */}
-            {deleteDialog.isOpen && (
-                <div className="fixed inset-0 z-120 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-card border border-border rounded-3xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden animate-in zoom-in-95">
-                        <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center shrink-0 border border-destructive/20">
-                                <Trash2 className="w-6 h-6 text-destructive" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-foreground mb-2">{t('learning_hub.delete_dialog.title')}</h3>
-                                <p className="text-sm text-muted-foreground leading-relaxed">
-                                    {t('learning_hub.delete_dialog.warning_text')}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex flex-col sm:flex-row items-center justify-end gap-3 mt-8 pt-5 border-t border-border">
-                            <button onClick={() => setDeleteDialog({ isOpen: false, videoId: null })} className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-bold text-foreground bg-muted hover:bg-muted/80 transition-colors">
-                                {t('learning_hub.delete_dialog.cancel_btn')}
-                            </button>
-                            <button onClick={confirmDelete} className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-bold text-destructive-foreground bg-destructive hover:bg-destructive/90 transition-colors shadow-md">
-                                {t('learning_hub.delete_dialog.confirm_btn')}
-                            </button>
+            {/* --- HEADER --- */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative z-20">
+                <div className="flex items-center gap-5">
+                    <div className="relative">
+                        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
+                            <BookOpen className="w-7 h-7 text-primary" />
                         </div>
                     </div>
-                </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                <div>
-                    <h1 className="text-3xl font-black text-primary flex items-center gap-3">
-                        <BookOpen className="w-8 h-8" />
-                        {t('learning_hub.page_title')}
-                    </h1>
-                    <p className="text-muted-foreground mt-1 text-sm font-medium">
-                        {t('learning_hub.page_subtitle')}
-                    </p>
+                    <div className="space-y-0.5">
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-3xl font-black text-foreground tracking-tight uppercase">
+                                {t('learning_hub.page_title', 'Learning Hub')}
+                            </h1>
+                        </div>
+                        <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
+                            {t('learning_hub.page_subtitle', 'Training & Resources')}
+                        </p>
+                    </div>
                 </div>
 
                 {isAdmin && (
-                    <button
+                    <Button
                         onClick={() => setIsUploadModalOpen(true)}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all active:scale-95 shadow-md shrink-0 w-full sm:w-auto justify-center"
+                        className="h-12 px-8 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-95 transition-all w-full sm:w-auto"
                     >
-                        <UploadCloud className="w-5 h-5" />
-                        {t('learning_hub.upload_btn')}
-                    </button>
+                        <UploadCloud className="w-4 h-4 shrink-0" />
+                        <span>{t('learning_hub.upload_btn', 'Upload Lesson')}</span>
+                    </Button>
                 )}
             </div>
 
+            {/* --- CONTENT --- */}
             {isLoading && !isLearningUploadActive ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 animate-pulse">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className="bg-card border border-border rounded-2xl overflow-hidden aspect-video animate-pulse" />
+                        <div key={i} className="bg-card rounded-[2.5rem] border border-border/50 h-75" />
                     ))}
                 </div>
             ) : videos.length === 0 && !isLearningUploadActive ? (
-                <div className="flex flex-col items-center justify-center text-center p-10 sm:p-16 bg-card border border-border rounded-3xl shadow-sm animate-in zoom-in-95 duration-500">
-                    <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4">
-                        <GraduationCap className="w-10 h-10 text-muted-foreground/50" />
+                <div className="bg-card border-2 border-dashed border-border/60 rounded-[3rem] p-12 sm:p-20 mt-8 text-center flex flex-col items-center relative overflow-hidden group hover:border-primary/30 hover:bg-muted/10 transition-all duration-500">
+                    <div className="relative w-24 h-24 mb-6 group-hover:scale-110 transition-transform duration-500">
+                        <div className="absolute inset-0 bg-primary/10 rounded-full animate-ping opacity-50" />
+                        <div className="relative w-full h-full bg-muted/50 rounded-full flex items-center justify-center border border-border/50 shadow-inner z-10">
+                            <GraduationCap className="w-10 h-10 text-muted-foreground/50" />
+                        </div>
                     </div>
-                    <h3 className="text-xl font-black text-foreground mb-1">{t('learning_hub.empty_state_title')}</h3>
-                    <p className="text-muted-foreground font-medium max-w-sm">
-                        {t('learning_hub.empty_state_desc')} {isAdmin && t('learning_hub.empty_state_admin_hint')}
+                    <h2 className="text-2xl sm:text-3xl font-black text-foreground mb-3 tracking-tight uppercase italic">{t('learning_hub.empty_state_title', 'No Lessons Found')}</h2>
+                    <p className="text-muted-foreground font-medium max-w-md text-sm sm:text-base leading-relaxed">
+                        {t('learning_hub.empty_state_desc', 'No training materials are available at this time.')} {isAdmin && t('learning_hub.empty_state_admin_hint', 'Upload one to get started.')}
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
 
                     {/* --- THE GHOST CARD --- */}
                     {isLearningUploadActive && jobQueue && (
-                        <div className="group bg-background dark:bg-[#0d1117] border border-primary/50 shadow-[0_0_20px_rgba(59,130,246,0.15)] rounded-3xl overflow-hidden flex flex-col relative transition-all duration-300">
-                            <div className="relative w-full aspect-video bg-black overflow-hidden shrink-0">
-                                <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20">
-                                    <button onClick={handleCancelUpload} className="p-2 bg-black/40 hover:bg-destructive/90 active:bg-destructive backdrop-blur-md text-white rounded-full transition-all duration-200 shadow-lg border border-white/20 active:scale-90" title={t('learning_hub.ghost_card.cancel_upload')}>
-                                        <X className="w-4 h-4" />
+                        <div className="group bg-card border-2 border-primary/50 shadow-[0_0_20px_rgba(var(--primary),0.15)] rounded-[2.5rem] overflow-hidden flex flex-col relative transition-all duration-300">
+                            <div className="relative aspect-video bg-black overflow-hidden shrink-0">
+                                <div className="absolute top-3 right-3 z-20">
+                                    <button onClick={handleCancelUpload} className="p-2 bg-black/40 hover:bg-destructive/90 active:bg-destructive backdrop-blur-md text-white rounded-xl transition-all duration-200 shadow-lg border border-white/20 active:scale-95" title={t('learning_hub.ghost_card.cancel_upload', 'Cancel')}>
+                                        <X className="w-5 h-5" />
                                     </button>
                                 </div>
-
-                                {previewUrl && (
+                                {previewUrl ? (
                                     <video
                                         src={previewUrl}
-                                        className="absolute top-0 left-0 w-full h-full object-contain transition-all duration-300"
-                                        style={{
-                                            filter: `blur(${Math.max(0, 8 - (uploadProgress * 0.08))}px) grayscale(${Math.max(0, 100 - uploadProgress)}%) brightness(${0.5 + (uploadProgress * 0.005)})`
-                                        }}
+                                        className="w-full h-full object-cover transition-all duration-300"
+                                        style={{ filter: `blur(${Math.max(0, 8 - (uploadProgress * 0.08))}px) grayscale(${Math.max(0, 100 - uploadProgress)}%) brightness(${0.5 + (uploadProgress * 0.005)})` }}
                                         autoPlay loop muted playsInline
                                     />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-slate-900">
+                                        <UploadCloud className="w-8 h-8 text-primary animate-pulse" />
+                                    </div>
                                 )}
-
-                                <div className="absolute bottom-0 left-0 w-full h-1.5 bg-black/50 z-10">
-                                    <div className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }} />
+                                <div className="absolute bottom-0 left-0 w-full h-1.5 bg-black/50">
+                                    <div className="h-full bg-primary shadow-[0_0_10px_rgba(var(--primary),0.8)] transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }} />
                                 </div>
-                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                     <span className="text-3xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] tracking-tighter">{uploadProgress}%</span>
                                 </div>
                             </div>
-
-                            <div className="p-5 flex flex-col flex-1 opacity-60 animate-pulse">
-                                <h3 className="font-extrabold text-foreground text-lg line-clamp-1">{jobQueue.metadata.title}</h3>
-
-                                <div className="mt-auto pt-4 border-t border-border">
-                                    <p className="text-[12px] font-semibold text-primary truncate flex items-center gap-1.5">
+                            <div className="flex flex-col p-6 border-t border-border opacity-70 animate-pulse bg-muted/10 flex-1">
+                                <h3 className="font-black text-foreground text-base truncate mb-1">{jobQueue.metadata.title}</h3>
+                                <div className="mt-auto pt-4 border-t border-border/50">
+                                    <p className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2 bg-primary/10 w-fit px-3 py-1.5 rounded-lg border border-primary/20">
                                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        {uploadProgress === 100 ? t('learning_hub.ghost_card.finalizing') : t('learning_hub.ghost_card.uploading')}
+                                        {uploadProgress === 100 ? t('learning_hub.ghost_card.finalizing', 'Finalizing...') : t('learning_hub.ghost_card.uploading', 'Uploading...')}
                                     </p>
                                 </div>
                             </div>
@@ -422,71 +400,75 @@ const LearningHub = () => {
                         const isExpanded = expandedCards[video._id];
 
                         return (
-                            <div key={video._id} className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col">
+                            <div key={video._id} className={`bg-card border rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group/card ${isExpanded ? 'border-primary/40 ring-4 ring-primary/5' : 'border-border/60 hover:border-primary/30'}`}>
 
                                 <div className="relative w-full aspect-video bg-black shrink-0 overflow-hidden">
-                                    {/* WE PASSED THE PROP HERE */}
                                     <VideoPlayer src={video.fileUrl} thumbnailUrl={video.thumbnailUrl} />
                                 </div>
 
-                                <div className="p-4 sm:p-5 flex flex-col flex-1">
-                                    <div
-                                        className="flex items-start justify-between gap-3 cursor-pointer group"
+                                <div className="p-5 sm:p-6 flex flex-col flex-1 relative z-10">
+                                    
+                                    <div 
+                                        className="flex flex-col cursor-pointer mb-2"
                                         onClick={() => toggleExpand(video._id)}
                                     >
-                                        <div className="flex-1">
-                                            <h3 className="font-extrabold text-foreground text-lg line-clamp-1 group-hover:text-primary transition-colors">{video.title}</h3>
-                                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1 font-medium">
-                                                <CalendarDays className="w-3.5 h-3.5 opacity-70" />
-                                                {formatDate(video.updatedAt || video.createdAt)}
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="font-black text-foreground text-lg leading-snug line-clamp-2 group-hover/card:text-primary transition-colors">{video.title}</h3>
+                                                <div className="flex items-center gap-1.5 text-[10px] uppercase font-black tracking-widest text-muted-foreground mt-2">
+                                                    <CalendarDays className="w-3.5 h-3.5 opacity-70" />
+                                                    {formatDate(video.updatedAt || video.createdAt)}
+                                                </div>
                                             </div>
+                                            <button className={`p-2 bg-muted/50 text-muted-foreground rounded-full hover:bg-muted hover:text-foreground transition-all duration-300 shrink-0 ${isExpanded ? 'rotate-180 bg-primary/10 text-primary shadow-sm' : ''}`}>
+                                                <ChevronDown className="w-4 h-4" />
+                                            </button>
                                         </div>
-                                        <button
-                                            className="p-1.5 bg-muted/50 text-muted-foreground rounded-full hover:bg-muted hover:text-foreground transition-colors shrink-0"
-                                            aria-label="Toggle details"
-                                        >
-                                            <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
-                                        </button>
                                     </div>
 
+                                    {/* ACCORDION BODY */}
                                     <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                                         <div className="overflow-hidden flex flex-col">
-                                            <div className="pt-4 flex flex-col h-full">
+                                            <div className="pt-4 mt-2 border-t border-border/50 flex flex-col h-full">
 
                                                 {video.description && (
-                                                    <p className="text-sm text-muted-foreground mb-4 line-clamp-3 leading-relaxed">{video.description}</p>
+                                                    <p className="text-sm font-medium text-muted-foreground mb-5 leading-relaxed bg-muted/20 p-4 rounded-2xl border border-border/40 shadow-inner line-clamp-4">
+                                                        {video.description}
+                                                    </p>
                                                 )}
 
-                                                <div className="mt-auto pt-4 sm:pt-5 border-t border-border flex flex-wrap items-center justify-between gap-y-3 gap-x-2">
-
+                                                <div className="mt-auto pt-2 flex flex-wrap items-center justify-between gap-y-4 gap-x-2">
+                                                    
+                                                    {/* Instructor Info */}
                                                     <div className="flex flex-col min-w-40 flex-1">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider shrink-0">{t('learning_hub.video_card.instructor_label')}</span>
-                                                            <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded border shadow-sm shrink-0 ${video.uploaderRole === 'SuperAdmin'
+                                                            <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider shrink-0">{t('learning_hub.video_card.instructor_label', 'By')}</span>
+                                                            <span className={`px-2 py-0.5 text-[8px] font-black uppercase tracking-widest rounded-md border shadow-sm shrink-0 ${video.uploaderRole === 'SuperAdmin'
                                                                 ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30'
                                                                 : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
-                                                                }`}>
+                                                            }`}>
                                                                 {video.uploaderRole}
                                                             </span>
                                                         </div>
-                                                        <span className="text-sm font-bold text-foreground mt-0.5 truncate w-full" title={video.uploaderName}>
+                                                        <span className="text-sm font-extrabold text-foreground mt-1 truncate w-full" title={video.uploaderName}>
                                                             {video.uploaderName}
                                                         </span>
                                                     </div>
 
-                                                    <div className="flex items-center justify-end gap-1.5 shrink-0 ml-auto">
+                                                    {/* Action Buttons */}
+                                                    <div className="flex items-center justify-end gap-2 shrink-0 ml-auto">
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); handleDownload(video); }}
-                                                            className="p-2.5 bg-muted text-foreground hover:bg-primary/10 hover:text-primary rounded-xl transition-colors"
-                                                            title={t('learning_hub.video_card.download_tooltip')}
+                                                            className="p-2.5 bg-muted/50 text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-xl transition-colors border border-transparent hover:border-primary/20 shadow-sm"
+                                                            title={t('learning_hub.video_card.download_tooltip', 'Download')}
                                                         >
                                                             <Download className="w-4 h-4" />
                                                         </button>
 
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); handleWhatsAppShare(video); }}
-                                                            className="p-2.5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 rounded-xl transition-colors"
-                                                            title={t('learning_hub.video_card.share_tooltip')}
+                                                            className="p-2.5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 rounded-xl transition-colors border border-[#25D366]/20 shadow-sm"
+                                                            title={t('learning_hub.video_card.share_tooltip', 'Share')}
                                                         >
                                                             <WhatsAppIcon className="w-4 h-4" />
                                                         </button>
@@ -495,15 +477,15 @@ const LearningHub = () => {
                                                             <>
                                                                 <button
                                                                     onClick={(e) => { e.stopPropagation(); openEditModal(video); }}
-                                                                    className="p-2.5 bg-muted text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500 rounded-xl transition-colors"
-                                                                    title={t('learning_hub.video_card.edit_tooltip')}
+                                                                    className="p-2.5 bg-muted/50 text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500 rounded-xl transition-colors border border-transparent hover:border-blue-500/20 shadow-sm"
+                                                                    title={t('learning_hub.video_card.edit_tooltip', 'Edit')}
                                                                 >
                                                                     <Edit2 className="w-4 h-4" />
                                                                 </button>
                                                                 <button
                                                                     onClick={(e) => { e.stopPropagation(); triggerDelete(video._id); }}
-                                                                    className="p-2.5 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-xl transition-colors"
-                                                                    title={t('learning_hub.video_card.delete_tooltip')}
+                                                                    className="p-2.5 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-xl transition-colors border border-destructive/20 shadow-sm"
+                                                                    title={t('learning_hub.video_card.delete_tooltip', 'Delete')}
                                                                 >
                                                                     <Trash2 className="w-4 h-4" />
                                                                 </button>
@@ -519,6 +501,123 @@ const LearningHub = () => {
                             </div>
                         );
                     })}
+                </div>
+            )}
+
+            <LearningMediaUploadModal
+                isOpen={isUploadModalOpen}
+                onClose={() => setIsUploadModalOpen(false)}
+            />
+
+            {/* --- EDIT DIALOG (BOTTOM SHEET) --- */}
+            {editModalOpen && (
+                <div className={`fixed inset-0 z-200 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isModalClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleCloseEditModal}>
+                    <div 
+                        className={`bg-card w-full max-w-md rounded-t-[2.5rem] md:rounded-3xl shadow-2xl border-t md:border border-border/50 flex flex-col relative max-h-[90vh] md:max-h-[85vh] overflow-hidden ${isModalClosing ? 'transition-transform duration-300 ease-out' : 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95'}`} 
+                        style={{ transform: `translateY(${modalDragOffset}px)` }} 
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20 rounded-t-[inherit]" />
+                        
+                        <div className="w-full flex justify-center pt-3 pb-1 md:hidden touch-none" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEndEdit}>
+                            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
+                        </div>
+
+                        <div className="sticky top-0 bg-card/90 backdrop-blur-md z-10 px-6 pt-2 pb-4 md:pt-6 md:pb-6 flex justify-between items-center border-b border-border/50 touch-none" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEndEdit}>
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-inner">
+                                    <Edit2 className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-extrabold text-foreground tracking-tight">{t('learning_hub.edit_dialog.title', 'Edit Lesson')}</h3>
+                                </div>
+                            </div>
+                            <button onClick={handleCloseEditModal} className="p-2.5 hover:bg-muted rounded-full bg-muted/50 border border-border hidden md:flex transition-colors">
+                                <X className="w-5 h-5 text-muted-foreground" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={submitEdit} className="flex flex-col flex-1 overflow-hidden">
+                            <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar space-y-6">
+                                <div className="space-y-2.5">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1 flex items-center gap-2">
+                                        {t('learning_hub.edit_dialog.lesson_title', 'Lesson Title')} <span className="text-destructive">*</span>
+                                    </Label>
+                                    <Input
+                                        type="text"
+                                        value={editTitle}
+                                        onChange={(e) => setEditTitle(e.target.value)}
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        className="h-12 rounded-xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-sm font-bold"
+                                    />
+                                </div>
+                                <div className="space-y-2.5">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-foreground ml-1">
+                                        {t('learning_hub.edit_dialog.description', 'Description')}
+                                    </Label>
+                                    <Textarea
+                                        rows={4}
+                                        value={editDescription}
+                                        onChange={(e) => setEditDescription(e.target.value)}
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        className="w-full p-4 rounded-2xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-sm font-medium resize-none shadow-sm"
+                                    />
+                                </div>
+                            </div>
+                            <div className="p-4 sm:p-6 bg-muted/10 border-t border-border/50 shrink-0 pb-safe flex gap-3 rounded-b-3xl">
+                                <Button type="button" variant="ghost" onClick={handleCloseEditModal} className="flex-1 h-12 font-bold text-muted-foreground hover:bg-muted transition-colors rounded-xl">
+                                    {t('learning_hub.edit_dialog.cancel_btn', 'Cancel')}
+                                </Button>
+                                <Button type="submit" disabled={!editTitle.trim()} className="flex-1 h-12 font-black uppercase tracking-widest bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all rounded-xl">
+                                    {t('learning_hub.edit_dialog.save_btn', 'Save')}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* --- DELETE DIALOG (BOTTOM SHEET) --- */}
+            {deleteDialog.isOpen && (
+                <div className={`fixed inset-0 z-200 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isModalClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleCloseDeleteModal}>
+                    <div 
+                        className={`bg-card w-full max-w-sm rounded-t-[2.5rem] md:rounded-3xl shadow-2xl border-t md:border border-border/50 flex flex-col relative overflow-hidden ${isModalClosing ? 'transition-transform duration-300 ease-out' : 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95'}`} 
+                        style={{ transform: `translateY(${modalDragOffset}px)` }} 
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-destructive/40 via-destructive to-destructive/40 z-20 rounded-t-[inherit] pointer-events-none" />
+
+                        <div className="w-full flex justify-center pt-3 pb-1 md:hidden touch-none" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEndDelete}>
+                            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
+                        </div>
+
+                        <div className="p-6 md:p-8 text-center pt-6 md:pt-10">
+                            <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center text-destructive mx-auto mb-6 shadow-inner border border-destructive/20 relative">
+                                <div className="absolute inset-0 bg-destructive/10 rounded-full animate-ping opacity-40" />
+                                <Trash2 className="w-10 h-10 relative z-10" />
+                            </div>
+                            <h3 className="text-2xl font-extrabold text-foreground mb-2 tracking-tight">{t('learning_hub.delete_dialog.title', 'Delete Lesson?')}</h3>
+                            <p className="text-sm font-medium text-muted-foreground leading-relaxed px-2">
+                                {t('learning_hub.delete_dialog.warning_text', 'This action cannot be undone.')}
+                            </p>
+                        </div>
+
+                        <div className="bg-muted/10 p-5 border-t border-border/50 flex flex-col gap-3 rounded-b-3xl pb-safe">
+                            <Button 
+                                variant="destructive" 
+                                className="w-full h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-destructive/20 hover:shadow-destructive/30 active:scale-[0.98] transition-all"
+                                onClick={confirmDelete}
+                            >
+                                {t('learning_hub.delete_dialog.confirm_btn', 'Yes, Delete')}
+                            </Button>
+                            <button 
+                                onClick={handleCloseDeleteModal} 
+                                className="w-full h-12 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors border border-transparent hover:border-border/80"
+                            >
+                                {t('learning_hub.delete_dialog.cancel_btn', 'Cancel')}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

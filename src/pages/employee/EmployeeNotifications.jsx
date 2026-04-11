@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
 import { io } from "socket.io-client";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 
 // Setup socket connection
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 const EmployeeNotifications = () => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation();
     const { user } = useSelector((state) => state.auth);
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -28,7 +28,7 @@ const EmployeeNotifications = () => {
                 }
             } catch (error) {
                 console.error("Failed to fetch notifications:", error);
-                toast.error(t('employee_notifications.toasts.load_error'));
+                toast.error(t('employee_notifications.toasts.load_error', 'Failed to load notifications'));
             } finally {
                 setLoading(false);
             }
@@ -74,25 +74,25 @@ const EmployeeNotifications = () => {
     // --- ACTIONS ---
     const markAllAsRead = async () => {
         setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-        const toastId = toast.loading(t('employee_notifications.toasts.marking_read'));
+        const toastId = toast.loading(t('employee_notifications.toasts.marking_read', 'Marking as read...'));
         try {
             await api.put('/employee/notifications/mark-read');
-            toast.success(t('employee_notifications.toasts.mark_read_success'), { id: toastId });
+            toast.success(t('employee_notifications.toasts.mark_read_success', 'All marked as read'), { id: toastId });
         } catch (error) {
             console.error("Failed to mark as read:", error);
-            toast.error(t('employee_notifications.toasts.mark_read_error'), { id: toastId });
+            toast.error(t('employee_notifications.toasts.mark_read_error', 'Failed to mark as read'), { id: toastId });
         }
     };
 
     const clearAll = async () => {
         setNotifications([]);
-        const toastId = toast.loading(t('employee_notifications.toasts.clearing'));
+        const toastId = toast.loading(t('employee_notifications.toasts.clearing', 'Clearing notifications...'));
         try {
             await api.delete('/employee/notifications/clear');
-            toast.success(t('employee_notifications.toasts.clear_success'), { id: toastId });
+            toast.success(t('employee_notifications.toasts.clear_success', 'Notifications cleared'), { id: toastId });
         } catch (error) {
             console.error("Failed to clear notifications:", error);
-            toast.error(t('employee_notifications.toasts.clear_error'), { id: toastId });
+            toast.error(t('employee_notifications.toasts.clear_error', 'Failed to clear notifications'), { id: toastId });
         }
     };
 
@@ -100,30 +100,30 @@ const EmployeeNotifications = () => {
     const getTimeAgo = (dateString) => {
         const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
         let interval = seconds / 31536000;
-        if (interval > 1) return Math.floor(interval) + " " + t('employee_notifications.time.years');
+        if (interval > 1) return Math.floor(interval) + " " + t('employee_notifications.time.years', 'yrs ago');
         interval = seconds / 2592000;
-        if (interval > 1) return Math.floor(interval) + " " + t('employee_notifications.time.months');
+        if (interval > 1) return Math.floor(interval) + " " + t('employee_notifications.time.months', 'mos ago');
         interval = seconds / 86400;
-        if (interval > 1) return Math.floor(interval) + " " + t('employee_notifications.time.days');
+        if (interval > 1) return Math.floor(interval) + " " + t('employee_notifications.time.days', 'days ago');
         interval = seconds / 3600;
-        if (interval > 1) return Math.floor(interval) + " " + t('employee_notifications.time.hours');
+        if (interval > 1) return Math.floor(interval) + " " + t('employee_notifications.time.hours', 'hrs ago');
         interval = seconds / 60;
-        if (interval > 1) return Math.floor(interval) + " " + t('employee_notifications.time.mins');
-        return t('employee_notifications.time.just_now');
+        if (interval > 1) return Math.floor(interval) + " " + t('employee_notifications.time.mins', 'mins ago');
+        return t('employee_notifications.time.just_now', 'Just now');
     };
 
     const getIconInfo = (type) => {
         switch (type) {
             case 'Warning':
             case 'Deletion':
-                return { icon: <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5" />, bg: 'bg-destructive/10 text-destructive border-destructive/20' };
+                return { icon: <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6" />, bg: 'bg-destructive/10 text-destructive border-destructive/20' };
             case 'Assignment':
             case 'Updation':
-                return { icon: <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />, bg: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' };
+                return { icon: <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6" />, bg: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' };
             case 'System':
             case 'General':
             default:
-                return { icon: <Info className="w-4 h-4 sm:w-5 sm:h-5" />, bg: 'bg-blue-500/10 text-blue-500 border-blue-500/20' };
+                return { icon: <Info className="w-5 h-5 sm:w-6 sm:h-6" />, bg: 'bg-blue-500/10 text-blue-500 border-blue-500/20' };
         }
     };
 
@@ -132,134 +132,126 @@ const EmployeeNotifications = () => {
     // ==========================================
     if (loading) {
         return (
-            <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-4xl mx-auto animate-in fade-in duration-300 pb-24 md:pb-8">
-                {/* Header Shimmer */}
-                <div className="mb-4 sm:mb-6 md:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
-                    <div>
-                        <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
-                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-muted animate-pulse shrink-0" />
-                            <div className="h-8 sm:h-10 w-48 sm:w-64 bg-muted rounded-lg animate-pulse" />
-                        </div>
-                        <div className="h-4 sm:h-5 w-64 sm:w-80 bg-muted/60 rounded-md animate-pulse mt-1" />
-                    </div>
-                    {/* Buttons Shimmer */}
-                    <div className="flex items-center gap-2 self-start md:self-auto w-full md:w-auto">
-                        <div className="h-8 sm:h-9 w-28 sm:w-32 bg-muted rounded-md animate-pulse" />
-                        <div className="h-8 sm:h-9 w-24 sm:w-28 bg-muted rounded-md animate-pulse" />
-                    </div>
-                </div>
-
-                {/* Notifications Card Shimmer */}
-                <div className="bg-card rounded-xl sm:rounded-2xl shadow-card border border-border min-h-100 sm:min-h-125 overflow-hidden flex flex-col">
-                    <div className="p-3 sm:p-4 md:p-6 flex-1 bg-muted/5 flex flex-col gap-2.5 sm:gap-3">
-                        {[1, 2, 3, 4, 5].map((i) => (
-                            <div key={i} className="relative p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl border border-border bg-card/50">
-                                <div className="flex gap-3 sm:gap-4 pr-4 sm:pr-6">
-                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted animate-pulse shrink-0" />
-                                    <div className="flex flex-col gap-2 w-full mt-1">
-                                        <div className="h-5 w-1/3 sm:w-1/4 bg-muted rounded animate-pulse" />
-                                        <div className="h-4 w-3/4 sm:w-2/3 bg-muted/60 rounded animate-pulse" />
-                                        <div className="h-3 w-16 sm:w-20 bg-muted/40 rounded mt-1 animate-pulse" />
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+            <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 md:space-y-8 mt-2 md:mt-4 animate-pulse">
+                <div className="h-12 w-64 bg-muted rounded-2xl" />
+                <div className="bg-card rounded-[2.5rem] border border-border/50 h-125 w-full" />
             </div>
         );
     }
 
     return (
-        <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-4xl mx-auto animate-in fade-in duration-300 pb-24 md:pb-8">
-            <div className="mb-4 sm:mb-6 md:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
-                <div>
-                    <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
-                        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                            <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
-                            {unreadCount > 0 && (
-                                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 sm:h-3 sm:w-3">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 bg-destructive border-2 border-card"></span>
-                                </span>
-                            )}
+        <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700 pb-24 p-4 sm:p-6 lg:p-8 mt-2 md:mt-0">
+            
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative z-20">
+                <div className="flex items-center gap-5">
+                    <div className="relative">
+                        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
+                            <Bell className="w-7 h-7 text-primary" />
                         </div>
-                        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground tracking-tight">{t('employee_notifications.title')}</h1>
+                        {unreadCount > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-4 w-4 bg-destructive border-2 border-background"></span>
+                            </span>
+                        )}
                     </div>
-                    <p className="text-muted-foreground text-xs sm:text-sm">{t('employee_notifications.subtitle')}</p>
+                    <div className="space-y-0.5">
+                        <h1 className="text-3xl font-black text-foreground tracking-tight uppercase">{t('employee_notifications.title', 'Notifications')}</h1>
+                        <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
+                            {t('employee_notifications.subtitle', 'Your recent alerts')}
+                        </p>
+                    </div>
                 </div>
 
                 {notifications.length > 0 && (
-                    <div className="flex items-center gap-2 self-start md:self-auto w-full md:w-auto">
-                        <Button variant="outline" size="sm" onClick={markAllAsRead} disabled={unreadCount === 0} className="gap-1.5 sm:gap-2 flex-1 md:flex-none text-xs sm:text-sm h-8 sm:h-9">
-                            <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {t('employee_notifications.btn_mark_read')}
+                    <div className="flex items-center gap-3">
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={markAllAsRead} 
+                            disabled={unreadCount === 0} 
+                            className="h-11 px-5 rounded-xl font-bold gap-2 text-xs uppercase tracking-widest border-border/80 hover:bg-muted"
+                        >
+                            <Check className="w-4 h-4" /> <span className="hidden sm:inline">{t('employee_notifications.btn_mark_read', 'Mark Read')}</span>
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={clearAll} className="text-destructive hover:bg-destructive/10 hover:text-destructive gap-1.5 sm:gap-2 flex-1 md:flex-none text-xs sm:text-sm h-8 sm:h-9">
-                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {t('employee_notifications.btn_clear_all')}
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={clearAll} 
+                            className="h-11 px-5 rounded-xl font-bold gap-2 text-xs uppercase tracking-widest border-destructive/30 text-destructive hover:bg-destructive hover:text-white transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4" /> <span className="hidden sm:inline">{t('employee_notifications.btn_clear_all', 'Clear All')}</span>
                         </Button>
                     </div>
                 )}
             </div>
 
-            <div className="bg-card rounded-xl sm:rounded-2xl shadow-card border border-border min-h-100 sm:min-h-125 overflow-hidden flex flex-col">
-                <div className="p-3 sm:p-4 md:p-6 flex-1 bg-muted/5 flex flex-col gap-2.5 sm:gap-3">
+            {/* Main Content Card */}
+            <div className="bg-card rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-border/60 relative overflow-hidden flex flex-col">
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20" />
+                
+                <div className="p-4 sm:p-6 md:p-8 flex-1 bg-muted/10 flex flex-col gap-4">
                     {notifications.length === 0 ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center p-6 sm:p-8">
-                            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-muted/50 flex items-center justify-center mb-3 sm:mb-4">
-                                <Bell className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground/50" />
-                            </div>
-                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">{t('employee_notifications.empty_title')}</h3>
-                            <p className="text-xs sm:text-sm text-muted-foreground">{t('employee_notifications.empty_desc')}</p>
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-12 opacity-40">
+                            <Bell className="w-16 h-16 mb-4 text-muted-foreground" />
+                            <h3 className="text-xl font-black uppercase tracking-widest text-foreground mb-1">{t('employee_notifications.empty_title', 'All Caught Up')}</h3>
+                            <p className="text-sm font-bold text-muted-foreground uppercase tracking-wide">{t('employee_notifications.empty_desc', 'You have no new notifications')}</p>
                         </div>
                     ) : (
-                        notifications.map((notification) => {
-                            const { icon, bg } = getIconInfo(notification.type);
-                            return (
-                                <div
-                                    key={notification._id}
-                                    className={`relative p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl border transition-all ${notification.isRead
-                                        ? 'bg-card border-border hover:bg-muted/30'
-                                        : 'bg-primary/5 border-primary/20 shadow-sm'
-                                        }`}
-                                >
-                                    {!notification.isRead && (
-                                        <div className="absolute top-3 right-3 sm:top-5 sm:right-5 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.8)] animate-pulse" />
-                                    )}
-                                    <div className="flex gap-3 sm:gap-4 pr-4 sm:pr-6">
-                                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 border ${bg}`}>
-                                            {icon}
-                                        </div>
-                                        <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0 w-full">
-                                            <div className="flex items-center gap-2">
-                                                <h4 className={`text-sm sm:text-base font-bold truncate ${notification.isRead ? 'text-foreground/90' : 'text-foreground'}`}>
-                                                    {notification.title}
-                                                </h4>
+                        <div className="space-y-4">
+                            {notifications.map((notification) => {
+                                const { icon, bg } = getIconInfo(notification.type);
+                                return (
+                                    <div
+                                        key={notification._id}
+                                        className={`relative p-5 sm:p-6 rounded-3xl border transition-all duration-300 group overflow-hidden ${notification.isRead
+                                            ? 'bg-card border-border/60 hover:border-primary/30 hover:bg-muted/30 shadow-sm'
+                                            : 'bg-primary/5 border-primary/30 shadow-md scale-[1.01]'
+                                            }`}
+                                    >
+                                        {!notification.isRead && (
+                                            <div className="absolute top-0 left-0 w-1.5 h-full bg-primary" />
+                                        )}
 
-                                                {notification.type === 'Warning' && notification.level && (
-                                                    <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-md bg-destructive/10 text-destructive border border-destructive/20 shrink-0">
-                                                        {notification.level}
-                                                    </span>
-                                                )}
+                                        <div className="flex gap-4 sm:gap-5 pr-2">
+                                            <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 border ${bg} shadow-inner`}>
+                                                {icon}
                                             </div>
+                                            
+                                            <div className="flex flex-col gap-1.5 min-w-0 w-full">
+                                                <div className="flex flex-wrap items-center gap-3">
+                                                    <h4 className={`text-base sm:text-lg font-black truncate ${notification.isRead ? 'text-foreground/90' : 'text-foreground'}`}>
+                                                        {notification.title}
+                                                    </h4>
 
-                                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                                                {notification.type === 'Warning' && notification.reason
-                                                    ? notification.reason
-                                                    : notification.message}
-                                            </p>
+                                                    {notification.type === 'Warning' && notification.level && (
+                                                        <span className="px-2.5 py-1 text-[10px] uppercase font-black tracking-widest rounded-lg bg-destructive/10 text-destructive border border-destructive/20 shrink-0">
+                                                            {notification.level}
+                                                        </span>
+                                                    )}
+                                                </div>
 
-                                            <div className="flex items-center gap-1.5 mt-1.5 sm:mt-2 text-[10px] sm:text-xs font-medium text-muted-foreground/80">
-                                                <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                                                {getTimeAgo(notification.createdAt)}
+                                                <p className="text-sm font-medium text-muted-foreground leading-relaxed pt-1">
+                                                    {notification.type === 'Warning' && notification.reason
+                                                        ? `"${notification.reason}"`
+                                                        : notification.message}
+                                                </p>
+
+                                                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/40 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-80">
+                                                    <Clock className="w-3.5 h-3.5" />
+                                                    {getTimeAgo(notification.createdAt)}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            );
-                        })
+                                );
+                            })}
+                        </div>
                     )}
                 </div>
             </div>
+
         </div>
     );
 };

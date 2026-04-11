@@ -3,7 +3,8 @@ import {
     Trophy, TrendingUp, TrendingDown, Minus, Star,
     Medal, Crown, Target, LineChart as LineChartIcon,
     ChevronDown, CalendarDays, Zap,
-    Users
+    Users,
+    Loader2
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
@@ -39,7 +40,7 @@ const EmployeeLeaderBoard = () => {
                 setLeaderboard(res.data.data);
             }
         } catch (error) {
-            toast.error(t('leaderboard.toasts.load_error'));
+            toast.error(t('leaderboard.toasts.load_error', 'Failed to load leaderboard'));
         } finally {
             setIsLoading(false);
         }
@@ -82,8 +83,6 @@ const EmployeeLeaderBoard = () => {
     // 5. DEDICATED EFFECT: SOCKET LISTENER
     useEffect(() => {
         const handleRealTimeUpdate = () => {
-            console.log("⚡ Employee Leaderboard Socket Ping Received!");
-
             if (Date.now() - refetchTimestamp.current > 2000) {
                 refetchTimestamp.current = Date.now();
 
@@ -92,7 +91,7 @@ const EmployeeLeaderBoard = () => {
                     audio.play().catch(() => { });
                 } catch (e) { }
 
-                toast.success(t('leaderboard.toasts.updated'), { icon: '🏆' });
+                toast.success(t('leaderboard.toasts.updated', 'Leaderboard updated!'), { icon: '🏆' });
 
                 fetchLeaderboard();
                 fetchMyGraph();
@@ -117,10 +116,10 @@ const EmployeeLeaderBoard = () => {
 
     const getZoneStyles = (zone) => {
         switch (zone) {
-            case 'green': return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
-            case 'blue': return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
-            case 'red': return 'bg-destructive/10 text-destructive border-destructive/20';
-            default: return 'bg-muted text-muted-foreground border-border';
+            case 'green': return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+            case 'blue': return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+            case 'red': return 'bg-destructive/10 text-destructive dark:text-red-400 border-destructive/20';
+            default: return 'bg-muted text-muted-foreground border-border/60';
         }
     };
 
@@ -137,17 +136,16 @@ const EmployeeLeaderBoard = () => {
         if (!employee) return <div className="flex-1" />;
 
         const isFirst = rank === 1;
-        const heightClass = rank === 1 ? 'h-32 sm:h-40' : rank === 2 ? 'h-24 sm:h-32' : 'h-20 sm:h-28';
+        const heightClass = rank === 1 ? 'h-36 sm:h-48' : rank === 2 ? 'h-28 sm:h-36' : 'h-24 sm:h-28';
         const colorClass = rank === 1 ? 'from-amber-400 to-amber-600' : rank === 2 ? 'from-slate-300 to-slate-500' : 'from-orange-700 to-orange-900';
         const bgOpacity = rank === 1 ? 'bg-amber-500/10 border-amber-500/30' : rank === 2 ? 'bg-slate-500/10 border-slate-500/30' : 'bg-orange-700/10 border-orange-700/30';
 
         return (
             <div className="flex-1 flex flex-col items-center justify-end relative group animate-in slide-in-from-bottom-8 duration-700">
-                {isFirst && <Crown className="w-8 h-8 text-amber-500 mb-2 absolute -top-10 animate-bounce" />}
+                {isFirst && <Crown className="w-10 h-10 text-amber-500 mb-3 absolute -top-12 animate-bounce drop-shadow-md" />}
 
                 <div
-                    className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full mb-3 z-10 flex items-center justify-center text-white font-black text-lg sm:text-2xl shadow-lg bg-linear-to-br ${colorClass} overflow-hidden shrink-0 ring-4 ring-background`}
-                    style={{ background: `linear-gradient(to bottom right, var(--tw-gradient-stops))` }}
+                    className={`w-14 h-14 sm:w-20 sm:h-20 rounded-full mb-4 z-10 flex items-center justify-center text-white font-black text-xl sm:text-3xl shadow-xl shadow-black/10 bg-linear-to-br ${colorClass} overflow-hidden shrink-0 border-4 border-background`}
                 >
                     {employee.profilePicture && typeof employee.profilePicture === 'string' && employee.profilePicture.startsWith('http') ? (
                         <img
@@ -160,44 +158,60 @@ const EmployeeLeaderBoard = () => {
                     )}
                 </div>
 
-                <div className="text-center mb-2 z-10">
-                    <p className="font-bold text-xs sm:text-sm text-foreground truncate w-full px-1">{employee.name.split(' ')[0]}</p>
-                    <p className="text-[10px] sm:text-xs font-black text-muted-foreground">{employee.currentWeeklyScore} {t('leaderboard.pts')}</p>
+                <div className="text-center mb-3 z-10 space-y-1">
+                    <p className="font-extrabold text-sm sm:text-base text-foreground truncate w-full px-1 tracking-tight">{employee.name.split(' ')[0]}</p>
+                    <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-muted-foreground">{employee.currentWeeklyScore} {t('leaderboard.pts', 'PTS')}</p>
                 </div>
 
-                <div className={`w-full rounded-t-2xl border-t border-l border-r ${bgOpacity} ${heightClass} flex items-start justify-center pt-4 relative overflow-hidden transition-all duration-300 group-hover:brightness-110`}>
+                <div className={`w-full rounded-t-4xl border-t-2 border-l border-r ${bgOpacity} ${heightClass} flex items-start justify-center pt-5 relative overflow-hidden transition-all duration-500 group-hover:brightness-110 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]`}>
                     <div className={`absolute inset-0 opacity-20 bg-linear-to-b ${colorClass} to-transparent`} />
-                    <span className="text-3xl sm:text-5xl font-black opacity-30">{rank}</span>
+                    <span className="text-4xl sm:text-6xl font-black opacity-40 drop-shadow-sm">{rank}</span>
                 </div>
             </div>
         );
     };
 
+    if (isLoading) {
+        return (
+            <div className="max-w-5xl mx-auto space-y-6 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500 mt-2 md:mt-4">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 pb-8 border-b border-border/40">
+                    <div className="space-y-3 w-full max-w-sm">
+                        <div className="h-12 w-3/4 md:w-72 bg-muted rounded-2xl animate-pulse" />
+                        <div className="h-5 w-full md:w-80 bg-muted/60 rounded-xl animate-pulse" />
+                    </div>
+                </div>
+                <div className="h-64 flex items-end justify-center gap-4 mt-12 animate-pulse px-4">
+                    <div className="flex-1 h-32 bg-card rounded-t-[2.5rem] border border-border/50" />
+                    <div className="flex-1 h-48 bg-card rounded-t-[2.5rem] border border-border/50" />
+                    <div className="flex-1 h-24 bg-card rounded-t-[2.5rem] border border-border/50" />
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="p-3 sm:p-4 md:p-8 max-w-5xl mx-auto animate-in fade-in duration-500 pb-24">
+        <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700 pb-24 p-4 sm:p-6 lg:p-8 mt-2 md:mt-0">
 
             {/* HEADER */}
-            <div className="mb-6 sm:mb-8 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm shrink-0">
-                        <Medal className="w-6 h-6" />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-8 border-b border-border/50 relative z-20">
+                <div className="flex items-center gap-5">
+                    <div className="relative">
+                        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
+                            <Trophy className="w-7 h-7 text-primary" />
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-xl sm:text-3xl font-black tracking-tight text-foreground">{t('leaderboard.employee_title')}</h1>
-                        <p className="text-muted-foreground text-xs sm:text-sm">{t('leaderboard.employee_subtitle')}</p>
+                    <div className="space-y-0.5">
+                        <h1 className="text-3xl font-black text-foreground tracking-tight uppercase italic">{t('leaderboard.employee_title', 'Leaderboard')}</h1>
+                        <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                           <Medal className="w-3.5 h-3.5 text-primary/70" /> {t('leaderboard.employee_subtitle', 'Top Performers')}
+                        </p>
                     </div>
                 </div>
             </div>
 
             {/* PODIUM SECTION */}
-            {isLoading ? (
-                <div className="h-64 flex items-end justify-center gap-2 sm:gap-4 mb-10 animate-pulse">
-                    <div className="flex-1 h-32 bg-card rounded-t-2xl border border-border" />
-                    <div className="flex-1 h-48 bg-card rounded-t-2xl border border-border" />
-                    <div className="flex-1 h-24 bg-card rounded-t-2xl border border-border" />
-                </div>
-            ) : top3.length > 0 && (
-                <div className="flex items-end justify-center gap-2 sm:gap-4 max-w-3xl mx-auto mb-8 sm:mb-12 mt-12 px-2">
+            {top3.length > 0 && (
+                <div className="flex items-end justify-center gap-2 sm:gap-4 max-w-4xl mx-auto mb-10 sm:mb-16 mt-12 px-2">
                     <PodiumStep rank={2} employee={top3[1]} />
                     <PodiumStep rank={1} employee={top3[0]} />
                     <PodiumStep rank={3} employee={top3[2]} />
@@ -206,28 +220,31 @@ const EmployeeLeaderBoard = () => {
 
             {/* MY STATS & GRAPH SECTION */}
             {myStats && (
-                <div className="bg-card rounded-3xl border border-border shadow-lg shadow-primary/5 overflow-hidden mb-8 relative">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-primary via-blue-500 to-emerald-500" />
+                <div className="bg-card rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-border/60 relative overflow-hidden mb-10">
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary via-blue-500 to-emerald-500 z-20" />
+                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
-                    <div className="p-5 sm:p-8 flex flex-col md:flex-row items-center md:justify-between gap-6">
+                    <div className="p-6 sm:p-8 flex flex-col md:flex-row items-center md:justify-between gap-8 relative z-10">
 
                         {/* My Quick Stats */}
-                        <div className="flex items-center gap-5 w-full md:w-auto">
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full gradient-primary flex items-center justify-center text-white font-black text-3xl shadow-md border-4 border-background shrink-0">
+                        <div className="flex items-center gap-6 w-full md:w-auto">
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-linear-to-br from-primary to-primary/80 flex items-center justify-center text-white font-black text-4xl shadow-xl shadow-primary/20 border border-primary/20 shrink-0 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
                                 #{myStats.currentWeeklyRank}
                             </div>
-                            <div>
-                                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5 mb-1">
-                                    <Target className="w-4 h-4 text-primary" /> {t('leaderboard.my_ranking')}
+                            <div className="space-y-1">
+                                <p className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-1.5">
+                                    <Target className="w-3.5 h-3.5 text-primary" /> {t('leaderboard.my_ranking', 'My Ranking')}
                                 </p>
-                                <h2 className="text-2xl sm:text-3xl font-black text-foreground flex items-center gap-3">
-                                    {myStats.currentWeeklyScore} <span className="text-base text-muted-foreground font-semibold">{t('leaderboard.out_of_100_pts')}</span>
-                                    {getTrendIcon(myStats.scoreTrend)}
+                                <h2 className="text-3xl sm:text-4xl font-black text-foreground flex items-center gap-3 tracking-tight">
+                                    {myStats.currentWeeklyScore} <span className="text-sm sm:text-base text-muted-foreground font-bold tracking-widest uppercase mt-1">{t('leaderboard.out_of_100_pts', '/ 100')}</span>
                                 </h2>
-                                <div className="mt-2 flex gap-2">
-                                    <span className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${getZoneStyles(myStats.colorZone)}`}>
+                                <div className="mt-3 flex items-center gap-3">
+                                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border shadow-sm ${getZoneStyles(myStats.colorZone)}`}>
                                         {t('leaderboard.zone_label', { zone: myStats.colorZone })}
                                     </span>
+                                    <div className="bg-muted border border-border/60 p-1 rounded-lg shadow-sm">
+                                        {getTrendIcon(myStats.scoreTrend)}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -235,49 +252,52 @@ const EmployeeLeaderBoard = () => {
                         {/* Graph Toggle Button */}
                         <button
                             onClick={() => setIsChartExpanded(!isChartExpanded)}
-                            className="w-full md:w-auto px-6 py-3 rounded-xl bg-muted/50 hover:bg-muted border border-border flex items-center justify-center gap-3 transition-colors font-bold text-sm text-foreground group"
+                            className="w-full md:w-auto h-14 px-8 rounded-2xl bg-muted/30 hover:bg-muted/60 border border-border/60 flex items-center justify-center gap-3 transition-all font-black uppercase tracking-widest text-xs text-foreground shadow-sm active:scale-95"
                         >
-                            <LineChartIcon className="w-5 h-5 text-primary" />
-                            {isChartExpanded ? t('leaderboard.hide_progress') : t('leaderboard.view_progress')}
+                            <LineChartIcon className="w-4 h-4 text-primary" />
+                            {isChartExpanded ? t('leaderboard.hide_progress', 'Hide Graph') : t('leaderboard.view_progress', 'View Graph')}
                             <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${isChartExpanded ? 'rotate-180' : ''}`} />
                         </button>
                     </div>
 
                     {/* Smooth Accordion Graph */}
-                    <div className={`grid transition-all duration-300 ease-in-out bg-background/50 ${isChartExpanded ? 'grid-rows-[1fr] opacity-100 border-t border-border' : 'grid-rows-[0fr] opacity-0'}`}>
+                    <div className={`grid transition-all duration-500 ease-in-out bg-muted/5 ${isChartExpanded ? 'grid-rows-[1fr] opacity-100 border-t border-border/50' : 'grid-rows-[0fr] opacity-0'}`}>
                         <div className="overflow-hidden">
-                            <div className="p-4 sm:p-6">
-                                <div className="flex justify-end mb-4">
-                                    <div className="flex bg-muted/50 p-1 rounded-xl border border-border">
-                                        <button onClick={() => setGraphPeriod('weekly')} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${graphPeriod === 'weekly' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                                            <CalendarDays className="w-3.5 h-3.5" /> {t('leaderboard.graph.weekly')}
+                            <div className="p-5 sm:p-8">
+                                <div className="flex justify-end mb-6">
+                                    <div className="flex bg-muted/40 p-1.5 rounded-2xl border border-border/60 shadow-sm">
+                                        <button onClick={() => setGraphPeriod('weekly')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${graphPeriod === 'weekly' ? 'bg-background shadow-md text-foreground border border-border/50' : 'text-muted-foreground hover:text-foreground'}`}>
+                                            <CalendarDays className="w-3.5 h-3.5" /> {t('leaderboard.graph.weekly', 'Weekly')}
                                         </button>
-                                        <button onClick={() => setGraphPeriod('monthly')} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${graphPeriod === 'monthly' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                                            <LineChartIcon className="w-3.5 h-3.5" /> {t('leaderboard.graph.monthly')}
+                                        <button onClick={() => setGraphPeriod('monthly')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${graphPeriod === 'monthly' ? 'bg-background shadow-md text-foreground border border-border/50' : 'text-muted-foreground hover:text-foreground'}`}>
+                                            <LineChartIcon className="w-3.5 h-3.5" /> {t('leaderboard.graph.monthly', 'Monthly')}
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="h-62.5 min-h-62.5 w-full min-w-full relative">
+                                <div className="h-70 sm:h-80 w-full relative">
                                     {isGraphLoading ? (
-                                        <div className="w-full h-full flex items-center justify-center text-muted-foreground animate-pulse">
-                                            {t('leaderboard.graph.loading', { period: t(`leaderboard.graph.${graphPeriod}`) })}
+                                        <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground bg-card border border-dashed border-border/60 rounded-3xl animate-pulse">
+                                            <Loader2 className="w-8 h-8 text-primary animate-spin mb-3" />
+                                            <span className="text-xs font-bold uppercase tracking-widest">{t('leaderboard.graph.loading', { period: t(`leaderboard.graph.${graphPeriod}`) })}</span>
                                         </div>
                                     ) : myGraphData.length === 0 ? (
-                                        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm border-2 border-dashed border-border rounded-xl">
-                                            {t('leaderboard.graph.no_historical_data')}
+                                        <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground bg-card border-2 border-dashed border-border/60 rounded-3xl">
+                                            <LineChartIcon className="w-8 h-8 text-muted-foreground/40 mb-3" />
+                                            <span className="text-xs font-bold uppercase tracking-widest">{t('leaderboard.graph.no_historical_data', 'No Data Available')}</span>
                                         </div>
                                     ) : (
                                         <ResponsiveContainer width="100%" height="100%">
                                             <LineChart data={myGraphData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
-                                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} dy={10} />
-                                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} domain={[0, 100]} />
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.3} />
+                                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} dy={10} />
+                                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} domain={[0, 100]} />
                                                 <Tooltip
                                                     cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '3 3' }}
-                                                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
+                                                    contentStyle={{ borderRadius: '16px', border: '1px solid var(--border)', backgroundColor: 'var(--card)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold', fontSize: '12px' }}
+                                                    itemStyle={{ color: 'var(--foreground)' }}
                                                 />
-                                                <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6, fill: '#3b82f6' }} />
+                                                <Line type="monotone" dataKey="score" stroke="var(--primary)" strokeWidth={4} dot={{ r: 5, strokeWidth: 3, fill: 'var(--card)', stroke: 'var(--primary)' }} activeDot={{ r: 8, fill: 'var(--primary)', stroke: 'var(--card)', strokeWidth: 2 }} />
                                             </LineChart>
                                         </ResponsiveContainer>
                                     )}
@@ -289,34 +309,42 @@ const EmployeeLeaderBoard = () => {
             )}
 
             {/* FULL LEADERBOARD LIST */}
-            <div className="bg-card rounded-2xl sm:rounded-3xl border border-border shadow-sm overflow-hidden flex flex-col">
-                <div className="p-4 sm:p-5 border-b border-border bg-muted/30 flex items-center justify-between">
-                    <h3 className="font-bold text-sm sm:text-base text-foreground flex items-center gap-2">
-                        <Users className="w-4 h-4 text-primary" /> {t('leaderboard.full_roster')}
+            <div className="bg-card rounded-[2.5rem] border border-border/60 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden flex flex-col relative">
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20 pointer-events-none" />
+                
+                <div className="p-6 sm:p-8 border-b border-border/50 bg-muted/10 flex items-center justify-between">
+                    <h3 className="font-black text-lg sm:text-xl text-foreground uppercase tracking-tight flex items-center gap-3">
+                        <Users className="w-5 h-5 text-primary" /> {t('leaderboard.full_roster', 'Full Roster')}
                     </h3>
                 </div>
 
-                <div className="p-2 sm:p-4 flex-1 bg-background/50">
+                <div className="p-4 sm:p-6 flex-1 bg-background/30 space-y-3">
                     {isLoading ? (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                             {[...Array(5)].map((_, idx) => (
-                                <div key={idx} className="h-16 bg-card border border-border/80 rounded-xl animate-pulse" />
+                                <div key={idx} className="h-20 bg-card border border-border/50 rounded-2xl animate-pulse" />
                             ))}
                         </div>
                     ) : leaderboard.length === 0 ? (
-                        <div className="text-center py-10 text-muted-foreground text-sm font-medium">{t('leaderboard.no_active_employees')}</div>
+                        <div className="text-center py-16 flex flex-col items-center justify-center bg-muted/10 rounded-3xl border border-dashed border-border/60">
+                            <Users className="w-10 h-10 text-muted-foreground/30 mb-4" />
+                            <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{t('leaderboard.no_active_employees', 'No active records')}</p>
+                        </div>
                     ) : (
-                        <div className="space-y-2 animate-in fade-in duration-500">
+                        <div className="space-y-3 animate-in fade-in duration-500">
                             {leaderboard.map((emp) => {
                                 const isMe = myStats && emp._id === myStats._id;
 
                                 return (
-                                    <div key={emp._id} className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border transition-all duration-300 ${isMe ? 'bg-primary/5 border-primary/30 shadow-sm' : 'bg-card border-border/80 hover:border-primary/20'}`}>
-                                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                                            <div className="w-8 h-8 flex items-center justify-center rounded-lg text-sm font-black text-muted-foreground bg-muted shrink-0">
+                                    <div key={emp._id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all duration-300 gap-4 sm:gap-6 ${isMe ? 'bg-primary/5 border-primary/30 shadow-md scale-[1.01] z-10 relative' : 'bg-card border-border/60 hover:border-primary/20 hover:bg-muted/10 hover:shadow-sm'}`}>
+                                        
+                                        {/* Rank & Profile */}
+                                        <div className="flex items-center gap-4 sm:gap-5 min-w-0">
+                                            <div className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-2xl text-sm sm:text-base font-black shrink-0 ${isMe ? 'bg-primary text-primary-foreground shadow-inner' : 'text-muted-foreground bg-muted border border-border/60'}`}>
                                                 #{emp.currentWeeklyRank}
                                             </div>
-                                            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden ${isMe ? 'bg-primary shadow-lg shadow-primary/30' : 'bg-slate-400 dark:bg-slate-600'}`}>
+                                            
+                                            <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white font-black text-sm sm:text-lg shrink-0 overflow-hidden border-2 border-background shadow-sm ${isMe ? 'bg-primary' : 'bg-slate-400 dark:bg-slate-600'}`}>
                                                 {emp.profilePicture && typeof emp.profilePicture === 'string' && emp.profilePicture.startsWith('http') ? (
                                                     <img
                                                         src={emp.profilePicture}
@@ -327,18 +355,21 @@ const EmployeeLeaderBoard = () => {
                                                     emp.name.charAt(0).toUpperCase()
                                                 )}
                                             </div>
+                                            
                                             <div className="min-w-0">
-                                                <p className={`font-bold text-sm truncate flex items-center gap-2 ${isMe ? 'text-primary' : 'text-foreground'}`}>
-                                                    {emp.name} {isMe && <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
+                                                <p className={`font-black text-base sm:text-lg truncate flex items-center gap-2 tracking-tight ${isMe ? 'text-primary' : 'text-foreground'}`}>
+                                                    {emp.name} {isMe && <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />}
                                                 </p>
-                                                <p className="text-[10px] text-muted-foreground uppercase font-semibold truncate">{emp.zone || t('leaderboard.unassigned')}</p>
+                                                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-bold tracking-widest truncate mt-0.5">{emp.zone || t('leaderboard.unassigned')}</p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3 shrink-0 pl-2">
-                                            <span className={`px-2.5 py-1 rounded text-[11px] font-black uppercase tracking-wider border ${getZoneStyles(emp.colorZone)}`}>
-                                                {emp.currentWeeklyScore} <span className="hidden sm:inline">{t('leaderboard.pts')}</span>
+
+                                        {/* Stats Row */}
+                                        <div className="flex items-center gap-3 sm:gap-4 shrink-0 pl-16 sm:pl-0">
+                                            <span className={`px-4 py-2 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-widest border shadow-sm flex items-center gap-1.5 ${getZoneStyles(emp.colorZone)}`}>
+                                                {emp.currentWeeklyScore} <span>{t('leaderboard.pts', 'PTS')}</span>
                                             </span>
-                                            <div className="w-6 flex justify-center">
+                                            <div className="w-8 h-8 rounded-xl bg-background border border-border/60 flex justify-center items-center shadow-sm">
                                                 {getTrendIcon(emp.scoreTrend)}
                                             </div>
                                         </div>

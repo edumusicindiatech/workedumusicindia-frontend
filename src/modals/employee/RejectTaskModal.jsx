@@ -1,86 +1,136 @@
-import { useState, useEffect } from "react";
-import { AlertCircle, Loader2 } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { AlertTriangle, Loader2, MessageSquareWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
-import { useTranslation } from "react-i18next"; // <-- Added import
+import { useTranslation } from "react-i18next";
 
 const RejectTaskModal = ({ isOpen, onClose, onSubmit, actionLoading }) => {
-    const { t } = useTranslation(); // <-- Initialize hook
+    const { t } = useTranslation();
     const [rejectReason, setRejectReason] = useState("");
 
-    // Reset the reason field every time the modal opens
+    // Swipe & Animation states
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragOffset, setDragOffset] = useState(0);
+    const [isClosing, setIsClosing] = useState(false);
+    const dragStartY = useRef(0);
+
     useEffect(() => {
         if (isOpen) {
             setRejectReason("");
+            setIsClosing(false);
+            setDragOffset(0);
         }
     }, [isOpen]);
 
     if (!isOpen) return null;
 
+    // --- ANIMATION HANDLERS ---
+    const handleClose = () => {
+        if (actionLoading) return; // Prevent closing while processing
+        setIsClosing(true);
+        setDragOffset(window.innerHeight);
+        setTimeout(() => {
+            onClose();
+            setIsClosing(false);
+            setDragOffset(0);
+        }, 300);
+    };
+
+    const handleTouchStart = (e) => {
+        if (e.target.closest('button') || e.target.closest('textarea')) return;
+        dragStartY.current = e.touches[0].clientY;
+        setIsDragging(true);
+    };
+
+    const handleTouchMove = (e) => {
+        if (!isDragging) return;
+        const delta = e.touches[0].clientY - dragStartY.current;
+        if (delta > 0) setDragOffset(delta);
+    };
+
+    const handleTouchEnd = () => {
+        setIsDragging(false);
+        if (dragOffset > 120) handleClose();
+        else setDragOffset(0);
+    };
+
     const handleSubmit = () => {
         if (!rejectReason.trim()) {
-            toast.error(t('reject_task.error_reason'));
+            toast.error(t('reject_task.error_reason', 'Please provide a reason for rejection.'));
             return;
         }
         onSubmit(rejectReason);
     };
 
     return (
-        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={onClose}>
+        <div className={`fixed inset-0 z-200 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleClose}>
 
-            {/* Modal Container */}
             <div
-                className="bg-card w-full max-w-md rounded-4xl shadow-2xl border border-border/50 flex flex-col overflow-hidden animate-in zoom-in-95 fade-in duration-300 relative"
-                onClick={(e) => e.stopPropagation()}
+                className={`bg-card w-full max-w-sm rounded-t-[2.5rem] md:rounded-3xl shadow-2xl border-t md:border border-border/50 flex flex-col relative overflow-hidden ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95' : ''}`}
+                style={{ transform: `translateY(${dragOffset}px)` }}
+                onClick={e => e.stopPropagation()}
             >
-                {/* Decorative Top Gradient Line */}
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-destructive/40 via-destructive to-destructive/40" />
+                {/* Red Accent Border */}
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-destructive/40 via-destructive to-destructive/40 z-20 rounded-t-[inherit] pointer-events-none" />
+
+                {/* Mobile Drag Handle */}
+                <div className="w-full flex justify-center pt-3 pb-1 md:hidden touch-none" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+                    <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
+                </div>
 
                 {/* --- Header Section --- */}
-                <div className="pt-8 px-6 sm:px-8 text-center flex flex-col items-center">
-                    {/* Glowing Icon Container */}
-                    <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mb-5 border border-destructive/20 shadow-inner relative">
-                        <div className="absolute inset-0 bg-destructive/20 rounded-2xl animate-ping opacity-20" />
-                        <AlertCircle className="w-8 h-8 text-destructive relative z-10 drop-shadow-sm" />
+                <div className="p-6 md:p-8 text-center pt-6 md:pt-10">
+                    <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center text-destructive mx-auto mb-6 shadow-inner border border-destructive/20 relative">
+                        <div className="absolute inset-0 bg-destructive/10 rounded-full animate-ping opacity-40" />
+                        <AlertTriangle className="w-10 h-10 relative z-10" />
                     </div>
 
-                    <h2 className="text-2xl font-extrabold text-foreground tracking-tight mb-2">
-                        {t('reject_task.title')}
+                    <h2 className="text-2xl font-extrabold text-foreground mb-3 tracking-tight">
+                        {t('reject_task.title', 'Reject Task')}
                     </h2>
-                    <p className="text-sm font-medium text-muted-foreground">
-                        {t('reject_task.subtitle')}
+                    <p className="text-sm text-muted-foreground leading-relaxed px-2 font-medium">
+                        {t('reject_task.subtitle', 'This action will notify the admin. Please explain why you cannot accept this assignment.')}
                     </p>
                 </div>
 
                 {/* --- Body / Form Section --- */}
-                <div className="p-6 sm:p-8 space-y-6 mt-2">
-                    <textarea
-                        value={rejectReason}
-                        onChange={(e) => setRejectReason(e.target.value)}
-                        placeholder={t('reject_task.placeholder')}
-                        disabled={actionLoading}
-                        className="w-full min-h-30 p-4 rounded-2xl border border-border/60 bg-muted/20 text-sm sm:text-base focus:bg-card focus:border-destructive/50 focus:ring-4 focus:ring-destructive/10 outline-none resize-none transition-all duration-300 custom-scrollbar placeholder:text-muted-foreground/50 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-
-                    {/* --- Action Buttons --- */}
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        <Button
-                            variant="outline"
-                            className="flex-1 h-14 rounded-2xl font-bold text-base border-border/80 hover:bg-muted hover:text-foreground transition-all disabled:opacity-50"
-                            onClick={onClose}
+                <div className="px-6 md:px-8 pb-8 space-y-4">
+                    <div className="space-y-2.5">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-destructive ml-1 flex items-center gap-1.5">
+                            <MessageSquareWarning className="w-3.5 h-3.5" />
+                            {t('reject_task.reason_label', 'Reason for rejection')}
+                        </Label>
+                        <Textarea
+                            value={rejectReason}
+                            onChange={(e) => setRejectReason(e.target.value)}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            placeholder={t('reject_task.placeholder', 'e.g. Schedule conflict, out of town...')}
                             disabled={actionLoading}
-                        >
-                            {t('reject_task.cancel')}
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            className="flex-1 h-14 rounded-2xl font-bold text-base shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:shadow-[0_0_25px_rgba(239,68,68,0.35)] hover:bg-destructive transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100"
-                            onClick={handleSubmit}
-                            disabled={!rejectReason.trim() || actionLoading}
-                        >
-                            {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('reject_task.confirm')}
-                        </Button>
+                            className="w-full min-h-30 p-4 rounded-2xl border border-border/80 bg-muted/20 text-sm focus-visible:ring-destructive/30 resize-none transition-all shadow-sm font-medium disabled:opacity-50"
+                        />
                     </div>
+                </div>
+
+                {/* --- Footer Action Buttons --- */}
+                <div className="bg-muted/10 p-5 border-t border-border/50 flex flex-col gap-3 rounded-b-3xl pb-safe">
+                    <Button
+                        variant="destructive"
+                        className="w-full h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-destructive/20 hover:shadow-destructive/30 active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none"
+                        onClick={handleSubmit}
+                        disabled={!rejectReason.trim() || actionLoading}
+                    >
+                        {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('reject_task.confirm', 'Confirm Rejection')}
+                    </Button>
+                    <button
+                        onClick={handleClose}
+                        disabled={actionLoading}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        className="w-full h-12 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors border border-transparent hover:border-border/80 disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                        {t('reject_task.cancel', 'Cancel')}
+                    </button>
                 </div>
 
             </div>
