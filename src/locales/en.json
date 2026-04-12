@@ -819,6 +819,8 @@
             "summary_label": "Summary",
             "general_location": "General Location",
             "report_type": "Daily Report",
+            "students_count": "{{count}} Students Present",
+            "students_short": "{{count}} Students",
             "no_history_found": "No attendance records found for the last 30 days."
         },
         "events": {
@@ -1102,6 +1104,8 @@
     "daily_report": {
         "assigned_school": "Assigned School",
         "label_band": "Band Category",
+        "label_students": "No. of Students Present",
+        "placeholder_students": "e.g. 45",
         "junior_band": "Junior Band",
         "senior_band": "Senior Band",
         "title": "End of Day Report",

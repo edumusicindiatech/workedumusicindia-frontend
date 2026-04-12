@@ -3,7 +3,9 @@ import { useSelector, useDispatch } from "react-redux";
 import {
     UploadCloud, X, Film, Info, MapPin,
     CalendarDays, ChevronRight, Users, CheckCircle2,
-    Loader2, Video
+    Loader2, Video,
+    ChevronUp,
+    ChevronDown
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { startBackgroundUpload } from "../../store/slices/uploadSlice";
@@ -123,7 +125,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
     const handleTouchStart = (e) => {
         // Prevent dragging if the user is interacting with buttons inside the header
         if (e.target.closest('button')) return;
-        
+
         dragStartY.current = e.touches[0].clientY;
         if (modalRef.current) {
             // Remove transition during drag for 1:1 finger tracking (Zero lag)
@@ -135,7 +137,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
         if (dragStartY.current === 0) return;
 
         const delta = e.touches[0].clientY - dragStartY.current;
-        
+
         // Only allow dragging downwards
         if (delta > 0) {
             currentDragY.current = delta;
@@ -152,7 +154,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
         if (modalRef.current) {
             // Re-enable smooth spring transition for the snap
             modalRef.current.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
-            
+
             // If dragged down more than 120px, close it. Otherwise, snap back up.
             if (currentDragY.current > 120 && !isUploading) {
                 handleCloseModal();
@@ -166,7 +168,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
     const handleCloseModal = () => {
         if (isUploading) return;
         setIsClosing(true);
-        
+
         // Trigger exit animation natively
         if (modalRef.current) {
             modalRef.current.style.transition = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)';
@@ -261,9 +263,9 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
 
     return (
         <div className={`fixed inset-0 z-100 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none pointer-events-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleCloseModal}>
-            <div 
+            <div
                 ref={modalRef}
-                className={`bg-card w-full max-w-2xl rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl border-t md:border border-border/50 flex flex-col max-h-[95vh] md:max-h-[90vh] relative overflow-hidden will-change-transform ${!isClosing ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 md:zoom-in-95' : ''}`} 
+                className={`bg-card w-full max-w-2xl rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl border-t md:border border-border/50 flex flex-col max-h-[95vh] md:max-h-[90vh] relative overflow-hidden will-change-transform ${!isClosing ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 md:zoom-in-95' : ''}`}
                 onClick={e => e.stopPropagation()}
             >
                 {/* Top Accent Line */}
@@ -271,16 +273,16 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
 
                 {/* --- HEADER (Drag Target Area) --- */}
                 {/* Touch events placed ONLY here to prevent scrolling conflicts with the body content */}
-                <div 
+                <div
                     className="sticky top-0 bg-card/95 backdrop-blur-md z-20 border-b border-border/50 touch-none cursor-grab active:cursor-grabbing shrink-0"
-                    onTouchStart={handleTouchStart} 
-                    onTouchMove={handleTouchMove} 
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                 >
                     <div className="w-full flex justify-center pt-4 pb-1 md:hidden">
                         <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
                     </div>
-                    
+
                     <div className="px-6 pb-5 pt-2 md:pt-6 flex items-center justify-between pointer-events-none">
                         <div className="flex items-center gap-4 pr-4 pointer-events-auto min-w-0">
                             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-inner">
@@ -304,7 +306,7 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                 {/* --- BODY --- */}
                 {/* overflow-y-auto enables native scrolling without triggering the drag effect */}
                 <form id="media-upload-form" onSubmit={handleSubmit} className="overflow-y-auto p-6 md:p-8 space-y-8 custom-scrollbar bg-card flex-1">
-                    
+
                     <div className="space-y-6">
                         {/* School Selection */}
                         <div className="space-y-2.5">
@@ -354,28 +356,28 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 flex items-center justify-between sm:justify-start sm:gap-1.5">
                                     {t('upload_modal.event_name', 'Event Name')} <span className="lowercase font-medium tracking-normal opacity-70">({t('upload_modal.optional')})</span>
                                 </Label>
-                                <Input 
-                                    type="text" 
-                                    value={eventName} 
-                                    onChange={(e) => setEventName(e.target.value)} 
-                                    placeholder={t('upload_modal.placeholder_event', 'e.g. Annual Function')} 
+                                <Input
+                                    type="text"
+                                    value={eventName}
+                                    onChange={(e) => setEventName(e.target.value)}
+                                    placeholder={t('upload_modal.placeholder_event', 'e.g. Annual Function')}
                                     onPointerDown={(e) => e.stopPropagation()}
-                                    className="h-12 rounded-xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-sm font-medium" 
+                                    className="h-12 rounded-xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-sm font-medium"
                                 />
                             </div>
-                            
+
                             <div className="space-y-2.5">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 flex items-center gap-1.5">
                                     {t('upload_modal.event_date', 'Event Date')} {eventName && <span className="text-destructive">*</span>}
                                 </Label>
                                 <div className="relative">
                                     <CalendarDays className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                                    <Input 
-                                        type="date" 
-                                        value={eventDate} 
-                                        onChange={(e) => setEventDate(e.target.value)} 
+                                    <Input
+                                        type="date"
+                                        value={eventDate}
+                                        onChange={(e) => setEventDate(e.target.value)}
                                         onPointerDown={(e) => e.stopPropagation()}
-                                        className="h-12 pl-10 rounded-xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-sm font-medium scheme-light dark:scheme-dark" 
+                                        className="h-12 pl-10 rounded-xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-sm font-medium scheme-light dark:scheme-dark"
                                     />
                                 </div>
                             </div>
@@ -384,16 +386,43 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-foreground ml-1">
                                     {t('upload_modal.students_present', 'Students Present')} <span className="text-destructive">*</span>
                                 </Label>
-                                <div className="relative sm:w-1/2">
+                                <div className="relative group sm:w-1/2">
+                                    {/* Left Icon */}
                                     <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/70 pointer-events-none" />
-                                    <Input 
-                                        type="number" 
-                                        value={studentsCount} 
-                                        onChange={(e) => setStudentsCount(e.target.value)} 
-                                        placeholder="0" 
+
+                                    {/* Input Field */}
+                                    <Input
+                                        type="number"
+                                        value={studentsCount}
+                                        onChange={(e) => setStudentsCount(e.target.value)}
+                                        placeholder="0"
                                         onPointerDown={(e) => e.stopPropagation()}
-                                        className="h-12 pl-10 rounded-xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-sm font-medium" 
+                                        className="h-12 pl-10 pr-12 rounded-xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-sm font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                     />
+
+                                    {/* Custom Increment/Decrement Buttons */}
+                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 opacity-70 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // Prevents modal drag/click issues
+                                                setStudentsCount(prev => prev ? String(Number(prev) + 1) : "1");
+                                            }}
+                                            className="p-1 hover:bg-primary/20 hover:text-primary text-muted-foreground rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-primary/50"
+                                        >
+                                            <ChevronUp className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // Prevents modal drag/click issues
+                                                setStudentsCount(prev => (prev && Number(prev) > 0) ? String(Number(prev) - 1) : "0");
+                                            }}
+                                            className="p-1 hover:bg-primary/20 hover:text-primary text-muted-foreground rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-primary/50"
+                                        >
+                                            <ChevronDown className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -476,10 +505,10 @@ const EmployeeMediaUploadModal = ({ isOpen, onClose }) => {
                     </div>
 
                     <div className="flex gap-3 w-full sm:w-auto">
-                        <Button 
-                            variant="ghost" 
-                            onClick={handleCloseModal} 
-                            disabled={isUploading} 
+                        <Button
+                            variant="ghost"
+                            onClick={handleCloseModal}
+                            disabled={isUploading}
                             className="flex-1 sm:flex-none h-12 sm:hidden rounded-xl font-bold text-muted-foreground"
                         >
                             Cancel

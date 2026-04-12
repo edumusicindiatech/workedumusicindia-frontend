@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useSelector } from "react-redux";
 import {
     ChevronRight, ArrowLeft, Search, CalendarDays,
-    ClipboardCheck, FileText, PartyPopper, School, MapPin, Clock
+    ClipboardCheck, FileText, PartyPopper, School, MapPin, Clock, Users
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import toast from "react-hot-toast";
@@ -305,14 +305,14 @@ const AdminReports = () => {
                                 <div className="space-y-4 animate-in fade-in slide-in-from-right-8">
                                     {sortedDates.length === 0 ? (
                                         <div className="text-center py-10 text-muted-foreground bg-muted/10 rounded-2xl border border-dashed text-sm">
-                                            {/* Fix 1: Added fallback text so it never renders empty */}
+                                            {/* Fallback text so it never renders empty */}
                                             {t('admin_reports.daily.no_reports') || "No reports found for this month."}
                                         </div>
                                     ) : (
                                         sortedDates.map(dateStr => (
                                             <div key={dateStr} className="bg-card border border-border/80 rounded-2xl shadow-sm overflow-hidden transition-all mb-4">
 
-                                                {/* Fix 2: RESTORED the Date Accordion Header that was missing! */}
+                                                {/* Date Accordion Header */}
                                                 <div
                                                     className="p-4 bg-muted/30 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors"
                                                     onClick={() => {
@@ -359,7 +359,6 @@ const AdminReports = () => {
                                                                             </span>
                                                                         </div>
                                                                         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                                                                            {/* Fix 3: Added the band to the badge! */}
                                                                             <span className="text-[10px] font-bold bg-blue-500/10 text-blue-600 px-2 py-1 rounded uppercase shrink-0">
                                                                                 {r.category || r.reportType || r.type || 'Report'} {r.band ? `• ${r.band}` : ''}
                                                                             </span>
@@ -374,11 +373,18 @@ const AdminReports = () => {
                                                                                 /* EVENT REPORT UI */
                                                                                 <div className="space-y-3">
                                                                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/50 pb-3">
-                                                                                        <p className="font-bold text-base text-foreground">
-                                                                                            {r.eventName || 'Event Details'}
-                                                                                        </p>
-                                                                                        <p className="text-xs font-semibold flex items-center gap-1.5 text-muted-foreground bg-background px-2.5 py-1 rounded border border-border/50 w-fit">
-                                                                                            <CalendarDays className="w-3.5 h-3.5" />
+                                                                                        <div className="flex items-center gap-3">
+                                                                                            <p className="font-bold text-base text-foreground">
+                                                                                                {r.eventName || 'Event Details'}
+                                                                                            </p>
+                                                                                            {/* --- STUDENTS PRESENT BADGE FOR EVENTS --- */}
+                                                                                            <p className="text-xs font-semibold flex items-center gap-1.5 text-muted-foreground bg-background px-2.5 py-1 rounded border border-border/50 w-fit shadow-sm">
+                                                                                                <Users className="w-3.5 h-3.5 text-blue-500" />
+                                                                                                {r.studentsPresent || 0} Students
+                                                                                            </p>
+                                                                                        </div>
+                                                                                        <p className="text-xs font-semibold flex items-center gap-1.5 text-muted-foreground bg-background px-2.5 py-1 rounded border border-border/50 w-fit shadow-sm">
+                                                                                            <CalendarDays className="w-3.5 h-3.5 text-blue-500" />
                                                                                             {r.eventDate ? formatFullDate(r.eventDate) : formatFullDate(r.date)}
                                                                                         </p>
                                                                                     </div>
@@ -394,9 +400,16 @@ const AdminReports = () => {
                                                                             ) : (
                                                                                 /* REGULAR REPORT UI */
                                                                                 <div>
-                                                                                    <p className="font-semibold text-blue-700/80 dark:text-blue-400 mb-2 text-xs uppercase tracking-wider">
-                                                                                        {t('admin_reports.daily.summary_label') || 'Daily Summary'}
-                                                                                    </p>
+                                                                                    <div className="flex justify-between items-center mb-2.5">
+                                                                                        <p className="font-semibold text-blue-700/80 dark:text-blue-400 text-xs uppercase tracking-wider">
+                                                                                            {t('admin_reports.daily.summary_label') || 'Daily Summary'}
+                                                                                        </p>
+                                                                                        {/* --- STUDENTS PRESENT BADGE FOR REGULAR REPORTS --- */}
+                                                                                        <p className="text-xs font-semibold flex items-center gap-1.5 text-muted-foreground bg-background px-2.5 py-1 rounded border border-border/50 w-fit shadow-sm">
+                                                                                            <Users className="w-3.5 h-3.5 text-blue-500" />
+                                                                                            {r.studentsPresent || 0} Students
+                                                                                        </p>
+                                                                                    </div>
                                                                                     <p className="leading-relaxed text-foreground/90 whitespace-pre-wrap">
                                                                                         {r.summary || r.description || 'No summary provided.'}
                                                                                     </p>

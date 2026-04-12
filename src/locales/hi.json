@@ -812,6 +812,8 @@
             "summary_label": "सारांश",
             "general_location": "सामान्य स्थान",
             "report_type": "दैनिक रिपोर्ट",
+            "students_count": "{{count}} छात्र उपस्थित हैं",
+            "students_short": "{{count}} छात्र",
             "no_history_found": "पिछले 30 दिनों के लिए कोई उपस्थिति रिकॉर्ड नहीं मिला।"
         },
         "events": {
@@ -1107,6 +1109,8 @@
     "daily_report": {
         "assigned_school": "आवंटित स्कूल",
         "label_band": "बैंड श्रेणी",
+        "label_students": "उपस्थित छात्रों की संख्या",
+        "placeholder_students": "उदाहरण: 45",
         "junior_band": "जूनियर बैंड",
         "senior_band": "सीनियर बैंड",
         "title": "दिन के अंत की रिपोर्ट",
