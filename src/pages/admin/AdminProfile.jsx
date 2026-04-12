@@ -1,16 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Mail, Phone, ShieldCheck, User, Camera, Loader2, Trash2, AlertCircle, Edit2, ShieldAlert, CheckCircle2 } from "lucide-react";
+import { Mail, Phone, ShieldCheck, User, Camera, Loader2, Trash2, Edit2, ShieldAlert, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
-import ChangePasswordModal from "../../modals/admin/AdminChangePasswordModal";
-import { useTranslation, Trans } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { updateProfilePicture } from "../../store/slices/authSlice";
 import { Button } from "@/components/ui/button";
 
 // --- SOCKET SETUP ---
 import { io } from "socket.io-client";
-import { Label } from "recharts";
+import { Label } from "@/components/ui/label"; // Ensure correct import for your setup
 import AdminChangePasswordModal from "../../modals/admin/AdminChangePasswordModal";
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
@@ -67,17 +66,17 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, loading }) => {
                         <div className="absolute inset-0 bg-destructive/10 rounded-full animate-ping opacity-40" />
                         <Trash2 className="w-7 h-7 relative z-10" />
                     </div>
-                    <h3 className="text-xl font-extrabold text-foreground mb-2">Remove Picture?</h3>
+                    <h3 className="text-xl font-extrabold text-foreground mb-2">{t('admin_profile.delete_modal.title')}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                        This will permanently delete your profile photo and revert to your initials.
+                        {t('admin_profile.delete_modal.desc')}
                     </p>
                 </div>
                 <div className="bg-muted/10 p-5 border-t border-border/50 flex flex-col gap-2 rounded-b-3xl pb-safe">
                     <button onClick={onConfirm} disabled={loading} className="w-full flex items-center justify-center gap-2 h-12 text-sm font-bold bg-destructive text-white hover:bg-destructive/90 rounded-xl transition-all shadow-lg shadow-destructive/20 active:scale-95">
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Yes, Remove Photo"}
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('admin_profile.delete_modal.confirm')}
                     </button>
                     <button onClick={handleClose} disabled={loading} className="w-full h-12 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors">
-                        Cancel
+                        {t('admin_profile.delete_modal.cancel')}
                     </button>
                 </div>
             </div>
@@ -198,11 +197,11 @@ const AdminProfile = () => {
             {/* Header */}
             <div className="space-y-2">
                 <h1 className="text-3xl md:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-linear-to-r from-primary to-primary/60">
-                    {t('admin_profile.title', 'My Profile')}
+                    {t('admin_profile.title')}
                 </h1>
                 <p className="text-muted-foreground font-medium text-sm sm:text-base flex items-center gap-2">
                     <ShieldAlert className="w-4 h-4 text-primary/70" />
-                    {t('admin_profile.subtitle', 'Manage your administrative identity and security')}
+                    {t('admin_profile.subtitle')}
                 </p>
             </div>
 
@@ -225,7 +224,7 @@ const AdminProfile = () => {
                                     className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-all cursor-pointer text-white"
                                 >
                                     {isUploadingAvatar ? <Loader2 className="w-8 h-8 animate-spin" /> : <Camera className="w-8 h-8" />}
-                                    <span className="text-[10px] font-bold uppercase mt-1">Change</span>
+                                    <span className="text-[10px] font-bold uppercase mt-1">{t('admin_profile.avatar_change')}</span>
                                 </div>
                             </div>
 
@@ -233,7 +232,7 @@ const AdminProfile = () => {
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setIsDeleteModalOpen(true); }}
                                     className="absolute -top-2 -right-2 p-2 bg-destructive text-white rounded-2xl border-4 border-card shadow-lg hover:scale-110 active:scale-95 transition-all z-20"
-                                    title="Remove Picture"
+                                    title={t('admin_profile.delete_modal.title')}
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
@@ -246,10 +245,10 @@ const AdminProfile = () => {
                             <h2 className="text-3xl sm:text-4xl font-black text-foreground tracking-tight">{localUser.name}</h2>
                             <div className="flex flex-wrap justify-center sm:justify-start gap-2">
                                 <span className="text-xs font-black bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 rounded-full uppercase tracking-widest">
-                                    {localUser.role || 'Admin'}
+                                    {localUser.role || t('admin_profile.roles.admin')}
                                 </span>
                                 <span className="text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 px-4 py-1.5 rounded-full flex items-center gap-1.5 uppercase tracking-wide">
-                                    <CheckCircle2 className="w-3.5 h-3.5" /> Verified
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> {t('admin_profile.verified')}
                                 </span>
                             </div>
                         </div>
@@ -261,7 +260,7 @@ const AdminProfile = () => {
                         className="w-full sm:w-auto h-12 rounded-2xl gap-2 font-bold px-6 shadow-sm hover:border-primary/40 hover:bg-primary/5 active:scale-95 transition-all"
                     >
                         <Edit2 className="w-4 h-4" />
-                        <span>{t('admin_profile.btn_edit_password', 'Security Settings')}</span>
+                        <span>{t('admin_profile.btn_edit_password')}</span>
                     </Button>
                 </div>
 
@@ -269,29 +268,33 @@ const AdminProfile = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                     <div className="space-y-5">
                         <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-2 ml-1">
-                            <User className="w-4 h-4 text-primary/60" /> Account Identity
+                            <User className="w-4 h-4 text-primary/60" /> {t('admin_profile.sections.account_identity')}
                         </Label>
                         <div className="space-y-3">
-                            <ProfileDetailItem icon={<Mail className="text-blue-500" />} label="Email Address" value={localUser.email} />
-                            <ProfileDetailItem icon={<Phone className="text-emerald-500" />} label="Mobile Number" value={localUser.mobile || "Not Linked"} />
+                            <ProfileDetailItem icon={<Mail className="text-blue-500" />} label={t('admin_profile.sections.email_address')} value={localUser.email} />
+                            <ProfileDetailItem icon={<Phone className="text-emerald-500" />} label={t('admin_profile.sections.mobile_number')} value={localUser.mobile || t('admin_profile.sections.not_linked')} />
                         </div>
                     </div>
 
                     <div className="space-y-5">
                         <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-2 ml-1">
-                            <ShieldCheck className="w-4 h-4 text-primary/60" /> System Permissions
+                            <ShieldCheck className="w-4 h-4 text-primary/60" /> {t('admin_profile.sections.system_permissions')}
                         </Label>
                         <div className="space-y-3">
-                            <ProfileDetailItem icon={<ShieldCheck className="text-amber-500" />} label="Access Level" value={localUser.role === 'SuperAdmin' ? 'Unrestricted Admin' : 'Staff Admin'} />
+                            <ProfileDetailItem 
+                                icon={<ShieldCheck className="text-amber-500" />} 
+                                label={t('admin_profile.sections.access_level')} 
+                                value={localUser.role === 'SuperAdmin' ? t('admin_profile.roles.super_admin') : t('admin_profile.roles.staff_admin')} 
+                            />
                             <div className="flex items-center gap-4 p-5 rounded-3xl bg-muted/30 border border-border/50 transition-all hover:border-indigo-500/30">
                                 <div className="p-3 bg-card rounded-2xl shrink-0 shadow-sm border border-border/50">
                                     <ShieldAlert className="w-5 h-5 text-indigo-500" />
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-1">Account Status</p>
+                                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-1">{t('admin_profile.sections.account_status')}</p>
                                     <div className="flex items-center gap-2">
                                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                        <p className="text-sm sm:text-base font-bold text-foreground">Active & Protected</p>
+                                        <p className="text-sm sm:text-base font-bold text-foreground">{t('admin_profile.sections.active_protected')}</p>
                                     </div>
                                 </div>
                             </div>
