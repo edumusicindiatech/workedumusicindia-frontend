@@ -291,7 +291,6 @@ const MyProfile = () => {
                                     <img 
                                         src={localUser.profilePicture} 
                                         alt={localUser.name} 
-                                        crossOrigin="anonymous" // --- NEW: Added for CORS fix ---
                                         className="w-full h-full object-cover" 
                                     />
                                 ) : (

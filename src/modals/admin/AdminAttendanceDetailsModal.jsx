@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { X, ArrowLeft, School, Users, ChevronRight, FileText, CheckCircle2, Clock, AlertCircle, XCircle, Download, Coffee, Star, FolderOpen, CalendarOff, CalendarDays } from "lucide-react";
 import * as XLSX from 'xlsx-js-style';
 import toast from "react-hot-toast";
-import { useTranslation } from "react-i18next"; 
+import { useTranslation } from "react-i18next";
 
 const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName }) => {
-    const { t } = useTranslation(); 
+    const { t } = useTranslation();
     const [viewLevel, setViewLevel] = useState("schools"); // 'schools' | 'categories' | 'overview' | 'detail'
     const [selectedSchool, setSelectedSchool] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -41,10 +41,10 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
         }, 300);
     };
 
-    const handleTouchStart = (e) => { 
+    const handleTouchStart = (e) => {
         if (e.target.closest('button')) return;
-        dragStartY.current = e.touches[0].clientY; 
-        setIsDragging(true); 
+        dragStartY.current = e.touches[0].clientY;
+        setIsDragging(true);
     };
 
     const handleTouchMove = (e) => {
@@ -129,13 +129,18 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
                                 // --- NEW: Add (Task) Tag if record is a task ---
                                 const schoolDisplayName = record.isTask ? `${school.name} (Task)` : school.name;
 
+                                // Translate status for Excel
+                                const translatedStatus = record.status
+                                    ? t(`attendance_modal.status.${record.status.toLowerCase()}`, { defaultValue: record.status })
+                                    : "-";
+
                                 wsData.push([
                                     employeeName,
                                     monthData.month,
                                     schoolDisplayName, // <-- Uses the new display name
                                     category.name,
                                     record.rawDate || record.date,
-                                    record.status,
+                                    translatedStatus,
                                     record.checkIn || "-",
                                     record.checkOut || "-",
                                     cleanNote,
@@ -319,27 +324,27 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
                     <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col items-center justify-center shadow-sm">
                         <CheckCircle2 className="w-5 h-5 text-emerald-500 mb-2" />
                         <span className="text-2xl md:text-3xl font-black text-emerald-500 leading-none mb-1">{m.present}</span>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600/80">Present</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600/80">{t('attendance_modal.status.present')}</span>
                     </div>
                     <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 flex flex-col items-center justify-center shadow-sm">
                         <AlertCircle className="w-5 h-5 text-amber-500 mb-2" />
                         <span className="text-2xl md:text-3xl font-black text-amber-500 leading-none mb-1">{m.late}</span>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500/80">Late</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500/80">{t('attendance_modal.status.late')}</span>
                     </div>
                     <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4 flex flex-col items-center justify-center shadow-sm">
                         <XCircle className="w-5 h-5 text-destructive mb-2" />
                         <span className="text-2xl md:text-3xl font-black text-destructive leading-none mb-1">{m.absent}</span>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-destructive/80">Absent</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-destructive/80">{t('attendance_modal.status.absent')}</span>
                     </div>
                     <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4 flex flex-col items-center justify-center shadow-sm">
                         <Star className="w-5 h-5 text-violet-500 mb-2" />
                         <span className="text-2xl md:text-3xl font-black text-violet-500 leading-none mb-1">{m.events}</span>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-violet-500/80">Events</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-violet-500/80">{t('attendance_modal.status.events')}</span>
                     </div>
                     <div className="rounded-2xl border border-slate-500/20 bg-slate-500/5 p-4 flex flex-col items-center justify-center shadow-sm sm:col-span-1 lg:col-span-1 col-span-2">
                         <Coffee className="w-5 h-5 text-slate-500 mb-2" />
                         <span className="text-2xl md:text-3xl font-black text-slate-500 leading-none mb-1">{m.holidays}</span>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500/80">Holidays</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500/80">{t('attendance_modal.status.holidays')}</span>
                     </div>
                 </div>
 
@@ -359,7 +364,8 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
                                         </span>
                                     )}
                                     <span className={`px-2.5 py-1 rounded-md text-[10px] md:text-xs font-bold uppercase tracking-wider border shadow-sm ${getStatusStyle(record.status)}`}>
-                                        {record.status}
+                                        {/* Translated Status Tag */}
+                                        {record.status ? t(`attendance_modal.status.${record.status.toLowerCase()}`, { defaultValue: record.status }) : ''}
                                     </span>
                                 </div>
                                 <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-primary shrink-0 transition-colors" />
@@ -376,7 +382,8 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
             <div className="flex flex-col items-center justify-center p-8 md:p-12 bg-muted/10 border border-border rounded-3xl mb-8 relative shadow-sm overflow-hidden">
                 <div className={`absolute top-0 left-0 w-full h-1.5 opacity-50 ${getStatusStyle(selectedRecord.status).replace('text-', 'bg-').split(' ')[0]}`} />
                 <span className={`absolute top-4 md:top-6 border px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest shadow-sm ${getStatusStyle(selectedRecord.status)}`}>
-                    {selectedRecord.status}
+                    {/* Translated Status Tag */}
+                    {selectedRecord.status ? t(`attendance_modal.status.${selectedRecord.status.toLowerCase()}`, { defaultValue: selectedRecord.status }) : ''}
                 </span>
                 <h3 className="text-3xl md:text-4xl font-black text-foreground mt-8 mb-8 text-center">{selectedRecord.date}</h3>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full sm:w-auto">
@@ -390,11 +397,11 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
             </div>
             <div className="space-y-3 flex-1">
                 <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-2 ml-1">
-                    <FileText className="w-4 h-4 text-primary/70" /> {t('attendance_modal.teachers_note', "Log Notes")}
+                    <FileText className="w-4 h-4 text-primary/70" /> {t('attendance_modal.teachers_note')}
                 </h4>
                 <div className="p-5 md:p-6 bg-card border border-border/60 shadow-sm rounded-2xl min-h-35 flex items-center justify-center text-center">
                     <p className={`text-sm md:text-base leading-relaxed ${selectedRecord.note ? 'text-foreground font-medium italic' : 'text-muted-foreground'}`}>
-                        {selectedRecord.note || t('attendance_modal.no_note_provided', "No notes provided for this shift.")}
+                        {selectedRecord.note || t('attendance_modal.no_note_provided')}
                     </p>
                 </div>
             </div>
@@ -408,20 +415,20 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
                 {/* HEADER */}
                 <div className="sticky top-0 bg-card/90 backdrop-blur-md z-10 touch-none border-b border-border/50 pt-2" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
                     <div className="w-full flex justify-center pt-3 pb-1 md:hidden"><div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full"></div></div>
-                    
+
                     <div className="px-6 pb-5 pt-2 md:pt-6 flex items-center justify-between">
                         <div className="flex items-center gap-4 pr-4">
-                            
+
                             {/* Dynamic Icon / Back Button */}
                             {viewLevel === "schools" ? (
                                 <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-500/20 shadow-inner z-30">
                                     <CalendarDays className="w-6 h-6 text-indigo-500" />
                                 </div>
                             ) : (
-                                <button 
-                                    type="button" 
-                                    onClick={handleBack} 
-                                    onTouchStart={(e) => e.stopPropagation()} 
+                                <button
+                                    type="button"
+                                    onClick={handleBack}
+                                    onTouchStart={(e) => e.stopPropagation()}
                                     onMouseDown={(e) => e.stopPropagation()}
                                     className="w-12 h-12 rounded-2xl bg-muted/50 hover:bg-muted flex items-center justify-center shrink-0 border border-border/60 transition-colors group shadow-sm relative z-30"
                                 >
@@ -437,21 +444,21 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
                                     {viewLevel === "overview" && selectedCategory?.name}
                                     {viewLevel === "detail" && selectedRecord?.date}
                                 </h2>
-                                
+
                                 {/* Dynamic Subtitle */}
                                 <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5 font-medium line-clamp-1">
                                     {viewLevel === "schools" && employeeName}
-                                    {viewLevel === "categories" && t('attendance_modal.select_option_msg', 'Select a category to view records')}
-                                    {viewLevel === "overview" && t('attendance_modal.overview_msg', 'Attendance Summary')}
-                                    {viewLevel === "detail" && t('attendance_modal.daily_details_title', 'Shift Summary')}
+                                    {viewLevel === "categories" && t('attendance_modal.select_option_msg')}
+                                    {viewLevel === "overview" && t('attendance_modal.overview_msg')}
+                                    {viewLevel === "detail" && t('attendance_modal.daily_details_title')}
                                 </p>
                             </div>
                         </div>
 
                         {/* Close Button */}
-                        <button 
-                            type="button" 
-                            onClick={handleClose} 
+                        <button
+                            type="button"
+                            onClick={handleClose}
                             onTouchStart={(e) => e.stopPropagation()}
                             onMouseDown={(e) => e.stopPropagation()}
                             className="p-2.5 hover:bg-muted rounded-full bg-muted/50 border border-border shrink-0 hidden md:flex transition-colors relative z-30"

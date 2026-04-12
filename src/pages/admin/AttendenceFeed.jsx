@@ -223,15 +223,6 @@ const AttendanceFeed = () => {
 
     const formatTime = (dateString) => dateString ? new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
 
-    const formatTime12Hour = (time) => {
-        if (!time) return "";
-        const [hourString, minute] = time.split(":");
-        let hour = parseInt(hourString, 10);
-        const ampm = hour >= 12 ? "PM" : "AM";
-        hour = hour % 12 || 12;
-        return `${hour < 10 ? `0${hour}` : hour}:${minute} ${ampm}`;
-    };
-
     return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-24 h-full mt-2 md:mt-0">
             {/* Header Section */}
@@ -244,7 +235,7 @@ const AttendanceFeed = () => {
                     <div className="space-y-0.5">
                         <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight uppercase">{t('attendance_feed.title')}</h1>
                         <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                           <Radio className="w-3 h-3 text-destructive animate-pulse" /> Live Monitoring Active
+                           <Radio className="w-3 h-3 text-destructive animate-pulse" /> {t('attendance_feed.live_monitoring', 'Live Monitoring Active')}
                         </p>
                     </div>
                 </div>
@@ -300,15 +291,10 @@ const AttendanceFeed = () => {
                         const isActiveOrPending = ["Pending", "Running", "Late"].includes(uiStatus);
 
                         let arrivalDelayBadge = null;
-                        let departureDelayBadge = null;
                         if (!["Absent", "Holiday", "On Leave"].includes(uiStatus)) {
                             if (record.expectedStartTime) {
                                 const delay = calculateTimeDiff(record.expectedStartTime, record.checkInTime ? new Date(record.checkInTime) : new Date());
                                 if (delay) arrivalDelayBadge = `+ ${delay}`;
-                            }
-                            if (record.expectedEndTime) {
-                                const overdue = calculateTimeDiff(record.expectedEndTime, record.checkOutTime ? new Date(record.checkOutTime) : new Date());
-                                if (overdue) departureDelayBadge = `+ ${overdue}`;
                             }
                         }
 
@@ -353,7 +339,7 @@ const AttendanceFeed = () => {
                                                 <School className="w-4 h-4 text-primary" />
                                             </div>
                                             <div className="min-w-0">
-                                                <span className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground block leading-none mb-1">Assigned Location</span>
+                                                <span className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground block leading-none mb-1">{t('attendance_feed.assigned_location', 'Assigned Location')}</span>
                                                 <p className="text-sm font-extrabold text-foreground truncate">{record.school?.schoolName || "Not Found"}</p>
                                             </div>
                                         </div>
@@ -435,12 +421,12 @@ const AttendanceFeed = () => {
                         <div className="p-6 overflow-y-auto flex-1 custom-scrollbar space-y-6">
                             {(selectedNoteRecord.eventNote || selectedNoteRecord.lateReason || selectedNoteRecord.teacherNote) && (
                                 <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">Field Intelligence</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">{t('attendance_feed.modal.field_intelligence', 'Field Intelligence')}</Label>
                                     
                                     {selectedNoteRecord.eventNote && (
                                         <div className="p-4 bg-violet-500/5 border border-violet-500/20 rounded-2xl animate-in slide-in-from-top-2">
                                             <p className="text-[9px] font-black uppercase tracking-tighter text-violet-600 mb-1 flex items-center gap-1.5">
-                                                <Star className="w-3 h-3 fill-current" /> Event Highlights
+                                                <Star className="w-3 h-3 fill-current" /> {t('attendance_feed.modal.event_highlights', 'Event Highlights')}
                                             </p>
                                             <p className="text-sm font-semibold text-foreground italic">"{selectedNoteRecord.eventNote}"</p>
                                         </div>
@@ -449,7 +435,7 @@ const AttendanceFeed = () => {
                                     {selectedNoteRecord.lateReason && (
                                         <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl animate-in slide-in-from-top-2">
                                             <p className="text-[9px] font-black uppercase tracking-tighter text-amber-600 mb-1 flex items-center gap-1.5">
-                                                <AlertCircle className="w-3 h-3" /> Delay Justification
+                                                <AlertCircle className="w-3 h-3" /> {t('attendance_feed.modal.delay_justification', 'Delay Justification')}
                                             </p>
                                             <p className="text-sm font-semibold text-foreground italic">"{selectedNoteRecord.lateReason}"</p>
                                         </div>
@@ -458,7 +444,7 @@ const AttendanceFeed = () => {
                                     {selectedNoteRecord.teacherNote && (
                                         <div className="p-4 bg-muted/30 border border-border rounded-2xl animate-in slide-in-from-top-2">
                                             <p className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground mb-1 flex items-center gap-1.5">
-                                                <FileText className="w-3 h-3" /> Operations Report
+                                                <FileText className="w-3 h-3" /> {t('attendance_feed.modal.operations_report', 'Operations Report')}
                                             </p>
                                             <p className="text-sm font-semibold text-foreground italic">"{selectedNoteRecord.teacherNote}"</p>
                                         </div>
@@ -468,13 +454,13 @@ const AttendanceFeed = () => {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 block mb-1">Arrival</span>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 block mb-1">{t('attendance_feed.modal.arrival', 'Arrival')}</span>
                                     <p className="text-lg font-black text-foreground tabular-nums">
                                         {formatTime(selectedNoteRecord.checkInTime) || "Pending"}
                                     </p>
                                 </div>
                                 <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 block mb-1">Departure</span>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 block mb-1">{t('attendance_feed.modal.departure', 'Departure')}</span>
                                     <p className="text-lg font-black text-foreground tabular-nums">
                                         {formatTime(selectedNoteRecord.checkOutTime) || (selectedNoteRecord.checkInTime ? "On Site" : "Pending")}
                                     </p>
@@ -484,7 +470,7 @@ const AttendanceFeed = () => {
                             <div className="pt-6 border-t border-dashed border-border/60">
                                 <div className="flex items-center justify-between mb-5">
                                     <div className="flex items-center gap-2 text-foreground font-black uppercase tracking-tighter">
-                                        <Settings2 className="w-5 h-5 text-primary" /> System Override
+                                        <Settings2 className="w-5 h-5 text-primary" /> {t('attendance_feed.modal.system_override', 'System Override')}
                                     </div>
                                     <button 
                                         onClick={() => { setOverrideMode(!overrideMode); setOverrideAction(""); }}
@@ -492,7 +478,7 @@ const AttendanceFeed = () => {
                                             ${overrideMode ? 'bg-destructive text-white' : 'bg-muted text-muted-foreground hover:bg-border'}
                                         `}
                                     >
-                                        {overrideMode ? "Cancel Override" : "Enable Edit Mode"}
+                                        {overrideMode ? t('attendance_feed.modal.btn_cancel_override', 'Cancel Override') : t('attendance_feed.modal.btn_edit_mode', 'Enable Edit Mode')}
                                     </button>
                                 </div>
 
@@ -500,12 +486,12 @@ const AttendanceFeed = () => {
                                     <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
                                         <div className="grid grid-cols-3 gap-2">
                                             {[
-                                                { id: "CheckIn", label: "Check In", color: "hover:border-emerald-500", active: "bg-emerald-500 text-white border-emerald-600" },
-                                                { id: "CheckOut", label: "Check Out", color: "hover:border-blue-500", active: "bg-blue-500 text-white border-blue-600" },
-                                                { id: "Absent", label: "Absent", color: "hover:border-destructive", active: "bg-destructive text-white border-destructive/60" },
-                                                { id: "Late", label: "Late", color: "hover:border-amber-500", active: "bg-amber-500 text-white border-amber-600" },
-                                                { id: "Event", label: "Event", color: "hover:border-violet-500", active: "bg-violet-500 text-white border-violet-600" },
-                                                { id: "Revoke", label: "Revoke", color: "hover:border-slate-800", active: "bg-slate-800 text-white border-black" },
+                                                { id: "CheckIn", label: t('attendance_feed.modal.action_check_in', "Check In"), color: "hover:border-emerald-500", active: "bg-emerald-500 text-white border-emerald-600" },
+                                                { id: "CheckOut", label: t('attendance_feed.modal.action_check_out', "Check Out"), color: "hover:border-blue-500", active: "bg-blue-500 text-white border-blue-600" },
+                                                { id: "Absent", label: t('attendance_feed.status.absent'), color: "hover:border-destructive", active: "bg-destructive text-white border-destructive/60" },
+                                                { id: "Late", label: t('attendance_feed.status.late'), color: "hover:border-amber-500", active: "bg-amber-500 text-white border-amber-600" },
+                                                { id: "Event", label: t('attendance_feed.status.event'), color: "hover:border-violet-500", active: "bg-violet-500 text-white border-violet-600" },
+                                                { id: "Revoke", label: t('attendance_feed.modal.action_revoke', "Revoke"), color: "hover:border-slate-800", active: "bg-slate-800 text-white border-black" },
                                             ].map((action) => {
                                                 if (action.id === 'CheckIn' && selectedNoteRecord.checkInTime) return null;
                                                 if (action.id === 'CheckOut' && (!selectedNoteRecord.checkInTime || selectedNoteRecord.checkOutTime)) return null;
@@ -527,7 +513,7 @@ const AttendanceFeed = () => {
                                         {overrideAction && (
                                             <div className="space-y-4 animate-in fade-in zoom-in-95">
                                                 <div className="space-y-2">
-                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Administrative Note (Required)</Label>
+                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">{t('attendance_feed.modal.admin_note', 'Administrative Note (Required)')}</Label>
                                                     <Textarea 
                                                         value={overrideReason}
                                                         onChange={(e) => setOverrideReason(e.target.value)}
@@ -543,7 +529,7 @@ const AttendanceFeed = () => {
                                                     {isSubmittingOverride ? (
                                                         <Loader2 className="w-5 h-5 animate-spin" />
                                                     ) : (
-                                                        "Confirm Override"
+                                                        t('attendance_feed.modal.btn_confirm_override', "Confirm Override")
                                                     )}
                                                 </Button>
                                             </div>
