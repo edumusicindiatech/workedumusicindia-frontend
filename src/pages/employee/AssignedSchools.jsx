@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import api from "../../api/axios";
 import {
-    School, MapPin, ChevronRight, Loader2, Map,
+    School, MapPin, ChevronRight, Map,
     Clock, Navigation, CalendarDays, UserX, CalendarOff, ClipboardList
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -46,6 +46,12 @@ const formatTime12Hour = (timeStr) => {
     hours = hours ? hours : 12; // the hour '0' should be '12'
 
     return `${hours}:${minuteStr} ${ampm}`;
+};
+
+// Helper to format dates for temporary tasks (e.g., "Jan 12")
+const formatTaskDate = (dateStr) => {
+    if (!dateStr) return "";
+    return new Date(dateStr).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
 };
 
 const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -189,15 +195,13 @@ const AssignedSchools = () => {
                     </p>
                 </div>
             ) : (
-                /* RESPONSIVE CONTAINER: Horizontal scrolling on mobile (with hidden scrollbar), Grid on desktop */
-                <div className="flex overflow-x-auto pb-10 pt-4 -mx-4 px-4 xl:mx-0 xl:px-0 snap-x snap-mandatory xl:grid xl:grid-cols-2 gap-6 xl:overflow-visible xl:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                /* Vertical Stacking / Grid Container */
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4 pb-10">
                     {assignedSchools.map((school) => (
                         <div
                             key={school.id}
                             onClick={() => setSelectedSchool(school)}
-                            // MOBILE: min-w-[85vw] creates the carousel effect. snap-center aligns it. 
-                            // DESKTOP: flex-shrink-0 prevents squishing. select-none prevents touch event conflicts.
-                            className="group bg-card rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-border/60 relative overflow-hidden flex flex-col h-full cursor-pointer hover:border-primary/50 transition-all duration-300 xl:hover:-translate-y-1 active:scale-[0.98] min-w-[85vw] sm:min-w-100 xl:min-w-0 shrink-0 snap-center select-none"
+                            className="group bg-card rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-border/60 relative overflow-hidden flex flex-col h-full cursor-pointer hover:border-primary/50 transition-all duration-300 lg:hover:-translate-y-1 active:scale-[0.98] select-none"
                         >
                             {/* Card Accent Line */}
                             <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20" />
@@ -239,27 +243,43 @@ const AssignedSchools = () => {
 
                                         return (
                                             <div key={idx} className="bg-muted/20 border border-border/60 rounded-3xl p-5 transition-colors group-hover/cat:border-primary/30 group-hover/cat:bg-muted/30 w-full relative group/cat">
-                                                <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <span className="bg-primary text-primary-foreground px-3.5 py-1.5 rounded-full text-[10px] sm:text-[11px] font-black tracking-widest uppercase shadow-sm whitespace-nowrap">
-                                                            {cat.name}
-                                                        </span>
 
-                                                        {cat.isTask && (
-                                                            <span className="bg-violet-500 text-white px-3.5 py-1.5 rounded-full border border-violet-600 text-[10px] sm:text-[11px] font-black tracking-widest uppercase shadow-sm flex items-center gap-1.5 whitespace-nowrap">
-                                                                <ClipboardList className="w-3 h-3 pointer-events-none" /> {t('assigned_schools.task_badge', 'Task')}
+                                                {/* Top Row: Category Tags and Distance */}
+                                                <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+                                                    <div className="flex flex-col gap-2">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <span className="bg-primary text-primary-foreground px-3.5 py-1.5 rounded-full text-[10px] sm:text-[11px] font-black tracking-widest uppercase shadow-sm whitespace-nowrap">
+                                                                {cat.name}
                                                             </span>
+
+                                                            {cat.isTask && (
+                                                                <span className="bg-violet-500 text-white px-3.5 py-1.5 rounded-full border border-violet-600 text-[10px] sm:text-[11px] font-black tracking-widest uppercase shadow-sm flex items-center gap-1.5 whitespace-nowrap">
+                                                                    <ClipboardList className="w-3 h-3 pointer-events-none" /> {t('assigned_schools.task_badge', 'Task')}
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Optional Date display if it's a temporary task */}
+                                                        {cat.isTask && cat.startDate && (
+                                                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">
+                                                                <CalendarDays className="w-3 h-3 text-violet-500/80" />
+                                                                <span>
+                                                                    {formatTaskDate(cat.startDate)}
+                                                                    {cat.endDate ? ` — ${formatTaskDate(cat.endDate)}` : ' (Ongoing)'}
+                                                                </span>
+                                                            </div>
                                                         )}
                                                     </div>
 
                                                     {distanceText && (
-                                                        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-full border border-blue-500/20 whitespace-nowrap animate-in fade-in zoom-in duration-300">
+                                                        <span className="self-start flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-full border border-blue-500/20 whitespace-nowrap animate-in fade-in zoom-in duration-300">
                                                             <Navigation className="w-3 h-3 pointer-events-none" />
                                                             {distanceText}
                                                         </span>
                                                     )}
                                                 </div>
 
+                                                {/* Bottom Row: Time and Days */}
                                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                                     <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-foreground bg-background border border-border/80 px-4 py-2 rounded-xl shadow-sm shrink-0">
                                                         <Clock className="w-4 h-4 text-amber-500 shrink-0 pointer-events-none" />

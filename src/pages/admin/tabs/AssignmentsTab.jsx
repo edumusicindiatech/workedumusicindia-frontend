@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     School, MapPin, Plus, Clock, CalendarDays,
-    Pencil, Trash2, CheckCircle2, Sparkles, Copy, Tags
+    Pencil, Trash2, CheckCircle2, Sparkles, Copy, Tags,
+    ClipboardList
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -24,11 +25,11 @@ const formatTime12Hour = (time) => {
 
 const AssignmentsTab = ({ schools, employeeId, onSuccess }) => {
     const { t } = useTranslation();
-    
+
     // States for Modals
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [manageModalData, setManageModalData] = useState({ isOpen: false, assignment: null });
-    
+
     // State to hold the data of the assignment we want to clone
     const [cloneData, setCloneData] = useState(null);
 
@@ -103,7 +104,7 @@ const AssignmentsTab = ({ schools, employeeId, onSuccess }) => {
                                         <div className="p-3 sm:p-4 rounded-2xl shrink-0 mt-0.5 bg-primary/10 dark:bg-primary/20">
                                             <School className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
                                         </div>
-                                        
+
                                         <div className="flex-1 min-w-0">
                                             <h2 className="text-xl sm:text-2xl font-bold leading-tight pb-1 wrap-break-word text-foreground">
                                                 {assignment.school?.schoolName || t('assignments_tab.unknown_school', 'Unknown School')}
@@ -116,10 +117,18 @@ const AssignmentsTab = ({ schools, employeeId, onSuccess }) => {
                                             </div>
                                         </div>
                                     </div>
-                                    
-                                    <span className="self-start sm:self-auto text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shrink-0 flex items-center gap-1.5 border shadow-sm bg-primary text-primary-foreground border-primary/20">
-                                        <Tags className="w-3 h-3" /> {assignment.category}
-                                    </span>
+
+                                    {/* --- UPDATED BADGES SECTION --- */}
+                                    <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                                        {assignment.isTask && (
+                                            <span className="text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 border shadow-sm bg-violet-500 text-white border-violet-600">
+                                                <ClipboardList className="w-3 h-3" /> {t('tasks_tab.task_badge', 'Task')}
+                                            </span>
+                                        )}
+                                        <span className="text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 border shadow-sm bg-primary text-primary-foreground border-primary/20">
+                                            <Tags className="w-3 h-3" /> {assignment.category}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {/* Scheduling Info */}
