@@ -4,10 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     ArrowLeft, School, ClipboardList, AlertTriangle,
     CalendarDays, MapPin, Pencil, Trash2, AlertCircle,
-    Mail, Phone, Briefcase, IdCard
+    Mail, Phone, Briefcase, IdCard, X, Download
 } from "lucide-react";
 import api from "../../api/axios";
 import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast"; // Ensure this is imported for download error handling
+import { Button } from "@/components/ui/button"; // Re-used for the download button
 
 // --- Import Tab Components ---
 import AssignmentsTab from "./tabs/AssignmentsTab";
@@ -32,6 +34,9 @@ const EmployeeProfile = () => {
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+    // --- NEW: State for Enlarged Profile Picture Modal ---
+    const [isProfilePicEnlarged, setIsProfilePicEnlarged] = useState(false);
 
     const currentUser = useSelector((state) => state.auth.user);
 
@@ -63,6 +68,52 @@ const EmployeeProfile = () => {
     const handleConfirmDelete = () => {
         navigate("/admin/employees", { replace: true });
     };
+
+    // --- NEW: Handle Image Download bypassing CORS/browser opening it in a new tab ---
+    const handleDownloadProfilePic = async (e) => {
+        e.stopPropagation(); // Prevent closing the modal when clicking the button
+        const toastId = toast.loading(t('employee_profile.downloading', 'Downloading image...'));
+
+        try {
+            const ext = employeeData.profilePicture.split('.').pop().split(/#|\?/)[0] || 'jpg';
+            const safeName = employeeData.name.replace(/\s+/g, '_');
+            const fileName = `${safeName}_profile_pic.${ext}`;
+
+            // THE FIX: Append a unique timestamp to the URL.
+            // This completely bypasses the browser's poisoned cache, forcing a fresh 
+            // network request that will correctly trigger your Cloudflare R2 CORS policy.
+            const noCacheUrl = `${employeeData.profilePicture}?t=${new Date().getTime()}`;
+
+            const response = await fetch(noCacheUrl, {
+                method: 'GET',
+                mode: 'cors'
+            });
+
+            if (!response.ok) throw new Error("Network response was not ok");
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+
+            document.body.appendChild(link);
+            link.click();
+
+            // Cleanup memory
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+
+            toast.success(t('employee_profile.download_success', 'Image downloaded successfully!'), { id: toastId });
+        } catch (err) {
+            console.error("Failed to download image", err);
+            toast.error(t('employee_profile.download_failed', 'Failed to download profile picture.'), { id: toastId });
+        }
+    };
+
+    // Helper to check if the profile picture is a valid URL
+    const hasValidImage = employeeData?.profilePicture && typeof employeeData.profilePicture === 'string' && employeeData.profilePicture.startsWith('http');
 
     if (errorMsg || (!isLoading && !employeeData)) {
         return (
@@ -105,14 +156,16 @@ const EmployeeProfile = () => {
                         <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/10 transition-colors duration-700" />
 
                         <div className="relative shrink-0">
-                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full gradient-primary flex items-center justify-center text-3xl font-extrabold text-primary-foreground shadow-lg ring-4 ring-background z-10 relative">
-                                {employeeData.profilePicture ? (
-                                    // If it's a URL, use an <img> tag. If it's an icon/string, just render it.
-                                    typeof employeeData.profilePicture === 'string' && employeeData.profilePicture.startsWith('http')
-                                        ? <img src={employeeData.profilePicture} alt={employeeData.name} className="w-full h-full rounded-full object-cover" />
-                                        : employeeData.profilePicture
+                            {/* --- ADDED onClick and hover effects if valid image --- */}
+                            <div
+                                className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full gradient-primary flex items-center justify-center text-3xl font-extrabold text-primary-foreground shadow-lg ring-4 ring-background z-10 relative ${hasValidImage ? 'cursor-pointer hover:scale-105 transition-transform duration-300' : ''}`}
+                                onClick={() => hasValidImage && setIsProfilePicEnlarged(true)}
+                                title={hasValidImage ? t('employee_profile.view_image', 'Click to enlarge') : ''}
+                            >
+                                {hasValidImage ? (
+                                    <img src={employeeData.profilePicture} alt={employeeData.name} className="w-full h-full rounded-full object-cover" />
                                 ) : (
-                                    employeeData.name.charAt(0).toUpperCase()
+                                    employeeData.profilePicture || employeeData.name.charAt(0).toUpperCase()
                                 )}
                             </div>
                             <div className={`absolute bottom-1 sm:bottom-2 right-1 sm:right-2 w-5 h-5 rounded-full border-4 border-background z-20 ${employeeData.isActive ? "bg-emerald-500" : "bg-destructive"}`} />
@@ -249,6 +302,43 @@ const EmployeeProfile = () => {
                             <EditEmployeeModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} employee={employeeData} onSave={handleSaveEdit} currentUser={currentUser} />
                             <DeleteEmployeeModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} employeeId={id} employeeName={employeeData.name} onConfirm={handleConfirmDelete} />
                         </>
+                    )}
+
+                    {/* --- NEW: ENLARGED PROFILE PICTURE MODAL --- */}
+                    {isProfilePicEnlarged && hasValidImage && (
+                        <div
+                            className="fixed inset-0 z-100 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300 p-4"
+                            onClick={() => setIsProfilePicEnlarged(false)}
+                        >
+                            {/* Close Button */}
+                            <button
+                                className="absolute top-6 right-6 sm:top-8 sm:right-8 p-2 text-white/70 hover:text-white bg-black/40 hover:bg-black/60 rounded-full transition-colors border border-white/10"
+                                onClick={(e) => { e.stopPropagation(); setIsProfilePicEnlarged(false); }}
+                            >
+                                <X className="w-6 h-6 sm:w-8 sm:h-8" />
+                            </button>
+
+                            {/* Circle Image Wrapper */}
+                            <div
+                                className="relative group animate-in zoom-in-95 duration-300"
+                                onClick={(e) => e.stopPropagation()} // Prevent clicking the image from closing the modal
+                            >
+                                <img
+                                    src={employeeData.profilePicture}
+                                    alt={employeeData.name}
+                                    className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full object-cover shadow-2xl border-4 border-white/20"
+                                />
+                            </div>
+
+                            {/* Download Button */}
+                            <Button
+                                onClick={handleDownloadProfilePic}
+                                className="mt-10 rounded-full px-8 py-7 sm:py-8 text-sm sm:text-base font-extrabold tracking-widest uppercase flex items-center gap-3 bg-white text-black hover:bg-gray-200 transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:scale-105 active:scale-95 animate-in slide-in-from-bottom-4 duration-300"
+                            >
+                                <Download className="w-5 h-5 sm:w-6 sm:h-6" />
+                                {t('employee_profile.download_pic', 'Download Picture')}
+                            </Button>
+                        </div>
                     )}
                 </div>
             )}
