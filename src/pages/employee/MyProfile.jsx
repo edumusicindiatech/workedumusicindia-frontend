@@ -63,39 +63,39 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, loading }) => {
     return (
         <div className={`fixed inset-0 z-200 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0' : 'opacity-100 backdrop-blur-sm animate-in fade-in'}`} onClick={handleClose}>
             <div
-                className={`bg-card w-full max-w-sm rounded-t-[2.5rem] md:rounded-3xl shadow-2xl border-t md:border border-border/50 flex flex-col relative overflow-hidden ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95' : ''}`}
+                className={`bg-card w-full max-w-sm rounded-t-4xl md:rounded-3xl shadow-2xl border-t md:border border-border/50 flex flex-col relative overflow-hidden ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95' : ''}`}
                 style={{ transform: `translateY(${dragOffset}px)` }}
                 onClick={e => e.stopPropagation()}
             >
                 <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-destructive/40 via-destructive to-destructive/40 z-20 rounded-t-[inherit]" />
                 <div className="w-full flex justify-center pt-3 pb-1 md:hidden touch-none" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
-                    <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
+                    <div className="w-10 sm:w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
                 </div>
 
-                <div className="p-6 md:p-8 text-center pt-6 md:pt-10">
-                    <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center text-destructive mx-auto mb-5 relative border border-destructive/20 shadow-inner">
+                <div className="p-5 sm:p-6 md:p-8 text-center pt-5 sm:pt-6 md:pt-10">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-destructive/10 flex items-center justify-center text-destructive mx-auto mb-4 sm:mb-5 relative border border-destructive/20 shadow-inner">
                         <div className="absolute inset-0 bg-destructive/10 rounded-full animate-ping opacity-40" />
-                        <Trash2 className="w-7 h-7 relative z-10" />
+                        <Trash2 className="w-6 h-6 sm:w-7 sm:h-7 relative z-10" />
                     </div>
-                    <h3 className="text-2xl font-extrabold text-foreground mb-2 tracking-tight">{t('my_profile.delete_modal.title')}</h3>
-                    <p className="text-sm font-medium text-muted-foreground leading-relaxed px-2">
+                    <h3 className="text-xl sm:text-2xl font-extrabold text-foreground mb-1.5 sm:mb-2 tracking-tight">{t('my_profile.delete_modal.title')}</h3>
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground leading-relaxed px-2">
                         {t('my_profile.delete_modal.desc')}
                     </p>
                 </div>
 
-                <div className="bg-muted/10 p-5 border-t border-border/50 flex flex-col gap-2 rounded-b-3xl pb-safe">
+                <div className="bg-muted/10 p-4 sm:p-5 border-t border-border/50 flex flex-col gap-2 rounded-b-2xl sm:rounded-b-3xl pb-safe">
                     <Button
                         onClick={onConfirm}
                         disabled={loading}
                         variant="destructive"
-                        className="w-full h-12 text-sm font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-destructive/20 active:scale-95"
+                        className="w-full h-10 sm:h-12 text-xs sm:text-sm font-black uppercase tracking-widest rounded-lg sm:rounded-xl transition-all shadow-lg shadow-destructive/20 active:scale-95"
                     >
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('my_profile.delete_modal.confirm')}
+                        {loading ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : t('my_profile.delete_modal.confirm')}
                     </Button>
                     <button
                         onClick={handleClose}
                         disabled={loading}
-                        className="w-full h-12 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors"
+                        className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg sm:rounded-xl transition-colors"
                     >
                         {t('my_profile.delete_modal.cancel')}
                     </button>
@@ -258,35 +258,35 @@ const MyProfile = () => {
 
     if (loading) {
         return (
-            <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in pb-24 p-4">
-                <div className="h-12 w-48 bg-muted rounded-2xl animate-pulse" />
-                <div className="bg-card rounded-[2.5rem] h-96 animate-pulse border border-border/50" />
+            <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in pb-24 p-4 sm:p-6 lg:p-8">
+                <div className="h-10 sm:h-12 w-40 sm:w-48 bg-muted rounded-xl sm:rounded-2xl animate-pulse" />
+                <div className="bg-card rounded-3xl sm:rounded-[2.5rem] h-80 sm:h-96 animate-pulse border border-border/50" />
             </div>
         );
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700 pb-24 p-4 sm:p-6 lg:p-8 mt-2 md:mt-0">
+        <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-700 pb-24 p-4 sm:p-6 lg:p-8 mt-2 md:mt-0">
             {/* Header */}
-            <div className="space-y-2">
-                <h1 className="text-3xl md:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-linear-to-r from-primary to-primary/60">
+            <div className="space-y-1.5 sm:space-y-2">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-linear-to-r from-primary to-primary/60">
                     {t('my_profile.title')}
                 </h1>
-                <p className="text-muted-foreground font-medium text-sm sm:text-base flex items-center gap-2">
-                    <User className="w-4 h-4 text-primary/70" />
+                <p className="text-muted-foreground font-medium text-xs sm:text-sm md:text-base flex items-center gap-1.5 sm:gap-2">
+                    <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary/70" />
                     {t('my_profile.subtitle')}
                 </p>
             </div>
 
             {/* Profile Card */}
-            <div className="bg-card rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-border/60 p-6 md:p-10 relative overflow-hidden group">
-                <div className="absolute -top-24 -right-24 w-80 h-80 bg-primary/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/10 transition-colors duration-1000" />
+            <div className="bg-card rounded-3xl sm:rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-border/60 p-5 sm:p-6 md:p-10 relative overflow-hidden group">
+                <div className="absolute -top-20 -right-20 sm:-top-24 sm:-right-24 w-64 h-64 sm:w-80 sm:h-80 bg-primary/5 rounded-full blur-2xl sm:blur-3xl pointer-events-none group-hover:bg-primary/10 transition-colors duration-1000" />
 
                 {/* Header Section: Avatar & Role */}
-                <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-6 mb-10 pb-10 border-b border-border/50 relative z-10">
-                    <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+                <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-5 sm:gap-6 mb-8 sm:mb-10 pb-8 sm:pb-10 border-b border-border/50 relative z-10">
+                    <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-center sm:text-left">
                         <div className="relative">
-                            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-[2.5rem] bg-linear-to-br from-primary to-primary/80 flex items-center justify-center text-primary-foreground text-4xl sm:text-5xl font-black shadow-2xl shadow-primary/30 border-4 border-background overflow-hidden relative group/avatar transition-transform hover:scale-[1.02]">
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-3xl sm:rounded-[2.5rem] bg-linear-to-br from-primary to-primary/80 flex items-center justify-center text-primary-foreground text-3xl sm:text-4xl md:text-5xl font-black shadow-2xl shadow-primary/30 border-[3px] sm:border-4 border-background overflow-hidden relative group/avatar transition-transform hover:scale-[1.02]">
                                 {localUser.profilePicture ? (
                                     <img
                                         src={localUser.profilePicture}
@@ -300,19 +300,19 @@ const MyProfile = () => {
                                     onClick={() => !isUploadingAvatar && fileInputRef.current?.click()}
                                     className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-all cursor-pointer text-white"
                                 >
-                                    {isUploadingAvatar ? <Loader2 className="w-8 h-8 animate-spin" /> : <Camera className="w-8 h-8" />}
-                                    <span className="text-[10px] font-bold uppercase mt-1 tracking-widest">{t('my_profile.change_pic')}</span>
+                                    {isUploadingAvatar ? <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" /> : <Camera className="w-6 h-6 sm:w-8 sm:h-8" />}
+                                    <span className="text-[8px] sm:text-[10px] font-bold uppercase mt-1 tracking-widest">{t('my_profile.change_pic')}</span>
                                 </div>
                             </div>
 
-                            {/* --- NEW: DOWNLOAD BUTTON (Top Left) --- */}
+                            {/* --- DOWNLOAD BUTTON (Top Left) --- */}
                             {localUser.profilePicture && (
                                 <button
                                     onClick={handleDownloadProfilePic}
-                                    className="absolute -top-2 -left-2 p-2 bg-primary text-primary-foreground rounded-2xl border-4 border-card shadow-lg hover:scale-110 active:scale-95 transition-all z-20"
+                                    className="absolute -top-1.5 -left-1.5 sm:-top-2 sm:-left-2 p-1.5 sm:p-2 bg-primary text-primary-foreground rounded-xl sm:rounded-2xl border-[3px] sm:border-4 border-card shadow-lg hover:scale-110 active:scale-95 transition-all z-20"
                                     title={t('my_profile.download_pic')}
                                 >
-                                    <Download className="w-4 h-4" />
+                                    <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 </button>
                             )}
 
@@ -320,20 +320,20 @@ const MyProfile = () => {
                             {localUser.profilePicture && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setIsDeleteModalOpen(true); }}
-                                    className="absolute -top-2 -right-2 p-2 bg-destructive text-white rounded-2xl border-4 border-card shadow-lg hover:scale-110 active:scale-95 transition-all z-20"
+                                    className="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 p-1.5 sm:p-2 bg-destructive text-white rounded-xl sm:rounded-2xl border-[3px] sm:border-4 border-card shadow-lg hover:scale-110 active:scale-95 transition-all z-20"
                                     title={t('my_profile.remove_pic')}
                                 >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 </button>
                             )}
 
                             <input type="file" ref={fileInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/*" />
                         </div>
 
-                        <div className="space-y-1.5">
-                            <h2 className="text-3xl sm:text-4xl font-black text-foreground tracking-tight">{localUser.name}</h2>
+                        <div className="space-y-1 sm:space-y-1.5">
+                            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-foreground tracking-tight">{localUser.name}</h2>
                             <div className="flex flex-wrap justify-center sm:justify-start gap-2">
-                                <span className="text-xs font-black bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 rounded-full uppercase tracking-widest">
+                                <span className="text-[10px] sm:text-xs font-black bg-primary/10 text-primary border border-primary/20 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full uppercase tracking-widest">
                                     {localUser.designation || t('my_profile.employee_fallback')}
                                 </span>
                             </div>
@@ -343,41 +343,41 @@ const MyProfile = () => {
                     <Button
                         onClick={() => setIsPasswordModalOpen(true)}
                         variant="outline"
-                        className="w-full sm:w-auto h-12 rounded-2xl gap-2 font-bold px-6 shadow-sm hover:border-primary/40 hover:bg-primary/5 active:scale-95 transition-all"
+                        className="w-full sm:w-auto h-10 sm:h-12 rounded-xl sm:rounded-2xl gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold px-4 sm:px-6 shadow-sm hover:border-primary/40 hover:bg-primary/5 active:scale-95 transition-all"
                     >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         <span>{t('my_profile.btn_edit_password')}</span>
                     </Button>
                 </div>
 
                 {/* Details Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-                    <div className="space-y-5">
-                        <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-2 ml-1">
-                            <User className="w-4 h-4 text-primary/60" /> {t('my_profile.contact_info')}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 relative z-10">
+                    <div className="space-y-4 sm:space-y-5">
+                        <Label className="text-[9px] sm:text-[10px] md:text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-1.5 sm:gap-2 ml-1">
+                            <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary/60" /> {t('my_profile.contact_info')}
                         </Label>
-                        <div className="space-y-3">
-                            <ProfileDetailItem icon={<Fingerprint className="text-indigo-500" />} label={t('my_profile.label_id')} value={localUser.employeeId} />
-                            <ProfileDetailItem icon={<Mail className="text-blue-500" />} label={t('my_profile.label_email')} value={localUser.email} />
-                            <ProfileDetailItem icon={<Phone className="text-emerald-500" />} label={t('my_profile.label_phone')} value={localUser.mobile || t('my_profile.not_provided')} />
+                        <div className="space-y-2.5 sm:space-y-3">
+                            <ProfileDetailItem icon={<Fingerprint className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />} label={t('my_profile.label_id')} value={localUser.employeeId} />
+                            <ProfileDetailItem icon={<Mail className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />} label={t('my_profile.label_email')} value={localUser.email} />
+                            <ProfileDetailItem icon={<Phone className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />} label={t('my_profile.label_phone')} value={localUser.mobile || t('my_profile.not_provided')} />
                         </div>
                     </div>
 
-                    <div className="space-y-5">
-                        <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-2 ml-1">
-                            <MapPin className="w-4 h-4 text-primary/60" /> {t('my_profile.assignment_details')}
+                    <div className="space-y-4 sm:space-y-5">
+                        <Label className="text-[9px] sm:text-[10px] md:text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-1.5 sm:gap-2 ml-1">
+                            <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary/60" /> {t('my_profile.assignment_details')}
                         </Label>
-                        <div className="space-y-3 h-full flex flex-col">
-                            <ProfileDetailItem icon={<MapPin className="text-amber-500" />} label={t('my_profile.label_zone')} value={allottedLocation} />
-                            <div className="flex items-start gap-4 p-5 rounded-3xl bg-muted/30 border border-border/50 transition-all hover:border-primary/20 flex-1 group/item">
-                                <div className="p-3 bg-card rounded-2xl shrink-0 shadow-sm border border-border/50 group-hover/item:scale-110 transition-transform">
-                                    <School className="w-5 h-5 text-indigo-500" />
+                        <div className="space-y-2.5 sm:space-y-3 h-full flex flex-col">
+                            <ProfileDetailItem icon={<MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />} label={t('my_profile.label_zone')} value={allottedLocation} />
+                            <div className="flex items-start gap-3 sm:gap-4 p-4 sm:p-5 rounded-3xl sm:rounded-3xl bg-muted/30 border border-border/50 transition-all hover:border-primary/20 flex-1 group/item">
+                                <div className="p-2 sm:p-3 bg-card rounded-xl sm:rounded-2xl shrink-0 shadow-sm border border-border/50 group-hover/item:scale-110 transition-transform">
+                                    <School className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-2.5">{t('my_profile.label_locations')}</p>
-                                    <div className="flex flex-wrap gap-2">
+                                    <p className="text-[9px] sm:text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-2 sm:mb-2.5">{t('my_profile.label_locations')}</p>
+                                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                         {assignedSchools.map((school, i) => (
-                                            <span key={i} className="text-[11px] font-black bg-background text-foreground px-3 py-1.5 rounded-lg border border-border/60 shadow-sm uppercase tracking-wide truncate max-w-full">
+                                            <span key={i} className="text-[9px] sm:text-[10px] md:text-[11px] font-black bg-background text-foreground px-2 py-1 sm:px-3 sm:py-1.5 rounded-md sm:rounded-lg border border-border/60 shadow-sm uppercase tracking-wide truncate max-w-full">
                                                 {school}
                                             </span>
                                         ))}
@@ -407,11 +407,11 @@ const MyProfile = () => {
 };
 
 const ProfileDetailItem = ({ icon, label, value }) => (
-    <div className="flex items-center gap-4 p-5 rounded-3xl bg-muted/30 border border-border/50 hover:bg-muted/50 hover:border-primary/20 transition-all group/item">
-        <div className="p-3 bg-card rounded-2xl shrink-0 shadow-sm border border-border/50 group-hover/item:scale-110 transition-transform">{icon}</div>
+    <div className="flex items-center gap-3 sm:gap-4 p-3.5 sm:p-4 md:p-5 rounded-3xl sm:rounded-3xl bg-muted/30 border border-border/50 hover:bg-muted/50 hover:border-primary/20 transition-all group/item">
+        <div className="p-2 sm:p-2.5 md:p-3 bg-card rounded-xl sm:rounded-2xl shrink-0 shadow-sm border border-border/50 group-hover/item:scale-110 transition-transform">{icon}</div>
         <div className="min-w-0 flex-1">
-            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-1">{label}</p>
-            <p className="text-sm sm:text-base font-bold text-foreground truncate">{value}</p>
+            <p className="text-[8px] sm:text-[9px] md:text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-0.5 sm:mb-1">{label}</p>
+            <p className="text-xs sm:text-sm md:text-base font-bold text-foreground truncate">{value}</p>
         </div>
     </div>
 );

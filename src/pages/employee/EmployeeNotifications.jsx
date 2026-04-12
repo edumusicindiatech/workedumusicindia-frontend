@@ -127,9 +127,6 @@ const EmployeeNotifications = () => {
         }
     };
 
-    // ==========================================
-    // RENDER: LOADING STATE (SHIMMER)
-    // ==========================================
     if (loading) {
         return (
             <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 md:space-y-8 mt-2 md:mt-4 animate-pulse">
@@ -140,63 +137,67 @@ const EmployeeNotifications = () => {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700 pb-24 p-4 sm:p-6 lg:p-8 mt-2 md:mt-0">
+        <div className="w-full max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700 pb-24 p-4 sm:p-6 lg:p-8 mt-2 md:mt-0 overflow-x-hidden">
             
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative z-20">
-                <div className="flex items-center gap-5">
-                    <div className="relative">
-                        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
-                            <Bell className="w-7 h-7 text-primary" />
+                <div className="flex items-start sm:items-center gap-4 sm:gap-5 min-w-0">
+                    <div className="relative shrink-0 mt-1 sm:mt-0">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
+                            <Bell className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
                         </div>
                         {unreadCount > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
+                            <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 sm:h-4 sm:w-4">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-4 w-4 bg-destructive border-2 border-background"></span>
+                                <span className="relative inline-flex rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 bg-destructive border-2 border-background"></span>
                             </span>
                         )}
                     </div>
-                    <div className="space-y-0.5">
-                        <h1 className="text-3xl font-black text-foreground tracking-tight uppercase">{t('employee_notifications.title', 'Notifications')}</h1>
-                        <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
+                    <div className="space-y-1 min-w-0 flex-1">
+                        <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight uppercase wrap-break-word leading-tight">
+                            {t('employee_notifications.title', 'Notifications')}
+                        </h1>
+                        <p className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-widest wrap-break-word mt-1">
                             {t('employee_notifications.subtitle', 'Your recent alerts')}
                         </p>
                     </div>
                 </div>
 
                 {notifications.length > 0 && (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                         <Button 
                             variant="outline" 
                             size="sm" 
                             onClick={markAllAsRead} 
                             disabled={unreadCount === 0} 
-                            className="h-11 px-5 rounded-xl font-bold gap-2 text-xs uppercase tracking-widest border-border/80 hover:bg-muted"
+                            className="flex-1 sm:flex-none h-11 px-4 sm:px-5 rounded-xl font-black gap-2 text-[10px] sm:text-xs uppercase tracking-widest border-border/80 hover:bg-muted active:scale-[0.98] transition-all"
                         >
-                            <Check className="w-4 h-4" /> <span className="hidden sm:inline">{t('employee_notifications.btn_mark_read', 'Mark Read')}</span>
+                            <Check className="w-4 h-4 shrink-0" /> 
+                            <span className="truncate">{t('employee_notifications.btn_mark_read', 'Mark Read')}</span>
                         </Button>
                         <Button 
                             variant="outline" 
                             size="sm" 
                             onClick={clearAll} 
-                            className="h-11 px-5 rounded-xl font-bold gap-2 text-xs uppercase tracking-widest border-destructive/30 text-destructive hover:bg-destructive hover:text-white transition-colors"
+                            className="flex-1 sm:flex-none h-11 px-4 sm:px-5 rounded-xl font-black gap-2 text-[10px] sm:text-xs uppercase tracking-widest border-destructive/30 text-destructive hover:bg-destructive hover:text-white active:scale-[0.98] transition-all"
                         >
-                            <Trash2 className="w-4 h-4" /> <span className="hidden sm:inline">{t('employee_notifications.btn_clear_all', 'Clear All')}</span>
+                            <Trash2 className="w-4 h-4 shrink-0" /> 
+                            <span className="truncate">{t('employee_notifications.btn_clear_all', 'Clear All')}</span>
                         </Button>
                     </div>
                 )}
             </div>
 
             {/* Main Content Card */}
-            <div className="bg-card rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-border/60 relative overflow-hidden flex flex-col">
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20" />
+            <div className="bg-card rounded-4xl sm:rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-border/60 relative overflow-hidden flex flex-col min-h-100">
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20 pointer-events-none" />
                 
-                <div className="p-4 sm:p-6 md:p-8 flex-1 bg-muted/10 flex flex-col gap-4">
+                <div className="p-4 sm:p-6 md:p-8 flex-1 bg-muted/5 dark:bg-muted/10 flex flex-col gap-4">
                     {notifications.length === 0 ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center p-12 opacity-40">
-                            <Bell className="w-16 h-16 mb-4 text-muted-foreground" />
-                            <h3 className="text-xl font-black uppercase tracking-widest text-foreground mb-1">{t('employee_notifications.empty_title', 'All Caught Up')}</h3>
-                            <p className="text-sm font-bold text-muted-foreground uppercase tracking-wide">{t('employee_notifications.empty_desc', 'You have no new notifications')}</p>
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 sm:p-12 opacity-40">
+                            <Bell className="w-12 h-12 sm:w-16 sm:h-16 mb-4 text-muted-foreground" />
+                            <h3 className="text-xl sm:text-2xl font-black uppercase tracking-widest text-foreground mb-1 italic">{t('employee_notifications.empty_title', 'All Caught Up')}</h3>
+                            <p className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-widest leading-relaxed max-w-62.5">{t('employee_notifications.empty_desc', 'You have no new notifications')}</p>
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -211,36 +212,36 @@ const EmployeeNotifications = () => {
                                             }`}
                                     >
                                         {!notification.isRead && (
-                                            <div className="absolute top-0 left-0 w-1.5 h-full bg-primary" />
+                                            <div className="absolute top-0 left-0 w-1.5 h-full bg-primary z-10" />
                                         )}
 
-                                        <div className="flex gap-4 sm:gap-5 pr-2">
-                                            <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 border ${bg} shadow-inner`}>
+                                        <div className="flex items-start gap-4 sm:gap-5 min-w-0">
+                                            <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 border ${bg} shadow-inner transition-transform group-hover:scale-105`}>
                                                 {icon}
                                             </div>
                                             
-                                            <div className="flex flex-col gap-1.5 min-w-0 w-full">
-                                                <div className="flex flex-wrap items-center gap-3">
-                                                    <h4 className={`text-base sm:text-lg font-black truncate ${notification.isRead ? 'text-foreground/90' : 'text-foreground'}`}>
+                                            <div className="flex flex-col gap-1 min-w-0 flex-1">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h4 className={`text-base sm:text-lg font-black tracking-tight uppercase line-clamp-1 ${notification.isRead ? 'text-foreground/80' : 'text-foreground'}`}>
                                                         {notification.title}
                                                     </h4>
 
                                                     {notification.type === 'Warning' && notification.level && (
-                                                        <span className="px-2.5 py-1 text-[10px] uppercase font-black tracking-widest rounded-lg bg-destructive/10 text-destructive border border-destructive/20 shrink-0">
+                                                        <span className="px-2 py-0.5 text-[9px] sm:text-[10px] uppercase font-black tracking-widest rounded-lg bg-destructive/10 text-destructive border border-destructive/20 shrink-0">
                                                             {notification.level}
                                                         </span>
                                                     )}
                                                 </div>
 
-                                                <p className="text-sm font-medium text-muted-foreground leading-relaxed pt-1">
+                                                <p className="text-xs sm:text-sm font-medium text-muted-foreground leading-relaxed wrap-break-word">
                                                     {notification.type === 'Warning' && notification.reason
                                                         ? `"${notification.reason}"`
                                                         : notification.message}
                                                 </p>
 
-                                                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/40 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-80">
-                                                    <Clock className="w-3.5 h-3.5" />
-                                                    {getTimeAgo(notification.createdAt)}
+                                                <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-border/40 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-70">
+                                                    <Clock className="w-3.5 h-3.5 shrink-0" />
+                                                    <span className="truncate">{getTimeAgo(notification.createdAt)}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -251,7 +252,6 @@ const EmployeeNotifications = () => {
                     )}
                 </div>
             </div>
-
         </div>
     );
 };

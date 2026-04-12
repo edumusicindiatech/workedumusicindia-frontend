@@ -24,7 +24,6 @@ const VideoPlayer = ({ src, thumbnailUrl }) => {
     const [isLoaded, setIsLoaded] = useState(false);
     const videoRef = useRef(null);
 
-    // 1. Show the lightweight thumbnail first to save data
     if (!isLoaded) {
         return (
             <div
@@ -33,14 +32,13 @@ const VideoPlayer = ({ src, thumbnailUrl }) => {
                 onClick={() => setIsLoaded(true)}
             >
                 <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-300"></div>
-                <div className="relative z-10 w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-primary/80 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary transition-all duration-300 backdrop-blur-md shadow-xl shadow-primary/30 border border-white/20">
-                    <PlayCircle className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                <div className="relative z-10 w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-2xl sm:rounded-3xl bg-primary/80 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary transition-all duration-300 backdrop-blur-md shadow-xl shadow-primary/30 border border-white/20">
+                    <PlayCircle className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-white" />
                 </div>
             </div>
         );
     }
 
-    // 2. Load the actual heavy video only when clicked
     return (
         <video
             ref={videoRef}
@@ -65,7 +63,6 @@ const LearningHub = () => {
 
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     
-    // Modal Drag states
     const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, videoId: null });
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [modalDragOffset, setModalDragOffset] = useState(0);
@@ -84,7 +81,6 @@ const LearningHub = () => {
     const isLearningUploadActive = isUploading && jobQueue?.uploadType === 'learning-hub';
     const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
 
-    // --- ANIMATION HANDLERS FOR MODALS ---
     const handleCloseEditModal = () => {
         setIsModalClosing(true);
         setModalDragOffset(window.innerHeight);
@@ -299,23 +295,23 @@ const LearningHub = () => {
     };
 
     return (
-        <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 pb-24 p-4 sm:p-6 lg:p-8 mt-2 md:mt-0">
+        <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-700 pb-24 p-4 sm:p-6 lg:p-8 mt-2 md:mt-0">
 
             {/* --- HEADER --- */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative z-20">
-                <div className="flex items-center gap-5">
+                <div className="flex items-center gap-4 sm:gap-5">
                     <div className="relative">
-                        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
-                            <BookOpen className="w-7 h-7 text-primary" />
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
+                            <BookOpen className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
                         </div>
                     </div>
                     <div className="space-y-0.5">
                         <div className="flex items-center gap-3">
-                            <h1 className="text-3xl font-black text-foreground tracking-tight uppercase">
+                            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight uppercase">
                                 {t('learning_hub.page_title', 'Learning Hub')}
                             </h1>
                         </div>
-                        <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
+                        <p className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-widest">
                             {t('learning_hub.page_subtitle', 'Training & Resources')}
                         </p>
                     </div>
@@ -324,7 +320,7 @@ const LearningHub = () => {
                 {isAdmin && (
                     <Button
                         onClick={() => setIsUploadModalOpen(true)}
-                        className="h-12 px-8 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-95 transition-all w-full sm:w-auto"
+                        className="h-10 sm:h-12 px-6 sm:px-8 text-xs sm:text-sm rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-95 transition-all w-full sm:w-auto"
                     >
                         <UploadCloud className="w-4 h-4 shrink-0" />
                         <span>{t('learning_hub.upload_btn', 'Upload Lesson')}</span>
@@ -336,32 +332,32 @@ const LearningHub = () => {
             {isLoading && !isLearningUploadActive ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 animate-pulse">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className="bg-card rounded-[2.5rem] border border-border/50 h-75" />
+                        <div key={i} className="bg-card rounded-3xl sm:rounded-[2.5rem] border border-border/50 h-64 sm:h-75" />
                     ))}
                 </div>
             ) : videos.length === 0 && !isLearningUploadActive ? (
-                <div className="bg-card border-2 border-dashed border-border/60 rounded-[3rem] p-12 sm:p-20 mt-8 text-center flex flex-col items-center relative overflow-hidden group hover:border-primary/30 hover:bg-muted/10 transition-all duration-500">
-                    <div className="relative w-24 h-24 mb-6 group-hover:scale-110 transition-transform duration-500">
+                <div className="bg-card border-2 border-dashed border-border/60 rounded-3xl sm:rounded-[3rem] p-8 sm:p-12 lg:p-20 mt-8 text-center flex flex-col items-center relative overflow-hidden group hover:border-primary/30 hover:bg-muted/10 transition-all duration-500">
+                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 mb-6 group-hover:scale-110 transition-transform duration-500">
                         <div className="absolute inset-0 bg-primary/10 rounded-full animate-ping opacity-50" />
                         <div className="relative w-full h-full bg-muted/50 rounded-full flex items-center justify-center border border-border/50 shadow-inner z-10">
-                            <GraduationCap className="w-10 h-10 text-muted-foreground/50" />
+                            <GraduationCap className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground/50" />
                         </div>
                     </div>
-                    <h2 className="text-2xl sm:text-3xl font-black text-foreground mb-3 tracking-tight uppercase italic">{t('learning_hub.empty_state_title', 'No Lessons Found')}</h2>
-                    <p className="text-muted-foreground font-medium max-w-md text-sm sm:text-base leading-relaxed">
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-foreground mb-3 tracking-tight uppercase italic">{t('learning_hub.empty_state_title', 'No Lessons Found')}</h2>
+                    <p className="text-muted-foreground font-medium max-w-md text-xs sm:text-sm md:text-base leading-relaxed">
                         {t('learning_hub.empty_state_desc', 'No training materials are available at this time.')} {isAdmin && t('learning_hub.empty_state_admin_hint', 'Upload one to get started.')}
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-8">
 
                     {/* --- THE GHOST CARD --- */}
                     {isLearningUploadActive && jobQueue && (
-                        <div className="group bg-card border-2 border-primary/50 shadow-[0_0_20px_rgba(var(--primary),0.15)] rounded-[2.5rem] overflow-hidden flex flex-col relative transition-all duration-300">
+                        <div className="group bg-card border-2 border-primary/50 shadow-[0_0_20px_rgba(var(--primary),0.15)] rounded-4xl sm:rounded-[2.5rem] overflow-hidden flex flex-col relative transition-all duration-300">
                             <div className="relative aspect-video bg-black overflow-hidden shrink-0">
                                 <div className="absolute top-3 right-3 z-20">
                                     <button onClick={handleCancelUpload} className="p-2 bg-black/40 hover:bg-destructive/90 active:bg-destructive backdrop-blur-md text-white rounded-xl transition-all duration-200 shadow-lg border border-white/20 active:scale-95" title={t('learning_hub.ghost_card.cancel_upload', 'Cancel')}>
-                                        <X className="w-5 h-5" />
+                                        <X className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </button>
                                 </div>
                                 {previewUrl ? (
@@ -373,21 +369,21 @@ const LearningHub = () => {
                                     />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center bg-slate-900">
-                                        <UploadCloud className="w-8 h-8 text-primary animate-pulse" />
+                                        <UploadCloud className="w-6 h-6 sm:w-8 sm:h-8 text-primary animate-pulse" />
                                     </div>
                                 )}
-                                <div className="absolute bottom-0 left-0 w-full h-1.5 bg-black/50">
+                                <div className="absolute bottom-0 left-0 w-full h-1 sm:h-1.5 bg-black/50">
                                     <div className="h-full bg-primary shadow-[0_0_10px_rgba(var(--primary),0.8)] transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }} />
                                 </div>
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                    <span className="text-3xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] tracking-tighter">{uploadProgress}%</span>
+                                    <span className="text-2xl sm:text-3xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] tracking-tighter">{uploadProgress}%</span>
                                 </div>
                             </div>
-                            <div className="flex flex-col p-6 border-t border-border opacity-70 animate-pulse bg-muted/10 flex-1">
-                                <h3 className="font-black text-foreground text-base truncate mb-1">{jobQueue.metadata.title}</h3>
+                            <div className="flex flex-col p-4 sm:p-6 border-t border-border opacity-70 animate-pulse bg-muted/10 flex-1">
+                                <h3 className="font-black text-foreground text-sm sm:text-base truncate mb-1">{jobQueue.metadata.title}</h3>
                                 <div className="mt-auto pt-4 border-t border-border/50">
-                                    <p className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2 bg-primary/10 w-fit px-3 py-1.5 rounded-lg border border-primary/20">
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2 bg-primary/10 w-fit px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-primary/20">
+                                        <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 animate-spin" />
                                         {uploadProgress === 100 ? t('learning_hub.ghost_card.finalizing', 'Finalizing...') : t('learning_hub.ghost_card.uploading', 'Uploading...')}
                                     </p>
                                 </div>
@@ -400,28 +396,28 @@ const LearningHub = () => {
                         const isExpanded = expandedCards[video._id];
 
                         return (
-                            <div key={video._id} className={`bg-card border rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group/card ${isExpanded ? 'border-primary/40 ring-4 ring-primary/5' : 'border-border/60 hover:border-primary/30'}`}>
+                            <div key={video._id} className={`bg-card border rounded-4xl sm:rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group/card ${isExpanded ? 'border-primary/40 ring-2 sm:ring-4 ring-primary/5' : 'border-border/60 hover:border-primary/30'}`}>
 
                                 <div className="relative w-full aspect-video bg-black shrink-0 overflow-hidden">
                                     <VideoPlayer src={video.fileUrl} thumbnailUrl={video.thumbnailUrl} />
                                 </div>
 
-                                <div className="p-5 sm:p-6 flex flex-col flex-1 relative z-10">
+                                <div className="p-4 sm:p-5 md:p-6 flex flex-col flex-1 relative z-10">
                                     
                                     <div 
-                                        className="flex flex-col cursor-pointer mb-2"
+                                        className="flex flex-col cursor-pointer mb-1 sm:mb-2"
                                         onClick={() => toggleExpand(video._id)}
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex-1 min-w-0">
-                                                <h3 className="font-black text-foreground text-lg leading-snug line-clamp-2 group-hover/card:text-primary transition-colors">{video.title}</h3>
-                                                <div className="flex items-center gap-1.5 text-[10px] uppercase font-black tracking-widest text-muted-foreground mt-2">
-                                                    <CalendarDays className="w-3.5 h-3.5 opacity-70" />
+                                                <h3 className="font-black text-foreground text-base sm:text-lg leading-snug line-clamp-2 group-hover/card:text-primary transition-colors">{video.title}</h3>
+                                                <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] uppercase font-black tracking-widest text-muted-foreground mt-1.5 sm:mt-2">
+                                                    <CalendarDays className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-70" />
                                                     {formatDate(video.updatedAt || video.createdAt)}
                                                 </div>
                                             </div>
-                                            <button className={`p-2 bg-muted/50 text-muted-foreground rounded-full hover:bg-muted hover:text-foreground transition-all duration-300 shrink-0 ${isExpanded ? 'rotate-180 bg-primary/10 text-primary shadow-sm' : ''}`}>
-                                                <ChevronDown className="w-4 h-4" />
+                                            <button className={`p-1.5 sm:p-2 bg-muted/50 text-muted-foreground rounded-full hover:bg-muted hover:text-foreground transition-all duration-300 shrink-0 ${isExpanded ? 'rotate-180 bg-primary/10 text-primary shadow-sm' : ''}`}>
+                                                <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                             </button>
                                         </div>
                                     </div>
@@ -429,65 +425,65 @@ const LearningHub = () => {
                                     {/* ACCORDION BODY */}
                                     <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                                         <div className="overflow-hidden flex flex-col">
-                                            <div className="pt-4 mt-2 border-t border-border/50 flex flex-col h-full">
+                                            <div className="pt-3 sm:pt-4 mt-2 border-t border-border/50 flex flex-col h-full">
 
                                                 {video.description && (
-                                                    <p className="text-sm font-medium text-muted-foreground mb-5 leading-relaxed bg-muted/20 p-4 rounded-2xl border border-border/40 shadow-inner line-clamp-4">
+                                                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-4 sm:mb-5 leading-relaxed bg-muted/20 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-border/40 shadow-inner line-clamp-4">
                                                         {video.description}
                                                     </p>
                                                 )}
 
-                                                <div className="mt-auto pt-2 flex flex-wrap items-center justify-between gap-y-4 gap-x-2">
+                                                <div className="mt-auto pt-2 flex flex-wrap items-center justify-between gap-y-3 gap-x-2">
                                                     
                                                     {/* Instructor Info */}
-                                                    <div className="flex flex-col min-w-40 flex-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider shrink-0">{t('learning_hub.video_card.instructor_label', 'By')}</span>
-                                                            <span className={`px-2 py-0.5 text-[8px] font-black uppercase tracking-widest rounded-md border shadow-sm shrink-0 ${video.uploaderRole === 'SuperAdmin'
+                                                    <div className="flex flex-col min-w-30 sm:min-w-40 flex-1">
+                                                        <div className="flex items-center gap-1.5 sm:gap-2">
+                                                            <span className="text-[8px] sm:text-[9px] text-muted-foreground font-black uppercase tracking-wider shrink-0">{t('learning_hub.video_card.instructor_label', 'By')}</span>
+                                                            <span className={`px-1.5 sm:px-2 py-0.5 text-[7px] sm:text-[8px] font-black uppercase tracking-widest rounded-md border shadow-sm shrink-0 ${video.uploaderRole === 'SuperAdmin'
                                                                 ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30'
                                                                 : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
                                                             }`}>
                                                                 {video.uploaderRole}
                                                             </span>
                                                         </div>
-                                                        <span className="text-sm font-extrabold text-foreground mt-1 truncate w-full" title={video.uploaderName}>
+                                                        <span className="text-xs sm:text-sm font-extrabold text-foreground mt-0.5 sm:mt-1 truncate w-full" title={video.uploaderName}>
                                                             {video.uploaderName}
                                                         </span>
                                                     </div>
 
                                                     {/* Action Buttons */}
-                                                    <div className="flex items-center justify-end gap-2 shrink-0 ml-auto">
+                                                    <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0 ml-auto">
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); handleDownload(video); }}
-                                                            className="p-2.5 bg-muted/50 text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-xl transition-colors border border-transparent hover:border-primary/20 shadow-sm"
+                                                            className="p-2 sm:p-2.5 bg-muted/50 text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-lg sm:rounded-xl transition-colors border border-transparent hover:border-primary/20 shadow-sm"
                                                             title={t('learning_hub.video_card.download_tooltip', 'Download')}
                                                         >
-                                                            <Download className="w-4 h-4" />
+                                                            <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                                         </button>
 
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); handleWhatsAppShare(video); }}
-                                                            className="p-2.5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 rounded-xl transition-colors border border-[#25D366]/20 shadow-sm"
+                                                            className="p-2 sm:p-2.5 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 rounded-lg sm:rounded-xl transition-colors border border-[#25D366]/20 shadow-sm"
                                                             title={t('learning_hub.video_card.share_tooltip', 'Share')}
                                                         >
-                                                            <WhatsAppIcon className="w-4 h-4" />
+                                                            <WhatsAppIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                                         </button>
 
                                                         {isAdmin && (
                                                             <>
                                                                 <button
                                                                     onClick={(e) => { e.stopPropagation(); openEditModal(video); }}
-                                                                    className="p-2.5 bg-muted/50 text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500 rounded-xl transition-colors border border-transparent hover:border-blue-500/20 shadow-sm"
+                                                                    className="p-2 sm:p-2.5 bg-muted/50 text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500 rounded-lg sm:rounded-xl transition-colors border border-transparent hover:border-blue-500/20 shadow-sm"
                                                                     title={t('learning_hub.video_card.edit_tooltip', 'Edit')}
                                                                 >
-                                                                    <Edit2 className="w-4 h-4" />
+                                                                    <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                                                 </button>
                                                                 <button
                                                                     onClick={(e) => { e.stopPropagation(); triggerDelete(video._id); }}
-                                                                    className="p-2.5 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-xl transition-colors border border-destructive/20 shadow-sm"
+                                                                    className="p-2 sm:p-2.5 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg sm:rounded-xl transition-colors border border-destructive/20 shadow-sm"
                                                                     title={t('learning_hub.video_card.delete_tooltip', 'Delete')}
                                                                 >
-                                                                    <Trash2 className="w-4 h-4" />
+                                                                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                                                 </button>
                                                             </>
                                                         )}
@@ -513,34 +509,34 @@ const LearningHub = () => {
             {editModalOpen && (
                 <div className={`fixed inset-0 z-200 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isModalClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleCloseEditModal}>
                     <div 
-                        className={`bg-card w-full max-w-md rounded-t-[2.5rem] md:rounded-3xl shadow-2xl border-t md:border border-border/50 flex flex-col relative max-h-[90vh] md:max-h-[85vh] overflow-hidden ${isModalClosing ? 'transition-transform duration-300 ease-out' : 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95'}`} 
+                        className={`bg-card w-full max-w-md rounded-t-4xl md:rounded-3xl shadow-2xl border-t md:border border-border/50 flex flex-col relative max-h-[90vh] md:max-h-[85vh] overflow-hidden ${isModalClosing ? 'transition-transform duration-300 ease-out' : 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95'}`} 
                         style={{ transform: `translateY(${modalDragOffset}px)` }} 
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20 rounded-t-[inherit]" />
                         
                         <div className="w-full flex justify-center pt-3 pb-1 md:hidden touch-none" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEndEdit}>
-                            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
+                            <div className="w-10 sm:w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
                         </div>
 
-                        <div className="sticky top-0 bg-card/90 backdrop-blur-md z-10 px-6 pt-2 pb-4 md:pt-6 md:pb-6 flex justify-between items-center border-b border-border/50 touch-none" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEndEdit}>
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-inner">
-                                    <Edit2 className="w-6 h-6" />
+                        <div className="sticky top-0 bg-card/90 backdrop-blur-md z-10 px-5 sm:px-6 pt-2 pb-3 sm:pb-4 md:pt-6 md:pb-6 flex justify-between items-center border-b border-border/50 touch-none" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEndEdit}>
+                            <div className="flex items-center gap-3 sm:gap-4">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-inner">
+                                    <Edit2 className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-extrabold text-foreground tracking-tight">{t('learning_hub.edit_dialog.title', 'Edit Lesson')}</h3>
+                                    <h3 className="text-lg sm:text-xl font-extrabold text-foreground tracking-tight">{t('learning_hub.edit_dialog.title', 'Edit Lesson')}</h3>
                                 </div>
                             </div>
-                            <button onClick={handleCloseEditModal} className="p-2.5 hover:bg-muted rounded-full bg-muted/50 border border-border hidden md:flex transition-colors">
-                                <X className="w-5 h-5 text-muted-foreground" />
+                            <button onClick={handleCloseEditModal} className="p-2 sm:p-2.5 hover:bg-muted rounded-full bg-muted/50 border border-border hidden md:flex transition-colors">
+                                <X className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                             </button>
                         </div>
 
                         <form onSubmit={submitEdit} className="flex flex-col flex-1 overflow-hidden">
-                            <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar space-y-6">
-                                <div className="space-y-2.5">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1 flex items-center gap-2">
+                            <div className="p-5 sm:p-6 md:p-8 overflow-y-auto custom-scrollbar space-y-5 sm:space-y-6">
+                                <div className="space-y-2">
+                                    <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1 flex items-center gap-1.5 sm:gap-2">
                                         {t('learning_hub.edit_dialog.lesson_title', 'Lesson Title')} <span className="text-destructive">*</span>
                                     </Label>
                                     <Input
@@ -548,11 +544,11 @@ const LearningHub = () => {
                                         value={editTitle}
                                         onChange={(e) => setEditTitle(e.target.value)}
                                         onPointerDown={(e) => e.stopPropagation()}
-                                        className="h-12 rounded-xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-sm font-bold"
+                                        className="h-10 sm:h-12 rounded-lg sm:rounded-xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-xs sm:text-sm font-bold"
                                     />
                                 </div>
-                                <div className="space-y-2.5">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-foreground ml-1">
+                                <div className="space-y-2">
+                                    <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-foreground ml-1">
                                         {t('learning_hub.edit_dialog.description', 'Description')}
                                     </Label>
                                     <Textarea
@@ -560,15 +556,15 @@ const LearningHub = () => {
                                         value={editDescription}
                                         onChange={(e) => setEditDescription(e.target.value)}
                                         onPointerDown={(e) => e.stopPropagation()}
-                                        className="w-full p-4 rounded-2xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-sm font-medium resize-none shadow-sm"
+                                        className="w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-muted/20 border-border/60 focus-visible:ring-primary/30 text-xs sm:text-sm font-medium resize-none shadow-sm"
                                     />
                                 </div>
                             </div>
-                            <div className="p-4 sm:p-6 bg-muted/10 border-t border-border/50 shrink-0 pb-safe flex gap-3 rounded-b-3xl">
-                                <Button type="button" variant="ghost" onClick={handleCloseEditModal} className="flex-1 h-12 font-bold text-muted-foreground hover:bg-muted transition-colors rounded-xl">
+                            <div className="p-4 sm:p-6 bg-muted/10 border-t border-border/50 shrink-0 pb-safe flex gap-2 sm:gap-3 rounded-b-2xl sm:rounded-b-3xl">
+                                <Button type="button" variant="ghost" onClick={handleCloseEditModal} className="flex-1 h-10 sm:h-12 text-xs sm:text-sm font-bold text-muted-foreground hover:bg-muted transition-colors rounded-lg sm:rounded-xl">
                                     {t('learning_hub.edit_dialog.cancel_btn', 'Cancel')}
                                 </Button>
-                                <Button type="submit" disabled={!editTitle.trim()} className="flex-1 h-12 font-black uppercase tracking-widest bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all rounded-xl">
+                                <Button type="submit" disabled={!editTitle.trim()} className="flex-1 h-10 sm:h-12 text-xs sm:text-sm font-black uppercase tracking-widest bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all rounded-lg sm:rounded-xl">
                                     {t('learning_hub.edit_dialog.save_btn', 'Save')}
                                 </Button>
                             </div>
@@ -581,38 +577,38 @@ const LearningHub = () => {
             {deleteDialog.isOpen && (
                 <div className={`fixed inset-0 z-200 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isModalClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleCloseDeleteModal}>
                     <div 
-                        className={`bg-card w-full max-w-sm rounded-t-[2.5rem] md:rounded-3xl shadow-2xl border-t md:border border-border/50 flex flex-col relative overflow-hidden ${isModalClosing ? 'transition-transform duration-300 ease-out' : 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95'}`} 
+                        className={`bg-card w-full max-w-sm rounded-t-4xl md:rounded-3xl shadow-2xl border-t md:border border-border/50 flex flex-col relative overflow-hidden ${isModalClosing ? 'transition-transform duration-300 ease-out' : 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95'}`} 
                         style={{ transform: `translateY(${modalDragOffset}px)` }} 
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-destructive/40 via-destructive to-destructive/40 z-20 rounded-t-[inherit] pointer-events-none" />
 
                         <div className="w-full flex justify-center pt-3 pb-1 md:hidden touch-none" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEndDelete}>
-                            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
+                            <div className="w-10 sm:w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
                         </div>
 
-                        <div className="p-6 md:p-8 text-center pt-6 md:pt-10">
-                            <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center text-destructive mx-auto mb-6 shadow-inner border border-destructive/20 relative">
+                        <div className="p-5 sm:p-6 md:p-8 text-center pt-5 sm:pt-6 md:pt-10">
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-destructive/10 flex items-center justify-center text-destructive mx-auto mb-4 sm:mb-6 shadow-inner border border-destructive/20 relative">
                                 <div className="absolute inset-0 bg-destructive/10 rounded-full animate-ping opacity-40" />
-                                <Trash2 className="w-10 h-10 relative z-10" />
+                                <Trash2 className="w-8 h-8 sm:w-10 sm:h-10 relative z-10" />
                             </div>
-                            <h3 className="text-2xl font-extrabold text-foreground mb-2 tracking-tight">{t('learning_hub.delete_dialog.title', 'Delete Lesson?')}</h3>
-                            <p className="text-sm font-medium text-muted-foreground leading-relaxed px-2">
+                            <h3 className="text-xl sm:text-2xl font-extrabold text-foreground mb-1.5 sm:mb-2 tracking-tight">{t('learning_hub.delete_dialog.title', 'Delete Lesson?')}</h3>
+                            <p className="text-xs sm:text-sm font-medium text-muted-foreground leading-relaxed px-2">
                                 {t('learning_hub.delete_dialog.warning_text', 'This action cannot be undone.')}
                             </p>
                         </div>
 
-                        <div className="bg-muted/10 p-5 border-t border-border/50 flex flex-col gap-3 rounded-b-3xl pb-safe">
+                        <div className="bg-muted/10 p-4 sm:p-5 border-t border-border/50 flex flex-col gap-2.5 sm:gap-3 rounded-b-2xl sm:rounded-b-3xl pb-safe">
                             <Button 
                                 variant="destructive" 
-                                className="w-full h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-destructive/20 hover:shadow-destructive/30 active:scale-[0.98] transition-all"
+                                className="w-full h-10 sm:h-12 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black uppercase tracking-widest shadow-lg shadow-destructive/20 hover:shadow-destructive/30 active:scale-[0.98] transition-all"
                                 onClick={confirmDelete}
                             >
                                 {t('learning_hub.delete_dialog.confirm_btn', 'Yes, Delete')}
                             </Button>
                             <button 
                                 onClick={handleCloseDeleteModal} 
-                                className="w-full h-12 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors border border-transparent hover:border-border/80"
+                                className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg sm:rounded-xl transition-colors border border-transparent hover:border-border/80"
                             >
                                 {t('learning_hub.delete_dialog.cancel_btn', 'Cancel')}
                             </button>

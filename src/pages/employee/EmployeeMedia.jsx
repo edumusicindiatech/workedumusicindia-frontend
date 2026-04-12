@@ -385,21 +385,21 @@ const EmployeeMedia = () => {
 
             {/* --- HEADER --- */}
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 mb-8 md:mb-10">
-                <div className="flex items-center gap-5 w-full md:w-auto">
-                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner shrink-0">
-                        <Film className="w-7 h-7 text-primary" />
+                <div className="flex items-start sm:items-center gap-4 sm:gap-5 w-full md:w-auto min-w-0">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner shrink-0 mt-1 sm:mt-0">
+                        <Film className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
                     </div>
-                    <div className="space-y-1 min-w-0">
-                        <h1 className="text-3xl font-black text-foreground tracking-tight uppercase truncate">
+                    <div className="space-y-1 min-w-0 flex-1">
+                        <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight uppercase wrap-break-word leading-tight">
                             {t('employee_media.title', 'Media Gallery')}
                         </h1>
-                        <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2 truncate">
+                        <p className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2 truncate mt-1">
                             {t('employee_media.subtitle', 'Your Vault Uploads')}
                         </p>
                     </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full md:w-auto">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full md:w-auto shrink-0">
                     <div className="w-full sm:w-44 z-10 shrink-0">
                         <CustomSelect
                             value={selectedYear}
@@ -409,10 +409,10 @@ const EmployeeMedia = () => {
                     </div>
                     <Button
                         onClick={() => setIsUploadModalOpen(true)}
-                        className="h-12 px-6 sm:px-8 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-95 transition-all w-full sm:w-auto"
+                        className="h-12 px-6 sm:px-8 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] sm:text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-[0.98] transition-all w-full sm:w-auto"
                     >
-                        <UploadCloud className="w-5 h-5 shrink-0" />
-                        <span>{t('employee_media.upload_media', 'Upload Media')}</span>
+                        <UploadCloud className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                        <span className="truncate">{t('employee_media.upload_media', 'Upload Media')}</span>
                     </Button>
                 </div>
             </div>
@@ -425,15 +425,15 @@ const EmployeeMedia = () => {
                     ))}
                 </div>
             ) : Object.keys(displayMediaData).length === 0 && !isUploading ? (
-                <div className="bg-card border-2 border-dashed border-border/60 rounded-[3rem] p-12 sm:p-20 mt-8 text-center flex flex-col items-center relative overflow-hidden group hover:border-primary/30 hover:bg-muted/10 transition-all duration-500">
-                    <div className="relative w-24 h-24 mb-6 group-hover:scale-110 transition-transform duration-500">
+                <div className="bg-card border-2 border-dashed border-border/60 rounded-[3rem] p-8 sm:p-12 md:p-20 mt-8 text-center flex flex-col items-center relative overflow-hidden group hover:border-primary/30 hover:bg-muted/10 transition-all duration-500 max-w-2xl mx-auto">
+                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 mb-6 group-hover:scale-110 transition-transform duration-500">
                         <div className="absolute inset-0 bg-primary/10 rounded-full animate-ping opacity-50" />
                         <div className="relative w-full h-full bg-muted/50 rounded-full flex items-center justify-center border border-border/50 shadow-inner z-10">
-                            <Film className="w-10 h-10 text-muted-foreground/50" />
+                            <Film className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground/50" />
                         </div>
                     </div>
-                    <h2 className="text-2xl sm:text-3xl font-black text-foreground mb-3 tracking-tight uppercase italic">{t('employee_media.no_media_found', 'No Media Found')}</h2>
-                    <p className="text-muted-foreground font-medium max-w-md text-sm sm:text-base leading-relaxed">
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-foreground mb-3 tracking-tight uppercase italic wrap-break-word">{t('employee_media.no_media_found', 'No Media Found')}</h2>
+                    <p className="text-muted-foreground font-medium text-xs sm:text-sm md:text-base leading-relaxed max-w-md">
                         {t('employee_media.no_uploads_year', { year: selectedYear })}
                     </p>
                 </div>
@@ -446,7 +446,7 @@ const EmployeeMedia = () => {
                         const { average, colorClass } = getMonthlyStats(mediaFiles);
 
                         return (
-                            <div key={month} className="bg-card rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-border/60 relative overflow-hidden flex flex-col transition-all duration-300">
+                            <div key={month} className="bg-card rounded-4xl sm:rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-border/60 relative overflow-hidden flex flex-col transition-all duration-300 min-w-0">
                                 
                                 {/* Card Accent Line */}
                                 <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20 pointer-events-none" />
@@ -454,34 +454,34 @@ const EmployeeMedia = () => {
                                 {/* MONTH HEADER */}
                                 <button
                                     onClick={() => toggleMonth(month)}
-                                    className="w-full px-6 py-5 sm:px-8 sm:py-6 flex flex-wrap items-center justify-between bg-transparent hover:bg-muted/30 dark:hover:bg-slate-800/30 transition-colors gap-4 group"
+                                    className="w-full px-5 py-4 sm:px-8 sm:py-6 flex flex-row items-center justify-between bg-transparent hover:bg-muted/30 dark:hover:bg-slate-800/30 transition-colors gap-3 sm:gap-4 group min-w-0"
                                 >
-                                    <div className="flex items-center flex-wrap gap-4 sm:gap-6 min-w-0">
-                                        <div className="flex items-center gap-3 shrink-0">
-                                            <CalendarIcon className={`w-6 h-6 sm:w-7 sm:h-7 ${isExpanded ? 'text-primary' : 'text-muted-foreground group-hover:text-primary transition-colors'}`} />
-                                            <h2 className="text-xl sm:text-2xl font-black text-foreground uppercase tracking-tight">{month} {selectedYear}</h2>
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 min-w-0 flex-1 text-left">
+                                        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                                            <CalendarIcon className={`w-5 h-5 sm:w-7 sm:h-7 shrink-0 ${isExpanded ? 'text-primary' : 'text-muted-foreground group-hover:text-primary transition-colors'}`} />
+                                            <h2 className="text-lg sm:text-2xl font-black text-foreground uppercase tracking-tight truncate">{month} {selectedYear}</h2>
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-3 sm:ml-2 border-l-2 border-border/60 pl-3 sm:pl-5">
-                                            <span className="px-3 py-1 sm:px-4 sm:py-1.5 rounded-xl bg-muted/60 text-[10px] sm:text-[11px] font-black text-muted-foreground uppercase tracking-widest whitespace-nowrap shadow-sm">
+                                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 sm:border-l-2 sm:border-border/60 sm:pl-5 min-w-0">
+                                            <span className="px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-lg sm:rounded-xl bg-muted/60 text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-widest whitespace-nowrap shadow-sm shrink-0">
                                                 {mediaFiles.length} {t('employee_media.videos')}
                                             </span>
                                             {average !== null && (
-                                                <div className={`px-3 py-1 sm:px-4 sm:py-1.5 rounded-xl border text-[10px] sm:text-[11px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap shadow-sm ${colorClass}`}>
-                                                    <Award className="w-3.5 h-3.5" />
+                                                <div className={`px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-lg sm:rounded-xl border text-[9px] sm:text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shadow-sm shrink-0 ${colorClass}`}>
+                                                    <Award className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                                     {t('employee_media.avg')}: {average}/10
                                                 </div>
                                             )}
                                         </div>
                                     </div>
-                                    <div className={`w-10 h-10 rounded-2xl bg-muted/50 flex items-center justify-center transition-all duration-300 group-hover:bg-primary/10 group-hover:text-primary shrink-0 ${isExpanded ? 'rotate-180 bg-primary/10 text-primary' : 'text-muted-foreground'}`}>
-                                        <ChevronDown className="w-5 h-5" />
+                                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-muted/50 flex items-center justify-center transition-all duration-300 group-hover:bg-primary/10 group-hover:text-primary shrink-0 ${isExpanded ? 'rotate-180 bg-primary/10 text-primary' : 'text-muted-foreground'}`}>
+                                        <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
                                 </button>
 
                                 {/* ACCORDION BODY WITH CSS GRID TRICK */}
                                 <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                                     <div className="overflow-hidden">
-                                        <div className="p-4 sm:p-6 lg:p-8 pt-0 sm:pt-2 border-t border-border/50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                                        <div className="p-4 sm:p-6 lg:p-8 pt-0 sm:pt-2 border-t border-border/50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-8">
 
                                             {/* MAP THROUGH CARDS */}
                                             {mediaFiles.map((media) => {
@@ -489,11 +489,11 @@ const EmployeeMedia = () => {
 
                                                 return media.isGhost ? (
                                                     // --- THE UPLOADING GHOST CARD ---
-                                                    <div key="ghost" className="group bg-card border-2 border-primary/50 shadow-[0_0_20px_rgba(var(--primary),0.15)] rounded-4xl overflow-hidden flex flex-col relative transition-all duration-300">
+                                                    <div key="ghost" className="group bg-card border-2 border-primary/50 shadow-[0_0_20px_rgba(var(--primary),0.15)] rounded-3xl sm:rounded-4xl overflow-hidden flex flex-col relative transition-all duration-300 min-w-0">
                                                         <div className="relative aspect-video bg-black overflow-hidden shrink-0">
                                                             <div className="absolute top-3 right-3 z-20">
                                                                 <button onClick={handleCancelUpload} className="p-2 bg-black/40 hover:bg-destructive/90 active:bg-destructive backdrop-blur-md text-white rounded-xl transition-all duration-200 shadow-lg border border-white/20 active:scale-95" title={t('employee_media.cancel_upload')}>
-                                                                    <X className="w-5 h-5" />
+                                                                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
                                                                 </button>
                                                             </div>
                                                             {previewUrl ? (
@@ -505,37 +505,37 @@ const EmployeeMedia = () => {
                                                                 />
                                                             ) : (
                                                                 <div className="w-full h-full flex items-center justify-center bg-slate-900">
-                                                                    <UploadCloud className="w-8 h-8 text-primary animate-pulse" />
+                                                                    <UploadCloud className="w-6 h-6 sm:w-8 sm:h-8 text-primary animate-pulse" />
                                                                 </div>
                                                             )}
                                                             <div className="absolute bottom-0 left-0 w-full h-1.5 bg-black/50">
                                                                 <div className="h-full bg-primary shadow-[0_0_10px_rgba(var(--primary),0.8)] transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }} />
                                                             </div>
                                                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                                <span className="text-3xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] tracking-tighter">{uploadProgress}%</span>
+                                                                <span className="text-2xl sm:text-3xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] tracking-tighter">{uploadProgress}%</span>
                                                             </div>
                                                         </div>
-                                                        <div className="flex flex-col p-6 border-t border-border opacity-70 animate-pulse bg-muted/10 flex-1">
-                                                            <h3 className="font-black text-foreground text-sm truncate mb-1">{media.eventName || t('employee_media.regular_class', 'Regular Class')}</h3>
-                                                            <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mb-4">{media.eventDate}</p>
+                                                        <div className="flex flex-col p-5 sm:p-6 border-t border-border opacity-70 animate-pulse bg-muted/10 flex-1 min-w-0">
+                                                            <h3 className="font-black text-foreground text-sm truncate mb-1 uppercase tracking-tight">{media.eventName || t('employee_media.regular_class', 'Regular Class')}</h3>
+                                                            <p className="text-muted-foreground text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-4 truncate">{media.eventDate}</p>
                                                             <div className="mt-auto">
-                                                                <p className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2 bg-primary/10 w-fit px-3 py-1.5 rounded-lg border border-primary/20">
-                                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                                    {uploadProgress === 100 ? t('employee_media.finalizing') : t('employee_media.uploading')}
+                                                                <p className="text-[9px] sm:text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2 bg-primary/10 w-fit px-3 py-1.5 rounded-lg border border-primary/20">
+                                                                    <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 animate-spin shrink-0" />
+                                                                    <span className="truncate">{uploadProgress === 100 ? t('employee_media.finalizing') : t('employee_media.uploading')}</span>
                                                                 </p>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 ) : (
                                                     // --- THE ACTUAL RENDERED VIDEO CARD ---
-                                                    <div key={media.id} className="flex flex-col bg-card dark:bg-[#131821] border border-border/60 rounded-4xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group/card">
+                                                    <div key={media.id} className="flex flex-col bg-card dark:bg-[#131821] border border-border/60 rounded-3xl sm:rounded-4xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group/card min-w-0">
 
                                                         {/* VIDEO PLAYER AREA */}
                                                         <div className="w-full relative bg-black shrink-0 overflow-hidden aspect-video">
                                                             {videoErrors[media.id] || !media.videoUrl ? (
                                                                 <div className="flex flex-col items-center justify-center h-full w-full p-8 bg-slate-900 border-b border-border text-center absolute inset-0">
-                                                                    <AlertTriangle className="w-8 h-8 text-muted-foreground/50 mb-3" />
-                                                                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{t('employee_media.unavailable', 'Unavailable')}</span>
+                                                                    <AlertTriangle className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground/50 mb-2 sm:mb-3 shrink-0" />
+                                                                    <span className="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-widest">{t('employee_media.unavailable', 'Unavailable')}</span>
                                                                 </div>
                                                             ) : (
                                                                 <VideoPlayer
@@ -548,49 +548,55 @@ const EmployeeMedia = () => {
                                                         </div>
 
                                                         {/* CARD FOOTER INFO */}
-                                                        <div className="p-5 sm:p-6 flex flex-col flex-1">
+                                                        <div className="p-4 sm:p-5 md:p-6 flex flex-col flex-1 min-w-0">
                                                             
-                                                            <div className="flex items-start justify-between gap-3 mb-4">
-                                                                <div className="flex flex-wrap items-center gap-2 min-w-0">
-                                                                    <span className="bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest truncate max-w-35 shadow-sm">
+                                                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4 min-w-0 w-full">
+                                                                <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
+                                                                    <span className="bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest truncate max-w-full shadow-sm shrink-0">
                                                                         {media.schoolName}
                                                                     </span>
-                                                                    <span className="bg-muted text-muted-foreground border border-border/60 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest truncate shadow-sm">
+                                                                    <span className="bg-muted text-muted-foreground border border-border/60 px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest truncate shadow-sm shrink-0">
                                                                         {media.band === 'Junior Band' ? t('employee_media.junior_band') : t('employee_media.senior_band')}
                                                                     </span>
                                                                 </div>
                                                                 {media.marks !== null ? (
-                                                                    <span className="shrink-0 px-2.5 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-xl text-sm font-black tabular-nums shadow-sm">{media.marks}/10</span>
+                                                                    <span className="self-start sm:self-auto shrink-0 px-2.5 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-xl text-xs sm:text-sm font-black tabular-nums shadow-sm">
+                                                                        {media.marks}/10
+                                                                    </span>
                                                                 ) : (
-                                                                    <span className="shrink-0 px-2.5 py-1 bg-muted/60 text-muted-foreground border border-border/60 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm">{t('employee_media.unscored', 'Unscored')}</span>
+                                                                    <span className="self-start sm:self-auto shrink-0 px-2.5 py-1 bg-muted/60 text-muted-foreground border border-border/60 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm">
+                                                                        {t('employee_media.unscored', 'Unscored')}
+                                                                    </span>
                                                                 )}
                                                             </div>
 
                                                             <div className="min-w-0 flex-1 mb-5">
-                                                                <h3 className="font-black text-foreground text-lg truncate transition-colors">{media.eventName || t('employee_media.regular_class', 'Regular Class')}</h3>
-                                                                <div className="flex items-center gap-3 mt-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                                                    <span className="flex items-center gap-1.5"><CalendarIcon className="w-3.5 h-3.5" /> {media.eventDate}</span>
-                                                                    <span className="text-border text-xs">•</span>
-                                                                    <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> {media.students || '0'}</span>
+                                                                <h3 className="font-black text-foreground text-base sm:text-lg wrap-break-word line-clamp-2 leading-tight tracking-tight uppercase transition-colors">
+                                                                    {media.eventName || t('employee_media.regular_class', 'Regular Class')}
+                                                                </h3>
+                                                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1.5 sm:mt-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted-foreground min-w-0">
+                                                                    <span className="flex items-center gap-1 sm:gap-1.5 shrink-0"><CalendarIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" /> {media.eventDate}</span>
+                                                                    <span className="text-border text-xs hidden sm:inline-block">•</span>
+                                                                    <span className="flex items-center gap-1 sm:gap-1.5 shrink-0"><Users className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" /> {media.students || '0'}</span>
                                                                 </div>
                                                             </div>
 
                                                             {/* ACTION BUTTONS */}
-                                                            <div className="flex items-center justify-between gap-2 pt-5 border-t border-border/60 mt-auto">
-                                                                <div className="flex items-center gap-2">
-                                                                    <button onClick={(e) => { e.stopPropagation(); handleCopyLink(media.videoUrl); }} title={t('employee_media.copy_link_title')} className="p-2.5 rounded-xl bg-muted/50 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors duration-300 border border-transparent hover:border-primary/20 shadow-sm">
+                                                            <div className="flex items-center justify-between gap-2 pt-4 sm:pt-5 border-t border-border/60 mt-auto shrink-0 w-full min-w-0">
+                                                                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none pr-2">
+                                                                    <button onClick={(e) => { e.stopPropagation(); handleCopyLink(media.videoUrl); }} title={t('employee_media.copy_link_title')} className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-muted/50 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors duration-300 border border-transparent hover:border-primary/20 shadow-sm shrink-0">
                                                                         <Copy className="w-4 h-4" />
                                                                     </button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); handleDownload(media.videoUrl, media.eventName); }} title={t('employee_media.download_title')} className="p-2.5 rounded-xl bg-muted/50 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors duration-300 border border-transparent hover:border-primary/20 shadow-sm" disabled={!media.videoUrl || videoErrors[media.id]}>
+                                                                    <button onClick={(e) => { e.stopPropagation(); handleDownload(media.videoUrl, media.eventName); }} title={t('employee_media.download_title')} className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-muted/50 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors duration-300 border border-transparent hover:border-primary/20 shadow-sm shrink-0" disabled={!media.videoUrl || videoErrors[media.id]}>
                                                                         <Download className="w-4 h-4" />
                                                                     </button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); handleWhatsAppShare(media); }} title={t('employee_media.share_tooltip', 'Share on WhatsApp')} className="p-2.5 rounded-xl bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors duration-300 border border-[#25D366]/20 shadow-sm">
+                                                                    <button onClick={(e) => { e.stopPropagation(); handleWhatsAppShare(media); }} title={t('employee_media.share_tooltip', 'Share on WhatsApp')} className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors duration-300 border border-[#25D366]/20 shadow-sm shrink-0">
                                                                         <WhatsAppIcon className="w-4 h-4" />
                                                                     </button>
                                                                 </div>
 
                                                                 {media.marks === null && !media.remark && (
-                                                                    <button onClick={(e) => triggerDeleteConfirmation(e, media.id, month)} title={t('employee_media.delete_title')} className="p-2.5 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all duration-300 border border-destructive/20 shadow-sm">
+                                                                    <button onClick={(e) => triggerDeleteConfirmation(e, media.id, month)} title={t('employee_media.delete_title')} className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all duration-300 border border-destructive/20 shadow-sm shrink-0 ml-auto">
                                                                         <Trash2 className="w-4 h-4" />
                                                                     </button>
                                                                 )}
@@ -630,7 +636,7 @@ const EmployeeMedia = () => {
                                 <div className="absolute inset-0 bg-destructive/10 rounded-full animate-ping opacity-40" />
                                 <AlertTriangle className="w-10 h-10 relative z-10" />
                             </div>
-                            <h3 className="text-2xl font-extrabold text-foreground mb-2 tracking-tight">{t('employee_media.delete_title', 'Delete Media?')}</h3>
+                            <h3 className="text-2xl font-extrabold text-foreground mb-2 tracking-tight uppercase">{t('employee_media.delete_title', 'Delete Media?')}</h3>
                             <p className="text-sm font-medium text-muted-foreground leading-relaxed px-2">
                                 {t('employee_media.delete_desc', 'Are you sure you want to delete this video?')}
                             </p>
@@ -639,14 +645,14 @@ const EmployeeMedia = () => {
                         <div className="bg-muted/10 p-5 border-t border-border/50 flex flex-col gap-3 rounded-b-3xl pb-safe">
                             <Button 
                                 variant="destructive" 
-                                className="w-full h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-destructive/20 hover:shadow-destructive/30 active:scale-[0.98] transition-all"
+                                className="w-full h-12 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-lg shadow-destructive/20 hover:shadow-destructive/30 active:scale-[0.98] transition-all"
                                 onClick={executeDelete}
                             >
                                 {t('employee_media.yes_delete', 'Yes, Delete')}
                             </Button>
                             <button 
                                 onClick={() => setDeleteConfirmation(null)} 
-                                className="w-full h-12 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors border border-transparent hover:border-border/80"
+                                className="w-full h-12 text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors border border-transparent hover:border-border/80"
                             >
                                 {t('employee_media.cancel', 'Cancel')}
                             </button>
