@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { 
     Mail, Phone, ShieldCheck, MapPin, School, Edit2, 
-    User, Camera, Loader2, Trash2, AlertCircle, Fingerprint 
+    User, Camera, Loader2, Trash2, AlertCircle, Fingerprint, Download 
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
@@ -217,6 +217,45 @@ const MyProfile = () => {
         }
     };
 
+    // --- NEW: Handle Image Download with Cache-Busting ---
+    const handleDownloadProfilePic = async (e) => {
+        e.stopPropagation(); 
+        const toastId = toast.loading(t('my_profile.toasts.downloading', 'Downloading image...'));
+        
+        try {
+            const ext = localUser.profilePicture.split('.').pop().split(/#|\?/)[0] || 'jpg';
+            const safeName = localUser.name.replace(/\s+/g, '_');
+            const fileName = `${safeName}_profile_pic.${ext}`;
+
+            const noCacheUrl = `${localUser.profilePicture}?t=${new Date().getTime()}`;
+
+            const response = await fetch(noCacheUrl, { 
+                method: 'GET',
+                mode: 'cors'
+            });
+            
+            if (!response.ok) throw new Error("Network response was not ok");
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+
+            document.body.appendChild(link);
+            link.click();
+            
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            
+            toast.success(t('my_profile.toasts.download_success', 'Image downloaded successfully!'), { id: toastId });
+        } catch (err) {
+            console.error("Failed to download image", err);
+            toast.error(t('my_profile.toasts.download_failed', 'Failed to download profile picture.'), { id: toastId });
+        }
+    };
+
     if (loading) {
         return (
             <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in pb-24 p-4">
@@ -249,7 +288,12 @@ const MyProfile = () => {
                         <div className="relative">
                             <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-[2.5rem] bg-linear-to-br from-primary to-primary/80 flex items-center justify-center text-primary-foreground text-4xl sm:text-5xl font-black shadow-2xl shadow-primary/30 border-4 border-background overflow-hidden relative group/avatar transition-transform hover:scale-[1.02]">
                                 {localUser.profilePicture ? (
-                                    <img src={localUser.profilePicture} alt={localUser.name} className="w-full h-full object-cover" />
+                                    <img 
+                                        src={localUser.profilePicture} 
+                                        alt={localUser.name} 
+                                        crossOrigin="anonymous" // --- NEW: Added for CORS fix ---
+                                        className="w-full h-full object-cover" 
+                                    />
                                 ) : (
                                     <span>{localUser.name?.charAt(0).toUpperCase() || "U"}</span>
                                 )}
@@ -258,15 +302,27 @@ const MyProfile = () => {
                                     className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-all cursor-pointer text-white"
                                 >
                                     {isUploadingAvatar ? <Loader2 className="w-8 h-8 animate-spin" /> : <Camera className="w-8 h-8" />}
-                                    <span className="text-[10px] font-bold uppercase mt-1 tracking-widest">Change</span>
+                                    <span className="text-[10px] font-bold uppercase mt-1 tracking-widest">{t('my_profile.change_pic', 'Change')}</span>
                                 </div>
                             </div>
 
+                            {/* --- NEW: DOWNLOAD BUTTON (Top Left) --- */}
+                            {localUser.profilePicture && (
+                                <button
+                                    onClick={handleDownloadProfilePic}
+                                    className="absolute -top-2 -left-2 p-2 bg-primary text-primary-foreground rounded-2xl border-4 border-card shadow-lg hover:scale-110 active:scale-95 transition-all z-20"
+                                    title={t('my_profile.download_pic', 'Download Picture')}
+                                >
+                                    <Download className="w-4 h-4" />
+                                </button>
+                            )}
+
+                            {/* DELETE BUTTON (Top Right) */}
                             {localUser.profilePicture && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setIsDeleteModalOpen(true); }}
                                     className="absolute -top-2 -right-2 p-2 bg-destructive text-white rounded-2xl border-4 border-card shadow-lg hover:scale-110 active:scale-95 transition-all z-20"
-                                    title="Remove Picture"
+                                    title={t('my_profile.remove_pic', 'Remove Picture')}
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
