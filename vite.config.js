@@ -69,28 +69,28 @@ export default defineConfig(({ mode }) => ({
             short_name: "Clock In",
             description: "Log your current school visit",
             url: "/employee/dashboard",
-            icons: [{ src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" }]
+            icons: [{ src: "/shortcuts/clock.png", sizes: "192x192", type: "image/png" }]
           },
           {
             name: "Assigned Schools",
-            short_name: "Schools alloted",
+            short_name: "Schools",
             description: "View your alloted schools",
             url: "/employee/assignments",
-            icons: [{ src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" }]
+            icons: [{ src: "/shortcuts/school.png", sizes: "192x192", type: "image/png" }]
           },
           {
             name: "Upload Media",
             short_name: "Media",
             description: "Upload your media files",
             url: "/employee/media",
-            icons: [{ src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" }]
+            icons: [{ src: "/shortcuts/media.png", sizes: "192x192", type: "image/png" }]
           },
           {
             name: "Submit Daily Report",
             short_name: "Report",
             description: "Log your daily report",
             url: "/employee/report",
-            icons: [{ src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" }]
+            icons: [{ src: "/shortcuts/report.png", sizes: "192x192", type: "image/png" }]
           }
         ]
         // ----------------------------------------------------
