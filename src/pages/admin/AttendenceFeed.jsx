@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { useSelector } from "react-redux";
 import {
     Radio, Clock, MapPin, School, Users, FileText,
-    AlertCircle, CheckCircle2, XCircle, Coffee, Star, X, Timer, 
+    AlertCircle, CheckCircle2, XCircle, Coffee, Star, X, Timer,
     Filter, ChevronDown, LogOut, Settings2, Navigation, Loader2, Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -235,7 +235,7 @@ const AttendanceFeed = () => {
                     <div className="space-y-0.5">
                         <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight uppercase">{t('attendance_feed.title')}</h1>
                         <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                           <Radio className="w-3 h-3 text-destructive animate-pulse" /> {t('attendance_feed.live_monitoring', 'Live Monitoring Active')}
+                            <Radio className="w-3 h-3 text-destructive animate-pulse" /> {t('attendance_feed.live_monitoring', 'Live Monitoring Active')}
                         </p>
                     </div>
                 </div>
@@ -262,7 +262,7 @@ const AttendanceFeed = () => {
                                         className={`flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all ${activeFilter === f
                                             ? "bg-primary text-primary-foreground shadow-md"
                                             : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                                        }`}
+                                            }`}
                                     >
                                         <span className="uppercase tracking-widest">{t(`attendance_feed.filter_${f.toLowerCase()}`)}</span>
                                         {activeFilter === f && <CheckCircle2 className="w-4 h-4" />}
@@ -346,7 +346,28 @@ const AttendanceFeed = () => {
 
                                         {isActiveOrPending && employeeLocation && (
                                             <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 rounded-xl border border-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-wider animate-in slide-in-from-right-4">
-                                                <Navigation className="w-3 h-3 animate-pulse" /> Live tracking
+                                                <Navigation className="w-3 h-3 animate-pulse" />
+                                                <span>Live tracking</span>
+
+                                                {/* Safely extract school coordinates whether they are flat fields or GeoJSON */}
+                                                {(() => {
+                                                    const schoolLat = record.school?.latitude || record.school?.location?.coordinates?.[1];
+                                                    const schoolLng = record.school?.longitude || record.school?.location?.coordinates?.[0];
+
+                                                    if (schoolLat && schoolLng) {
+                                                        return (
+                                                            <span className="ml-1 border-l border-blue-500/30 pl-2">
+                                                                {calculateDistance(
+                                                                    employeeLocation.lat,
+                                                                    employeeLocation.lng,
+                                                                    schoolLat,
+                                                                    schoolLng
+                                                                )} away
+                                                            </span>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
                                             </div>
                                         )}
                                     </div>
@@ -362,10 +383,10 @@ const AttendanceFeed = () => {
                                                 <span className="px-2 py-1 bg-amber-500 text-white rounded-lg text-[9px] font-black shadow-sm shadow-amber-500/20 animate-in zoom-in">{arrivalDelayBadge}</span>
                                             )}
                                         </div>
-                                        
+
                                         <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
                                             <Clock className="w-3 h-3" />
-                                            {record.checkInTime ? formatTime(record.checkInTime) : "PENDING"} 
+                                            {record.checkInTime ? formatTime(record.checkInTime) : "PENDING"}
                                             {record.checkOutTime && ` → ${formatTime(record.checkOutTime)}`}
                                         </div>
                                     </div>
@@ -390,9 +411,9 @@ const AttendanceFeed = () => {
             {/* DETAIL & OVERRIDE MODAL */}
             {selectedNoteRecord && (
                 <div className={`fixed inset-0 z-150 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleCloseModal}>
-                    <div 
-                        className={`bg-card w-full max-w-lg rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl border-t md:border border-border/50 flex flex-col relative overflow-hidden ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95' : ''}`} 
-                        style={{ transform: `translateY(${dragOffset}px)` }} 
+                    <div
+                        className={`bg-card w-full max-w-lg rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl border-t md:border border-border/50 flex flex-col relative overflow-hidden ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95' : ''}`}
+                        style={{ transform: `translateY(${dragOffset}px)` }}
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20 rounded-t-[inherit] pointer-events-none" />
@@ -422,7 +443,7 @@ const AttendanceFeed = () => {
                             {(selectedNoteRecord.eventNote || selectedNoteRecord.lateReason || selectedNoteRecord.teacherNote) && (
                                 <div className="space-y-4">
                                     <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">{t('attendance_feed.modal.field_intelligence', 'Field Intelligence')}</Label>
-                                    
+
                                     {selectedNoteRecord.eventNote && (
                                         <div className="p-4 bg-violet-500/5 border border-violet-500/20 rounded-2xl animate-in slide-in-from-top-2">
                                             <p className="text-[9px] font-black uppercase tracking-tighter text-violet-600 mb-1 flex items-center gap-1.5">
@@ -472,7 +493,7 @@ const AttendanceFeed = () => {
                                     <div className="flex items-center gap-2 text-foreground font-black uppercase tracking-tighter">
                                         <Settings2 className="w-5 h-5 text-primary" /> {t('attendance_feed.modal.system_override', 'System Override')}
                                     </div>
-                                    <button 
+                                    <button
                                         onClick={() => { setOverrideMode(!overrideMode); setOverrideAction(""); }}
                                         className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm
                                             ${overrideMode ? 'bg-destructive text-white' : 'bg-muted text-muted-foreground hover:bg-border'}
@@ -514,14 +535,14 @@ const AttendanceFeed = () => {
                                             <div className="space-y-4 animate-in fade-in zoom-in-95">
                                                 <div className="space-y-2">
                                                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">{t('attendance_feed.modal.admin_note', 'Administrative Note (Required)')}</Label>
-                                                    <Textarea 
+                                                    <Textarea
                                                         value={overrideReason}
                                                         onChange={(e) => setOverrideReason(e.target.value)}
                                                         placeholder="Explain why this override is being performed..."
                                                         className="rounded-3xl bg-muted/20 border-border/80 focus-visible:ring-primary/30 p-4 min-h-25 text-sm font-medium"
                                                     />
                                                 </div>
-                                                <Button 
+                                                <Button
                                                     onClick={handleOverrideSubmit}
                                                     disabled={isSubmittingOverride || !overrideReason.trim()}
                                                     className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 active:scale-[0.98] transition-all"
