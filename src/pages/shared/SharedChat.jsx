@@ -5,10 +5,11 @@ import { io } from "socket.io-client";
 import {
     Search, Phone, MoreVertical, Paperclip, Send, Download,
     ArrowLeft, Loader2, CheckCheck, Check, MessageSquare, Camera, Image as ImageIcon, X, FileCheck,
-    Trash2, Link as LinkIcon, FileText, Users, Forward, PlaySquare
+    Trash2, Link as LinkIcon, FileText, Users, Forward, PlaySquare, Lock
 } from "lucide-react";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
+import CallOverlay from "./CallOverlay";
 
 // --- GLOBAL SOCKET SINGLETON ---
 if (!window.__GLOBAL_SOCKET__) {
@@ -621,7 +622,6 @@ const SharedChat = () => {
 
     const initiateVoiceCall = () => {
         if (!activeChat) return;
-        // Fire the global event to tell the Navbar to start the call!
         window.dispatchEvent(new CustomEvent('initiate_global_call', { detail: activeChat }));
     };
 
@@ -663,11 +663,8 @@ const SharedChat = () => {
             {/* FULLSCREEN MEDIA VIEWER - RENDERED AT ROOT LEVEL */}
             {fullscreenMedia && !showForwardDialog && (
                 <div className="fixed inset-0! z-999999! w-screen h-screen bg-[#0b141a] flex flex-col animate-in fade-in duration-200">
-
                     {/* Top Bar */}
                     <div className="flex items-center justify-between px-4 sm:px-6 h-16 shrink-0 bg-[#0b141a]">
-
-                        {/* Left Info */}
                         <div className="flex items-center gap-3">
                             {String(fullscreenMedia.senderId || fullscreenMedia.sender) === String(currentUserId) ? (
                                 user?.profilePicture ? (
@@ -690,32 +687,18 @@ const SharedChat = () => {
                             </div>
                         </div>
 
-                        {/* Right Tools */}
                         <div className="flex items-center gap-2 sm:gap-4 text-[#AEBAC1]">
-                            <button onClick={() => handleDeleteMediaFromViewer(fullscreenMedia)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Delete for me">
-                                <Trash2 className="w-5 h-5 sm:w-5 sm:h-5" />
-                            </button>
-                            <button onClick={() => setShowForwardDialog(true)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Forward">
-                                <Forward className="w-5 h-5 sm:w-5 sm:h-5" />
-                            </button>
-                            <button onClick={() => downloadToLocal(fullscreenMedia.mediaUrl, fullscreenMedia.mediaType)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Download">
-                                <Download className="w-5 h-5 sm:w-5 sm:h-5" />
-                            </button>
+                            <button onClick={() => handleDeleteMediaFromViewer(fullscreenMedia)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Delete for me"><Trash2 className="w-5 h-5 sm:w-5 sm:h-5" /></button>
+                            <button onClick={() => setShowForwardDialog(true)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Forward"><Forward className="w-5 h-5 sm:w-5 sm:h-5" /></button>
+                            <button onClick={() => downloadToLocal(fullscreenMedia.mediaUrl, fullscreenMedia.mediaType)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Download"><Download className="w-5 h-5 sm:w-5 sm:h-5" /></button>
                             <div className="w-px h-6 bg-white/10 mx-1 hidden sm:block"></div>
-                            <button onClick={() => setFullscreenMedia(null)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Close">
-                                <X className="w-6 h-6 sm:w-6 sm:h-6" />
-                            </button>
+                            <button onClick={() => setFullscreenMedia(null)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Close"><X className="w-6 h-6 sm:w-6 sm:h-6" /></button>
                         </div>
                     </div>
 
-                    {/* Central Image/Video/Document Frame */}
                     <div className="flex-1 w-full flex items-center justify-center overflow-hidden p-4 sm:p-8 select-none">
-                        {fullscreenMedia.mediaType === 'image' && (
-                            <img src={fullscreenMedia.mediaUrl} alt="Fullscreen Preview" className="w-auto h-auto max-w-full max-h-full object-contain" />
-                        )}
-                        {fullscreenMedia.mediaType === 'video' && (
-                            <video src={fullscreenMedia.mediaUrl} controls autoPlay className="w-auto h-auto max-w-full max-h-full object-contain" />
-                        )}
+                        {fullscreenMedia.mediaType === 'image' && <img src={fullscreenMedia.mediaUrl} alt="Fullscreen Preview" className="w-auto h-auto max-w-full max-h-full object-contain" />}
+                        {fullscreenMedia.mediaType === 'video' && <video src={fullscreenMedia.mediaUrl} controls autoPlay className="w-auto h-auto max-w-full max-h-full object-contain" />}
                         {fullscreenMedia.mediaType === 'document' && (
                             <div className="w-full h-full max-w-4xl bg-[#EBEBEB] dark:bg-card rounded-xl overflow-hidden shadow-2xl flex flex-col">
                                 <div className="bg-muted p-4 flex items-center gap-4 shrink-0 border-b border-border">
@@ -725,27 +708,17 @@ const SharedChat = () => {
                                         <p className="text-xs text-muted-foreground">Document Preview</p>
                                     </div>
                                 </div>
-                                {/* Check if the document URL is actually an image extension */}
                                 {fullscreenMedia.mediaUrl.match(/\.(jpeg|jpg|gif|png|webp|bmp)(?:\?.*)?$/i) ? (
                                     <div className="flex-1 w-full h-full bg-black/5 dark:bg-black/20 flex items-center justify-center p-4 overflow-hidden">
-                                        <img
-                                            src={fullscreenMedia.mediaUrl}
-                                            alt="Document Preview"
-                                            className="max-w-full max-h-full object-contain drop-shadow-md rounded-md"
-                                        />
+                                        <img src={fullscreenMedia.mediaUrl} alt="Document Preview" className="max-w-full max-h-full object-contain drop-shadow-md rounded-md" />
                                     </div>
                                 ) : (
-                                    <iframe
-                                        src={fullscreenMedia.mediaUrl}
-                                        className="flex-1 w-full h-full border-none bg-white"
-                                        title="Document Viewer"
-                                    />
+                                    <iframe src={fullscreenMedia.mediaUrl} className="flex-1 w-full h-full border-none bg-white" title="Document Viewer" />
                                 )}
                             </div>
                         )}
                     </div>
 
-                    {/* Bottom Thumbnail Gallery */}
                     {chatMediaFiles.length > 0 && (
                         <div className="h-20 shrink-0 border-t border-white/10 flex items-center justify-center px-4 gap-2 overflow-x-auto custom-scrollbar">
                             {chatMediaFiles.map((mediaMsg) => {
@@ -756,17 +729,7 @@ const SharedChat = () => {
                                         onClick={() => setFullscreenMedia(mediaMsg)}
                                         className={`w-12 h-12 shrink-0 rounded-md overflow-hidden cursor-pointer border-2 transition-all duration-200 ${isSelected ? 'border-white scale-110 opacity-100 z-10' : 'border-transparent opacity-50 hover:opacity-100'}`}
                                     >
-                                        {mediaMsg.mediaType === 'image' ? (
-                                            <img src={mediaMsg.mediaUrl} className="w-full h-full object-cover" alt="thumb" />
-                                        ) : mediaMsg.mediaType === 'video' ? (
-                                            <div className="w-full h-full bg-white/10 flex items-center justify-center">
-                                                <PlaySquare className="w-6 h-6 text-white" />
-                                            </div>
-                                        ) : (
-                                            <div className="w-full h-full bg-white/10 flex items-center justify-center">
-                                                <FileText className="w-6 h-6 text-white" />
-                                            </div>
-                                        )}
+                                        {mediaMsg.mediaType === 'image' ? <img src={mediaMsg.mediaUrl} className="w-full h-full object-cover" alt="thumb" /> : mediaMsg.mediaType === 'video' ? <div className="w-full h-full bg-white/10 flex items-center justify-center"><PlaySquare className="w-6 h-6 text-white" /></div> : <div className="w-full h-full bg-white/10 flex items-center justify-center"><FileText className="w-6 h-6 text-white" /></div>}
                                     </div>
                                 );
                             })}
@@ -775,23 +738,15 @@ const SharedChat = () => {
                 </div>
             )}
 
-            {/* FORWARD DIALOG BOX - ALSO ELEVATED */}
+            {/* FORWARD DIALOG BOX */}
             {showForwardDialog && (
                 <div className="fixed inset-0 z-1000000 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
                     <div className="w-full max-w-sm md:max-w-md bg-card border border-border shadow-2xl rounded-3xl overflow-hidden flex flex-col max-h-[85vh] md:max-h-[75vh]">
-
                         <div className="p-4 md:p-5 border-b border-border/50 bg-muted/20">
                             <h3 className="text-lg font-bold text-foreground mb-4">Forward message</h3>
                             <div className="relative">
                                 <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                                <input
-                                    type="text"
-                                    placeholder="Search contacts..."
-                                    value={forwardSearchQuery}
-                                    onChange={(e) => setForwardSearchQuery(e.target.value)}
-                                    className="w-full bg-background border border-border/60 rounded-xl pl-10 pr-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm"
-                                    autoFocus
-                                />
+                                <input type="text" placeholder="Search contacts..." value={forwardSearchQuery} onChange={(e) => setForwardSearchQuery(e.target.value)} className="w-full bg-background border border-border/60 rounded-xl pl-10 pr-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm" autoFocus />
                             </div>
                         </div>
 
@@ -801,58 +756,23 @@ const SharedChat = () => {
                                 return (
                                     <label key={user._id || user.id} className={`flex items-center gap-3.5 p-3 rounded-xl cursor-pointer transition-colors ${isSelected ? 'bg-primary/5 dark:bg-primary/10' : 'hover:bg-muted/50'}`}>
                                         <div className="relative flex items-center justify-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={isSelected}
-                                                onChange={(e) => {
-                                                    const id = user._id || user.id;
-                                                    if (e.target.checked) setForwardSelectedUsers(prev => [...prev, id]);
-                                                    else setForwardSelectedUsers(prev => prev.filter(userId => userId !== id));
-                                                }}
-                                                className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary focus:ring-offset-background cursor-pointer"
-                                            />
+                                            <input type="checkbox" checked={isSelected} onChange={(e) => { const id = user._id || user.id; if (e.target.checked) setForwardSelectedUsers(prev => [...prev, id]); else setForwardSelectedUsers(prev => prev.filter(userId => userId !== id)); }} className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary focus:ring-offset-background cursor-pointer" />
                                         </div>
                                         <div className="shrink-0">
-                                            {user.profilePicture ? (
-                                                <img src={user.profilePicture} alt={user.name} className="w-10 h-10 rounded-full object-cover" />
-                                            ) : (
-                                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">{user.name?.charAt(0)}</div>
-                                            )}
+                                            {user.profilePicture ? <img src={user.profilePicture} alt={user.name} className="w-10 h-10 rounded-full object-cover" /> : <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">{user.name?.charAt(0)}</div>}
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <span className="font-semibold text-[15px] text-foreground truncate block">{user.name}</span>
-                                        </div>
+                                        <div className="flex-1 min-w-0"><span className="font-semibold text-[15px] text-foreground truncate block">{user.name}</span></div>
                                     </label>
                                 );
                             })}
-                            {conversations.filter(c => c.name.toLowerCase().includes(forwardSearchQuery.toLowerCase())).length === 0 && (
-                                <p className="text-center text-muted-foreground p-6 text-sm font-medium">No contacts found</p>
-                            )}
+                            {conversations.filter(c => c.name.toLowerCase().includes(forwardSearchQuery.toLowerCase())).length === 0 && <p className="text-center text-muted-foreground p-6 text-sm font-medium">No contacts found</p>}
                         </div>
 
                         <div className="p-4 md:p-5 border-t border-border/50 flex items-center justify-between bg-muted/20">
-                            <span className="text-sm font-medium text-muted-foreground">
-                                {forwardSelectedUsers.length > 0 ? `${forwardSelectedUsers.length} selected` : 'Select contacts'}
-                            </span>
+                            <span className="text-sm font-medium text-muted-foreground">{forwardSelectedUsers.length > 0 ? `${forwardSelectedUsers.length} selected` : 'Select contacts'}</span>
                             <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => {
-                                        setShowForwardDialog(false);
-                                        setForwardSelectedUsers([]);
-                                        setForwardSearchQuery("");
-                                    }}
-                                    className="px-4 py-2.5 text-[14px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                {forwardSelectedUsers.length > 0 && (
-                                    <button
-                                        onClick={handleForwardMedia}
-                                        className="w-11 h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-transform active:scale-95 shadow-lg animate-in zoom-in-95 duration-200"
-                                    >
-                                        <Send className="w-5 h-5 ml-0.5" />
-                                    </button>
-                                )}
+                                <button onClick={() => { setShowForwardDialog(false); setForwardSelectedUsers([]); setForwardSearchQuery(""); }} className="px-4 py-2.5 text-[14px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors">Cancel</button>
+                                {forwardSelectedUsers.length > 0 && <button onClick={handleForwardMedia} className="w-11 h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-transform active:scale-95 shadow-lg animate-in zoom-in-95 duration-200"><Send className="w-5 h-5 ml-0.5" /></button>}
                             </div>
                         </div>
                     </div>
@@ -863,48 +783,29 @@ const SharedChat = () => {
 
                 {/* DELETE CONTEXT MENU */}
                 {contextMenu && (
-                    <div
-                        ref={contextMenuRef}
-                        className="fixed z-50 bg-card border border-border shadow-2xl rounded-xl py-1 w-44 animate-in fade-in zoom-in-95 duration-150"
-                        style={{ top: contextMenu.mouseY, left: contextMenu.mouseX }}
-                    >
-                        <button onClick={() => executeDelete('me')} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted text-sm font-medium text-foreground transition-colors">
-                            <Trash2 className="w-4 h-4 text-muted-foreground" /> Delete for me
-                        </button>
+                    <div ref={contextMenuRef} className="fixed z-50 bg-card border border-border shadow-2xl rounded-xl py-1 w-44 animate-in fade-in zoom-in-95 duration-150" style={{ top: contextMenu.mouseY, left: contextMenu.mouseX }}>
+                        <button onClick={() => executeDelete('me')} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted text-sm font-medium text-foreground transition-colors"><Trash2 className="w-4 h-4 text-muted-foreground" /> Delete for me</button>
                         {String(contextMenu.msg.senderId || contextMenu.msg.sender) === String(currentUserId) && (
-                            <button onClick={() => executeDelete('everyone')} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-rose-500/10 text-sm font-medium text-rose-500 transition-colors">
-                                <Trash2 className="w-4 h-4" /> Delete for everyone
-                            </button>
+                            <button onClick={() => executeDelete('everyone')} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-rose-500/10 text-sm font-medium text-rose-500 transition-colors"><Trash2 className="w-4 h-4" /> Delete for everyone</button>
                         )}
                     </div>
                 )}
 
-                {/* LEFT SIDEBAR (Contacts) - RESIZABLE */}
+                {/* LEFT SIDEBAR (Contacts) */}
                 <div
-                    className={`relative flex flex-col h-full bg-card dark:bg-[#11131A] border-r border-border/40 z-20 transition-[width] ease-linear duration-0 ${activeChat ? 'hidden md:flex' : 'flex w-full'}`}
-                    style={{
-                        width: (activeChat || window.innerWidth >= 768) ? `${sidebarWidth}px` : '100%',
-                        minWidth: (activeChat || window.innerWidth >= 768) ? '280px' : '100%',
-                        maxWidth: (activeChat || window.innerWidth >= 768) ? '500px' : '100%'
-                    }}
+                    className={`relative flex-col h-full bg-card dark:bg-[#11131A] border-r border-border/40 z-20 transition-all duration-300 ease-in-out ${activeChat ? 'hidden md:flex' : 'flex w-full animate-in slide-in-from-left-4 md:animate-none'}`}
+                    style={{ width: (activeChat || window.innerWidth >= 768) ? `${sidebarWidth}px` : '100%', minWidth: (activeChat || window.innerWidth >= 768) ? '280px' : '100%', maxWidth: (activeChat || window.innerWidth >= 768) ? '500px' : '100%' }}
                 >
-                    <div
-                        onMouseDown={handleMouseDown}
-                        className="absolute top-0 -right-0.75 w-1.5 h-full cursor-col-resize hover:bg-primary/50 active:bg-primary z-50 hidden md:block transition-colors"
-                    />
+                    <div onMouseDown={handleMouseDown} className="absolute top-0 -right-0.75 w-1.5 h-full cursor-col-resize hover:bg-primary/50 active:bg-primary z-50 hidden md:block transition-colors" />
 
                     <div className="p-4 sm:p-5 shrink-0 space-y-4 bg-card dark:bg-[#11131A]">
                         <div className="flex items-center justify-between">
                             <h2 className="text-2xl font-black tracking-tight text-foreground">Messages</h2>
                             <div className="relative" ref={sidebarMenuRef}>
-                                <button onClick={() => setShowSidebarMenu(!showSidebarMenu)} className="p-2 rounded-full text-muted-foreground hover:bg-muted">
-                                    <MoreVertical className="w-5 h-5" />
-                                </button>
+                                <button onClick={() => setShowSidebarMenu(!showSidebarMenu)} className="p-2 rounded-full text-muted-foreground hover:bg-muted"><MoreVertical className="w-5 h-5" /></button>
                                 {showSidebarMenu && (
                                     <div className="absolute top-10 right-0 w-48 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-30">
-                                        <button onClick={() => { setShowSidebarMenu(false); toast("Groups coming soon!"); }} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium">
-                                            <Users className="w-4 h-4" /> New group
-                                        </button>
+                                        <button onClick={() => { setShowSidebarMenu(false); toast("Groups coming soon!"); }} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><Users className="w-4 h-4" /> New group</button>
                                     </div>
                                 )}
                             </div>
@@ -930,32 +831,16 @@ const SharedChat = () => {
                                 return (
                                     <div key={userId} onClick={() => handleSelectChat(chatUser)} className={`flex items-center gap-3.5 p-3 cursor-pointer rounded-xl transition-all duration-200 ${isActive ? 'bg-muted dark:bg-[#1A1D24]' : 'hover:bg-muted/50 dark:hover:bg-[#16181F]'}`}>
                                         <div className="relative shrink-0">
-                                            {chatUser.profilePicture ? (
-                                                <img src={chatUser.profilePicture} alt={chatUser.name} className="w-12 h-12 rounded-full object-cover" />
-                                            ) : (
-                                                <div className="w-12 h-12 rounded-full bg-linear-to-br from-primary/20 to-primary/10 flex items-center justify-center text-primary font-bold text-base">
-                                                    {chatUser.name?.charAt(0) || 'U'}
-                                                </div>
-                                            )}
-                                            {isOnline(userId) && (
-                                                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-card rounded-full"></span>
-                                            )}
+                                            {chatUser.profilePicture ? <img src={chatUser.profilePicture} alt={chatUser.name} className="w-12 h-12 rounded-full object-cover" /> : <div className="w-12 h-12 rounded-full bg-linear-to-br from-primary/20 to-primary/10 flex items-center justify-center text-primary font-bold text-base">{chatUser.name?.charAt(0) || 'U'}</div>}
+                                            {isOnline(userId) && <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-card rounded-full"></span>}
                                         </div>
                                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                                             <div className="flex justify-between items-center mb-0.5">
-                                                <h3 className={`text-[15px] font-semibold truncate ${unreadCount > 0 ? 'text-foreground' : (isActive ? 'text-foreground' : 'text-foreground/90')}`}>
-                                                    {chatUser.name}
-                                                </h3>
+                                                <h3 className={`text-[15px] font-semibold truncate ${unreadCount > 0 ? 'text-foreground' : (isActive ? 'text-foreground' : 'text-foreground/90')}`}>{chatUser.name}</h3>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <p className={`text-[13px] truncate font-medium ${unreadCount > 0 ? 'text-foreground/80' : 'text-muted-foreground'}`}>
-                                                    {chatUser.role || 'Employee'}
-                                                </p>
-                                                {unreadCount > 0 && (
-                                                    <span className="w-5 h-5 rounded-full bg-[#25D366] text-white text-[10px] font-bold flex items-center justify-center shrink-0 ml-2 animate-in zoom-in duration-200 shadow-sm">
-                                                        {unreadCount > 9 ? '9+' : unreadCount}
-                                                    </span>
-                                                )}
+                                                <p className={`text-[13px] truncate font-medium ${unreadCount > 0 ? 'text-foreground/80' : 'text-muted-foreground'}`}>{chatUser.role || 'Employee'}</p>
+                                                {unreadCount > 0 && <span className="w-5 h-5 rounded-full bg-[#25D366] text-white text-[10px] font-bold flex items-center justify-center shrink-0 ml-2 animate-in zoom-in duration-200 shadow-sm">{unreadCount > 9 ? '9+' : unreadCount}</span>}
                                             </div>
                                         </div>
                                     </div>
@@ -966,7 +851,7 @@ const SharedChat = () => {
                 </div>
 
                 {/* MAIN CONVERSATION WINDOW */}
-                <div className={`flex-1 flex flex-col h-full relative overflow-hidden transition-all duration-300 ${!activeChat ? 'hidden md:flex' : 'flex'}`}>
+                <div className={`flex-1 flex-col h-full relative overflow-hidden transition-all duration-300 ${!activeChat ? 'hidden md:flex' : 'flex animate-in slide-in-from-right-4 md:animate-none'}`}>
                     {activeChat ? (
                         <div className="flex-1 flex w-full h-full relative bg-[#EBEBEB] dark:bg-[#0B0D12]">
                             <div className="flex-1 flex flex-col h-full relative z-10 transition-all duration-300">
@@ -974,35 +859,16 @@ const SharedChat = () => {
                                 {/* TOP BAR */}
                                 {showSearchInput ? (
                                     <div className="h-16 md:h-17.5 px-2 sm:px-4 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center gap-2 shrink-0 z-20 sticky top-0 animate-in fade-in duration-200">
-                                        <button onClick={() => { setShowSearchInput(false); setChatSearchQuery(""); }} className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0">
-                                            <ArrowLeft className="w-5 h-5" />
-                                        </button>
-                                        <input
-                                            autoFocus
-                                            type="text"
-                                            value={chatSearchQuery}
-                                            onChange={(e) => setChatSearchQuery(e.target.value)}
-                                            placeholder="Search..."
-                                            className="flex-1 bg-transparent border-none text-[15px] focus:outline-none focus:ring-0 text-foreground placeholder:text-muted-foreground min-w-0"
-                                        />
-                                        {chatSearchQuery && (
-                                            <button onClick={() => setChatSearchQuery("")} className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0">
-                                                <X className="w-5 h-5" />
-                                            </button>
-                                        )}
+                                        <button onClick={() => { setShowSearchInput(false); setChatSearchQuery(""); }} className="p-3 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0"><ArrowLeft className="w-5 h-5" /></button>
+                                        <input autoFocus type="text" value={chatSearchQuery} onChange={(e) => setChatSearchQuery(e.target.value)} placeholder="Search..." className="flex-1 bg-transparent border-none text-[15px] focus:outline-none focus:ring-0 text-foreground placeholder:text-muted-foreground min-w-0" />
+                                        {chatSearchQuery && <button onClick={() => setChatSearchQuery("")} className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0"><X className="w-5 h-5" /></button>}
                                     </div>
                                 ) : (
-                                    <div className="h-16 md:h-17.5 px-3 sm:px-5 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center justify-between shrink-0 z-20 sticky top-0">
+                                    <div className="h-16 md:h-17.5 px-2 sm:px-5 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center justify-between shrink-0 z-20 sticky top-0">
                                         <div className="flex items-center flex-1 gap-2 sm:gap-4 cursor-pointer" onClick={() => setShowProfileInfo(true)}>
-                                            <button onClick={(e) => { e.stopPropagation(); setActiveChat(null); }} className="md:hidden p-2 -ml-1 text-muted-foreground hover:bg-muted rounded-full">
-                                                <ArrowLeft className="w-5 h-5" />
-                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); setActiveChat(null); }} className="md:hidden p-2 text-muted-foreground hover:bg-muted rounded-full"><ArrowLeft className="w-5 h-5" /></button>
                                             <div className="relative shrink-0">
-                                                {activeChat.profilePicture ? (
-                                                    <img src={activeChat.profilePicture} alt="Profile" className="w-10 h-10 md:w-11 md:h-11 rounded-full object-cover" />
-                                                ) : (
-                                                    <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">{activeChat.name?.charAt(0)}</div>
-                                                )}
+                                                {activeChat.profilePicture ? <img src={activeChat.profilePicture} alt="Profile" className="w-10 h-10 md:w-11 md:h-11 rounded-full object-cover" /> : <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">{activeChat.name?.charAt(0)}</div>}
                                             </div>
                                             <div className="leading-tight flex-1 min-w-0">
                                                 <h3 className="text-[15px] md:text-[16px] font-bold text-foreground truncate tracking-wide">{activeChat.name}</h3>
@@ -1014,17 +880,9 @@ const SharedChat = () => {
                                         </div>
 
                                         <div className="flex items-center gap-0.5 md:gap-1 relative" ref={topMenuRef}>
-                                            <button onClick={() => setShowSearchInput(true)} className="p-2 md:p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors">
-                                                <Search className="w-5 h-5" />
-                                            </button>
-
-                                            <button onClick={initiateVoiceCall} className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 text-[13px] md:text-[14px] font-bold text-white bg-[#6B66FF] hover:bg-[#5A55E5] rounded-xl transition-all active:scale-95 shadow-sm mx-0.5 md:mx-1">
-                                                <Phone className="w-4 h-4 fill-current" /> <span className="hidden sm:inline">Call</span>
-                                            </button>
-
-                                            <button onClick={() => setShowTopMenu(!showTopMenu)} className="p-2 md:p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors">
-                                                <MoreVertical className="w-5 h-5" />
-                                            </button>
+                                            <button onClick={() => setShowSearchInput(true)} className="p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"><Search className="w-5 h-5" /></button>
+                                            <button onClick={initiateVoiceCall} className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 text-[13px] md:text-[14px] font-bold text-white bg-[#6B66FF] hover:bg-[#5A55E5] rounded-xl transition-all active:scale-95 shadow-sm mx-0.5 md:mx-1"><Phone className="w-4 h-4 fill-current" /> <span className="hidden sm:inline">Call</span></button>
+                                            <button onClick={() => setShowTopMenu(!showTopMenu)} className="p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"><MoreVertical className="w-5 h-5" /></button>
 
                                             {showTopMenu && (
                                                 <div className="absolute top-12 right-0 w-44 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-30">
@@ -1039,10 +897,20 @@ const SharedChat = () => {
 
                                 {/* Message Feed */}
                                 <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 custom-scrollbar relative bg-linear-to-b from-[#f0f2f5] to-[#e5e7eb] dark:from-[#0B0D12] dark:to-[#0F1115]">
-                                    <div className="relative z-10 flex flex-col space-y-4">
+                                    <div className="relative z-10 flex flex-col space-y-4 pb-2">
                                         {displayedMessages.length === 0 ? (
-                                            <div className="h-full flex flex-col items-center justify-center text-muted-foreground mt-20">
-                                                <p className="text-sm font-medium bg-card/80 px-4 py-2 rounded-lg shadow-sm text-center mx-4">Send a message to start the conversation.</p>
+                                            <div className="h-full flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-500 m-auto mt-10">
+                                                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 shadow-inner border border-primary/20">
+                                                    <MessageSquare className="w-10 h-10 text-primary" />
+                                                </div>
+                                                <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2 tracking-tight">Say Hello to {activeChat.name.split(' ')[0]}!</h3>
+                                                <p className="text-muted-foreground text-[14px] sm:text-[15px] max-w-70 sm:max-w-sm mb-8 leading-relaxed">
+                                                    Send messages, share photos, or start a secure voice call.
+                                                </p>
+                                                <div className="bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[12px] px-4 py-2.5 rounded-xl flex flex-col sm:flex-row items-center gap-2.5 max-w-sm border border-amber-500/20 shadow-sm backdrop-blur-sm mx-auto">
+                                                    <Lock className="w-4 h-4 shrink-0" />
+                                                    <span className="text-center sm:text-left leading-tight">Messages are end-to-end encrypted. No one outside of this chat can read or listen to them.</span>
+                                                </div>
                                             </div>
                                         ) : (
                                             displayedMessages.map((msg, idx) => {
@@ -1058,14 +926,15 @@ const SharedChat = () => {
                                                         onTouchEnd={handleTouchEnd}
                                                         onTouchMove={handleTouchEnd}
                                                     >
-                                                        <div className={`relative max-w-[85%] sm:max-w-[75%] md:max-w-[65%] px-3 py-2 shadow-sm select-none ${isMe ? 'bg-[#6B66FF] text-white rounded-2xl rounded-tr-sm shadow-[0_4px_14px_-6px_rgba(var(--primary),0.3)]' : 'bg-card dark:bg-[#1C1F26] text-foreground rounded-2xl rounded-tl-sm border border-border/50 shadow-sm'}`}>
+                                                        {/* BUBBLE SIZING RESTRAINT APPLIED HERE */}
+                                                        <div className={`relative max-w-[85%] sm:max-w-[75%] lg:max-w-[60%] px-3 py-2 shadow-sm select-none ${isMe ? 'bg-[#6B66FF] text-white rounded-2xl rounded-tr-sm shadow-[0_4px_14px_-6px_rgba(var(--primary),0.3)]' : 'bg-card dark:bg-[#1C1F26] text-foreground rounded-2xl rounded-tl-sm border border-border/50 shadow-sm'}`}>
 
-                                                            {/* Media Handling */}
+                                                            {/* Media Handling (Images/Videos) */}
                                                             {msg.mediaUrl && (msg.mediaType === 'image' || msg.mediaType === 'video') && (
                                                                 !isMediaRevealed ? (
                                                                     <div
                                                                         onClick={() => handleRevealMedia(msg._id)}
-                                                                        className="relative w-48 h-48 md:w-60 md:h-60 bg-[#2A2E35] rounded-xl flex flex-col items-center justify-center cursor-pointer mb-1 border border-white/10 hover:bg-[#31363F] transition-colors"
+                                                                        className="relative w-48 h-48 sm:w-64 sm:h-64 bg-[#2A2E35] rounded-xl flex flex-col items-center justify-center cursor-pointer mb-1 border border-white/10 hover:bg-[#31363F] transition-colors"
                                                                     >
                                                                         <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md mb-2 hover:scale-105 transition-transform border border-white/20">
                                                                             <Download className="w-6 h-6 text-white" />
@@ -1078,7 +947,7 @@ const SharedChat = () => {
                                                                             <img
                                                                                 src={msg.mediaUrl}
                                                                                 alt="Image attachment"
-                                                                                className="max-w-full min-w-30 min-h-30 w-auto max-h-50 rounded-xl object-cover group-hover/media:opacity-90 transition-opacity bg-black/20"
+                                                                                className="w-48 sm:w-64 h-auto max-h-64 rounded-xl object-cover group-hover/media:opacity-90 transition-opacity bg-black/20"
                                                                                 onError={(e) => {
                                                                                     console.error("Image failed to load. URL:", msg.mediaUrl);
                                                                                     e.target.src = "https://placehold.co/400x300/13151A/FFF?text=Image+Unavailable";
@@ -1086,8 +955,8 @@ const SharedChat = () => {
                                                                             />
                                                                         )}
                                                                         {msg.mediaType === 'video' && (
-                                                                            <div className="relative">
-                                                                                <video src={msg.mediaUrl} className="max-w-full w-auto max-h-50 rounded-xl object-cover" />
+                                                                            <div className="relative w-48 sm:w-64">
+                                                                                <video src={msg.mediaUrl} className="w-full h-auto max-h-64 rounded-xl object-cover" />
                                                                                 <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl group-hover/media:bg-black/30 transition-colors">
                                                                                     <div className="w-12 h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/40"><PlaySquare className="w-6 h-6 text-white fill-white/80" /></div>
                                                                                 </div>
@@ -1101,7 +970,7 @@ const SharedChat = () => {
                                                             {msg.mediaType === 'document' && msg.mediaUrl && (
                                                                 <div
                                                                     onClick={() => setFullscreenMedia(msg)}
-                                                                    className="flex items-center gap-3 bg-black/10 dark:bg-white/5 p-3 rounded-lg mb-1.5 border border-white/5 cursor-pointer hover:bg-black/20 dark:hover:bg-white/10 transition-colors"
+                                                                    className="flex items-center gap-3 bg-black/10 dark:bg-white/5 p-3 rounded-lg mb-1.5 border border-white/5 cursor-pointer hover:bg-black/20 dark:hover:bg-white/10 transition-colors w-60 sm:w-72"
                                                                 >
                                                                     <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
                                                                         <FileCheck className="w-5 h-5 text-blue-500" />
@@ -1138,7 +1007,7 @@ const SharedChat = () => {
                                             <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={(e) => handleMediaUpload(e, { compress: true, maxCount: 1, maxSizeCombinedMb: 50 })} />
 
                                             {showAttachMenu && (
-                                                <div className="absolute bottom-12 left-0 w-48 bg-card border border-border shadow-2xl rounded-2xl p-1.5 flex flex-col gap-1 z-30 animate-in zoom-in-95 duration-200">
+                                                <div className="absolute bottom-full mb-2 left-0 w-48 bg-card border border-border shadow-2xl rounded-2xl p-1.5 flex flex-col gap-1 z-30 animate-in zoom-in-95 duration-200 origin-bottom-left">
                                                     <button type="button" onClick={() => { setShowAttachMenu(false); cameraInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center"><Camera className="w-4 h-4" /></div> Camera</button>
                                                     <button type="button" onClick={() => { setShowAttachMenu(false); fileInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><ImageIcon className="w-4 h-4" /></div> Photos & Videos</button>
                                                     <button type="button" onClick={() => { setShowAttachMenu(false); docInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center"><FileCheck className="w-4 h-4" /></div> Document</button>
@@ -1253,7 +1122,7 @@ const SharedChat = () => {
                             </div>
                             <h2 className="text-xl md:text-2xl font-black text-foreground tracking-tight z-10">Communication Hub</h2>
                             <p className="text-[14px] md:text-[15px] mt-2 md:mt-3 font-medium opacity-70 max-w-70 md:max-w-[320px] text-center z-10 leading-relaxed">
-                                Select a team member from the sidebar to send direct messages, compress images, and start voice calls.
+                                Select a team member from the sidebar to send direct messages, share media, and start voice calls.
                             </p>
                         </div>
                     )}
