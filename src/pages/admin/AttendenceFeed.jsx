@@ -308,7 +308,7 @@ const AttendanceFeed = () => {
                     </div>
                 </div>
 
-                <div className="relative z-60" ref={filterRef}>
+                <div className="relative z-10" ref={filterRef}>
                     <Button
                         onClick={() => setIsFilterOpen(!isFilterOpen)}
                         className="gap-2 h-11 px-5 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all active:scale-95"
@@ -570,13 +570,15 @@ const AttendanceFeed = () => {
                                 <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl">
                                     <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 block mb-1">{t('attendance_feed.modal.arrival', 'Arrival')}</span>
                                     <p className="text-lg font-black text-foreground tabular-nums">
-                                        {formatTime(selectedNoteRecord.checkInTime) || selectedNoteRecord.expectedStartTime || "Pending"}
+                                        {/* Added formatTime() around expectedStartTime */}
+                                        {formatTime(selectedNoteRecord.checkInTime) || formatTime(selectedNoteRecord.expectedStartTime) || "Pending"}
                                     </p>
                                 </div>
                                 <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
                                     <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 block mb-1">{t('attendance_feed.modal.departure', 'Departure')}</span>
                                     <p className="text-lg font-black text-foreground tabular-nums">
-                                        {formatTime(selectedNoteRecord.checkOutTime) || (selectedNoteRecord.checkInTime ? "On Site" : (selectedNoteRecord.expectedEndTime || "Pending"))}
+                                        {/* Added formatTime() around expectedEndTime */}
+                                        {formatTime(selectedNoteRecord.checkOutTime) || (selectedNoteRecord.checkInTime ? "On Site" : (formatTime(selectedNoteRecord.expectedEndTime) || "Pending"))}
                                     </p>
                                 </div>
                             </div>
@@ -604,6 +606,7 @@ const AttendanceFeed = () => {
                                                 { id: "CheckOut", label: t('attendance_feed.modal.action_check_out', "Check Out"), color: "hover:border-blue-500", active: "bg-blue-500 text-white border-blue-600" },
                                                 { id: "Absent", label: t('attendance_feed.status.absent'), color: "hover:border-destructive", active: "bg-destructive text-white border-destructive/60" },
                                                 { id: "Late", label: t('attendance_feed.status.late'), color: "hover:border-amber-500", active: "bg-amber-500 text-white border-amber-600" },
+                                                { id: "Holiday", label: t('attendance_feed.status.holiday', "Holiday"), color: "hover:border-teal-500", active: "bg-teal-500 text-white border-teal-600" },
                                                 { id: "Event", label: t('attendance_feed.status.event'), color: "hover:border-violet-500", active: "bg-violet-500 text-white border-violet-600" },
                                                 { id: "Revoke", label: t('attendance_feed.modal.action_revoke', "Revoke"), color: "hover:border-slate-800", active: "bg-slate-800 text-white border-black" },
                                             ].map((action) => {
