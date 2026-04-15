@@ -159,7 +159,7 @@ const ProgressReport = () => {
     const previewRecords = useMemo(() => {
         if (!records || !selectedMonth) return [];
         return records.filter(r => r.date && typeof r.date === 'string' && r.date.startsWith(selectedMonth))
-                      .sort((a, b) => new Date(a.date) - new Date(b.date));
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
     }, [records, selectedMonth]);
 
     const schoolsInMonth = useMemo(() => {
@@ -334,10 +334,10 @@ const ProgressReport = () => {
                     {selectedMonth && !selectedSchool && (
                         <div className="flex flex-wrap gap-2">
                             {/* VIEW PREVIEW BUTTON */}
-                            <Button 
-                                onClick={() => setShowPreviewModal(true)} 
-                                variant="outline" 
-                                size="sm" 
+                            <Button
+                                onClick={() => setShowPreviewModal(true)}
+                                variant="outline"
+                                size="sm"
                                 className="gap-1.5 border-teal-500/20 text-teal-600 dark:text-teal-400 font-bold hover:bg-teal-500 hover:text-white h-8 sm:h-9 px-3 shrink-0 transition-colors"
                             >
                                 <Eye className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Preview Sheet</span>
@@ -661,8 +661,8 @@ const ProgressReport = () => {
 
             {/* PREVIEW SHEET MODAL */}
             {showPreviewModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-card w-full max-w-5xl h-[80vh] rounded-[2rem] flex flex-col shadow-2xl border border-border overflow-hidden transform transition-all">
+                <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-card w-full max-w-5xl h-[80vh] rounded-4xl flex flex-col shadow-2xl border border-border overflow-hidden transform transition-all">
                         {/* Header */}
                         <div className="p-4 sm:p-6 border-b border-border flex justify-between items-center bg-muted/30">
                             <div>
@@ -674,16 +674,16 @@ const ProgressReport = () => {
                                     {selectedTeacher?.name} • {formatMonth(selectedMonth)}
                                 </p>
                             </div>
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
+                            <Button
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => setShowPreviewModal(false)}
                                 className="rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
                             >
-                                <X className="w-5 h-5"/>
+                                <X className="w-5 h-5" />
                             </Button>
                         </div>
-                        
+
                         {/* Table Content */}
                         <div className="overflow-auto p-0 flex-1 custom-scrollbar bg-card">
                             {previewRecords.length === 0 ? (
@@ -692,15 +692,15 @@ const ProgressReport = () => {
                                 </div>
                             ) : (
                                 <table className="w-full text-sm text-left whitespace-nowrap">
-                                    <thead className="text-xs uppercase text-muted-foreground bg-muted/50 sticky top-0 z-10 shadow-sm border-b border-border/50">
+                                    <thead className="text-xs uppercase text-muted-foreground sticky top-0 z-20">
                                         <tr>
-                                            <th className="px-6 py-4 font-bold tracking-wider">Date</th>
-                                            <th className="px-6 py-4 font-bold tracking-wider">Location / School</th>
-                                            <th className="px-6 py-4 font-bold tracking-wider">Category</th>
-                                            <th className="px-6 py-4 font-bold tracking-wider">Status</th>
-                                            <th className="px-6 py-4 font-bold tracking-wider">Check-In</th>
-                                            <th className="px-6 py-4 font-bold tracking-wider">Check-Out</th>
-                                            <th className="px-6 py-4 font-bold tracking-wider">Remarks</th>
+                                            <th className="px-6 py-4 font-bold tracking-wider bg-card border-b border-border">Date</th>
+                                            <th className="px-6 py-4 font-bold tracking-wider bg-card border-b border-border">Location / School</th>
+                                            <th className="px-6 py-4 font-bold tracking-wider bg-card border-b border-border">Category</th>
+                                            <th className="px-6 py-4 font-bold tracking-wider bg-card border-b border-border">Status</th>
+                                            <th className="px-6 py-4 font-bold tracking-wider bg-card border-b border-border">Check-In</th>
+                                            <th className="px-6 py-4 font-bold tracking-wider bg-card border-b border-border">Check-Out</th>
+                                            <th className="px-6 py-4 font-bold tracking-wider bg-card border-b border-border">Remarks</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/50">
@@ -716,7 +716,7 @@ const ProgressReport = () => {
                                                 </td>
                                                 <td className="px-6 py-3 font-medium">{formatTime(record.checkInTime) || "-"}</td>
                                                 <td className="px-6 py-3 font-medium">{formatTime(record.checkOutTime) || "-"}</td>
-                                                <td className="px-6 py-3 text-muted-foreground italic max-w-[200px] truncate" title={record.teacherNote || record.lateReason || record.eventNote || record.reason || ""}>
+                                                <td className="px-6 py-3 text-muted-foreground italic max-w-50 truncate" title={record.teacherNote || record.lateReason || record.eventNote || record.reason || ""}>
                                                     {record.teacherNote || record.lateReason || record.eventNote || record.reason || "-"}
                                                 </td>
                                             </tr>
