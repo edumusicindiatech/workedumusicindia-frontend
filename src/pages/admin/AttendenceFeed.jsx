@@ -27,7 +27,7 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
     return distanceInMeters < 1000 ? `${Math.round(distanceInMeters)} m` : `${(distanceInMeters / 1000).toFixed(2)} km`;
 };
 
-// --- HELPER FUNCTION: Calculate Time Difference ---
+// --- HELPER FUNCTION: Calculate Time Difference (Delays) ---
 const calculateTimeDiff = (targetTimeStr, compareDate = new Date()) => {
     if (!targetTimeStr) return null;
     let hours, minutes;
@@ -55,6 +55,21 @@ const calculateTimeDiff = (targetTimeStr, compareDate = new Date()) => {
         if (diffMins > 0) return `${diffMins}m`;
     }
     return null;
+};
+
+// --- HELPER FUNCTION: Parse "HH:MM AM/PM" to comparable minutes for sorting ---
+const parseTimeStringToMinutes = (timeStr) => {
+    if (!timeStr) return Number.MAX_SAFE_INTEGER; // Items without schedule go to bottom
+    let match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (match) {
+        let hours = parseInt(match[1], 10);
+        let minutes = parseInt(match[2], 10);
+        const ampm = match[3].toUpperCase();
+        if (ampm === 'PM' && hours < 12) hours += 12;
+        if (ampm === 'AM' && hours === 12) hours = 0;
+        return hours * 60 + minutes;
+    }
+    return Number.MAX_SAFE_INTEGER;
 };
 
 const AttendanceFeed = () => {
@@ -212,16 +227,69 @@ const AttendanceFeed = () => {
         }
     };
 
+    // --- PRIORITY ENGINE SORTING ---
     const filteredAndSortedData = useMemo(() => {
         let filtered = liveData;
         if (activeFilter === "Pending") filtered = liveData.filter(r => getDerivedStatus(r) === "Pending");
         else if (activeFilter === "Running") filtered = liveData.filter(r => ["Running", "Late", "Event"].includes(getDerivedStatus(r)));
         else if (activeFilter === "Completed") filtered = liveData.filter(r => getDerivedStatus(r) === "Completed");
         else if (activeFilter === "Exceptions") filtered = liveData.filter(r => ["Absent", "Holiday", "On Leave"].includes(getDerivedStatus(r)));
-        return filtered.sort((a, b) => new Date(b.checkInTime || b.createdAt || b.date) - new Date(a.checkInTime || a.createdAt || a.date));
+
+        const priorityMap = {
+            'Pending': 1,
+            'Running': 2,
+            'Late': 2,
+            'Event': 2,
+            'Completed': 3,
+            'Absent': 4,
+            'Holiday': 4,
+            'On Leave': 4
+        };
+
+        return filtered.sort((a, b) => {
+            const statusA = getDerivedStatus(a);
+            const statusB = getDerivedStatus(b);
+            const priorityA = priorityMap[statusA] || 5;
+            const priorityB = priorityMap[statusB] || 5;
+
+            if (priorityA !== priorityB) return priorityA - priorityB;
+
+            if (priorityA === 1) {
+                const timeA = parseTimeStringToMinutes(a.expectedStartTime);
+                const timeB = parseTimeStringToMinutes(b.expectedStartTime);
+                return timeA - timeB;
+            }
+
+            const timeA = new Date(a.checkOutTime || a.checkInTime || a.createdAt || a.date).getTime();
+            const timeB = new Date(b.checkOutTime || b.checkInTime || b.createdAt || b.date).getTime();
+            return timeB - timeA;
+        });
     }, [liveData, activeFilter]);
 
-    const formatTime = (dateString) => dateString ? new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
+    const formatTime = (timeInput) => {
+        if (!timeInput) return null;
+
+        // 1. If it's a raw "HH:MM" string (like expectedStartTime "08:00" or "14:30")
+        if (typeof timeInput === 'string' && !timeInput.includes('T') && timeInput.includes(':')) {
+            if (timeInput.toLowerCase().includes('am') || timeInput.toLowerCase().includes('pm')) {
+                return timeInput.toUpperCase(); // Already has AM/PM
+            }
+            let [hours, minutes] = timeInput.split(':');
+            hours = parseInt(hours, 10);
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12 || 12; // Convert 0 to 12 for midnight
+            return `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+        }
+
+        // 2. If it's a full Date string (like checkInTime)
+        const dateObj = new Date(timeInput);
+        if (!isNaN(dateObj)) {
+            // Enforce US locale to guarantee 12-hour AM/PM format
+            return dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        }
+
+        return timeInput;
+    };
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-24 h-full mt-2 md:mt-0">
@@ -302,101 +370,120 @@ const AttendanceFeed = () => {
                             <div
                                 key={record._id}
                                 onClick={() => setSelectedNoteRecord(record)}
-                                className={`group bg-card rounded-4xl border p-4 sm:p-5 transition-all duration-300 flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6 cursor-pointer hover:border-primary/50 hover:bg-blue-500/2 hover:shadow-xl hover:shadow-blue-500/10 active:scale-[0.98] relative overflow-hidden
+                                className={`group bg-card rounded-4xl border p-4 sm:p-5 transition-all duration-300 flex flex-col cursor-pointer hover:border-primary/50 hover:bg-blue-500/2 hover:shadow-xl hover:shadow-blue-500/10 active:scale-[0.98] relative overflow-hidden
                                     ${record.status === 'Event' ? 'border-violet-500/30' : 'border-border/60'}
                                     ${uiStatus === 'Absent' ? 'border-destructive/30' : ''}
                                 `}
                             >
-                                <div className="flex items-center gap-4 lg:w-[25%] shrink-0">
-                                    <div className="relative">
-                                        <div className={`w-14 h-14 rounded-2xl bg-linear-to-br from-primary to-primary/80 flex items-center justify-center text-white text-xl font-black shadow-lg overflow-hidden border-2 border-background
-                                            ${uiStatus === 'Absent' ? 'from-destructive to-destructive/80' : ''}
-                                            ${uiStatus === 'Holiday' ? 'from-teal-500 to-teal-500/80' : ''}
-                                        `}>
-                                            {record.teacher?.profilePicture ? (
-                                                <img src={record.teacher.profilePicture} className="w-full h-full object-cover" alt="" />
-                                            ) : record.teacher?.name?.charAt(0) || "U"}
-                                        </div>
-                                        {["Running", "Late"].includes(uiStatus) && (
-                                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-card flex items-center justify-center shadow-sm">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                {/* TOP ROW: Identities and Locations */}
+                                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-6">
+                                    <div className="flex items-center gap-4 lg:w-[30%] shrink-0">
+                                        <div className="relative">
+                                            <div className={`w-14 h-14 rounded-2xl bg-linear-to-br from-primary to-primary/80 flex items-center justify-center text-white text-xl font-black shadow-lg overflow-hidden border-2 border-background
+                                                ${uiStatus === 'Absent' ? 'from-destructive to-destructive/80' : ''}
+                                                ${uiStatus === 'Holiday' ? 'from-teal-500 to-teal-500/80' : ''}
+                                            `}>
+                                                {record.teacher?.profilePicture ? (
+                                                    <img src={record.teacher.profilePicture} className="w-full h-full object-cover" alt="" />
+                                                ) : record.teacher?.name?.charAt(0) || "U"}
                                             </div>
-                                        )}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h3 className="font-extrabold text-base text-foreground truncate group-hover:text-primary transition-colors">{record.teacher?.name || "Unknown Staff"}</h3>
-                                        <div className="flex items-center gap-1.5 mt-1">
-                                            <MapPin className="w-3 h-3 text-primary/60" />
-                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">{record.teacher?.zone || "Global"}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                    <div className="bg-muted/30 rounded-2xl p-3 sm:p-4 border border-border/40 group-hover:bg-muted/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                        <div className="min-w-0 flex items-center gap-3">
-                                            <div className="p-2 bg-background rounded-xl border border-border/50 shadow-sm shrink-0">
-                                                <School className="w-4 h-4 text-primary" />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <span className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground block leading-none mb-1">{t('attendance_feed.assigned_location', 'Assigned Location')}</span>
-                                                <p className="text-sm font-extrabold text-foreground truncate">{record.school?.schoolName || "Not Found"}</p>
-                                            </div>
-                                        </div>
-
-                                        {isActiveOrPending && employeeLocation && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation(); // Prevents the card's modal from opening
-                                                    const mapUrl = `https://www.google.com/maps?q=${employeeLocation.lat},${employeeLocation.lng}`;
-                                                    window.open(mapUrl, '_blank', 'noopener,noreferrer');
-                                                }}
-                                                className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl border border-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-wider animate-in slide-in-from-right-4 transition-all cursor-pointer shadow-sm hover:shadow active:scale-95"
-                                            >
-                                                <Navigation className="w-3 h-3 animate-pulse" />
-                                                <span>Live tracking</span>
-
-                                                {(() => {
-                                                    const schoolLat = record.school?.latitude || record.school?.location?.coordinates?.[1];
-                                                    const schoolLng = record.school?.longitude || record.school?.location?.coordinates?.[0];
-
-                                                    if (schoolLat && schoolLng) {
-                                                        return (
-                                                            <span className="ml-1 border-l border-blue-500/30 pl-2">
-                                                                {calculateDistance(
-                                                                    employeeLocation.lat,
-                                                                    employeeLocation.lng,
-                                                                    schoolLat,
-                                                                    schoolLng
-                                                                )} away
-                                                            </span>
-                                                        );
-                                                    }
-                                                    return null;
-                                                })()}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center justify-between lg:justify-end gap-4 lg:w-[25%] shrink-0">
-                                    <div className="flex flex-col items-end gap-1.5">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm flex items-center gap-1.5 ${statusConfig.color}`}>
-                                                {statusConfig.icon} {statusConfig.label}
-                                            </span>
-                                            {arrivalDelayBadge && (
-                                                <span className="px-2 py-1 bg-amber-500 text-white rounded-lg text-[9px] font-black shadow-sm shadow-amber-500/20 animate-in zoom-in">{arrivalDelayBadge}</span>
+                                            {["Running", "Late"].includes(uiStatus) && (
+                                                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-card flex items-center justify-center shadow-sm">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                                </div>
                                             )}
                                         </div>
-
-                                        <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
-                                            <Clock className="w-3 h-3" />
-                                            {record.checkInTime ? formatTime(record.checkInTime) : "PENDING"}
-                                            {record.checkOutTime && ` → ${formatTime(record.checkOutTime)}`}
+                                        <div className="min-w-0">
+                                            <h3 className="font-extrabold text-base text-foreground truncate group-hover:text-primary transition-colors">{record.teacher?.name || "Unknown Staff"}</h3>
+                                            <div className="flex items-center gap-1.5 mt-1">
+                                                <MapPin className="w-3 h-3 text-primary/60" />
+                                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">{record.teacher?.zone || "Global"}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <ChevronDown className="w-5 h-5 text-muted-foreground/30 group-hover:text-primary transition-all group-hover:translate-y-0.5 -rotate-90" />
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="bg-muted/30 rounded-2xl p-3 sm:p-4 border border-border/40 group-hover:bg-muted/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                            <div className="min-w-0 flex items-center gap-3">
+                                                <div className="p-2 bg-background rounded-xl border border-border/50 shadow-sm shrink-0">
+                                                    <School className="w-4 h-4 text-primary" />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <span className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground block leading-none mb-1">{t('attendance_feed.assigned_location', 'Assigned Location')}</span>
+                                                    <p className="text-sm font-extrabold text-foreground truncate">{record.school?.schoolName || "Not Found"}</p>
+                                                </div>
+                                            </div>
+
+                                            {isActiveOrPending && employeeLocation && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const mapUrl = `https://www.google.com/maps?q=$${employeeLocation.lat},${employeeLocation.lng}`;
+                                                        window.open(mapUrl, '_blank', 'noopener,noreferrer');
+                                                    }}
+                                                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl border border-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-wider animate-in slide-in-from-right-4 transition-all cursor-pointer shadow-sm hover:shadow active:scale-95"
+                                                >
+                                                    <Navigation className="w-3 h-3 animate-pulse" />
+                                                    <span>Live tracking</span>
+                                                    {(() => {
+                                                        const schoolLat = record.school?.latitude || record.school?.location?.coordinates?.[1];
+                                                        const schoolLng = record.school?.longitude || record.school?.location?.coordinates?.[0];
+                                                        if (schoolLat && schoolLng) {
+                                                            return (
+                                                                <span className="ml-1 border-l border-blue-500/30 pl-2">
+                                                                    {calculateDistance(employeeLocation.lat, employeeLocation.lng, schoolLat, schoolLng)} away
+                                                                </span>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    })()}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="hidden lg:flex justify-end shrink-0 pt-2 pr-2">
+                                        <ChevronDown className="w-5 h-5 text-muted-foreground/30 group-hover:text-primary transition-all group-hover:translate-x-1 -rotate-90" />
+                                    </div>
+                                </div>
+
+                                {/* BOTTOM ROW: Status (Left) & Times (Right) */}
+                                <div className="mt-4 pt-4 border-t border-dashed border-border/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+
+                                    {/* Bottom Left: Activity / Status */}
+                                    <div className="flex items-center gap-2">
+                                        <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm flex items-center gap-1.5 ${statusConfig.color}`}>
+                                            {statusConfig.icon} {statusConfig.label}
+                                        </span>
+                                        {arrivalDelayBadge && (
+                                            <span className="px-2 py-1 bg-amber-500 text-white rounded-lg text-[9px] font-black shadow-sm shadow-amber-500/20 animate-in zoom-in">{arrivalDelayBadge}</span>
+                                        )}
+                                    </div>
+
+                                    {/* Bottom Right: Scheduled & Actual Times */}
+                                    <div className="flex flex-col items-start sm:items-end gap-1">
+
+                                        <div className="flex items-center gap-1.5 text-[11px] font-black text-foreground uppercase tracking-tight">
+                                            <Clock className="w-3 h-3 text-primary" />
+
+                                            {/* Logic: If checked in, show time. If Absent/Holiday/Leave, show blank dashes. Otherwise show WAITING */}
+                                            {record.checkInTime
+                                                ? formatTime(record.checkInTime)
+                                                : (["Absent", "Holiday", "On Leave"].includes(uiStatus) ? "--:--" : "WAITING FOR ARRIVAL")
+                                            }
+
+                                            {record.checkOutTime && <span className="text-muted-foreground/50 mx-1">→</span>}
+                                            {record.checkOutTime && formatTime(record.checkOutTime)}
+                                        </div>
+
+                                        <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                                            <Timer className="w-2.5 h-2.5" />
+                                            {/* Wrap expected times in our new formatter so "08:00" becomes "08:00 AM" */}
+                                            SCH: {formatTime(record.expectedStartTime) || "--:--"} → {formatTime(record.expectedEndTime) || "--:--"}
+                                        </div>
+
+                                    </div>
+
                                 </div>
                             </div>
                         );
@@ -483,13 +570,13 @@ const AttendanceFeed = () => {
                                 <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl">
                                     <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 block mb-1">{t('attendance_feed.modal.arrival', 'Arrival')}</span>
                                     <p className="text-lg font-black text-foreground tabular-nums">
-                                        {formatTime(selectedNoteRecord.checkInTime) || "Pending"}
+                                        {formatTime(selectedNoteRecord.checkInTime) || selectedNoteRecord.expectedStartTime || "Pending"}
                                     </p>
                                 </div>
                                 <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
                                     <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 block mb-1">{t('attendance_feed.modal.departure', 'Departure')}</span>
                                     <p className="text-lg font-black text-foreground tabular-nums">
-                                        {formatTime(selectedNoteRecord.checkOutTime) || (selectedNoteRecord.checkInTime ? "On Site" : "Pending")}
+                                        {formatTime(selectedNoteRecord.checkOutTime) || (selectedNoteRecord.checkInTime ? "On Site" : (selectedNoteRecord.expectedEndTime || "Pending"))}
                                     </p>
                                 </div>
                             </div>
