@@ -78,7 +78,9 @@ const compressImage = (file, maxWidth = 1200, quality = 0.7) => {
                 ctx.drawImage(img, 0, 0, width, height);
 
                 canvas.toBlob((blob) => {
-                    const compressedFile = new File([blob], file.name, {
+                    // FIX: Mobile cameras sometimes don't provide a file.name
+                    const safeName = file.name || `compressed_${Date.now()}.jpg`;
+                    const compressedFile = new File([blob], safeName, {
                         type: 'image/jpeg',
                         lastModified: Date.now(),
                     });
@@ -406,27 +408,38 @@ const SharedChat = () => {
             for (let i = 0; i < files.length; i++) {
                 let fileToUpload = files[i];
 
+                // FIX: Mobile cameras often do not provide a `.name`. We assign a safe fallback name immediately.
+                let safeName = fileToUpload.name || `capture_${Date.now()}_${i}.jpg`;
+                let mimeType = fileToUpload.type;
+                if (!mimeType && safeName.endsWith('.jpg')) mimeType = 'image/jpeg';
+
                 let type = asDocument
                     ? 'document'
-                    : (fileToUpload.type.startsWith('image/') ? 'image' : (fileToUpload.type.startsWith('video/') ? 'video' : 'document'));
+                    : (mimeType.startsWith('image/') ? 'image' : (mimeType.startsWith('video/') ? 'video' : 'document'));
 
                 let finalFile = fileToUpload;
                 if (compress && type === 'image') {
                     finalFile = await compressImage(fileToUpload, 1200, 0.7);
-                    const newName = finalFile.name.replace(/\.[^/.]+$/, "") + ".jpg";
+                    // Safely replace the extension using the fallback name
+                    const newName = safeName.includes('.') ? safeName.replace(/\.[^/.]+$/, "") + ".jpg" : `${safeName}.jpg`;
                     finalFile = new File([finalFile], newName, { type: 'image/jpeg' });
                 }
                 const finalSize = finalFile.size;
 
                 toast.loading(`Uploading item ${i + 1}/${files.length}...`, { id: loadingToast });
 
-                const urlRes = await api.post('/chat/generate-presigned-url', { fileType: finalFile.type, originalName: finalFile.name });
+                // Pass the strictly checked name to the backend
+                const urlRes = await api.post('/chat/generate-presigned-url', {
+                    fileType: finalFile.type || mimeType,
+                    originalName: finalFile.name || safeName
+                });
+
                 const { presignedUrl, publicUrl } = urlRes.data;
 
                 const uploadResponse = await fetch(presignedUrl, {
                     method: 'PUT',
                     body: finalFile,
-                    headers: { 'Content-Type': finalFile.type }
+                    headers: { 'Content-Type': finalFile.type || mimeType }
                 });
 
                 if (!uploadResponse.ok) {
@@ -984,7 +997,7 @@ const SharedChat = () => {
                                                                 </div>
                                                             )}
 
-                                                            {msg.text && <p className="text-[14.5px] leading-snug whitespace-pre-wrap wrap-break-word">{msg.text}</p>}
+                                                            {msg.text && <p className="text-[14.5px] leading-snug whitespace-pre-wrap break-words">{msg.text}</p>}
 
                                                             {/* Status Ticks & Timestamp */}
                                                             <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] font-medium uppercase ${isMe ? 'text-white/80' : 'text-muted-foreground/80'}`}>
