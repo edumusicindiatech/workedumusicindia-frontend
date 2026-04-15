@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 const EmployeeResetPassword = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const [showPassword, useState] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
     const [newPassword, setNewPassword] = useState("");
