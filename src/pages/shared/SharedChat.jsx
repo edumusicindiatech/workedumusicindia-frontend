@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import { io } from "socket.io-client";
 import {
-    Search, Phone, MoreVertical, Paperclip, Send,
+    Search, Phone, MoreVertical, Paperclip, Send, Download,
     ArrowLeft, Loader2, CheckCheck, Check, MessageSquare, Camera, Image as ImageIcon, X, FileCheck,
     Trash2, Link as LinkIcon, FileText, Users, PhoneIncoming, PhoneOff
 } from "lucide-react";
@@ -86,6 +86,14 @@ const compressImage = (file, maxWidth = 1200, quality = 0.7) => {
     });
 };
 
+// --- FORMAT BYTES HELPER ---
+const formatBytes = (bytes, decimals = 2) => {
+    if (!+bytes) return '0 Bytes';
+    const k = 1024, dm = decimals < 0 ? 0 : decimals, sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+};
+
 const SharedChat = () => {
     const { user } = useSelector((state) => state.auth);
     const location = useLocation();
@@ -100,6 +108,10 @@ const SharedChat = () => {
 
     // Unread Badges State
     const [unreadMap, setUnreadMap] = useState({});
+
+    // Media Handling States
+    const [downloadedMedia, setDownloadedMedia] = useState(new Set());
+    const [fullscreenMedia, setFullscreenMedia] = useState(null);
 
     // UI States
     const [isUploading, setIsUploading] = useState(false);
@@ -194,7 +206,6 @@ const SharedChat = () => {
         setIncomingCall(null);
     };
 
-    // --- AUTO-HANGUP TIMEOUT ---
     useEffect(() => {
         let timer;
         if (incomingCall && !activeCall) {
@@ -220,27 +231,18 @@ const SharedChat = () => {
             const currentChat = activeChatRef.current;
             const isActivelyChatting = currentChat && (data.senderId === currentChat._id || data.senderId === currentChat.id);
 
-            // 1. Tell the sender the message was delivered to our device
             socket.emit("message_delivered", { senderId: data.senderId, recipientId: currentUserId });
 
             if (isActivelyChatting) {
-                // 2. We are currently looking at the chat! Don't play sound/toast.
                 setMessages((prev) => [...prev, data]);
                 scrollToBottom();
-
-                // Tell the sender we saw it immediately (Blue ticks)
                 socket.emit("mark_chat_seen", { senderId: data.senderId, recipientId: currentUserId });
             } else {
-                // 3. We are NOT looking at this person's chat right now. Play notification.
                 if (!document.hidden) {
                     playAudio('message');
                     toast.success(`New message received`, { icon: '💬', id: `chat-msg-${data.senderId}` });
                 }
-                // Increment unread badge for the sender
-                setUnreadMap(prev => ({
-                    ...prev,
-                    [data.senderId]: (prev[data.senderId] || 0) + 1
-                }));
+                setUnreadMap(prev => ({ ...prev, [data.senderId]: (prev[data.senderId] || 0) + 1 }));
             }
         };
 
@@ -248,11 +250,9 @@ const SharedChat = () => {
             setMessages((prev) => prev.filter(m => (m._id || m.id) !== messageId && m.timestamp !== timestamp));
         };
 
-        // Message Status Update Listener (For Sent/Delivered/Seen Ticks)
         const handleMessageStatusUpdate = ({ viewerId, status }) => {
             if (activeChatRef.current && (activeChatRef.current._id === viewerId || activeChatRef.current.id === viewerId)) {
                 setMessages(prev => prev.map(m => {
-                    // Update only if we sent it, and don't downgrade from seen to delivered
                     if (m.senderId === currentUserId) {
                         if (status === 'seen') return { ...m, status: 'seen' };
                         if (status === 'delivered' && m.status !== 'seen') return { ...m, status: 'delivered' };
@@ -262,9 +262,7 @@ const SharedChat = () => {
             }
         };
 
-        const handleIncomingCall = (data) => {
-            setIncomingCall({ from: data.from, callerName: data.callerName, signal: data.signal });
-        };
+        const handleIncomingCall = (data) => { setIncomingCall({ from: data.from, callerName: data.callerName, signal: data.signal }); };
 
         const handleCallAccepted = async (signal) => {
             if (pcRef.current) {
@@ -289,7 +287,7 @@ const SharedChat = () => {
         socket.on("online_users_updated", handleOnlineUsers);
         socket.on("receive_message", handleReceiveMessage);
         socket.on("message_deleted", handleMessageDeleted);
-        socket.on("messages_status_update", handleMessageStatusUpdate); // Listens for delivered/seen updates
+        socket.on("messages_status_update", handleMessageStatusUpdate);
         socket.on("incoming_call", handleIncomingCall);
         socket.on("call_accepted", handleCallAccepted);
         socket.on("ice_candidate", handleIceCandidate);
@@ -327,7 +325,6 @@ const SharedChat = () => {
             if (topMenuRef.current && !topMenuRef.current.contains(event.target)) setShowTopMenu(false);
             if (sidebarMenuRef.current && !sidebarMenuRef.current.contains(event.target)) setShowSidebarMenu(false);
 
-            // Close context menu ONLY if clicked outside the actual menu
             if (contextMenuRef.current && !contextMenuRef.current.contains(event.target)) {
                 setContextMenu(null);
             }
@@ -340,7 +337,6 @@ const SharedChat = () => {
         setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, 150);
     };
 
-    // Updated to 12-Hour Format (e.g. 10:30 AM)
     const formatTime = (timeString) => {
         if (!timeString) return '';
         const date = new Date(timeString);
@@ -357,11 +353,8 @@ const SharedChat = () => {
                 const peers = res.data.data.filter(p => (p._id || p.id) !== currentUserId);
                 setConversations(peers);
 
-                // Initialize unread map if backend provides it
                 const initialUnread = {};
-                peers.forEach(p => {
-                    if (p.unreadCount) initialUnread[p._id || p.id] = p.unreadCount;
-                });
+                peers.forEach(p => { if (p.unreadCount) initialUnread[p._id || p.id] = p.unreadCount; });
                 setUnreadMap(initialUnread);
             }
         } catch (error) { toast.error("Could not load contact list."); }
@@ -374,7 +367,6 @@ const SharedChat = () => {
             const res = await api.get(`/chat/history/${currentUserId}/${recipientId}`).catch(() => ({ data: { success: true, data: [] } }));
             if (res.data.success) {
                 setMessages(res.data.data || []);
-                // Once messages are fetched, tell the sender we've seen them (Blue Ticks)
                 socket.emit("mark_chat_seen", { senderId: recipientId, recipientId: currentUserId });
             }
             setShowProfileInfo(false);
@@ -387,7 +379,6 @@ const SharedChat = () => {
     const handleSelectChat = (chatUser) => {
         const userId = chatUser._id || chatUser.id;
 
-        // Clear unread badge instantly
         setUnreadMap(prev => ({ ...prev, [userId]: 0 }));
 
         if (activeChat && (activeChat._id || activeChat.id) === userId) return;
@@ -416,7 +407,8 @@ const SharedChat = () => {
             text: newMessage,
             mediaUrl: null,
             mediaType: 'text',
-            status: 'sent', // Initially sent (single tick)
+            fileSize: 0,
+            status: 'sent',
             timestamp: new Date().toISOString()
         };
 
@@ -432,19 +424,17 @@ const SharedChat = () => {
             if (res.data && res.data._id) {
                 setMessages(prev => prev.map(m => m._id === tempId ? { ...m, _id: res.data._id } : m));
             }
-        } catch (error) {
-            console.error("Failed to save message");
-        }
+        } catch (error) { console.error("Failed to save message"); }
     };
 
     const handleMediaUpload = async (e, options = {}) => {
         const files = Array.from(e.target.files);
         if (!files.length) return;
-        const { compress = false, maxCount = 1, maxSizeCombinedMb = 50 } = options;
+        const { compress = false, maxCount = 5, maxSizeCombinedMb = 50 } = options;
 
         if (files.length > maxCount) return toast.error(`Maximum of ${maxCount} items allowed at once.`);
         const combinedSizeMb = files.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024);
-        if (combinedSizeMb > maxSizeCombinedMb) return toast.error(`Size cannot exceed ${maxSizeCombinedMb}MB.`);
+        if (combinedSizeMb > maxSizeCombinedMb) return toast.error(`Total size cannot exceed ${maxSizeCombinedMb}MB.`);
 
         setShowAttachMenu(false);
         setIsUploading(true);
@@ -455,14 +445,39 @@ const SharedChat = () => {
                 let fileToUpload = files[i];
                 let type = fileToUpload.type.startsWith('image/') ? 'image' : (fileToUpload.type.startsWith('video/') ? 'video' : 'document');
 
-                if (compress && type === 'image') fileToUpload = await compressImage(fileToUpload, 1200, 0.7);
+                // Compress if image and format extension cleanly
+                let finalFile = fileToUpload;
+                if (compress && type === 'image') {
+                    finalFile = await compressImage(fileToUpload, 1200, 0.7);
+                    const newName = finalFile.name.replace(/\.[^/.]+$/, "") + ".jpg";
+                    finalFile = new File([finalFile], newName, { type: 'image/jpeg' });
+                }
+                const finalSize = finalFile.size;
 
                 toast.loading(`Uploading item ${i + 1}/${files.length}...`, { id: loadingToast });
 
-                const urlRes = await api.post('/chat/generate-presigned-url', { fileType: fileToUpload.type, originalName: fileToUpload.name });
+                const urlRes = await api.post('/chat/generate-presigned-url', { fileType: finalFile.type, originalName: finalFile.name });
                 const { presignedUrl, publicUrl } = urlRes.data;
 
-                await fetch(presignedUrl, { method: 'PUT', body: fileToUpload, headers: { 'Content-Type': fileToUpload.type } });
+                // --- STRICT UPLOAD VALIDATION ---
+                const uploadResponse = await fetch(presignedUrl, {
+                    method: 'PUT',
+                    body: finalFile,
+                    headers: { 'Content-Type': finalFile.type }
+                });
+
+                if (!uploadResponse.ok) {
+                    const errText = await uploadResponse.text();
+                    console.error("Cloudflare Upload Error:", uploadResponse.status, errText);
+                    toast.error(`Upload blocked by server (${uploadResponse.status}). Check CORS.`, { id: loadingToast });
+                    continue; // Abort this file, it failed.
+                }
+
+                // Ensure Public URL is always formatted correctly even if backend env is missing https
+                let finalPublicUrl = publicUrl;
+                if (finalPublicUrl && !finalPublicUrl.startsWith('http')) {
+                    finalPublicUrl = `https://${finalPublicUrl}`;
+                }
 
                 const tempId = `temp-${Date.now()}-${i}`;
                 const payload = {
@@ -470,8 +485,9 @@ const SharedChat = () => {
                     senderId: currentUserId,
                     recipientId: activeChat._id || activeChat.id,
                     text: "",
-                    mediaUrl: publicUrl,
+                    mediaUrl: finalPublicUrl,
                     mediaType: type,
+                    fileSize: finalSize,
                     status: 'sent',
                     timestamp: new Date().toISOString()
                 };
@@ -488,12 +504,40 @@ const SharedChat = () => {
             toast.success("Sent successfully!", { id: loadingToast });
             scrollToBottom();
         } catch (error) {
-            toast.error("Upload failed.", { id: loadingToast });
+            console.error("Upload error sequence:", error);
+            toast.error("Upload process failed.", { id: loadingToast });
         } finally {
             setIsUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = null;
             if (cameraInputRef.current) cameraInputRef.current.value = null;
             if (docInputRef.current) docInputRef.current.value = null;
+        }
+    };
+
+    // --- WHATSAPP STYLE MEDIA REVEAL / FULLSCREEN / LOCAL DOWNLOAD ---
+    const handleRevealMedia = (msgId) => {
+        setDownloadedMedia(prev => new Set(prev).add(msgId));
+    };
+
+    const downloadToLocal = async (url, type) => {
+        try {
+            toast.loading("Downloading to device...", { id: 'local-dl' });
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = `WorkForce_Media_${Date.now()}.${type === 'image' ? 'jpg' : (type === 'video' ? 'mp4' : 'file')}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(blobUrl);
+
+            toast.success("Saved to device!", { id: 'local-dl' });
+        } catch (error) {
+            console.error("Local download failed", error);
+            toast.error("Could not save file. Check CORS settings.", { id: 'local-dl' });
         }
     };
 
@@ -598,7 +642,6 @@ const SharedChat = () => {
         playAudio('hangup');
     };
 
-    // --- MENU ACTIONS ---
     const handleChatAction = async (action) => {
         setShowTopMenu(false);
         if (action === 'clear') {
@@ -607,32 +650,47 @@ const SharedChat = () => {
         } else { setSharedContentView(action); }
     };
 
-    // --- UI HELPERS ---
     const isOnline = (id) => onlineUsers.includes(id?.toString());
     const filteredConversations = conversations.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const localDeletedIds = JSON.parse(localStorage.getItem('deletedChatMessages') || '[]');
     const visibleMessages = messages.filter(m => !localDeletedIds.includes(m._id || m.id));
-
     const displayedMessages = chatSearchQuery.trim() === "" ? visibleMessages : visibleMessages.filter(m => m.text && m.text.toLowerCase().includes(chatSearchQuery.toLowerCase()));
 
-    const sharedMedia = visibleMessages.filter(m => m.mediaUrl && (m.mediaType === 'image' || m.mediaType === 'video'));
-    const sharedDocs = visibleMessages.filter(m => m.mediaUrl && m.mediaType === 'document');
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const sharedLinks = visibleMessages.filter(m => m.text && m.text.match(urlRegex));
-
-    // Renders WhatsApp Style Status Ticks
     const renderMessageStatus = (msg) => {
-        if (msg.status === 'seen') return <CheckCheck className="w-4 h-4 text-[#53bdeb] drop-shadow-sm" />; // WhatsApp Blue
-        if (msg.status === 'delivered') return <CheckCheck className="w-4 h-4 text-white/70" />; // Double Gray
-        return <Check className="w-4 h-4 text-white/70" />; // Single Gray Default
+        if (msg.status === 'seen') return <CheckCheck className="w-4 h-4 text-[#53bdeb] drop-shadow-sm" />;
+        if (msg.status === 'delivered') return <CheckCheck className="w-4 h-4 text-white/70" />;
+        return <Check className="w-4 h-4 text-white/70" />;
     };
 
     return (
         <div className="fixed top-16 inset-x-0 bottom-16 xl:bottom-0 z-30 flex bg-background dark:bg-[#0B0D12] overflow-hidden animate-in fade-in duration-300">
 
-            {/* HIDDEN AUDIO ELEMENT FOR WEBRTC VOICE CALLS */}
+            {/* HIDDEN AUDIO FOR WEBRTC VOICE CALLS */}
             <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+
+            {/* FULLSCREEN MEDIA VIEWER */}
+            {fullscreenMedia && (
+                <div className="fixed inset-0 z-99999 bg-black/95 flex flex-col animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between p-4 bg-linear-to-b from-black/60 to-transparent">
+                        <button onClick={() => setFullscreenMedia(null)} className="p-2 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors">
+                            <ArrowLeft className="w-6 h-6" />
+                        </button>
+                        <button onClick={() => downloadToLocal(fullscreenMedia.mediaUrl, fullscreenMedia.mediaType)} className="p-2 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors flex items-center gap-2 pr-4">
+                            <Download className="w-5 h-5" />
+                            <span className="text-sm font-semibold">Save</span>
+                        </button>
+                    </div>
+                    <div className="flex-1 flex items-center justify-center overflow-hidden p-4">
+                        {fullscreenMedia.mediaType === 'image' && (
+                            <img src={fullscreenMedia.mediaUrl} alt="Fullscreen" className="max-w-full max-h-full object-contain drop-shadow-2xl" />
+                        )}
+                        {fullscreenMedia.mediaType === 'video' && (
+                            <video src={fullscreenMedia.mediaUrl} controls autoPlay className="max-w-full max-h-full object-contain shadow-2xl rounded-xl" />
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* DELETE CONTEXT MENU */}
             {contextMenu && (
@@ -644,7 +702,6 @@ const SharedChat = () => {
                     <button onClick={() => executeDelete('me')} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted text-sm font-medium text-foreground transition-colors">
                         <Trash2 className="w-4 h-4 text-muted-foreground" /> Delete for me
                     </button>
-
                     {String(contextMenu.msg.senderId || contextMenu.msg.sender) === String(currentUserId) && (
                         <button onClick={() => executeDelete('everyone')} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-rose-500/10 text-sm font-medium text-rose-500 transition-colors">
                             <Trash2 className="w-4 h-4" /> Delete for everyone
@@ -848,6 +905,9 @@ const SharedChat = () => {
                                     ) : (
                                         displayedMessages.map((msg, idx) => {
                                             const isMe = String(msg.senderId || msg.sender) === String(currentUserId);
+                                            // Check if media is downloaded. Sender automatically has it "downloaded".
+                                            const isMediaRevealed = isMe || downloadedMedia.has(msg._id);
+
                                             return (
                                                 <div
                                                     key={idx}
@@ -857,15 +917,60 @@ const SharedChat = () => {
                                                     onTouchEnd={handleTouchEnd}
                                                     onTouchMove={handleTouchEnd}
                                                 >
-                                                    <div className={`relative max-w-[85%] sm:max-w-[75%] md:max-w-[65%] px-3 py-2 shadow-sm cursor-pointer select-none ${isMe ? 'bg-[#6B66FF] text-white rounded-2xl rounded-tr-sm shadow-[0_4px_14px_-6px_rgba(var(--primary),0.3)]' : 'bg-card dark:bg-[#1C1F26] text-foreground rounded-2xl rounded-tl-sm border border-border/50 shadow-sm'}`}>
-                                                        {msg.mediaType === 'image' && msg.mediaUrl && <img src={msg.mediaUrl} alt="attachment" className="max-w-full rounded-xl mb-1 object-cover hover:opacity-90 transition-transform" style={{ maxHeight: '280px' }} />}
-                                                        {msg.mediaType === 'video' && msg.mediaUrl && <video src={msg.mediaUrl} controls className="max-w-full rounded-xl mb-1" style={{ maxHeight: '280px' }} />}
+                                                    <div className={`relative max-w-[85%] sm:max-w-[75%] md:max-w-[65%] px-3 py-2 shadow-sm select-none ${isMe ? 'bg-[#6B66FF] text-white rounded-2xl rounded-tr-sm shadow-[0_4px_14px_-6px_rgba(var(--primary),0.3)]' : 'bg-card dark:bg-[#1C1F26] text-foreground rounded-2xl rounded-tl-sm border border-border/50 shadow-sm'}`}>
+
+                                                        {/* Media Handling (WhatsApp Download Style) */}
+                                                        {msg.mediaUrl && (msg.mediaType === 'image' || msg.mediaType === 'video') && (
+                                                            !isMediaRevealed ? (
+                                                                // Not Downloaded Placeholder
+                                                                <div
+                                                                    onClick={() => handleRevealMedia(msg._id)}
+                                                                    className="relative w-48 h-48 md:w-60 md:h-60 bg-[#2A2E35] rounded-xl flex flex-col items-center justify-center cursor-pointer mb-1 border border-white/10 hover:bg-[#31363F] transition-colors"
+                                                                >
+                                                                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md mb-2 hover:scale-105 transition-transform border border-white/20">
+                                                                        <Download className="w-6 h-6 text-white" />
+                                                                    </div>
+                                                                    <span className="text-white/80 text-xs font-semibold">{formatBytes(msg.fileSize || 0)}</span>
+                                                                </div>
+                                                            ) : (
+                                                                // Downloaded / Sender View
+                                                                <div className="relative mb-1 cursor-pointer group/media" onClick={() => setFullscreenMedia(msg)}>
+                                                                    {msg.mediaType === 'image' && (
+                                                                        <img
+                                                                            src={msg.mediaUrl}
+                                                                            alt="Image attachment"
+                                                                            className="max-w-full min-w-30 min-h-30 w-auto max-h-70 rounded-xl object-cover group-hover/media:opacity-90 transition-opacity bg-black/20"
+                                                                            onError={(e) => {
+                                                                                console.error("Image failed to load. URL:", msg.mediaUrl);
+                                                                                e.target.src = "https://placehold.co/400x300/13151A/FFF?text=Image+Unavailable"; // Fallback image
+                                                                            }}
+                                                                        />
+                                                                    )}
+                                                                    {msg.mediaType === 'video' && (
+                                                                        <div className="relative">
+                                                                            <video src={msg.mediaUrl} className="max-w-full w-auto max-h-70 rounded-xl object-cover" />
+                                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl group-hover/media:bg-black/30 transition-colors">
+                                                                                <div className="w-12 h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/40"><PlaySquare className="w-6 h-6 text-white fill-white/80" /></div>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )
+                                                        )}
+
+                                                        {/* Document Handling */}
                                                         {msg.mediaType === 'document' && msg.mediaUrl && (
-                                                            <div className="flex items-center gap-2 bg-black/10 dark:bg-black/20 p-2 rounded-lg mb-1">
-                                                                <FileCheck className="w-5 h-5 shrink-0" />
-                                                                <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="text-sm hover:underline font-medium truncate">View Document</a>
+                                                            <div className="flex items-center gap-3 bg-black/10 dark:bg-white/5 p-3 rounded-lg mb-1.5 border border-white/5">
+                                                                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
+                                                                    <FileCheck className="w-5 h-5 text-blue-500" />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="text-[13.5px] font-semibold hover:underline truncate block">Document File</a>
+                                                                    <p className="text-[11px] opacity-70 mt-0.5">{formatBytes(msg.fileSize || 0)} • {msg.mediaUrl.split('.').pop().toUpperCase()}</p>
+                                                                </div>
                                                             </div>
                                                         )}
+
                                                         {msg.text && <p className="text-[14.5px] leading-snug whitespace-pre-wrap wrap-break-word">{msg.text}</p>}
 
                                                         {/* Status Ticks & Timestamp */}
@@ -938,7 +1043,7 @@ const SharedChat = () => {
                             </div>
                             <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center pt-8 pb-4 space-y-6">
                                 <div className="w-36 h-36 md:w-44 md:h-44">
-                                    {activeChat.profilePicture ? <img src={activeChat.profilePicture} className="w-full h-full rounded-full object-cover shadow-lg border-2 border-background" /> : <div className="w-full h-full rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-5xl md:text-6xl shadow-lg border-2 border-background">{activeChat.name?.charAt(0)}</div>}
+                                    {activeChat.profilePicture ? <img src={activeChat.profilePicture} className="w-full h-full rounded-full object-cover shadow-lg border-2 border-background" /> : <div className="w-full h-full rounded-full bg-linear-to-br from-primary/20 to-primary/10 flex items-center justify-center text-primary font-bold text-5xl md:text-6xl shadow-lg border-2 border-background">{activeChat.name?.charAt(0)}</div>}
                                 </div>
                                 <div className="text-center px-6 w-full border-b border-border/40 pb-6">
                                     <h2 className="text-2xl font-bold text-foreground tracking-tight">{activeChat.name}</h2>
