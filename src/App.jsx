@@ -51,6 +51,7 @@ const EmployeeLeaderBoard = lazy(() => import("./pages/employee/EmployeeLeaderBo
 
 // NEW: Added HelpFAQ Import
 const HelpFAQ = lazy(() => import("./pages/employee/HelpFAQ"));
+const SharedChat = lazy(() => import("./pages/shared/SharedChat"));
 
 // ==========================================
 // 3. FALLBACK LOADER
@@ -66,7 +67,7 @@ const PageLoader = () => (
 // ==========================================
 const GlobalToaster = () => {
   const location = useLocation();
-  
+
   // Hide this global toaster if we are on the employee reset password page
   if (location.pathname === '/employee/reset-password') {
     return null;
@@ -246,9 +247,8 @@ function App() {
             <Route path="report" element={<DailyReport />} />
             <Route path="leaderboard" element={<EmployeeLeaderBoard />} />
             <Route path="notifications" element={<EmployeeNotifications />} />
-            
-            {/* NEW ROUTE: Help FAQ Page */}
             <Route path="help" element={<HelpFAQ />} />
+            <Route path="chat" element={<SharedChat />} />
           </Route>
 
           {/* Admin Routes */}
@@ -267,6 +267,7 @@ function App() {
             <Route path="leave-requests" element={<AdminLeaveRequests />} />
             <Route path="communication" element={<Communication />} />
             <Route path="notifications" element={<AdminNotifications />} />
+            <Route path="chat" element={<SharedChat />} />
           </Route>
 
           {/* 404 Fallback */}
