@@ -429,7 +429,7 @@ const AttendanceFeed = () => {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        const mapUrl = `https://www.google.com/maps?q=$${employeeLocation.lat},${employeeLocation.lng}`;
+                                                        const mapUrl = `https://www.google.com/maps?q=${employeeLocation.lat},${employeeLocation.lng}`;
                                                         window.open(mapUrl, '_blank', 'noopener,noreferrer');
                                                     }}
                                                     className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl border border-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-wider animate-in slide-in-from-right-4 transition-all cursor-pointer shadow-sm hover:shadow active:scale-95"
