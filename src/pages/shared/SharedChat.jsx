@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
-import { useLocation } from "react-router-dom"; // NEW: for detecting redirection state
+import { useLocation } from "react-router-dom";
 import { io } from "socket.io-client";
 import {
     Search, Phone, MoreVertical, Paperclip, Send,
@@ -17,6 +17,39 @@ if (!window.__GLOBAL_SOCKET__) {
     });
 }
 const socket = window.__GLOBAL_SOCKET__;
+
+// --- GLOBAL AUDIO SINGLETON ---
+if (!window.__GLOBAL_AUDIO__) {
+    window.__GLOBAL_AUDIO__ = {
+        notification: new Audio('/sounds/notification-ting.mp3'),
+        sos: new Audio('/sounds/beep.mp3'),
+        message: new Audio('/sounds/message.mp3'),
+        incoming: new Audio('/sounds/incoming.mp3'),
+        hangup: new Audio('/sounds/hangup.mp3'),
+        sent: new Audio('/sounds/sent.mp3'),
+    };
+}
+const globalAudio = window.__GLOBAL_AUDIO__;
+
+const playAudio = (type) => {
+    try {
+        const snd = globalAudio[type];
+        if (snd) {
+            snd.currentTime = 0;
+            snd.play().catch(e => console.warn(`Audio blocked for ${type}:`, e));
+        }
+    } catch (e) {}
+};
+
+const pauseAudio = (type) => {
+    try {
+        const snd = globalAudio[type];
+        if (snd) {
+            snd.pause();
+            snd.currentTime = 0;
+        }
+    } catch (e) {}
+};
 
 // --- NATIVE IMAGE COMPRESSOR ---
 const compressImage = (file, maxWidth = 1200, quality = 0.7) => {
@@ -71,12 +104,6 @@ const SharedChat = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [showProfileInfo, setShowProfileInfo] = useState(false);
 
-    // Audio Refs for Calls & Messages
-    const incomingAudioRef = useRef(new Audio('/sounds/incoming.mp3'));
-    const hangupAudioRef = useRef(new Audio('/sounds/hangup.mp3'));
-    const messageAudioRef = useRef(new Audio('/sounds/message.mp3'));
-    const sentAudioRef = useRef(new Audio('/sounds/sent.mp3'));
-
     // Call States (WebRTC)
     const [incomingCall, setIncomingCall] = useState(null);
     const [activeCall, setActiveCall] = useState(false);
@@ -110,30 +137,19 @@ const SharedChat = () => {
     const activeChatRef = useRef(activeChat);
     useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
 
-    // --- AUDIO HELPER ---
-    const playSound = (audioRef) => {
-        if (audioRef.current) {
-            audioRef.current.currentTime = 0;
-            audioRef.current.play().catch(e => console.warn("Audio blocked:", e));
-        }
-    };
-
-    // --- LAYOUT LOCK & AUDIO LOOP SETUP ---
+    // --- LAYOUT LOCK ---
     useEffect(() => {
         document.body.style.overflow = 'hidden';
-        if (incomingAudioRef.current) {
-            incomingAudioRef.current.loop = true; // Ring continuously
-        }
         return () => { document.body.style.overflow = ''; };
     }, []);
 
     // --- HANDLE INCOMING CALL AUDIO PLAYBACK ---
     useEffect(() => {
         if (incomingCall && !activeCall) {
-            playSound(incomingAudioRef);
-        } else if (incomingAudioRef.current) {
-            incomingAudioRef.current.pause();
-            incomingAudioRef.current.currentTime = 0;
+            globalAudio.incoming.loop = true;
+            playAudio('incoming');
+        } else {
+            pauseAudio('incoming');
         }
     }, [incomingCall, activeCall]);
 
@@ -175,7 +191,7 @@ const SharedChat = () => {
         setIncomingCall(null);
     };
 
-    // --- NEW: AUTO-HANGUP TIMEOUT ---
+    // --- AUTO-HANGUP TIMEOUT ---
     useEffect(() => {
         let timer;
         if (incomingCall && !activeCall) {
@@ -195,11 +211,16 @@ const SharedChat = () => {
         if (socket.connected) joinChatRoom();
         socket.on("connect", joinChatRoom);
 
-        socket.on("online_users_updated", (users) => setOnlineUsers(users));
-
-        socket.on("receive_message", (data) => {
+        // Extracting listeners to named functions so we don't accidentally wipe Navbar's listeners on unmount
+        const handleOnlineUsers = (users) => setOnlineUsers(users);
+        
+        const handleReceiveMessage = (data) => {
             const currentChat = activeChatRef.current;
-            playSound(messageAudioRef); // Play incoming message ping!
+            
+            // Play sound if tab is visible, otherwise Sidebar handles it
+            if (!document.hidden) {
+                playAudio('message'); 
+            }
 
             if (currentChat && (data.senderId === currentChat._id || data.senderId === currentChat.id)) {
                 setMessages((prev) => [...prev, data]);
@@ -207,47 +228,53 @@ const SharedChat = () => {
             } else {
                 toast.success(`New message received`, { icon: '💬', style: { borderRadius: '16px' } });
             }
-        });
+        };
 
-        // Delete for Everyone Listener
-        socket.on("message_deleted", ({ messageId, timestamp }) => {
+        const handleMessageDeleted = ({ messageId, timestamp }) => {
             setMessages((prev) => prev.filter(m => (m._id || m.id) !== messageId && m.timestamp !== timestamp));
-        });
+        };
 
-        // Call Listeners
-        socket.on("incoming_call", (data) => {
+        const handleIncomingCall = (data) => {
             setIncomingCall({ from: data.from, callerName: data.callerName, signal: data.signal });
-        });
+        };
 
-        socket.on("call_accepted", async (signal) => {
+        const handleCallAccepted = async (signal) => {
             if (pcRef.current) {
                 await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                 toast.success("Call connected", { icon: '📞' });
             }
-        });
+        };
 
-        socket.on("ice_candidate", async (data) => {
+        const handleIceCandidate = async (data) => {
             if (pcRef.current && data.candidate) {
                 try { await pcRef.current.addIceCandidate(new RTCIceCandidate(data.candidate)); }
                 catch (e) { console.error("Error adding ICE candidate", e); }
             }
-        });
+        };
 
-        socket.on("call_ended", () => {
+        const handleCallEnded = () => {
             cleanupCall();
-            playSound(hangupAudioRef);
+            playAudio('hangup');
             toast("Call ended", { icon: '📵' });
-        });
+        };
+
+        socket.on("online_users_updated", handleOnlineUsers);
+        socket.on("receive_message", handleReceiveMessage);
+        socket.on("message_deleted", handleMessageDeleted);
+        socket.on("incoming_call", handleIncomingCall);
+        socket.on("call_accepted", handleCallAccepted);
+        socket.on("ice_candidate", handleIceCandidate);
+        socket.on("call_ended", handleCallEnded);
 
         return () => {
             socket.off("connect", joinChatRoom);
-            socket.off("online_users_updated");
-            socket.off("receive_message");
-            socket.off("message_deleted");
-            socket.off("incoming_call");
-            socket.off("call_accepted");
-            socket.off("ice_candidate");
-            socket.off("call_ended");
+            socket.off("online_users_updated", handleOnlineUsers);
+            socket.off("receive_message", handleReceiveMessage); // Now specifically targets this component's listener
+            socket.off("message_deleted", handleMessageDeleted);
+            socket.off("incoming_call", handleIncomingCall);
+            socket.off("call_accepted", handleCallAccepted);
+            socket.off("ice_candidate", handleIceCandidate);
+            socket.off("call_ended", handleCallEnded);
         };
     }, [currentUserId]);
 
@@ -255,12 +282,10 @@ const SharedChat = () => {
     useEffect(() => {
         if (location.state?.incomingCall) {
             if (location.state.autoAccept) {
-                // Instantly auto accept because they clicked accept in the global menu
                 acceptCall(location.state.incomingCall);
             } else {
                 setIncomingCall(location.state.incomingCall);
             }
-            // Clear router state to prevent triggering on reloads
             window.history.replaceState({}, document.title);
         }
     }, [location.state]);
@@ -332,7 +357,7 @@ const SharedChat = () => {
         e?.preventDefault();
         if (!newMessage.trim() && !isUploading) return;
 
-        const tempId = `temp-${Date.now()}`; // Temporary ID to allow instant deletion
+        const tempId = `temp-${Date.now()}`;
 
         const payload = {
             _id: tempId,
@@ -347,14 +372,13 @@ const SharedChat = () => {
         setMessages((prev) => [...prev, payload]);
         setNewMessage("");
         scrollToBottom();
-        playSound(sentAudioRef); // Play sent tick!
+        playAudio('sent');
 
         socket.emit("send_message", payload);
 
         try {
             const res = await api.post('/chat/message', payload);
             if (res.data && res.data._id) {
-                // Swap the temp ID with the real database ID
                 setMessages(prev => prev.map(m => m._id === tempId ? { ...m, _id: res.data._id } : m));
             }
         } catch (error) { 
@@ -402,7 +426,7 @@ const SharedChat = () => {
 
                 socket.emit("send_message", payload);
                 setMessages((prev) => [...prev, payload]);
-                playSound(sentAudioRef);
+                playAudio('sent');
 
                 const res = await api.post('/chat/message', payload);
                 if (res.data && res.data._id) {
@@ -434,7 +458,7 @@ const SharedChat = () => {
     const handleTouchStart = (e, msg) => {
         touchTimer.current = setTimeout(() => {
             handleContextMenu(e, msg);
-        }, 600); // 600ms Long Press
+        }, 600);
     };
 
     const handleTouchEnd = () => {
@@ -448,7 +472,7 @@ const SharedChat = () => {
         
         const targetId = msg._id || msg.id;
 
-        // WhatsApp: Delete for Me (Local Storage hide)
+        // Delete for Me (Local Storage hide)
         if (type === 'me') {
             const localDeleted = JSON.parse(localStorage.getItem('deletedChatMessages') || '[]');
             if (targetId) localDeleted.push(targetId);
@@ -459,7 +483,7 @@ const SharedChat = () => {
             return;
         }
 
-        // WhatsApp: Delete for Everyone (DB + Socket)
+        // Delete for Everyone (DB + Socket)
         if (type === 'everyone') {
             setMessages(prev => prev.filter(m => (m._id || m.id) !== targetId && m.timestamp !== msg.timestamp));
             
@@ -511,7 +535,6 @@ const SharedChat = () => {
         });
     };
 
-    // Adjusted to take callData as param for Auto-Accept 
     const acceptCall = async (callData = incomingCall) => {
         if (!callData) return;
         const stream = await setupMedia();
@@ -547,7 +570,7 @@ const SharedChat = () => {
         const recipient = incomingCall?.from || (activeChat?._id || activeChat?.id);
         if (recipient) socket.emit('end_call', { to: recipient });
         cleanupCall();
-        playSound(hangupAudioRef);
+        playAudio('hangup');
     };
 
     // --- MENU ACTIONS ---
@@ -563,7 +586,6 @@ const SharedChat = () => {
     const isOnline = (id) => onlineUsers.includes(id?.toString());
     const filteredConversations = conversations.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    // Mask locally deleted messages before rendering
     const localDeletedIds = JSON.parse(localStorage.getItem('deletedChatMessages') || '[]');
     const visibleMessages = messages.filter(m => !localDeletedIds.includes(m._id || m.id));
     
@@ -591,7 +613,6 @@ const SharedChat = () => {
                         <Trash2 className="w-4 h-4 text-muted-foreground" /> Delete for me
                     </button>
                     
-                    {/* Only show 'Delete for everyone' if they are the author */}
                     {String(contextMenu.msg.senderId || contextMenu.msg.sender) === String(currentUserId) && (
                         <button onClick={() => executeDelete('everyone')} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-rose-500/10 text-sm font-medium text-rose-500 transition-colors">
                             <Trash2 className="w-4 h-4" /> Delete for everyone

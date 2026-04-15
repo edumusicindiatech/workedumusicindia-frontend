@@ -26,11 +26,38 @@ if (!window.__GLOBAL_SOCKET__) {
 }
 const socket = window.__GLOBAL_SOCKET__;
 
-// --- AUDIO SETUP ---
-const notificationSound = new Audio('/sounds/notification-ting.mp3');
-const sosBeepSound = new Audio('/sounds/beep.mp3');
-const chatMessageSound = new Audio('/sounds/message.mp3');
-const incomingAudio = new Audio('/sounds/incoming.mp3'); // NEW: Global ringtone
+// --- GLOBAL AUDIO SINGLETON ---
+if (!window.__GLOBAL_AUDIO__) {
+    window.__GLOBAL_AUDIO__ = {
+        notification: new Audio('/sounds/notification-ting.mp3'),
+        sos: new Audio('/sounds/beep.mp3'),
+        message: new Audio('/sounds/message.mp3'),
+        incoming: new Audio('/sounds/incoming.mp3'),
+        hangup: new Audio('/sounds/hangup.mp3'),
+        sent: new Audio('/sounds/sent.mp3'),
+    };
+}
+const globalAudio = window.__GLOBAL_AUDIO__;
+
+const playAudio = (type) => {
+    try {
+        const snd = globalAudio[type];
+        if (snd) {
+            snd.currentTime = 0;
+            snd.play().catch(e => console.warn(`Audio blocked for ${type}:`, e));
+        }
+    } catch (e) {}
+};
+
+const pauseAudio = (type) => {
+    try {
+        const snd = globalAudio[type];
+        if (snd) {
+            snd.pause();
+            snd.currentTime = 0;
+        }
+    } catch (e) {}
+};
 
 const EmployeeNavbar = () => {
     const { t } = useTranslation();
@@ -43,7 +70,7 @@ const EmployeeNavbar = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     
-    // NEW: Global Incoming Call State
+    // Global Incoming Call State
     const [globalIncomingCall, setGlobalIncomingCall] = useState(null);
 
     const mobileMenuRef = useRef(null);
@@ -56,8 +83,7 @@ const EmployeeNavbar = () => {
     // --- BROWSER AUDIO UNLOCKING ---
     useEffect(() => {
         const unlockAudio = () => {
-            const sounds = [notificationSound, sosBeepSound, chatMessageSound, incomingAudio];
-            sounds.forEach(snd => {
+            Object.values(globalAudio).forEach(snd => {
                 snd.volume = 0;
                 snd.play().then(() => {
                     snd.pause();
@@ -65,18 +91,26 @@ const EmployeeNavbar = () => {
                     snd.volume = 1;
                 }).catch(() => { });
             });
-
             document.removeEventListener('click', unlockAudio);
             document.removeEventListener('touchstart', unlockAudio);
         };
-
         document.addEventListener('click', unlockAudio);
         document.addEventListener('touchstart', unlockAudio);
-
         return () => {
             document.removeEventListener('click', unlockAudio);
             document.removeEventListener('touchstart', unlockAudio);
         };
+    }, []);
+
+    // --- VISIBILITY LISTENER TO CLEAR BADGES ---
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (!document.hidden && pathnameRef.current.includes('/chat')) {
+                setUnreadChatCount(0);
+            }
+        };
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
     }, []);
 
     // --- 60 SEC AUTO HANGUP FOR GLOBAL CALLS ---
@@ -85,7 +119,7 @@ const EmployeeNavbar = () => {
             const timer = setTimeout(() => {
                 socket.emit('end_call', { to: globalIncomingCall.from });
                 setGlobalIncomingCall(null);
-                incomingAudio.pause();
+                pauseAudio('incoming');
                 toast.error(`Missed call from ${globalIncomingCall.callerName}`);
             }, 60000);
             return () => clearTimeout(timer);
@@ -122,39 +156,24 @@ const EmployeeNavbar = () => {
         const handleIncomingChat = () => {
             if (pathnameRef.current !== '/employee/chat' || document.hidden) {
                 setUnreadChatCount(prev => prev + 1);
-                try {
-                    chatMessageSound.currentTime = 0;
-                    chatMessageSound.play().catch(e => console.warn("Audio blocked", e));
-                } catch (e) {}
                 toast.success(`New chat message received`, { icon: '💬', id: 'new-chat-toast' });
             }
         };
 
-        // --- NEW: LISTEN FOR INCOMING CALLS GLOBALLY ---
         const handleIncomingCall = (data) => {
-            if (pathnameRef.current.includes('/chat')) return; // SharedChat handles it directly if on page
+            if (pathnameRef.current.includes('/chat')) return; 
             setGlobalIncomingCall(data);
-            try {
-                incomingAudio.loop = true;
-                incomingAudio.currentTime = 0;
-                incomingAudio.play().catch(e => console.warn("Audio blocked", e));
-            } catch (e) { }
+            globalAudio.incoming.loop = true;
+            playAudio('incoming');
         };
 
         const handleCallEnded = () => {
             setGlobalIncomingCall(null);
-            try {
-                incomingAudio.pause();
-            } catch (e) { }
+            pauseAudio('incoming');
         };
 
         const handleNewNotification = () => {
-            try {
-                notificationSound.currentTime = 0;
-                notificationSound.play().catch(err => {
-                    console.warn("🔇 BROWSER BLOCKED AUDIO!", err);
-                });
-            } catch (e) {}
+            playAudio('notification');
 
             if (pathnameRef.current !== '/employee/notifications') {
                 setNotifCount(prev => prev + 1);
@@ -164,11 +183,7 @@ const EmployeeNavbar = () => {
 
         const handleIncomingSOS = (data) => {
             const { senderName, lat, lng } = data;
-
-            try {
-                sosBeepSound.currentTime = 0;
-                sosBeepSound.play().catch(e => console.warn("Audio blocked", e));
-            } catch (e) {}
+            playAudio('sos');
 
             if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 1000]);
 
@@ -291,7 +306,6 @@ const EmployeeNavbar = () => {
             label: t('navbar.notifications'),
             badge: notifCount
         },
-        // MOVED: Chat Hub is now after Notifications
         { path: "/employee/chat", icon: <MessageCircle className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: 'Chat', badge: unreadChatCount },
         {
             path: "/employee/profile",
@@ -350,7 +364,6 @@ const EmployeeNavbar = () => {
                                 ) : (
                                     <UserCircle className="w-7 h-7 text-muted-foreground" />
                                 )}
-                                {unreadChatCount > 0 && <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-card" />}
                             </button>
 
                             {isMobileMenuOpen && (
@@ -391,17 +404,6 @@ const EmployeeNavbar = () => {
                                         onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/help'); }}
                                     >
                                         <HelpCircle className="w-4 h-4 text-primary" /> {t('navbar.help') || 'Help & FAQs'}
-                                    </button>
-
-                                    <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                                        onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/chat'); }}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <MessageCircle className="w-4 h-4 text-primary" /> Chat Hub
-                                        </div>
-                                        {unreadChatCount > 0 && (
-                                            <span className="bg-destructive text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unreadChatCount}</span>
-                                        )}
                                     </button>
 
                                     <NavLink to="/employee/profile" onClick={() => setIsMobileMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
@@ -460,12 +462,12 @@ const EmployeeNavbar = () => {
                             <button onClick={() => {
                                 socket.emit('end_call', { to: globalIncomingCall.from });
                                 setGlobalIncomingCall(null);
-                                incomingAudio.pause();
+                                pauseAudio('incoming');
                             }} className="w-14 h-14 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
                                 <PhoneOff className="w-6 h-6" />
                             </button>
                             <button onClick={() => {
-                                incomingAudio.pause();
+                                pauseAudio('incoming');
                                 setGlobalIncomingCall(null);
                                 navigate('/employee/chat', { state: { incomingCall: globalIncomingCall, autoAccept: true } });
                             }} className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">

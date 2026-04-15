@@ -24,11 +24,38 @@ if (!window.__GLOBAL_SOCKET__) {
 }
 const socket = window.__GLOBAL_SOCKET__;
 
-// --- AUDIO SETUP ---
-const notificationSound = new Audio('/sounds/notification-ting.mp3');
-const sosBeepSound = new Audio('/sounds/beep.mp3');
-const chatMessageSound = new Audio('/sounds/message.mp3');
-const incomingAudio = new Audio('/sounds/incoming.mp3'); // NEW: Global ringtone
+// --- GLOBAL AUDIO SINGLETON ---
+if (!window.__GLOBAL_AUDIO__) {
+    window.__GLOBAL_AUDIO__ = {
+        notification: new Audio('/sounds/notification-ting.mp3'),
+        sos: new Audio('/sounds/beep.mp3'),
+        message: new Audio('/sounds/message.mp3'),
+        incoming: new Audio('/sounds/incoming.mp3'),
+        hangup: new Audio('/sounds/hangup.mp3'),
+        sent: new Audio('/sounds/sent.mp3'),
+    };
+}
+const globalAudio = window.__GLOBAL_AUDIO__;
+
+const playAudio = (type) => {
+    try {
+        const snd = globalAudio[type];
+        if (snd) {
+            snd.currentTime = 0;
+            snd.play().catch(e => console.warn(`Audio blocked for ${type}:`, e));
+        }
+    } catch (e) {}
+};
+
+const pauseAudio = (type) => {
+    try {
+        const snd = globalAudio[type];
+        if (snd) {
+            snd.pause();
+            snd.currentTime = 0;
+        }
+    } catch (e) {}
+};
 
 const AdminSidebar = () => {
     const { t } = useTranslation();
@@ -50,7 +77,7 @@ const AdminSidebar = () => {
     const [unreadChatCount, setUnreadChatCount] = useState(0);
     const [pendingMediaCount, setPendingMediaCount] = useState(0);
 
-    // NEW: Global Incoming Call State
+    // Global Incoming Call State
     const [globalIncomingCall, setGlobalIncomingCall] = useState(null);
 
     const mobileMenuRef = useRef(null);
@@ -67,8 +94,7 @@ const AdminSidebar = () => {
     // --- BROWSER AUDIO UNLOCKING ---
     useEffect(() => {
         const unlockAudio = () => {
-            const sounds = [notificationSound, sosBeepSound, chatMessageSound, incomingAudio];
-            sounds.forEach(snd => {
+            Object.values(globalAudio).forEach(snd => {
                 snd.volume = 0;
                 snd.play().then(() => {
                     snd.pause();
@@ -76,18 +102,26 @@ const AdminSidebar = () => {
                     snd.volume = 1;
                 }).catch(() => { });
             });
-
             document.removeEventListener('click', unlockAudio);
             document.removeEventListener('touchstart', unlockAudio);
         };
-
         document.addEventListener('click', unlockAudio);
         document.addEventListener('touchstart', unlockAudio);
-
         return () => {
             document.removeEventListener('click', unlockAudio);
             document.removeEventListener('touchstart', unlockAudio);
         };
+    }, []);
+
+    // --- VISIBILITY LISTENER TO CLEAR BADGES ---
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (!document.hidden && pathnameRef.current.includes('/chat')) {
+                setUnreadChatCount(0);
+            }
+        };
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
     }, []);
 
     // --- 60 SEC AUTO HANGUP FOR GLOBAL CALLS ---
@@ -96,7 +130,7 @@ const AdminSidebar = () => {
             const timer = setTimeout(() => {
                 socket.emit('end_call', { to: globalIncomingCall.from });
                 setGlobalIncomingCall(null);
-                incomingAudio.pause();
+                pauseAudio('incoming');
                 toast.error(`Missed call from ${globalIncomingCall.callerName}`);
             }, 60000);
             return () => clearTimeout(timer);
@@ -146,37 +180,24 @@ const AdminSidebar = () => {
         const handleIncomingChat = () => {
             if (pathnameRef.current !== '/admin/chat' || document.hidden) {
                 setUnreadChatCount(prev => prev + 1);
-                try {
-                    chatMessageSound.currentTime = 0;
-                    chatMessageSound.play().catch(e => console.warn("Audio blocked", e));
-                } catch (e) { }
                 toast.success(`New chat message received`, { icon: '💬', id: 'admin-new-chat' });
             }
         };
 
-        // --- NEW: LISTEN FOR INCOMING CALLS GLOBALLY ---
         const handleIncomingCall = (data) => {
-            if (pathnameRef.current.includes('/chat')) return; // SharedChat handles it directly if on page
+            if (pathnameRef.current.includes('/chat')) return; 
             setGlobalIncomingCall(data);
-            try {
-                incomingAudio.loop = true;
-                incomingAudio.currentTime = 0;
-                incomingAudio.play().catch(e => console.warn("Audio blocked", e));
-            } catch (e) { }
+            globalAudio.incoming.loop = true;
+            playAudio('incoming');
         };
 
         const handleCallEnded = () => {
             setGlobalIncomingCall(null);
-            try {
-                incomingAudio.pause();
-            } catch (e) { }
+            pauseAudio('incoming');
         };
 
         const handleNewNotification = (notif) => {
-            try {
-                notificationSound.currentTime = 0;
-                notificationSound.play().catch(err => { console.warn("🔇 BROWSER BLOCKED AUDIO!", err); });
-            } catch (e) { }
+            playAudio('notification');
 
             if (pathnameRef.current !== '/admin/notifications') {
                 setUnreadCount(prev => prev + 1);
@@ -190,11 +211,7 @@ const AdminSidebar = () => {
 
         const handleIncomingSOS = (data) => {
             const { senderName, lat, lng } = data;
-
-            try {
-                sosBeepSound.currentTime = 0;
-                sosBeepSound.play().catch(e => console.warn("Audio blocked", e));
-            } catch (e) { }
+            playAudio('sos');
 
             if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 1000]);
 
@@ -385,7 +402,6 @@ const AdminSidebar = () => {
                 <div className="relative" ref={mobileMenuRef}>
                     <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="relative p-1 rounded-full hover:bg-muted transition-colors flex items-center justify-center w-10 h-10 overflow-hidden ring-2 ring-transparent focus:ring-primary/20 border border-border/50">
                         {user?.profilePicture ? <img src={user.profilePicture} alt="Admin" className="w-full h-full object-cover rounded-full" /> : <UserCircle className="w-7 h-7 text-muted-foreground" />}
-                        {unreadChatCount > 0 && <span className="absolute top-0 right-0 w-3 h-3 bg-destructive rounded-full border-2 border-card" />}
                     </button>
 
                     {isMobileMenuOpen && (
@@ -514,12 +530,12 @@ const AdminSidebar = () => {
                             <button onClick={() => {
                                 socket.emit('end_call', { to: globalIncomingCall.from });
                                 setGlobalIncomingCall(null);
-                                incomingAudio.pause();
+                                pauseAudio('incoming');
                             }} className="w-14 h-14 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
                                 <PhoneOff className="w-6 h-6" />
                             </button>
                             <button onClick={() => {
-                                incomingAudio.pause();
+                                pauseAudio('incoming');
                                 setGlobalIncomingCall(null);
                                 navigate('/admin/chat', { state: { incomingCall: globalIncomingCall, autoAccept: true } });
                             }} className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
