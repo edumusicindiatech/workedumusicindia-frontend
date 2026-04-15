@@ -27,17 +27,18 @@ if (!window.__GLOBAL_SOCKET__) {
 }
 const socket = window.__GLOBAL_SOCKET__;
 
-// --- GLOBAL AUDIO SINGLETON ---
-if (!window.__GLOBAL_AUDIO__) {
-    window.__GLOBAL_AUDIO__ = {
-        notification: new Audio('/sounds/notification-ting.mp3'),
-        sos: new Audio('/sounds/beep.mp3'),
-        message: new Audio('/sounds/message.mp3'),
-        incoming: new Audio('/sounds/incoming.mp3'),
-        hangup: new Audio('/sounds/hangup.mp3'),
-        sent: new Audio('/sounds/sent.mp3'),
-    };
-}
+// --- GLOBAL AUDIO SINGLETON (HMR SAFE) ---
+if (!window.__GLOBAL_AUDIO__) window.__GLOBAL_AUDIO__ = {};
+
+if (!window.__GLOBAL_AUDIO__.notification) window.__GLOBAL_AUDIO__.notification = new Audio('/sounds/notification-ting.mp3');
+if (!window.__GLOBAL_AUDIO__.sos) window.__GLOBAL_AUDIO__.sos = new Audio('/sounds/beep.mp3');
+if (!window.__GLOBAL_AUDIO__.message) window.__GLOBAL_AUDIO__.message = new Audio('/sounds/message.mp3');
+if (!window.__GLOBAL_AUDIO__.incoming) window.__GLOBAL_AUDIO__.incoming = new Audio('/sounds/incoming.mp3');
+if (!window.__GLOBAL_AUDIO__.hangup) window.__GLOBAL_AUDIO__.hangup = new Audio('/sounds/hangup.mp3');
+if (!window.__GLOBAL_AUDIO__.sent) window.__GLOBAL_AUDIO__.sent = new Audio('/sounds/sent.mp3');
+if (!window.__GLOBAL_AUDIO__.calling) window.__GLOBAL_AUDIO__.calling = new Audio('/sounds/calling.mp3');
+if (!window.__GLOBAL_AUDIO__.ringing) window.__GLOBAL_AUDIO__.ringing = new Audio('/sounds/ringing.mp3');
+
 const globalAudio = window.__GLOBAL_AUDIO__;
 
 const playAudio = (type) => {
@@ -47,7 +48,7 @@ const playAudio = (type) => {
             snd.currentTime = 0;
             snd.play().catch(e => console.warn(`Audio blocked for ${type}:`, e));
         }
-    } catch (e) { }
+    } catch (e) {}
 };
 
 const pauseAudio = (type) => {
@@ -57,7 +58,7 @@ const pauseAudio = (type) => {
             snd.pause();
             snd.currentTime = 0;
         }
-    } catch (e) { }
+    } catch (e) {}
 };
 
 const iceServers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
@@ -72,7 +73,7 @@ const EmployeeNavbar = () => {
     const [unreadChatCount, setUnreadChatCount] = useState(0);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-
+    
     // --- GLOBAL WEBRTC CALL STATE ---
     const [globalIncomingCall, setGlobalIncomingCall] = useState(null);
     const [activeCall, setActiveCall] = useState(false);
@@ -80,7 +81,7 @@ const EmployeeNavbar = () => {
     const [isMinimizedCall, setIsMinimizedCall] = useState(false);
     const [isCallAccepted, setIsCallAccepted] = useState(false);
     const [onlineUsers, setOnlineUsers] = useState([]);
-
+    
     const pcRef = useRef(null);
     const localStreamRef = useRef(null);
     const remoteAudioRef = useRef(null);
@@ -91,15 +92,18 @@ const EmployeeNavbar = () => {
         pathnameRef.current = location.pathname;
     }, [location.pathname]);
 
+    // --- BROWSER AUDIO UNLOCKING ---
     useEffect(() => {
         const unlockAudio = () => {
             Object.values(globalAudio).forEach(snd => {
-                snd.volume = 0;
-                snd.play().then(() => {
-                    snd.pause();
-                    snd.currentTime = 0;
-                    snd.volume = 1;
-                }).catch(() => { });
+                if (snd) {
+                    snd.volume = 0;
+                    snd.play().then(() => {
+                        snd.pause();
+                        snd.currentTime = 0;
+                        snd.volume = 1;
+                    }).catch(() => { });
+                }
             });
             document.removeEventListener('click', unlockAudio);
             document.removeEventListener('touchstart', unlockAudio);
@@ -112,6 +116,7 @@ const EmployeeNavbar = () => {
         };
     }, []);
 
+    // --- VISIBILITY LISTENER TO CLEAR BADGES ---
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (!document.hidden && pathnameRef.current.includes('/chat')) {
@@ -122,6 +127,7 @@ const EmployeeNavbar = () => {
         return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
     }, []);
 
+    // --- 60 SEC AUTO HANGUP FOR GLOBAL CALLS ---
     useEffect(() => {
         if (globalIncomingCall && !activeCall) {
             const timer = setTimeout(() => {
@@ -134,9 +140,34 @@ const EmployeeNavbar = () => {
         }
     }, [globalIncomingCall, activeCall]);
 
+    // --- OUTGOING CALL AUDIO TRACKER ---
+    useEffect(() => {
+        if (activeCall && !isCallAccepted && callPeer) {
+            const isPeerOnline = onlineUsers.includes(String(callPeer._id || callPeer.id));
+            if (isPeerOnline) {
+                pauseAudio('calling');
+                if (globalAudio.ringing) globalAudio.ringing.loop = true; // Safety Check
+                playAudio('ringing');
+            } else {
+                pauseAudio('ringing');
+                if (globalAudio.calling) globalAudio.calling.loop = true; // Safety Check
+                playAudio('calling');
+            }
+        } else {
+            pauseAudio('calling');
+            pauseAudio('ringing');
+        }
+
+        return () => {
+            pauseAudio('calling');
+            pauseAudio('ringing');
+        };
+    }, [activeCall, isCallAccepted, callPeer, onlineUsers]);
+
     const { user, token } = useSelector((state) => state.auth);
     const themeMode = useSelector((state) => state.theme.mode);
 
+    // --- WEBRTC LOGIC ---
     const setupMedia = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -165,13 +196,13 @@ const EmployeeNavbar = () => {
     const handleAcceptCall = async () => {
         if (!globalIncomingCall) return;
         const callData = globalIncomingCall;
-
+        
         const stream = await setupMedia();
         if (!stream) return;
 
         setActiveCall(true);
-        setCallPeer({
-            name: callData.callerName,
+        setCallPeer({ 
+            name: callData.callerName, 
             _id: callData.from,
             profilePicture: callData.profilePicture
         });
@@ -204,6 +235,7 @@ const EmployeeNavbar = () => {
         playAudio('hangup');
     };
 
+    // Listen for SharedChat asking to start a call
     useEffect(() => {
         const handleInitiateCall = async (e) => {
             const peerToCall = e.detail;
@@ -228,12 +260,12 @@ const EmployeeNavbar = () => {
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
 
-            socket.emit('call_user', {
-                userToCall: peerToCall._id || peerToCall.id,
-                from: user.id || user._id,
+            socket.emit('call_user', { 
+                userToCall: peerToCall._id || peerToCall.id, 
+                from: user.id || user._id, 
                 callerName: user.name,
-                profilePicture: user.profilePicture,
-                signalData: offer
+                profilePicture: user.profilePicture, 
+                signalData: offer 
             });
         };
 
@@ -241,6 +273,7 @@ const EmployeeNavbar = () => {
         return () => window.removeEventListener('initiate_global_call', handleInitiateCall);
     }, [user]);
 
+    // --- SOCKET LOGIC ---
     useEffect(() => {
         if (!user || !token) return;
 
@@ -269,7 +302,7 @@ const EmployeeNavbar = () => {
 
         const handleIncomingCall = (data) => {
             setGlobalIncomingCall(data);
-            globalAudio.incoming.loop = true;
+            if (globalAudio.incoming) globalAudio.incoming.loop = true; // Safety Check
             playAudio('incoming');
         };
 
@@ -369,7 +402,7 @@ const EmployeeNavbar = () => {
 
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
-        try { await api.post('/auth/logout'); } catch (error) { }
+        try { await api.post('/auth/logout'); } catch (error) {} 
         finally {
             toast.remove();
             sessionStorage.setItem('justLoggedOut', 'true');

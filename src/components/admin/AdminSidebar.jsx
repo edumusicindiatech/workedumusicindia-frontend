@@ -34,6 +34,8 @@ if (!window.__GLOBAL_AUDIO__) {
         incoming: new Audio('/sounds/incoming.mp3'),
         hangup: new Audio('/sounds/hangup.mp3'),
         sent: new Audio('/sounds/sent.mp3'),
+        calling: new Audio('/sounds/calling.mp3'), // <-- ADDED
+        ringing: new Audio('/sounds/ringing.mp3'), // <-- ADDED
     };
 }
 const globalAudio = window.__GLOBAL_AUDIO__;
@@ -145,6 +147,30 @@ const AdminSidebar = () => {
             return () => clearTimeout(timer);
         }
     }, [globalIncomingCall, activeCall]);
+
+    // --- OUTGOING CALL AUDIO TRACKER ---
+    useEffect(() => {
+        if (activeCall && !isCallAccepted && callPeer) {
+            const isPeerOnline = onlineUsers.includes(String(callPeer._id || callPeer.id));
+            if (isPeerOnline) {
+                pauseAudio('calling');
+                globalAudio.ringing.loop = true;
+                playAudio('ringing');
+            } else {
+                pauseAudio('ringing');
+                globalAudio.calling.loop = true;
+                playAudio('calling');
+            }
+        } else {
+            pauseAudio('calling');
+            pauseAudio('ringing');
+        }
+
+        return () => {
+            pauseAudio('calling');
+            pauseAudio('ringing');
+        };
+    }, [activeCall, isCallAccepted, callPeer, onlineUsers]);
 
     // --- WEBRTC LOGIC ---
     const setupMedia = async () => {

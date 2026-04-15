@@ -28,6 +28,8 @@ if (!window.__GLOBAL_AUDIO__) {
         incoming: new Audio('/sounds/incoming.mp3'),
         hangup: new Audio('/sounds/hangup.mp3'),
         sent: new Audio('/sounds/sent.mp3'),
+        calling: new Audio('/sounds/calling.mp3'),
+        ringing: new Audio('/sounds/ringing.mp3'),
     };
 }
 const globalAudio = window.__GLOBAL_AUDIO__;
