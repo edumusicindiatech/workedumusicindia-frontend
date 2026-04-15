@@ -282,7 +282,7 @@ const EmployeeDashboard = () => {
     const openGoogleMaps = (coords) => {
         if (!coords || coords.length < 2) return;
         const [lng, lat] = coords;
-        const url = `http://googleusercontent.com/maps.google.com/2{lat},${lng}`;
+        const url = `https://www.google.com/maps?q=${lat},${lng}`;
         window.open(url, '_blank');
     };
 
