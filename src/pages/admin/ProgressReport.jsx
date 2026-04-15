@@ -3,7 +3,7 @@ import {
     ChevronRight, ArrowLeft, TrendingUp, Search,
     CheckCircle2, AlertCircle, XCircle, Star, Coffee, Film, CalendarDays,
     Clock, FileText, School, Download, Trophy, Users, FolderOpen, CalendarOff,
-    BarChart3, Loader2
+    BarChart3, Loader2, Eye, X // <-- Added Eye and X icons
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,9 @@ const ProgressReport = () => {
     const [showGraph, setShowGraph] = useState(false);
     const [graphData, setGraphData] = useState([]);
     const [isLoadingGraph, setIsLoadingGraph] = useState(false);
+
+    // Preview Modal State
+    const [showPreviewModal, setShowPreviewModal] = useState(false);
 
     const fetchTeachers = async () => {
         try {
@@ -151,6 +154,13 @@ const ProgressReport = () => {
         });
         return Array.from(months).sort((a, b) => b.localeCompare(a));
     }, [records]);
+
+    // Data for the Preview Sheet
+    const previewRecords = useMemo(() => {
+        if (!records || !selectedMonth) return [];
+        return records.filter(r => r.date && typeof r.date === 'string' && r.date.startsWith(selectedMonth))
+                      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    }, [records, selectedMonth]);
 
     const schoolsInMonth = useMemo(() => {
         if (!selectedMonth || !records) return { schools: [], hasLeaves: false };
@@ -275,7 +285,7 @@ const ProgressReport = () => {
     );
 
     return (
-        <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto animate-in fade-in duration-500 pb-20">
+        <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto animate-in fade-in duration-500 pb-20 relative">
             <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm shrink-0">
@@ -314,7 +324,7 @@ const ProgressReport = () => {
             )}
 
             <div className="bg-card rounded-2xl sm:rounded-3xl border border-border shadow-lg shadow-slate-200/40 dark:shadow-none overflow-hidden flex flex-col min-h-100 transition-all duration-300">
-                <div className="p-4 sm:p-5 border-b border-border bg-muted/30 flex items-center justify-between gap-3 sm:gap-4">
+                <div className="p-4 sm:p-5 border-b border-border bg-muted/30 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
                     <h3 className="font-bold text-sm sm:text-base text-foreground truncate">
                         {!selectedTeacher ? t('progress_report.headers.rankings')
                             : !selectedMonth ? t('progress_report.headers.teacher_reports', { name: selectedTeacher.name })
@@ -322,7 +332,17 @@ const ProgressReport = () => {
                     </h3>
 
                     {selectedMonth && !selectedSchool && (
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
+                            {/* VIEW PREVIEW BUTTON */}
+                            <Button 
+                                onClick={() => setShowPreviewModal(true)} 
+                                variant="outline" 
+                                size="sm" 
+                                className="gap-1.5 border-teal-500/20 text-teal-600 dark:text-teal-400 font-bold hover:bg-teal-500 hover:text-white h-8 sm:h-9 px-3 shrink-0 transition-colors"
+                            >
+                                <Eye className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Preview Sheet</span>
+                            </Button>
+
                             <Button
                                 onClick={handleToggleGraph}
                                 variant={showGraph ? "default" : "outline"}
@@ -332,6 +352,7 @@ const ProgressReport = () => {
                                 <BarChart3 className="w-3.5 h-3.5" />
                                 <span className="hidden sm:inline">{showGraph ? 'Close Graph' : 'View Graph'}</span>
                             </Button>
+
                             <Button onClick={handleExportExcel} variant="outline" size="sm" className="gap-1.5 border-primary/20 text-primary font-bold hover:bg-primary hover:text-primary-foreground h-8 sm:h-9 px-3 shrink-0">
                                 <Download className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t('progress_report.btn.export')}</span>
                             </Button>
@@ -340,6 +361,7 @@ const ProgressReport = () => {
                 </div>
 
                 <div className="p-3 sm:p-4 md:p-6 flex-1 bg-background/50 relative overflow-hidden">
+                    {/* ... (Existing List Content remains exactly the same) ... */}
                     {!selectedTeacher && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="relative mb-4 sm:mb-6">
@@ -357,7 +379,6 @@ const ProgressReport = () => {
                                     {filteredTeachers.map((teacher, idx) => (
                                         <div key={teacher._id} onClick={() => handleSelectTeacher(teacher)} className="flex items-center justify-between p-3 sm:p-4 bg-card border border-border/80 rounded-xl hover:border-primary/40 hover:shadow-md cursor-pointer transition-all duration-300 group">
 
-                                            {/* FIX 1: Added flex-1 and min-w-0 for layout constraint */}
                                             <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 pr-2">
                                                 <span className="text-[10px] sm:text-xs font-bold text-muted-foreground w-4 shrink-0">#{idx + 1}</span>
                                                 <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full gradient-primary flex items-center justify-center text-white font-bold shrink-0 overflow-hidden shadow-sm ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
@@ -372,14 +393,12 @@ const ProgressReport = () => {
                                                     )}
                                                 </div>
 
-                                                {/* FIX 1: Truncation wrappers and title attribute */}
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-bold text-sm text-foreground group-hover:text-primary truncate" title={teacher.name}>{teacher.name}</p>
                                                     <p className="text-[10px] text-muted-foreground uppercase font-semibold truncate" title={teacher.zone || t('progress_report.unassigned')}>{teacher.zone || t('progress_report.unassigned')}</p>
                                                 </div>
                                             </div>
 
-                                            {/* FIX 1: Added shrink-0 to prevent badge squeezing */}
                                             <div className="flex items-center shrink-0">
                                                 <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${getZoneStyles(teacher.colorZone)}`}>
                                                     <Trophy className="w-3 h-3 inline mr-1 mb-0.5" />
@@ -396,7 +415,6 @@ const ProgressReport = () => {
 
                     {selectedTeacher && !selectedMonth && (
                         <div className="animate-in fade-in slide-in-from-right-8 duration-300">
-                            {/* FIX 2: Added Loading State and Empty State UI */}
                             {isLoadingRecords ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                                     <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" />
@@ -640,6 +658,76 @@ const ProgressReport = () => {
                     )}
                 </div>
             </div>
+
+            {/* PREVIEW SHEET MODAL */}
+            {showPreviewModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-card w-full max-w-5xl h-[80vh] rounded-[2rem] flex flex-col shadow-2xl border border-border overflow-hidden transform transition-all">
+                        {/* Header */}
+                        <div className="p-4 sm:p-6 border-b border-border flex justify-between items-center bg-muted/30">
+                            <div>
+                                <h3 className="font-bold text-lg text-foreground flex items-center gap-2">
+                                    <FileText className="w-5 h-5 text-teal-500" />
+                                    Data Preview
+                                </h3>
+                                <p className="text-xs text-muted-foreground font-medium mt-1 uppercase tracking-wider">
+                                    {selectedTeacher?.name} • {formatMonth(selectedMonth)}
+                                </p>
+                            </div>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => setShowPreviewModal(false)}
+                                className="rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
+                            >
+                                <X className="w-5 h-5"/>
+                            </Button>
+                        </div>
+                        
+                        {/* Table Content */}
+                        <div className="overflow-auto p-0 flex-1 custom-scrollbar bg-card">
+                            {previewRecords.length === 0 ? (
+                                <div className="flex items-center justify-center h-full text-muted-foreground font-medium">
+                                    No records available for preview.
+                                </div>
+                            ) : (
+                                <table className="w-full text-sm text-left whitespace-nowrap">
+                                    <thead className="text-xs uppercase text-muted-foreground bg-muted/50 sticky top-0 z-10 shadow-sm border-b border-border/50">
+                                        <tr>
+                                            <th className="px-6 py-4 font-bold tracking-wider">Date</th>
+                                            <th className="px-6 py-4 font-bold tracking-wider">Location / School</th>
+                                            <th className="px-6 py-4 font-bold tracking-wider">Category</th>
+                                            <th className="px-6 py-4 font-bold tracking-wider">Status</th>
+                                            <th className="px-6 py-4 font-bold tracking-wider">Check-In</th>
+                                            <th className="px-6 py-4 font-bold tracking-wider">Check-Out</th>
+                                            <th className="px-6 py-4 font-bold tracking-wider">Remarks</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border/50">
+                                        {previewRecords.map((record, index) => (
+                                            <tr key={index} className="hover:bg-muted/20 transition-colors">
+                                                <td className="px-6 py-3 font-medium text-foreground">{formatFullDate(record.date)}</td>
+                                                <td className="px-6 py-3 font-semibold text-primary">{record.type === 'leave' ? 'LEAVE' : (record.school?.schoolName || "-")}</td>
+                                                <td className="px-6 py-3 text-muted-foreground">{record.type === 'leave' ? '-' : (record.band || "-")}</td>
+                                                <td className="px-6 py-3">
+                                                    <span className={record.type === 'leave' ? getStatusBadge('On Leave') : getStatusBadge(record.status)}>
+                                                        {record.type === 'leave' ? 'ON LEAVE' : record.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-3 font-medium">{formatTime(record.checkInTime) || "-"}</td>
+                                                <td className="px-6 py-3 font-medium">{formatTime(record.checkOutTime) || "-"}</td>
+                                                <td className="px-6 py-3 text-muted-foreground italic max-w-[200px] truncate" title={record.teacherNote || record.lateReason || record.eventNote || record.reason || ""}>
+                                                    {record.teacherNote || record.lateReason || record.eventNote || record.reason || "-"}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

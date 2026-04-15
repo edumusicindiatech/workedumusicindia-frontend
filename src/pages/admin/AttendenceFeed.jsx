@@ -60,15 +60,26 @@ const calculateTimeDiff = (targetTimeStr, compareDate = new Date()) => {
 // --- HELPER FUNCTION: Parse "HH:MM AM/PM" to comparable minutes for sorting ---
 const parseTimeStringToMinutes = (timeStr) => {
     if (!timeStr) return Number.MAX_SAFE_INTEGER; // Items without schedule go to bottom
-    let match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-    if (match) {
-        let hours = parseInt(match[1], 10);
-        let minutes = parseInt(match[2], 10);
-        const ampm = match[3].toUpperCase();
+
+    // 1. Try to read 12-hour format with AM/PM
+    let match12 = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (match12) {
+        let hours = parseInt(match12[1], 10);
+        let minutes = parseInt(match12[2], 10);
+        const ampm = match12[3].toUpperCase();
         if (ampm === 'PM' && hours < 12) hours += 12;
         if (ampm === 'AM' && hours === 12) hours = 0;
         return hours * 60 + minutes;
     }
+
+    // 2. Fallback to reading raw 24-hour format (e.g., "16:20", "11:00")
+    let match24 = timeStr.match(/(\d+):(\d+)/);
+    if (match24) {
+        let hours = parseInt(match24[1], 10);
+        let minutes = parseInt(match24[2], 10);
+        return hours * 60 + minutes;
+    }
+
     return Number.MAX_SAFE_INTEGER;
 };
 
