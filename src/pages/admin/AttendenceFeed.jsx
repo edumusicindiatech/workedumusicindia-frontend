@@ -345,11 +345,17 @@ const AttendanceFeed = () => {
                                         </div>
 
                                         {isActiveOrPending && employeeLocation && (
-                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 rounded-xl border border-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-wider animate-in slide-in-from-right-4">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation(); // Prevents the card's modal from opening
+                                                    const mapUrl = `https://www.google.com/maps?q=${employeeLocation.lat},${employeeLocation.lng}`;
+                                                    window.open(mapUrl, '_blank', 'noopener,noreferrer');
+                                                }}
+                                                className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl border border-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-wider animate-in slide-in-from-right-4 transition-all cursor-pointer shadow-sm hover:shadow active:scale-95"
+                                            >
                                                 <Navigation className="w-3 h-3 animate-pulse" />
                                                 <span>Live tracking</span>
 
-                                                {/* Safely extract school coordinates whether they are flat fields or GeoJSON */}
                                                 {(() => {
                                                     const schoolLat = record.school?.latitude || record.school?.location?.coordinates?.[1];
                                                     const schoolLng = record.school?.longitude || record.school?.location?.coordinates?.[0];
@@ -368,7 +374,7 @@ const AttendanceFeed = () => {
                                                     }
                                                     return null;
                                                 })()}
-                                            </div>
+                                            </button>
                                         )}
                                     </div>
                                 </div>
