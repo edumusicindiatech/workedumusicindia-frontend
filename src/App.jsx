@@ -1,5 +1,5 @@
 import { useEffect, Suspense, lazy } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { setCredentials, logout, setHydrationComplete } from "./store/slices/authSlice";
 import api, { setAxiosToken } from "./api/axios";
@@ -60,6 +60,41 @@ const PageLoader = () => (
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
   </div>
 );
+
+// ==========================================
+// 4. GLOBAL TOASTER (WITH CONDITIONAL LOGIC)
+// ==========================================
+const GlobalToaster = () => {
+  const location = useLocation();
+  
+  // Hide this global toaster if we are on the employee reset password page
+  if (location.pathname === '/employee/reset-password') {
+    return null;
+  }
+
+  return (
+    <Toaster position="top-right"
+      toastOptions={{
+        style: {
+          background: 'hsl(var(--card))',
+          color: 'hsl(var(--foreground))',
+          border: '1px solid hsl(var(--border))',
+          borderRadius: '12px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+          fontSize: '14px',
+          fontWeight: '500',
+        },
+        success: {
+          iconTheme: { primary: '#10b981', secondary: '#ffffff' },
+        },
+        error: {
+          iconTheme: { primary: '#ef4444', secondary: '#ffffff' },
+        },
+      }}
+    />
+  );
+};
+
 
 function App() {
   const dispatch = useDispatch();
@@ -176,25 +211,10 @@ function App() {
 
   return (
     <Router>
-      <Toaster position="top-right"
-        toastOptions={{
-          style: {
-            background: 'hsl(var(--card))',
-            color: 'hsl(var(--foreground))',
-            border: '1px solid hsl(var(--border))',
-            borderRadius: '12px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-            fontSize: '14px',
-            fontWeight: '500',
-          },
-          success: {
-            iconTheme: { primary: '#10b981', secondary: '#ffffff' },
-          },
-          error: {
-            iconTheme: { primary: '#ef4444', secondary: '#ffffff' },
-          },
-        }}
-      />
+      {/* This new GlobalToaster sits exactly where your old Toaster was, 
+        but it knows to hide itself on the reset password page! 
+      */}
+      <GlobalToaster />
 
       <FloatingUploadManager />
 
