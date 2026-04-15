@@ -64,10 +64,15 @@ const Login = () => {
         setIsLoading(true);
         setErrorMsg("");
 
+        // Trim any accidental spaces from the employee ID
+        const trimmedEmployeeId = employeeId.trim();
+
         try {
             // --- 2. FETCH DEVICE ID (PERMANENT OR TEMPORARY) ---
             const deviceId = getDeviceId();
-            const response = await api.post('/auth/login', { employeeId, password, deviceId });
+
+            // Use trimmedEmployeeId here instead of the raw state
+            const response = await api.post('/auth/login', { employeeId: trimmedEmployeeId, password, deviceId });
             const data = response.data;
 
             if (data.access_token) {
