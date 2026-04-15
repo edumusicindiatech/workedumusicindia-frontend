@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
     ChevronRight, ArrowLeft, TrendingUp, Search,
     CheckCircle2, AlertCircle, XCircle, Star, Coffee, Film, CalendarDays,
     Clock, FileText, School, Download, Trophy, Users, FolderOpen, CalendarOff,
-    BarChart3, Loader2, Eye, X // <-- Added Eye and X icons
+    BarChart3, Loader2, Eye, X
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,10 @@ const ProgressReport = () => {
     // Preview Modal State
     const [showPreviewModal, setShowPreviewModal] = useState(false);
 
+    // --- NEW: Real-Time Presence State ---
+    const [onlineUsers, setOnlineUsers] = useState({});
+    const timeoutsRef = useRef({});
+
     const fetchTeachers = async () => {
         try {
             const res = await api.get('/admin/progress/employees');
@@ -60,30 +64,53 @@ const ProgressReport = () => {
         if (!user) return;
         const currentUserId = user.id || user._id;
 
-        const joinUserRoom = () => {
+        // --- UPDATED: Join both user room and admin tracking room ---
+        const joinRooms = () => {
             socket.emit("join_room", currentUserId);
+            socket.emit("join_admin_room");
         };
 
-        if (socket.connected) joinUserRoom();
-        socket.on("connect", joinUserRoom);
+        if (socket.connected) joinRooms();
+        socket.on("connect", joinRooms);
 
         const handleRefresh = () => {
             try {
                 const audio = new Audio('/sounds/notification-ting.mp3');
                 audio.play().catch(() => { });
-                fetchTeachers();
             } catch (e) { }
 
             toast.success("Progress scores updated in real-time!", { icon: '📊' });
             fetchTeachers();
         };
 
+        // --- NEW: Real-Time Presence Listener ---
+        const handleLocationUpdate = (data) => {
+            const empId = data.employeeId;
+            if (!empId) return;
+
+            setOnlineUsers((prev) => ({ ...prev, [empId]: true }));
+
+            if (timeoutsRef.current[empId]) {
+                clearTimeout(timeoutsRef.current[empId]);
+            }
+
+            timeoutsRef.current[empId] = setTimeout(() => {
+                setOnlineUsers((prev) => ({ ...prev, [empId]: false }));
+            }, 15000);
+        };
+
         socket.on('admin_leaderboard_refresh', handleRefresh);
+        socket.on("employee_location_changed", handleLocationUpdate);
 
         return () => {
-            socket.off("connect", joinUserRoom);
+            socket.off("connect", joinRooms);
             socket.off('admin_leaderboard_refresh', handleRefresh);
+            socket.off("employee_location_changed", handleLocationUpdate);
+            
+            // Cleanup all active timeouts when leaving the page
+            Object.values(timeoutsRef.current).forEach(clearTimeout);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [t, user]);
 
     const formatUpdateTime = (date) => {
@@ -361,7 +388,6 @@ const ProgressReport = () => {
                 </div>
 
                 <div className="p-3 sm:p-4 md:p-6 flex-1 bg-background/50 relative overflow-hidden">
-                    {/* ... (Existing List Content remains exactly the same) ... */}
                     {!selectedTeacher && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="relative mb-4 sm:mb-6">
@@ -376,38 +402,49 @@ const ProgressReport = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-3">
-                                    {filteredTeachers.map((teacher, idx) => (
-                                        <div key={teacher._id} onClick={() => handleSelectTeacher(teacher)} className="flex items-center justify-between p-3 sm:p-4 bg-card border border-border/80 rounded-xl hover:border-primary/40 hover:shadow-md cursor-pointer transition-all duration-300 group">
+                                    {filteredTeachers.map((teacher, idx) => {
+                                        const isOnline = onlineUsers[teacher._id || teacher.id];
+                                        return (
+                                            <div key={teacher._id} onClick={() => handleSelectTeacher(teacher)} className="flex items-center justify-between p-3 sm:p-4 bg-card border border-border/80 rounded-xl hover:border-primary/40 hover:shadow-md cursor-pointer transition-all duration-300 group">
 
-                                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 pr-2">
-                                                <span className="text-[10px] sm:text-xs font-bold text-muted-foreground w-4 shrink-0">#{idx + 1}</span>
-                                                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full gradient-primary flex items-center justify-center text-white font-bold shrink-0 overflow-hidden shadow-sm ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
-                                                    {teacher.profilePicture && typeof teacher.profilePicture === 'string' && teacher.profilePicture.startsWith('http') ? (
-                                                        <img
-                                                            src={teacher.profilePicture}
-                                                            alt={teacher.name}
-                                                            className="w-full h-full object-cover"
+                                                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 pr-2">
+                                                    <span className="text-[10px] sm:text-xs font-bold text-muted-foreground w-4 shrink-0">#{idx + 1}</span>
+                                                    
+                                                    {/* --- UPGRADED PROFILE PIC WITH ONLINE INDICATOR --- */}
+                                                    <div className="relative shrink-0">
+                                                        <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full gradient-primary flex items-center justify-center text-white font-bold overflow-hidden shadow-sm ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
+                                                            {teacher.profilePicture && typeof teacher.profilePicture === 'string' && teacher.profilePicture.startsWith('http') ? (
+                                                                <img
+                                                                    src={teacher.profilePicture}
+                                                                    alt={teacher.name}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            ) : (
+                                                                teacher.name.charAt(0).toUpperCase()
+                                                            )}
+                                                        </div>
+                                                        <div 
+                                                            className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-[2.5px] border-card group-hover:border-primary/10 transition-colors duration-500 ${isOnline ? "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]" : "bg-slate-400"}`} 
+                                                            title={isOnline ? "Online" : "Offline"}
                                                         />
-                                                    ) : (
-                                                        teacher.name.charAt(0).toUpperCase()
-                                                    )}
+                                                    </div>
+
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-bold text-sm text-foreground group-hover:text-primary truncate" title={teacher.name}>{teacher.name}</p>
+                                                        <p className="text-[10px] text-muted-foreground uppercase font-semibold truncate" title={teacher.zone || t('progress_report.unassigned')}>{teacher.zone || t('progress_report.unassigned')}</p>
+                                                    </div>
                                                 </div>
 
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-bold text-sm text-foreground group-hover:text-primary truncate" title={teacher.name}>{teacher.name}</p>
-                                                    <p className="text-[10px] text-muted-foreground uppercase font-semibold truncate" title={teacher.zone || t('progress_report.unassigned')}>{teacher.zone || t('progress_report.unassigned')}</p>
+                                                <div className="flex items-center shrink-0">
+                                                    <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${getZoneStyles(teacher.colorZone)}`}>
+                                                        <Trophy className="w-3 h-3 inline mr-1 mb-0.5" />
+                                                        {teacher.currentWeeklyScore || 0} PTS
+                                                    </span>
+                                                    <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary ml-2 sm:ml-3" />
                                                 </div>
                                             </div>
-
-                                            <div className="flex items-center shrink-0">
-                                                <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${getZoneStyles(teacher.colorZone)}`}>
-                                                    <Trophy className="w-3 h-3 inline mr-1 mb-0.5" />
-                                                    {teacher.currentWeeklyScore || 0} PTS
-                                                </span>
-                                                <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary ml-2 sm:ml-3" />
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

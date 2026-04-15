@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useSelector } from "react-redux";
 import {
     Users, School, MapPin, ChevronRight, Film, Calendar as CalendarIcon,
     Award, Clock, Star, AlertTriangle,
@@ -11,7 +12,6 @@ import api from "../../api/axios";
 import CustomSelect from "../../components/ui/CustomSelect";
 import ReviewModal from "../../modals/admin/ReviewModal";
 import DeleteModal from "../../modals/admin/DeleteModal";
-import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000", { withCredentials: true });
@@ -85,6 +85,10 @@ const AdminMediaGallery = () => {
 
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, logId: null, fileId: null });
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // --- NEW: Real-Time Presence State ---
+    const [onlineUsers, setOnlineUsers] = useState({});
+    const timeoutsRef = useRef({});
 
     const refetchTimestamp = useRef(0);
     const { user } = useSelector((state) => state.auth);
@@ -195,11 +199,37 @@ const AdminMediaGallery = () => {
         if (viewMode === 'gallery') fetchMedia();
     }, [viewMode, fetchMedia]);
 
+    // --- UPDATED: Join Rooms and Monitor Presence ---
     useEffect(() => {
         if (user && (user._id || user.id)) {
             const adminId = user._id || user.id;
             socket.emit('join_room', adminId);
         }
+
+        socket.emit("join_admin_room");
+
+        const handleLocationUpdate = (data) => {
+            const empId = data.employeeId;
+            if (!empId) return;
+
+            setOnlineUsers((prev) => ({ ...prev, [empId]: true }));
+
+            if (timeoutsRef.current[empId]) {
+                clearTimeout(timeoutsRef.current[empId]);
+            }
+
+            timeoutsRef.current[empId] = setTimeout(() => {
+                setOnlineUsers((prev) => ({ ...prev, [empId]: false }));
+            }, 15000);
+        };
+
+        socket.on("employee_location_changed", handleLocationUpdate);
+
+        return () => {
+            socket.off("employee_location_changed", handleLocationUpdate);
+            // Cleanup timeouts
+            Object.values(timeoutsRef.current).forEach(clearTimeout);
+        };
     }, [user]);
 
     const handleDrillDown = (mode, data) => {
@@ -383,6 +413,7 @@ const AdminMediaGallery = () => {
                         const avgScore = emp.lastMonthAvg ? parseFloat(emp.lastMonthAvg).toFixed(1) : "N/A";
                         const pendingCount = emp.pendingCount || 0;
                         const isExcellent = emp.lastMonthAvg >= 8;
+                        const isOnline = onlineUsers[emp._id || emp.id];
 
                         return (
                             <div key={emp._id} onClick={() => handleDrillDown('schools', emp)} className="group relative bg-card dark:bg-[#0d1117] border border-border rounded-3xl p-6 hover:border-primary/50 hover:shadow-xl cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 overflow-visible transition-all duration-300 hover:-translate-y-1">
@@ -395,16 +426,23 @@ const AdminMediaGallery = () => {
                                 )}
 
                                 <div className="flex items-center gap-4 w-full sm:w-auto overflow-hidden">
-                                    <div className="w-14 h-14 rounded-full bg-linear-to-br from-primary to-blue-600 flex items-center justify-center text-xl font-black text-white shrink-0 group-hover:scale-110 transition-transform duration-500 shadow-md overflow-hidden ring-2 ring-transparent group-hover:ring-primary/20">
-                                        {emp.profilePicture && typeof emp.profilePicture === 'string' && emp.profilePicture.startsWith('http') ? (
-                                            <img
-                                                src={emp.profilePicture}
-                                                alt={emp.name}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        ) : (
-                                            emp.name.charAt(0).toUpperCase()
-                                        )}
+                                    {/* --- UPGRADED PROFILE PIC WITH ONLINE INDICATOR --- */}
+                                    <div className="relative shrink-0">
+                                        <div className="w-14 h-14 rounded-full bg-linear-to-br from-primary to-blue-600 flex items-center justify-center text-xl font-black text-white overflow-hidden shadow-md ring-2 ring-transparent group-hover:ring-primary/20 group-hover:scale-110 transition-all duration-500">
+                                            {emp.profilePicture && typeof emp.profilePicture === 'string' && emp.profilePicture.startsWith('http') ? (
+                                                <img
+                                                    src={emp.profilePicture}
+                                                    alt={emp.name}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                emp.name.charAt(0).toUpperCase()
+                                            )}
+                                        </div>
+                                        <div
+                                            className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-[2.5px] border-card transition-colors duration-500 ${isOnline ? "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]" : "bg-slate-400"}`}
+                                            title={isOnline ? "Online" : "Offline"}
+                                        />
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <h3 className="font-extrabold text-foreground text-base truncate group-hover:text-primary transition-colors duration-300">{emp.name}</h3>

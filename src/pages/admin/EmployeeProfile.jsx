@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -8,8 +8,8 @@ import {
 } from "lucide-react";
 import api from "../../api/axios";
 import { useTranslation } from "react-i18next";
-import toast from "react-hot-toast"; // Ensure this is imported for download error handling
-import { Button } from "@/components/ui/button"; // Re-used for the download button
+import toast from "react-hot-toast";
+import { Button } from "@/components/ui/button";
 
 // --- Import Tab Components ---
 import AssignmentsTab from "./tabs/AssignmentsTab";
@@ -21,6 +21,10 @@ import AttendanceTab from "./tabs/AttendanceTab";
 import EditEmployeeModal from "../../modals/admin/EditEmployeeModal";
 import DeleteEmployeeModal from "../../modals/admin/DeleteEmployeeModal";
 import { useSelector } from "react-redux";
+
+// --- SOCKET IMPORT FOR REAL-TIME PRESENCE ---
+import { io } from "socket.io-client";
+const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 const EmployeeProfile = () => {
     const { t } = useTranslation();
@@ -34,9 +38,11 @@ const EmployeeProfile = () => {
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-
-    // --- NEW: State for Enlarged Profile Picture Modal ---
     const [isProfilePicEnlarged, setIsProfilePicEnlarged] = useState(false);
+
+    // --- NEW: Real-Time Presence State ---
+    const [isOnline, setIsOnline] = useState(false);
+    const timeoutRef = useRef(null);
 
     const currentUser = useSelector((state) => state.auth.user);
 
@@ -59,36 +65,54 @@ const EmployeeProfile = () => {
     }, [id, t]);
 
     useEffect(() => {
-        if (id) {
-            fetchEmployeeDetails();
-        }
+        if (id) fetchEmployeeDetails();
     }, [id, fetchEmployeeDetails]);
 
+    // --- NEW: Real-Time Presence Listener ---
+    useEffect(() => {
+        if (!id) return;
+
+        // 1. Join the admin tracking room to hear location pings
+        socket.emit("join_admin_room");
+
+        // 2. Listen for any employee's location update
+        const handleLocationUpdate = (data) => {
+            // Check if the ping belongs to THIS specific employee profile
+            if (data.employeeId === id) {
+                setIsOnline(true); // They are online!
+
+                // Clear any existing timeout
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+                // Set a new 15-second fuse. If they don't ping again in 15 seconds, they went offline.
+                timeoutRef.current = setTimeout(() => {
+                    setIsOnline(false);
+                }, 15000); 
+            }
+        };
+
+        socket.on("employee_location_changed", handleLocationUpdate);
+
+        return () => {
+            socket.off("employee_location_changed", handleLocationUpdate);
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
+    }, [id]);
+
+
     const handleSaveEdit = (updatedEmployee) => setEmployeeData(updatedEmployee);
-    const handleConfirmDelete = () => {
-        navigate("/admin/employees", { replace: true });
-    };
+    const handleConfirmDelete = () => navigate("/admin/employees", { replace: true });
 
-    // --- NEW: Handle Image Download bypassing CORS/browser opening it in a new tab ---
     const handleDownloadProfilePic = async (e) => {
-        e.stopPropagation(); // Prevent closing the modal when clicking the button
+        e.stopPropagation();
         const toastId = toast.loading(t('employee_profile.downloading', 'Downloading image...'));
-
         try {
             const ext = employeeData.profilePicture.split('.').pop().split(/#|\?/)[0] || 'jpg';
             const safeName = employeeData.name.replace(/\s+/g, '_');
             const fileName = `${safeName}_profile_pic.${ext}`;
-
-            // THE FIX: Append a unique timestamp to the URL.
-            // This completely bypasses the browser's poisoned cache, forcing a fresh 
-            // network request that will correctly trigger your Cloudflare R2 CORS policy.
             const noCacheUrl = `${employeeData.profilePicture}?t=${new Date().getTime()}`;
 
-            const response = await fetch(noCacheUrl, {
-                method: 'GET',
-                mode: 'cors'
-            });
-
+            const response = await fetch(noCacheUrl, { method: 'GET', mode: 'cors' });
             if (!response.ok) throw new Error("Network response was not ok");
 
             const blob = await response.blob();
@@ -101,7 +125,6 @@ const EmployeeProfile = () => {
             document.body.appendChild(link);
             link.click();
 
-            // Cleanup memory
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
 
@@ -112,7 +135,6 @@ const EmployeeProfile = () => {
         }
     };
 
-    // Helper to check if the profile picture is a valid URL
     const hasValidImage = employeeData?.profilePicture && typeof employeeData.profilePicture === 'string' && employeeData.profilePicture.startsWith('http');
 
     if (errorMsg || (!isLoading && !employeeData)) {
@@ -156,7 +178,6 @@ const EmployeeProfile = () => {
                         <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/10 transition-colors duration-700" />
 
                         <div className="relative shrink-0">
-                            {/* --- ADDED onClick and hover effects if valid image --- */}
                             <div
                                 className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full gradient-primary flex items-center justify-center text-3xl font-extrabold text-primary-foreground shadow-lg ring-4 ring-background z-10 relative ${hasValidImage ? 'cursor-pointer hover:scale-105 transition-transform duration-300' : ''}`}
                                 onClick={() => hasValidImage && setIsProfilePicEnlarged(true)}
@@ -168,7 +189,12 @@ const EmployeeProfile = () => {
                                     employeeData.profilePicture || employeeData.name.charAt(0).toUpperCase()
                                 )}
                             </div>
-                            <div className={`absolute bottom-1 sm:bottom-2 right-1 sm:right-2 w-5 h-5 rounded-full border-4 border-background z-20 ${employeeData.isActive ? "bg-emerald-500" : "bg-destructive"}`} />
+                            
+                            {/* --- REPLACED STATIC DOT WITH REAL-TIME INDICATOR --- */}
+                            <div 
+                                className={`absolute bottom-1 sm:bottom-2 right-1 sm:right-2 w-5 h-5 rounded-full border-4 border-background z-20 transition-colors duration-500 ${isOnline ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "bg-slate-400"}`} 
+                                title={isOnline ? "Online (GPS Active)" : "Offline"}
+                            />
                         </div>
 
                         <div className="min-w-0 flex-1 flex flex-col justify-center pt-1">
@@ -178,11 +204,13 @@ const EmployeeProfile = () => {
                                         <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight truncate">
                                             {employeeData.name}
                                         </h1>
-                                        <span className={`hidden sm:inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-widest uppercase border ${employeeData.isActive
+                                        
+                                        {/* --- REPLACED STATIC BADGE WITH REAL-TIME BADGE --- */}
+                                        <span className={`hidden sm:inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-widest uppercase border transition-colors duration-500 ${isOnline
                                             ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                                            : "bg-destructive/10 text-destructive border-destructive/20"
-                                            }`}>
-                                            {employeeData.isActive ? t('employee_profile.status_active') : t('employee_profile.status_inactive')}
+                                            : "bg-slate-500/10 text-slate-500 border-slate-500/20"
+                                        }`}>
+                                            {isOnline ? "Online" : "Offline"}
                                         </span>
                                     </div>
 
@@ -207,7 +235,6 @@ const EmployeeProfile = () => {
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-4 sm:mt-5">
-                                {/* Employee ID Badge */}
                                 {employeeData.employeeId && (
                                     <div className="flex items-center gap-1.5 px-2.5 py-1 bg-muted/60 text-muted-foreground border border-border/60 rounded-lg text-xs sm:text-sm font-medium">
                                         <IdCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-70" />
@@ -304,13 +331,12 @@ const EmployeeProfile = () => {
                         </>
                     )}
 
-                    {/* --- NEW: ENLARGED PROFILE PICTURE MODAL --- */}
+                    {/* --- ENLARGED PROFILE PICTURE MODAL --- */}
                     {isProfilePicEnlarged && hasValidImage && (
                         <div
                             className="fixed inset-0 z-100 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300 p-4"
                             onClick={() => setIsProfilePicEnlarged(false)}
                         >
-                            {/* Close Button */}
                             <button
                                 className="absolute top-6 right-6 sm:top-8 sm:right-8 p-2 text-white/70 hover:text-white bg-black/40 hover:bg-black/60 rounded-full transition-colors border border-white/10"
                                 onClick={(e) => { e.stopPropagation(); setIsProfilePicEnlarged(false); }}
@@ -318,10 +344,9 @@ const EmployeeProfile = () => {
                                 <X className="w-6 h-6 sm:w-8 sm:h-8" />
                             </button>
 
-                            {/* Circle Image Wrapper */}
                             <div
                                 className="relative group animate-in zoom-in-95 duration-300"
-                                onClick={(e) => e.stopPropagation()} // Prevent clicking the image from closing the modal
+                                onClick={(e) => e.stopPropagation()} 
                             >
                                 <img
                                     src={employeeData.profilePicture}
@@ -330,7 +355,6 @@ const EmployeeProfile = () => {
                                 />
                             </div>
 
-                            {/* Download Button */}
                             <Button
                                 onClick={handleDownloadProfilePic}
                                 className="mt-10 rounded-full px-8 py-7 sm:py-8 text-sm sm:text-base font-extrabold tracking-widest uppercase flex items-center gap-3 bg-white text-black hover:bg-gray-200 transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:scale-105 active:scale-95 animate-in slide-in-from-bottom-4 duration-300"

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSelector } from "react-redux";
 import {
     Users, UserCheck, UserX, Clock, MapPin, School,
@@ -15,6 +15,10 @@ const AdminDashboard = () => {
     const [dashboardData, setDashboardData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // --- NEW: Real-Time Presence State ---
+    const [onlineUsers, setOnlineUsers] = useState({});
+    const timeoutsRef = useRef({});
 
     const fetchDashboardStats = useCallback(async (showFullLoader = true) => {
         if (showFullLoader) setLoading(true);
@@ -42,14 +46,40 @@ const AdminDashboard = () => {
         if (user && (user.id || user._id)) {
             socket.emit("join_room", user.id || user._id);
         }
+        
+        // --- NEW: Join admin tracking room to receive live pings ---
+        socket.emit("join_admin_room");
 
         socket.on('new_notification', (data) => {
             fetchDashboardStats(false);
         });
 
+        // --- NEW: Real-Time Presence Listener ---
+        const handleLocationUpdate = (data) => {
+            const empId = data.employeeId;
+            if (!empId) return;
+
+            setOnlineUsers((prev) => ({ ...prev, [empId]: true }));
+
+            if (timeoutsRef.current[empId]) {
+                clearTimeout(timeoutsRef.current[empId]);
+            }
+
+            timeoutsRef.current[empId] = setTimeout(() => {
+                setOnlineUsers((prev) => ({ ...prev, [empId]: false }));
+            }, 15000);
+        };
+
+        socket.on("employee_location_changed", handleLocationUpdate);
+
         return () => {
             clearInterval(interval);
+            socket.off('new_notification');
+            socket.off("employee_location_changed", handleLocationUpdate);
             socket.disconnect();
+            
+            // Cleanup all active timeouts
+            Object.values(timeoutsRef.current).forEach(clearTimeout);
         };
     }, [fetchDashboardStats, user]);
 
@@ -144,67 +174,79 @@ const AdminDashboard = () => {
 
                 <div className="flex flex-col">
                     {dashboardData?.recentActivity?.length > 0 ? (
-                        dashboardData.recentActivity.slice(0, 5).map((item, i) => (
-                            <div
-                                key={item.id || i}
-                                className="group flex flex-col lg:flex-row lg:items-center justify-between p-4 sm:p-6 border-b border-border/40 last:border-0 hover:bg-muted/40 transition-all gap-4 sm:gap-6"
-                            >
-                                <div className="flex items-center gap-3 sm:gap-4 lg:w-72 shrink-0">
-                                    {/* 🔥 UPGRADED: Logic to show profilePicture or classical Initial */}
-                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-primary/10 border border-primary/20 flex items-center justify-center shadow-inner shrink-0 transition-all duration-300">
-                                        {item?.profilePicture ? (
-                                            <img
-                                                src={item.profilePicture}
-                                                alt={item.name}
-                                                className="w-full h-full object-cover"
+                        dashboardData.recentActivity.slice(0, 5).map((item, i) => {
+                            // Fetch correct ID to check online status safely from the activity object
+                            const empId = item.teacherId || item.employeeId || item.teacher?._id || item.id;
+                            const isOnline = onlineUsers[empId];
+
+                            return (
+                                <div
+                                    key={item.id || i}
+                                    className="group flex flex-col lg:flex-row lg:items-center justify-between p-4 sm:p-6 border-b border-border/40 last:border-0 hover:bg-muted/40 transition-all gap-4 sm:gap-6"
+                                >
+                                    <div className="flex items-center gap-3 sm:gap-4 lg:w-72 shrink-0">
+                                        {/* 🔥 UPGRADED: Added Online Indicator Wrapper */}
+                                        <div className="relative shrink-0">
+                                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-primary/10 border border-primary/20 flex items-center justify-center shadow-inner transition-all duration-300">
+                                                {item?.profilePicture ? (
+                                                    <img
+                                                        src={item.profilePicture}
+                                                        alt={item.name}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <span className="text-primary text-sm sm:text-base font-bold group-hover:scale-110 transition-transform">
+                                                        {item?.name?.charAt(0)?.toUpperCase() || 'U'}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div 
+                                                className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 sm:border-[2.5px] border-card transition-colors duration-500 ${isOnline ? "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]" : "bg-slate-400"}`} 
+                                                title={isOnline ? "Online" : "Offline"}
                                             />
-                                        ) : (
-                                            <span className="text-primary text-sm sm:text-base font-bold group-hover:scale-110 transition-transform">
-                                                {item?.name?.charAt(0)?.toUpperCase() || 'U'}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm sm:text-base font-bold text-foreground truncate group-hover:text-primary transition-colors">{item?.name || 'Unknown User'}</p>
+                                            <p className="text-xs text-muted-foreground font-medium flex items-center gap-1 mt-0.5 truncate">
+                                                <MapPin className="w-3 h-3 shrink-0" /> {item?.zone || t('admin_dashboard.unassigned_zone')}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-row items-center gap-2 sm:gap-3 flex-1 min-w-0 bg-muted/30 lg:bg-transparent p-3 lg:p-0 rounded-xl lg:rounded-none border border-border/50 lg:border-none">
+                                        <div className="flex items-center gap-2 min-w-0 flex-1 bg-background lg:bg-muted/50 py-1.5 px-3 rounded-lg border border-border/50 lg:border-border">
+                                            {item.status === 'Approved' || item.status === 'Rejected' ? (
+                                                <CalendarOff className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
+                                            ) : (
+                                                <School className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                            )}
+                                            <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{item?.school || item?.leaveRange || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 min-w-0 flex-1 bg-background lg:bg-muted/50 py-1.5 px-3 rounded-lg border border-border/50 lg:border-border">
+                                            <BookOpen className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+                                            <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{item?.category || t('admin_dashboard.field_operation')}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center gap-2 shrink-0 lg:w-48 border-t border-border/40 lg:border-none pt-3 lg:pt-0 mt-1 lg:mt-0">
+                                        <div className="flex items-center gap-2">
+                                            {item.status === 'Approved' && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 hidden lg:block" />}
+                                            {item.status === 'Rejected' && <XCircle className="w-3.5 h-3.5 text-rose-500 hidden lg:block" />}
+                                            <span className={`px-3 py-1 rounded-md text-[10px] sm:text-xs font-black uppercase tracking-widest border ${statusBadgeStyle(item?.status)}`}>
+                                                {item?.action ? t(`admin_dashboard.status.${item.action.toLowerCase()}`, item.action)
+                                                    : item?.status ? t(`admin_dashboard.status.${item.status.toLowerCase()}`, item.status)
+                                                        : t('admin_dashboard.status.update')}
                                             </span>
-                                        )}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-sm sm:text-base font-bold text-foreground truncate group-hover:text-primary transition-colors">{item?.name || 'Unknown User'}</p>
-                                        <p className="text-xs text-muted-foreground font-medium flex items-center gap-1 mt-0.5 truncate">
-                                            <MapPin className="w-3 h-3 shrink-0" /> {item?.zone || t('admin_dashboard.unassigned_zone')}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-row items-center gap-2 sm:gap-3 flex-1 min-w-0 bg-muted/30 lg:bg-transparent p-3 lg:p-0 rounded-xl lg:rounded-none border border-border/50 lg:border-none">
-                                    <div className="flex items-center gap-2 min-w-0 flex-1 bg-background lg:bg-muted/50 py-1.5 px-3 rounded-lg border border-border/50 lg:border-border">
-                                        {item.status === 'Approved' || item.status === 'Rejected' ? (
-                                            <CalendarOff className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
-                                        ) : (
-                                            <School className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                                        )}
-                                        <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{item?.school || item?.leaveRange || 'N/A'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 min-w-0 flex-1 bg-background lg:bg-muted/50 py-1.5 px-3 rounded-lg border border-border/50 lg:border-border">
-                                        <BookOpen className="w-3.5 h-3.5 text-violet-500 shrink-0" />
-                                        <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{item?.category || t('admin_dashboard.field_operation')}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                                            <Clock className="w-3.5 h-3.5" />
+                                            <span className="text-xs font-bold text-foreground">{item?.checkInTime || item?.time || t('admin_dashboard.just_now')}</span>
+                                            {item?.timeAgo && <span className="text-[10px] font-medium opacity-70">• {item.timeAgo}</span>}
+                                        </div>
                                     </div>
                                 </div>
-
-                                <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center gap-2 shrink-0 lg:w-48 border-t border-border/40 lg:border-none pt-3 lg:pt-0 mt-1 lg:mt-0">
-                                    <div className="flex items-center gap-2">
-                                        {item.status === 'Approved' && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 hidden lg:block" />}
-                                        {item.status === 'Rejected' && <XCircle className="w-3.5 h-3.5 text-rose-500 hidden lg:block" />}
-                                        <span className={`px-3 py-1 rounded-md text-[10px] sm:text-xs font-black uppercase tracking-widest border ${statusBadgeStyle(item?.status)}`}>
-                                            {item?.action ? t(`admin_dashboard.status.${item.action.toLowerCase()}`, item.action)
-                                                : item?.status ? t(`admin_dashboard.status.${item.status.toLowerCase()}`, item.status)
-                                                    : t('admin_dashboard.status.update')}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                                        <Clock className="w-3.5 h-3.5" />
-                                        <span className="text-xs font-bold text-foreground">{item?.checkInTime || item?.time || t('admin_dashboard.just_now')}</span>
-                                        {item?.timeAgo && <span className="text-[10px] font-medium opacity-70">• {item.timeAgo}</span>}
-                                    </div>
-                                </div>
-                            </div>
-                        ))
+                            );
+                        })
                     ) : (
                         <div className="p-16 sm:p-24 text-center flex flex-col items-center justify-center">
                             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-muted/50 flex items-center justify-center mb-4 border border-border/50">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,10 @@ import toast from "react-hot-toast";
 import AddEmployeeModal from "../../modals/admin/AddEmployeeModal";
 import api from "../../api/axios";
 import { useTranslation } from "react-i18next";
+
+// --- SOCKET IMPORT FOR REAL-TIME PRESENCE ---
+import { io } from "socket.io-client";
+const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
 
 const EmployeeRoster = () => {
     const { t } = useTranslation();
@@ -17,6 +21,10 @@ const EmployeeRoster = () => {
     const [employees, setEmployees] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
+
+    // --- NEW: Real-Time Presence State for Multiple Users ---
+    const [onlineUsers, setOnlineUsers] = useState({});
+    const timeoutsRef = useRef({});
 
     const fetchRoster = async () => {
         try {
@@ -35,6 +43,39 @@ const EmployeeRoster = () => {
 
     useEffect(() => {
         fetchRoster();
+    }, []);
+
+    // --- NEW: Real-Time Presence Listener ---
+    useEffect(() => {
+        // 1. Join the admin tracking room to hear location pings
+        socket.emit("join_admin_room");
+
+        // 2. Listen for any employee's location update
+        const handleLocationUpdate = (data) => {
+            const empId = data.employeeId;
+            if (!empId) return;
+
+            // Mark this specific employee as online
+            setOnlineUsers((prev) => ({ ...prev, [empId]: true }));
+
+            // Clear any existing timeout for this specific employee
+            if (timeoutsRef.current[empId]) {
+                clearTimeout(timeoutsRef.current[empId]);
+            }
+
+            // Set a new 15-second fuse. If they don't ping again in 15 seconds, mark offline.
+            timeoutsRef.current[empId] = setTimeout(() => {
+                setOnlineUsers((prev) => ({ ...prev, [empId]: false }));
+            }, 15000);
+        };
+
+        socket.on("employee_location_changed", handleLocationUpdate);
+
+        return () => {
+            socket.off("employee_location_changed", handleLocationUpdate);
+            // Cleanup all active timeouts when leaving the page
+            Object.values(timeoutsRef.current).forEach(clearTimeout);
+        };
     }, []);
 
     const filtered = employees.filter((e) =>
@@ -120,99 +161,117 @@ const EmployeeRoster = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filtered.map((emp) => (
-                                        <tr
-                                            key={emp.id}
-                                            onClick={() => navigate(`/admin/employees/${emp.id}`)}
-                                            className="border-b border-border/40 last:border-0 cursor-pointer hover:bg-muted/40 transition-colors group"
-                                        >
-                                            <td className="px-8 py-4">
-                                                <div className="flex items-center gap-4">
-                                                    {/* --- FIXED DESKTOP PROFILE PIC --- */}
-                                                    <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground shadow-sm ring-2 ring-transparent group-hover:ring-primary/20 overflow-hidden transition-all">
-                                                        {emp.profilePicture ? (
-                                                            <img
-                                                                src={emp.profilePicture}
-                                                                alt={emp.name}
-                                                                className="w-full h-full object-cover"
-                                                                onError={(e) => {
-                                                                    e.target.style.display = 'none';
-                                                                    e.target.parentElement.innerHTML = emp.name.charAt(0).toUpperCase();
-                                                                }}
+                                    {filtered.map((emp) => {
+                                        const isOnline = onlineUsers[emp.id];
+                                        return (
+                                            <tr
+                                                key={emp.id}
+                                                onClick={() => navigate(`/admin/employees/${emp.id}`)}
+                                                className="border-b border-border/40 last:border-0 cursor-pointer hover:bg-muted/40 transition-colors group"
+                                            >
+                                                <td className="px-8 py-4">
+                                                    <div className="flex items-center gap-4">
+                                                        {/* --- FIXED DESKTOP PROFILE PIC WITH ONLINE INDICATOR --- */}
+                                                        <div className="relative w-10 h-10 shrink-0">
+                                                            <div className="w-full h-full rounded-full gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground shadow-sm ring-2 ring-transparent group-hover:ring-primary/20 overflow-hidden transition-all">
+                                                                {emp.profilePicture ? (
+                                                                    <img
+                                                                        src={emp.profilePicture}
+                                                                        alt={emp.name}
+                                                                        className="w-full h-full object-cover"
+                                                                        onError={(e) => {
+                                                                            e.target.style.display = 'none';
+                                                                            e.target.parentElement.innerHTML = emp.name.charAt(0).toUpperCase();
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    emp.name.charAt(0).toUpperCase()
+                                                                )}
+                                                            </div>
+                                                            <div
+                                                                className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-[2.5px] border-background group-hover:border-muted transition-colors duration-500 ${isOnline ? "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]" : "bg-slate-400"}`}
+                                                                title={isOnline ? "Online" : "Offline"}
                                                             />
-                                                        ) : (
-                                                            emp.name.charAt(0).toUpperCase()
-                                                        )}
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{emp.name}</span>
-                                                            {emp.systemRole === 'Admin' && (
-                                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-600 border border-purple-500/20 leading-none">
-                                                                    {t('employee_roster.admin_badge')}
-                                                                </span>
-                                                            )}
                                                         </div>
-                                                        <span className="text-xs text-muted-foreground mt-0.5">{emp.email || t('employee_roster.no_email')}</span>
+                                                        <div className="flex flex-col">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{emp.name}</span>
+                                                                {emp.systemRole === 'Admin' && (
+                                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-600 border border-purple-500/20 leading-none">
+                                                                        {t('employee_roster.admin_badge')}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <span className="text-xs text-muted-foreground mt-0.5">{emp.email || t('employee_roster.no_email')}</span>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">{emp.role || t('employee_roster.no_role')}</td>
-                                            <td className="px-6 py-4 text-sm text-muted-foreground flex items-center gap-1.5">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/70"></div>
-                                                {emp.location || t('employee_roster.unassigned_role')}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">{emp.role || t('employee_roster.no_role')}</td>
+                                                <td className="px-6 py-4 text-sm text-muted-foreground flex items-center gap-1.5">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/70"></div>
+                                                    {emp.location || t('employee_roster.unassigned_role')}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
 
                         {/* --- MOBILE VIEW: APP CARDS --- */}
                         <div className="grid grid-cols-1 gap-3 md:hidden">
-                            {filtered.map((emp) => (
-                                <div
-                                    key={emp.id}
-                                    onClick={() => navigate(`/admin/employees/${emp.id}`)}
-                                    className="bg-card p-4 rounded-2xl border border-border shadow-sm flex items-center justify-between active:scale-[0.98] transition-all cursor-pointer hover:border-primary/30"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        {/* --- FIXED MOBILE PROFILE PIC --- */}
-                                        <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-lg font-bold text-primary-foreground shadow-sm shrink-0 overflow-hidden">
-                                            {emp.profilePicture ? (
-                                                <img
-                                                    src={emp.profilePicture}
-                                                    alt={emp.name}
-                                                    className="w-full h-full object-cover"
-                                                    onError={(e) => {
-                                                        e.target.style.display = 'none';
-                                                        e.target.parentElement.innerHTML = emp.name.charAt(0).toUpperCase();
-                                                    }}
+                            {filtered.map((emp) => {
+                                const isOnline = onlineUsers[emp.id];
+                                return (
+                                    <div
+                                        key={emp.id}
+                                        onClick={() => navigate(`/admin/employees/${emp.id}`)}
+                                        className="bg-card p-4 rounded-2xl border border-border shadow-sm flex items-center justify-between active:scale-[0.98] transition-all cursor-pointer hover:border-primary/30"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            {/* --- FIXED MOBILE PROFILE PIC WITH ONLINE INDICATOR --- */}
+                                            <div className="relative w-12 h-12 shrink-0">
+                                                <div className="w-full h-full rounded-full gradient-primary flex items-center justify-center text-lg font-bold text-primary-foreground shadow-sm overflow-hidden">
+                                                    {emp.profilePicture ? (
+                                                        <img
+                                                            src={emp.profilePicture}
+                                                            alt={emp.name}
+                                                            className="w-full h-full object-cover"
+                                                            onError={(e) => {
+                                                                e.target.style.display = 'none';
+                                                                e.target.parentElement.innerHTML = emp.name.charAt(0).toUpperCase();
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        emp.name.charAt(0).toUpperCase()
+                                                    )}
+                                                </div>
+                                                <div
+                                                    className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-[2.5px] border-card transition-colors duration-500 ${isOnline ? "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]" : "bg-slate-400"}`}
+                                                    title={isOnline ? "Online" : "Offline"}
                                                 />
-                                            ) : (
-                                                emp.name.charAt(0).toUpperCase()
-                                            )}
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <div className="flex items-center gap-2 mb-0.5">
-                                                <span className="font-bold text-base text-foreground tracking-tight">{emp.name}</span>
-                                                {emp.systemRole === 'Admin' && (
-                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/10 text-purple-600 border border-purple-500/20 leading-none">
-                                                        {t('employee_roster.admin_badge')}
-                                                    </span>
-                                                )}
                                             </div>
-                                            <span className="text-xs font-medium text-muted-foreground">{emp.role || t('employee_roster.no_role')}</span>
-                                            <span className="text-[11px] font-medium text-muted-foreground/80 mt-1 flex items-center gap-1.5 bg-muted/40 w-fit px-2 py-0.5 rounded-md">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/70"></div> {emp.location || t('employee_roster.unassigned_role')}
-                                            </span>
+                                            <div className="flex flex-col">
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <span className="font-bold text-base text-foreground tracking-tight">{emp.name}</span>
+                                                    {emp.systemRole === 'Admin' && (
+                                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/10 text-purple-600 border border-purple-500/20 leading-none">
+                                                            {t('employee_roster.admin_badge')}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className="text-xs font-medium text-muted-foreground">{emp.role || t('employee_roster.no_role')}</span>
+                                                <span className="text-[11px] font-medium text-muted-foreground/80 mt-1 flex items-center gap-1.5 bg-muted/40 w-fit px-2 py-0.5 rounded-md">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/70"></div> {emp.location || t('employee_roster.unassigned_role')}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted/30">
+                                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted/30">
-                                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
 
                         {/* --- EMPTY STATE --- */}

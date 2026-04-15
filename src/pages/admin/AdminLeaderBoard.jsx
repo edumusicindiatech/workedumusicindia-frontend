@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
     Trophy, Search, TrendingUp, TrendingDown, Minus, Star,
     ArrowLeft, BarChart3, CalendarDays, LineChart as LineChartIcon,
@@ -34,6 +34,10 @@ const AdminLeaderboard = () => {
     const [graphPeriod, setGraphPeriod] = useState('weekly');
     const [isGraphLoading, setIsGraphLoading] = useState(false);
 
+    // --- NEW: Real-Time Presence State ---
+    const [onlineUsers, setOnlineUsers] = useState({});
+    const timeoutsRef = useRef({});
+
     // 1. DEDICATED FETCH (Leaderboard)
     const fetchLeaderboard = useCallback(async () => {
         try {
@@ -59,6 +63,9 @@ const AdminLeaderboard = () => {
             const adminId = user._id || user.id;
             socket.emit('join_room', adminId);
         }
+
+        // Join admin tracking room for live pings
+        socket.emit("join_admin_room");
     }, [user]);
 
     // 4. DEDICATED SOCKET LISTENER
@@ -78,10 +85,31 @@ const AdminLeaderboard = () => {
             fetchLeaderboard();
         };
 
+        // --- NEW: Real-Time Presence Listener ---
+        const handleLocationUpdate = (data) => {
+            const empId = data.employeeId;
+            if (!empId) return;
+
+            setOnlineUsers((prev) => ({ ...prev, [empId]: true }));
+
+            if (timeoutsRef.current[empId]) {
+                clearTimeout(timeoutsRef.current[empId]);
+            }
+
+            timeoutsRef.current[empId] = setTimeout(() => {
+                setOnlineUsers((prev) => ({ ...prev, [empId]: false }));
+            }, 15000);
+        };
+
         socket.on('admin_leaderboard_refresh', handleRealTimeUpdate);
+        socket.on("employee_location_changed", handleLocationUpdate);
 
         return () => {
             socket.off('admin_leaderboard_refresh', handleRealTimeUpdate);
+            socket.off("employee_location_changed", handleLocationUpdate);
+
+            // Cleanup all active timeouts when leaving the page
+            Object.values(timeoutsRef.current).forEach(clearTimeout);
         };
     }, [fetchLeaderboard, t]);
 
@@ -237,16 +265,23 @@ const AdminLeaderboard = () => {
                     <div className="p-4 sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-white font-bold text-xl shadow-sm overflow-hidden shrink-0">
-                                    {selectedEmployee.profilePicture && typeof selectedEmployee.profilePicture === 'string' && selectedEmployee.profilePicture.startsWith('http') ? (
-                                        <img
-                                            src={selectedEmployee.profilePicture}
-                                            alt={selectedEmployee.name}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        selectedEmployee.name.charAt(0).toUpperCase()
-                                    )}
+                                {/* --- UPGRADED HEADER PROFILE PIC WITH ONLINE INDICATOR --- */}
+                                <div className="relative shrink-0">
+                                    <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-white font-bold text-xl shadow-sm overflow-hidden">
+                                        {selectedEmployee.profilePicture && typeof selectedEmployee.profilePicture === 'string' && selectedEmployee.profilePicture.startsWith('http') ? (
+                                            <img
+                                                src={selectedEmployee.profilePicture}
+                                                alt={selectedEmployee.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            selectedEmployee.name.charAt(0).toUpperCase()
+                                        )}
+                                    </div>
+                                    <div
+                                        className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-[2.5px] border-card transition-colors duration-500 ${onlineUsers[selectedEmployee._id || selectedEmployee.id] ? "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]" : "bg-slate-400"}`}
+                                        title={onlineUsers[selectedEmployee._id || selectedEmployee.id] ? "Online" : "Offline"}
+                                    />
                                 </div>
                                 <div>
                                     <span className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border mb-1 inline-block ${getZoneStyles(selectedEmployee.colorZone)}`}>
@@ -331,42 +366,56 @@ const AdminLeaderboard = () => {
                             <div className="text-center py-10 text-muted-foreground text-sm font-medium">{t('leaderboard.no_employees')}</div>
                         ) : (
                             <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                {filteredEmployees.map((emp) => (
-                                    <div
-                                        key={emp._id}
-                                        onClick={() => setSelectedEmployee(emp)}
-                                        className="flex items-center justify-between p-3 sm:p-4 bg-card border border-border/80 rounded-xl hover:border-primary/40 hover:shadow-md transition-all duration-300 cursor-pointer group"
-                                    >
-                                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                                            <div className={`w-7 sm:w-8 h-7 sm:h-8 flex items-center justify-center rounded-lg text-xs sm:text-sm font-black shrink-0 ${getRankStyle(emp.currentWeeklyRank)}`}>
-                                                #{emp.currentWeeklyRank}
-                                            </div>
-                                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full gradient-primary flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden shadow-sm ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
-                                                {emp.profilePicture && typeof emp.profilePicture === 'string' && emp.profilePicture.startsWith('http') ? (
-                                                    <img
-                                                        src={emp.profilePicture}
-                                                        alt={emp.name}
-                                                        className="w-full h-full object-cover"
+                                {filteredEmployees.map((emp) => {
+                                    // Fetch online status safely
+                                    const isOnline = onlineUsers[emp._id || emp.id];
+
+                                    return (
+                                        <div
+                                            key={emp._id}
+                                            onClick={() => setSelectedEmployee(emp)}
+                                            className="flex items-center justify-between p-3 sm:p-4 bg-card border border-border/80 rounded-xl hover:border-primary/40 hover:shadow-md transition-all duration-300 cursor-pointer group"
+                                        >
+                                            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                                                <div className={`w-7 sm:w-8 h-7 sm:h-8 flex items-center justify-center rounded-lg text-xs sm:text-sm font-black shrink-0 ${getRankStyle(emp.currentWeeklyRank)}`}>
+                                                    #{emp.currentWeeklyRank}
+                                                </div>
+
+                                                {/* --- UPGRADED LIST PROFILE PIC WITH ONLINE INDICATOR --- */}
+                                                <div className="relative shrink-0">
+                                                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full gradient-primary flex items-center justify-center text-white font-bold text-sm overflow-hidden shadow-sm ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
+                                                        {emp.profilePicture && typeof emp.profilePicture === 'string' && emp.profilePicture.startsWith('http') ? (
+                                                            <img
+                                                                src={emp.profilePicture}
+                                                                alt={emp.name}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        ) : (
+                                                            emp.name.charAt(0).toUpperCase()
+                                                        )}
+                                                    </div>
+                                                    <div
+                                                        className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-[2.5px] border-card group-hover:border-primary/10 transition-colors duration-500 ${isOnline ? "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]" : "bg-slate-400"}`}
+                                                        title={isOnline ? "Online" : "Offline"}
                                                     />
-                                                ) : (
-                                                    emp.name.charAt(0).toUpperCase()
-                                                )}
+                                                </div>
+
+                                                <div className="min-w-0">
+                                                    <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors truncate">{emp.name}</p>
+                                                    <p className="text-[10px] text-muted-foreground uppercase font-semibold truncate">{emp.zone || t('leaderboard.unassigned')}</p>
+                                                </div>
                                             </div>
-                                            <div className="min-w-0">
-                                                <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors truncate">{emp.name}</p>
-                                                <p className="text-[10px] text-muted-foreground uppercase font-semibold truncate">{emp.zone || t('leaderboard.unassigned')}</p>
+                                            <div className="flex items-center gap-2 sm:gap-3 shrink-0 pl-2">
+                                                <span className={`px-2 sm:px-2.5 py-1 rounded text-[10px] sm:text-[11px] font-black uppercase tracking-wider border ${getZoneStyles(emp.colorZone)}`}>
+                                                    {emp.currentWeeklyScore} <span className="hidden sm:inline">/ 100</span><span className="inline sm:hidden">{t('leaderboard.pts')}</span>
+                                                </span>
+                                                <div className="w-6 flex justify-center">
+                                                    {getTrendIcon(emp.scoreTrend)}
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2 sm:gap-3 shrink-0 pl-2">
-                                            <span className={`px-2 sm:px-2.5 py-1 rounded text-[10px] sm:text-[11px] font-black uppercase tracking-wider border ${getZoneStyles(emp.colorZone)}`}>
-                                                {emp.currentWeeklyScore} <span className="hidden sm:inline">/ 100</span><span className="inline sm:hidden">{t('leaderboard.pts')}</span>
-                                            </span>
-                                            <div className="w-6 flex justify-center">
-                                                {getTrendIcon(emp.scoreTrend)}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
