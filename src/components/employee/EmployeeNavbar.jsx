@@ -48,7 +48,7 @@ const playAudio = (type) => {
             snd.currentTime = 0;
             snd.play().catch(e => console.warn(`Audio blocked for ${type}:`, e));
         }
-    } catch (e) {}
+    } catch (e) { }
 };
 
 const pauseAudio = (type) => {
@@ -58,7 +58,7 @@ const pauseAudio = (type) => {
             snd.pause();
             snd.currentTime = 0;
         }
-    } catch (e) {}
+    } catch (e) { }
 };
 
 const iceServers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
@@ -73,7 +73,7 @@ const EmployeeNavbar = () => {
     const [unreadChatCount, setUnreadChatCount] = useState(0);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-    
+
     // --- GLOBAL WEBRTC CALL STATE ---
     const [globalIncomingCall, setGlobalIncomingCall] = useState(null);
     const [activeCall, setActiveCall] = useState(false);
@@ -81,7 +81,7 @@ const EmployeeNavbar = () => {
     const [isMinimizedCall, setIsMinimizedCall] = useState(false);
     const [isCallAccepted, setIsCallAccepted] = useState(false);
     const [onlineUsers, setOnlineUsers] = useState([]);
-    
+
     const pcRef = useRef(null);
     const localStreamRef = useRef(null);
     const remoteAudioRef = useRef(null);
@@ -196,13 +196,13 @@ const EmployeeNavbar = () => {
     const handleAcceptCall = async () => {
         if (!globalIncomingCall) return;
         const callData = globalIncomingCall;
-        
+
         const stream = await setupMedia();
         if (!stream) return;
 
         setActiveCall(true);
-        setCallPeer({ 
-            name: callData.callerName, 
+        setCallPeer({
+            name: callData.callerName,
             _id: callData.from,
             profilePicture: callData.profilePicture
         });
@@ -260,12 +260,12 @@ const EmployeeNavbar = () => {
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
 
-            socket.emit('call_user', { 
-                userToCall: peerToCall._id || peerToCall.id, 
-                from: user.id || user._id, 
+            socket.emit('call_user', {
+                userToCall: peerToCall._id || peerToCall.id,
+                from: user.id || user._id,
                 callerName: user.name,
-                profilePicture: user.profilePicture, 
-                signalData: offer 
+                profilePicture: user.profilePicture,
+                signalData: offer
             });
         };
 
@@ -402,7 +402,7 @@ const EmployeeNavbar = () => {
 
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
-        try { await api.post('/auth/logout'); } catch (error) {} 
+        try { await api.post('/auth/logout'); } catch (error) { }
         finally {
             toast.remove();
             sessionStorage.setItem('justLoggedOut', 'true');
@@ -444,6 +444,7 @@ const EmployeeNavbar = () => {
                     localStream={localStreamRef.current}
                     isCallAccepted={isCallAccepted}
                     isOnline={onlineUsers.includes(String(callPeer?._id || callPeer?.id))}
+                    remoteAudioRef={remoteAudioRef} // <--- ADD THIS PROP
                 />
             )}
 

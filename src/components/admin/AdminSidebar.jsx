@@ -456,6 +456,7 @@ const AdminSidebar = () => {
                     localStream={localStreamRef.current}
                     isCallAccepted={isCallAccepted}
                     isOnline={onlineUsers.includes(String(callPeer?._id || callPeer?.id))}
+                    remoteAudioRef={remoteAudioRef} // <--- ADD THIS PROP
                 />
             )}
 

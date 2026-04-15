@@ -3,10 +3,11 @@ import {
     Mic, MicOff, Volume2, VolumeX, PhoneOff,
     Maximize2, ChevronLeft, User
 } from "lucide-react";
+import toast from "react-hot-toast";
 
-const CallOverlay = ({ peer, onHangup, isMinimized, setIsMinimized, localStream, isCallAccepted, isOnline }) => {
+const CallOverlay = ({ peer, onHangup, isMinimized, setIsMinimized, localStream, isCallAccepted, isOnline, remoteAudioRef }) => {
     const [isMuted, setIsMuted] = useState(false);
-    const [isLoudspeaker, setIsLoudspeaker] = useState(false);
+    const [isLoudspeaker, setIsLoudspeaker] = useState(true); // Usually defaults to loudspeaker on web
     const [timer, setTimer] = useState(0);
 
     // Draggable state for minimized view
@@ -23,7 +24,7 @@ const CallOverlay = ({ peer, onHangup, isMinimized, setIsMinimized, localStream,
         }
     }, [isMuted, localStream]);
 
-    // --- CALL TIMER LOGIC (ONLY RUNS WHEN ACCEPTED) ---
+    // --- CALL TIMER LOGIC ---
     useEffect(() => {
         let interval;
         if (isCallAccepted) {
@@ -40,15 +41,50 @@ const CallOverlay = ({ peer, onHangup, isMinimized, setIsMinimized, localStream,
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    // Status logic (Ringing vs Timer)
     const statusText = isCallAccepted
         ? formatTime(timer)
         : (isOnline ? "Ringing..." : "Calling...");
 
+    // --- LOUDSPEAKER ROUTING LOGIC ---
+    const toggleSpeaker = async () => {
+        const audioElement = remoteAudioRef?.current;
+
+        // 1. Check if the browser supports audio routing
+        if (!audioElement || typeof audioElement.setSinkId === 'undefined') {
+            toast.error("Speaker switching is not supported on this browser (Mobile Safari/Chrome restrict this).");
+            return;
+        }
+
+        try {
+            // 2. Request permission and list audio devices
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const audioOutputs = devices.filter(device => device.kind === 'audiooutput');
+
+            if (audioOutputs.length < 2) {
+                toast.error("No alternative speakers/headphones found.");
+                return;
+            }
+
+            // 3. Toggle state and pick the alternative speaker
+            const newLoudspeakerState = !isLoudspeaker;
+
+            // Usually, audioOutputs[0] is the default communication device (earpiece/headphones)
+            // and audioOutputs[1] is the speakerphone, but this varies by OS.
+            const targetDeviceId = newLoudspeakerState ? audioOutputs[1].deviceId : audioOutputs[0].deviceId;
+
+            await audioElement.setSinkId(targetDeviceId);
+            setIsLoudspeaker(newLoudspeakerState);
+            toast.success(`Switched to ${newLoudspeakerState ? 'Loudspeaker' : 'Earpiece/Headphones'}`);
+
+        } catch (err) {
+            console.error("Error switching audio output:", err);
+            toast.error("Failed to switch speaker. Permission may be denied.");
+        }
+    };
+
     // --- DRAG VS CLICK LOGIC ---
     const handleMouseDown = (e) => {
         isDragging.current = false;
-
         const startX = e.clientX - position.x;
         const startY = e.clientY - position.y;
         const initialClickX = e.clientX;
@@ -138,12 +174,15 @@ const CallOverlay = ({ peer, onHangup, isMinimized, setIsMinimized, localStream,
             </div>
 
             <div className="h-40 bg-[#1f2c33]/50 backdrop-blur-md rounded-t-[40px] flex items-center justify-center gap-8 md:gap-12 px-6 relative z-50">
-                <button onClick={() => setIsLoudspeaker(!isLoudspeaker)} className={`p-4 rounded-full transition-all ${isLoudspeaker ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}>
+                {/* --- LOUDSPEAKER BUTTON NOW CALLS THE FUNCTION --- */}
+                <button onClick={toggleSpeaker} className={`p-4 rounded-full transition-all ${isLoudspeaker ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}>
                     {isLoudspeaker ? <Volume2 size={28} /> : <VolumeX size={28} />}
                 </button>
+
                 <button onClick={onHangup} className="p-6 bg-rose-500 hover:bg-rose-600 rounded-full text-white transition-transform active:scale-90 shadow-xl">
                     <PhoneOff size={32} fill="currentColor" />
                 </button>
+
                 <button onClick={() => setIsMuted(!isMuted)} className={`p-4 rounded-full transition-all ${isMuted ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}>
                     {isMuted ? <MicOff size={28} /> : <Mic size={28} />}
                 </button>
