@@ -15,6 +15,7 @@ import { logout } from "../../store/slices/authSlice";
 import { toggleTheme } from "../../store/slices/themeSlice";
 import AdminSettingsModal from "../../modals/admin/AdminSettingsModal";
 import { Button } from "@/components/ui/button";
+import CallOverlay from "../../pages/shared/CallOverlay";
 
 // --- GLOBAL SOCKET SINGLETON ---
 if (!window.__GLOBAL_SOCKET__) {
@@ -44,7 +45,7 @@ const playAudio = (type) => {
             snd.currentTime = 0;
             snd.play().catch(e => console.warn(`Audio blocked for ${type}:`, e));
         }
-    } catch (e) {}
+    } catch (e) { }
 };
 
 const pauseAudio = (type) => {
@@ -54,8 +55,10 @@ const pauseAudio = (type) => {
             snd.pause();
             snd.currentTime = 0;
         }
-    } catch (e) {}
+    } catch (e) { }
 };
+
+const iceServers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
 const AdminSidebar = () => {
     const { t } = useTranslation();
@@ -77,10 +80,19 @@ const AdminSidebar = () => {
     const [unreadChatCount, setUnreadChatCount] = useState(0);
     const [pendingMediaCount, setPendingMediaCount] = useState(0);
 
-    // Global Incoming Call State
+    // --- GLOBAL WEBRTC CALL STATE ---
     const [globalIncomingCall, setGlobalIncomingCall] = useState(null);
+    const [activeCall, setActiveCall] = useState(false);
+    const [callPeer, setCallPeer] = useState(null);
+    const [isMinimizedCall, setIsMinimizedCall] = useState(false);
+    const [isCallAccepted, setIsCallAccepted] = useState(false);
+    const [onlineUsers, setOnlineUsers] = useState([]);
 
+    const pcRef = useRef(null);
+    const localStreamRef = useRef(null);
+    const remoteAudioRef = useRef(null);
     const mobileMenuRef = useRef(null);
+
     const pathnameRef = useRef(location.pathname);
 
     useEffect(() => {
@@ -91,7 +103,6 @@ const AdminSidebar = () => {
         if (user?.preferences) setUserPreferences(user.preferences);
     }, [user?.preferences]);
 
-    // --- BROWSER AUDIO UNLOCKING ---
     useEffect(() => {
         const unlockAudio = () => {
             Object.values(globalAudio).forEach(snd => {
@@ -113,7 +124,6 @@ const AdminSidebar = () => {
         };
     }, []);
 
-    // --- VISIBILITY LISTENER TO CLEAR BADGES ---
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (!document.hidden && pathnameRef.current.includes('/chat')) {
@@ -124,9 +134,8 @@ const AdminSidebar = () => {
         return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
     }, []);
 
-    // --- 60 SEC AUTO HANGUP FOR GLOBAL CALLS ---
     useEffect(() => {
-        if (globalIncomingCall) {
+        if (globalIncomingCall && !activeCall) {
             const timer = setTimeout(() => {
                 socket.emit('end_call', { to: globalIncomingCall.from });
                 setGlobalIncomingCall(null);
@@ -135,11 +144,116 @@ const AdminSidebar = () => {
             }, 60000);
             return () => clearTimeout(timer);
         }
-    }, [globalIncomingCall]);
+    }, [globalIncomingCall, activeCall]);
+
+    // --- WEBRTC LOGIC ---
+    const setupMedia = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            localStreamRef.current = stream;
+            return stream;
+        } catch (e) {
+            toast.error("Microphone access denied.");
+            return null;
+        }
+    };
+
+    const cleanupCall = () => {
+        if (localStreamRef.current) localStreamRef.current.getTracks().forEach(track => track.stop());
+        if (pcRef.current) pcRef.current.close();
+        if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
+
+        pcRef.current = null;
+        localStreamRef.current = null;
+        setActiveCall(false);
+        setCallPeer(null);
+        setGlobalIncomingCall(null);
+        setIsMinimizedCall(false);
+        setIsCallAccepted(false);
+    };
+
+    const handleAcceptCall = async () => {
+        if (!globalIncomingCall) return;
+        const callData = globalIncomingCall;
+
+        const stream = await setupMedia();
+        if (!stream) return;
+
+        setActiveCall(true);
+        setCallPeer({
+            name: callData.callerName,
+            _id: callData.from,
+            profilePicture: callData.profilePicture
+        });
+
+        const pc = new RTCPeerConnection(iceServers);
+        pcRef.current = pc;
+
+        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+        pc.onicecandidate = (e) => {
+            if (e.candidate) socket.emit('ice_candidate', { to: callData.from, candidate: e.candidate, from: user.id || user._id });
+        };
+
+        pc.ontrack = (e) => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = e.streams[0]; };
+
+        await pc.setRemoteDescription(new RTCSessionDescription(callData.signal));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        socket.emit('answer_call', { to: callData.from, signal: answer });
+        setGlobalIncomingCall(null);
+        pauseAudio('incoming');
+        setIsCallAccepted(true); // Timer starts immediately for receiver
+    };
+
+    const endCurrentCall = () => {
+        const recipient = globalIncomingCall?.from || callPeer?._id || callPeer?.id;
+        if (recipient) socket.emit('end_call', { to: recipient });
+        cleanupCall();
+        playAudio('hangup');
+    };
+
+    // Listen for SharedChat asking to start a call
+    useEffect(() => {
+        const handleInitiateCall = async (e) => {
+            const peerToCall = e.detail;
+            const stream = await setupMedia();
+            if (!stream) return;
+
+            setCallPeer(peerToCall);
+            setActiveCall(true);
+            setIsCallAccepted(false); // Wait for peer to accept
+
+            const pc = new RTCPeerConnection(iceServers);
+            pcRef.current = pc;
+
+            stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+            pc.onicecandidate = (e) => {
+                if (e.candidate) socket.emit('ice_candidate', { to: peerToCall._id || peerToCall.id, candidate: e.candidate, from: user.id || user._id });
+            };
+
+            pc.ontrack = (e) => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = e.streams[0]; };
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            socket.emit('call_user', {
+                userToCall: peerToCall._id || peerToCall.id,
+                from: user.id || user._id,
+                callerName: user.name,
+                profilePicture: user.profilePicture,
+                signalData: offer
+            });
+        };
+
+        window.addEventListener('initiate_global_call', handleInitiateCall);
+        return () => window.removeEventListener('initiate_global_call', handleInitiateCall);
+    }, [user]);
 
     useEffect(() => {
         if (!user) return;
-
         const fetchPendingMediaCount = async () => {
             try {
                 const res = await api.get('/admin/employees');
@@ -147,11 +261,12 @@ const AdminSidebar = () => {
                     const totalPending = res.data.data.reduce((sum, emp) => sum + (emp.pendingCount || 0), 0);
                     setPendingMediaCount(totalPending);
                 }
-            } catch (error) { console.error("Failed to fetch pending media", error); }
+            } catch (error) { }
         };
         fetchPendingMediaCount();
     }, [user, location.pathname]);
 
+    // --- SOCKET LOGIC ---
     useEffect(() => {
         if (!user) return;
 
@@ -162,7 +277,7 @@ const AdminSidebar = () => {
                     const unread = res.data.data.filter(n => !n.isRead && !n.isHidden).length;
                     setUnreadCount(unread);
                 }
-            } catch (error) { console.error("Failed to fetch global notifications count", error); }
+            } catch (error) { }
         };
 
         if (pathnameRef.current !== '/admin/notifications') fetchUnreadCount();
@@ -185,25 +300,37 @@ const AdminSidebar = () => {
         };
 
         const handleIncomingCall = (data) => {
-            if (pathnameRef.current.includes('/chat')) return; 
             setGlobalIncomingCall(data);
             globalAudio.incoming.loop = true;
             playAudio('incoming');
         };
 
-        const handleCallEnded = () => {
-            setGlobalIncomingCall(null);
+        const handleCallAccepted = async (signal) => {
+            setIsCallAccepted(true); // Timer starts for caller
+            if (pcRef.current) {
+                await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
+                toast.success("Call connected", { icon: '📞' });
+            }
+        };
+
+        const handleIceCandidate = async (data) => {
+            if (pcRef.current && data.candidate) {
+                try { await pcRef.current.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch (e) { }
+            }
+        };
+
+        const handleCallEndedGlobal = () => {
+            cleanupCall();
             pauseAudio('incoming');
+            playAudio('hangup');
         };
 
         const handleNewNotification = (notif) => {
             playAudio('notification');
-
             if (pathnameRef.current !== '/admin/notifications') {
                 setUnreadCount(prev => prev + 1);
                 toast(t('sidebar.new_alert_toast'), { icon: '🛡️' });
             }
-
             if (notif?.type === 'Media' || (notif?.title && notif.title.toLowerCase().includes('media'))) {
                 setPendingMediaCount(prev => prev + 1);
             }
@@ -212,9 +339,7 @@ const AdminSidebar = () => {
         const handleIncomingSOS = (data) => {
             const { senderName, lat, lng } = data;
             playAudio('sos');
-
             if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 1000]);
-
             if (pathnameRef.current !== '/admin/notifications') setUnreadCount(prev => prev + 1);
 
             toast.custom(
@@ -232,31 +357,34 @@ const AdminSidebar = () => {
                             </div>
                         </div>
                         <div className="flex border-l border-red-700/50">
-                            <button onClick={() => toast.dismiss(toastObj.id)} className="w-full border border-transparent rounded-none rounded-r-xl p-4 flex items-center justify-center text-white/80 hover:text-white hover:bg-red-700 transition-colors">
-                                <X className="w-5 h-5" />
-                            </button>
+                            <button onClick={() => toast.dismiss(toastObj.id)} className="w-full border border-transparent rounded-none rounded-r-xl p-4 flex items-center justify-center text-white/80 hover:text-white hover:bg-red-700 transition-colors"><X className="w-5 h-5" /></button>
                         </div>
                     </div>
-                ),
-                { duration: 30000, id: `admin-sos-alert-${senderName}`, position: "top-right" }
+                ), { duration: 30000, id: `admin-sos-alert-${senderName}`, position: "top-right" }
             );
         };
 
         socket.on("receive_message", handleIncomingChat);
         socket.on("incoming_call", handleIncomingCall);
-        socket.on("call_ended", handleCallEnded);
+        socket.on("call_accepted", handleCallAccepted);
+        socket.on("ice_candidate", handleIceCandidate);
+        socket.on("call_ended", handleCallEndedGlobal);
         socket.on("new_notification", handleNewNotification);
         socket.on("admin_leaderboard_refresh", handleNewNotification);
         socket.on("sos_alert_received", handleIncomingSOS);
+        socket.on("online_users_updated", setOnlineUsers);
 
         return () => {
             socket.off("connect", joinUserRoom);
             socket.off("receive_message", handleIncomingChat);
             socket.off("incoming_call", handleIncomingCall);
-            socket.off("call_ended", handleCallEnded);
+            socket.off("call_accepted", handleCallAccepted);
+            socket.off("ice_candidate", handleIceCandidate);
+            socket.off("call_ended", handleCallEndedGlobal);
             socket.off("new_notification", handleNewNotification);
             socket.off("admin_leaderboard_refresh", handleNewNotification);
             socket.off("sos_alert_received", handleIncomingSOS);
+            socket.off("online_users_updated", setOnlineUsers);
         };
     }, [user, t]);
 
@@ -267,9 +395,7 @@ const AdminSidebar = () => {
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
-                setIsMobileMenuOpen(false);
-            }
+            if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) setIsMobileMenuOpen(false);
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -277,11 +403,8 @@ const AdminSidebar = () => {
 
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
-        try {
-            await api.post('/auth/logout');
-        } catch (error) {
-            console.error("Backend logout cleanup failed:", error);
-        } finally {
+        try { await api.post('/auth/logout'); } catch (error) { }
+        finally {
             toast.remove();
             sessionStorage.setItem('justLoggedOut', 'true');
             dispatch(logout());
@@ -289,19 +412,27 @@ const AdminSidebar = () => {
     };
 
     const desktopNavClasses = ({ isActive }) =>
-        `flex items-center gap-2 px-3 py-2 rounded-lg transition-all font-medium text-sm whitespace-nowrap shrink-0 ${isActive
-            ? "bg-primary text-primary-foreground shadow-sm"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-        }`;
+        `flex items-center gap-2 px-3 py-2 rounded-lg transition-all font-medium text-sm whitespace-nowrap shrink-0 ${isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`;
 
     const mobileNavClasses = ({ isActive }) =>
-        `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive
-            ? "text-primary"
-            : "text-muted-foreground hover:text-foreground"
-        }`;
+        `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`;
 
     return (
         <>
+            <audio ref={remoteAudioRef} autoPlay className="hidden" />
+
+            {activeCall && (
+                <CallOverlay
+                    peer={callPeer}
+                    onHangup={endCurrentCall}
+                    isMinimized={isMinimizedCall}
+                    setIsMinimized={setIsMinimizedCall}
+                    localStream={localStreamRef.current}
+                    isCallAccepted={isCallAccepted}
+                    isOnline={onlineUsers.includes(String(callPeer?._id || callPeer?.id))}
+                />
+            )}
+
             {/* --- DESKTOP TOP NAVBAR --- */}
             <nav className="hidden 2xl:flex fixed top-0 w-full h-16 bg-card border-b border-border z-50 items-center justify-between px-6 shadow-sm">
                 <div className="flex items-center gap-3 shrink-0 mr-2">
@@ -314,27 +445,13 @@ const AdminSidebar = () => {
                 </div>
 
                 <div className="flex items-center justify-start flex-1 min-w-0 gap-1 overflow-x-auto px-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                    <NavLink to="/admin/dashboard" className={desktopNavClasses} title={t('sidebar.dashboard')}>
-                        <LayoutDashboard className="w-4.5 h-4.5" /> {t('sidebar.dashboard')}
-                    </NavLink>
-                    <NavLink to="/admin/employees" className={desktopNavClasses} title={t('sidebar.roster')}>
-                        <Users className="w-4.5 h-4.5" /> {t('sidebar.roster')}
-                    </NavLink>
-                    <NavLink to="/admin/attendance" className={desktopNavClasses} title={t('sidebar.attendance')}>
-                        <Radio className="w-4.5 h-4.5" /> {t('sidebar.attendance')}
-                    </NavLink>
-                    <NavLink to="/admin/learning-hub" className={desktopNavClasses} title={t('sidebar.learning_hub') || 'Training Vault'}>
-                        <BookOpen className="w-4.5 h-4.5" /> {t('sidebar.learning_hub') || 'Learn'}
-                    </NavLink>
-                    <NavLink to="/admin/progress" className={desktopNavClasses} title={t('sidebar.progress')}>
-                        <TrendingUp className="w-4.5 h-4.5" /> {t('sidebar.progress')}
-                    </NavLink>
-                    <NavLink to="/admin/leaderboard" className={desktopNavClasses} title={t('sidebar.leaderboard') || 'Leaderboard'}>
-                        <Trophy className="w-4.5 h-4.5" /> {t('sidebar.leaderboard') || 'Leaderboard'}
-                    </NavLink>
-                    <NavLink to="/admin/reports" className={desktopNavClasses} title={t('sidebar.reports')}>
-                        <ClipboardCheck className="w-4.5 h-4.5" /> {t('sidebar.reports')}
-                    </NavLink>
+                    <NavLink to="/admin/dashboard" className={desktopNavClasses} title={t('sidebar.dashboard')}><LayoutDashboard className="w-4.5 h-4.5" /> {t('sidebar.dashboard')}</NavLink>
+                    <NavLink to="/admin/employees" className={desktopNavClasses} title={t('sidebar.roster')}><Users className="w-4.5 h-4.5" /> {t('sidebar.roster')}</NavLink>
+                    <NavLink to="/admin/attendance" className={desktopNavClasses} title={t('sidebar.attendance')}><Radio className="w-4.5 h-4.5" /> {t('sidebar.attendance')}</NavLink>
+                    <NavLink to="/admin/learning-hub" className={desktopNavClasses} title={t('sidebar.learning_hub') || 'Training Vault'}><BookOpen className="w-4.5 h-4.5" /> {t('sidebar.learning_hub') || 'Learn'}</NavLink>
+                    <NavLink to="/admin/progress" className={desktopNavClasses} title={t('sidebar.progress')}><TrendingUp className="w-4.5 h-4.5" /> {t('sidebar.progress')}</NavLink>
+                    <NavLink to="/admin/leaderboard" className={desktopNavClasses} title={t('sidebar.leaderboard') || 'Leaderboard'}><Trophy className="w-4.5 h-4.5" /> {t('sidebar.leaderboard') || 'Leaderboard'}</NavLink>
+                    <NavLink to="/admin/reports" className={desktopNavClasses} title={t('sidebar.reports')}><ClipboardCheck className="w-4.5 h-4.5" /> {t('sidebar.reports')}</NavLink>
                     <NavLink to="/admin/media" className={desktopNavClasses} title={t('sidebar.media') || 'Media Gallery'}>
                         <div className="relative flex items-center justify-center">
                             <Film className="w-4.5 h-4.5" />
@@ -342,60 +459,40 @@ const AdminSidebar = () => {
                         </div>
                         {t('sidebar.media') || 'Media'}
                     </NavLink>
-                    <NavLink to="/admin/leave-requests" className={desktopNavClasses} title={t('sidebar.leave')}>
-                        <CalendarDays className="w-4.5 h-4.5" /> {t('sidebar.leave')}
-                    </NavLink>
+                    <NavLink to="/admin/leave-requests" className={desktopNavClasses} title={t('sidebar.leave')}><CalendarDays className="w-4.5 h-4.5" /> {t('sidebar.leave')}</NavLink>
                     <NavLink to="/admin/notifications" className={desktopNavClasses} title={t('sidebar.alerts')}>
                         <div className="relative flex items-center justify-center">
                             <Bell className="w-4.5 h-4.5" />
-                            {unreadCount > 0 && (
-                                <span className="absolute -top-1.5 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white shadow-sm border border-card animate-in zoom-in duration-300">
-                                    {unreadCount > 99 ? '99+' : unreadCount}
-                                </span>
-                            )}
+                            {unreadCount > 0 && <span className="absolute -top-1.5 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white shadow-sm border border-card animate-in zoom-in duration-300">{unreadCount > 99 ? '99+' : unreadCount}</span>}
                         </div>
                         {t('sidebar.alerts')}
                     </NavLink>
-                    
+
                     <NavLink to="/admin/chat" className={desktopNavClasses} title="Chat Hub">
                         <div className="relative flex items-center justify-center">
                             <MessageCircle className="w-4.5 h-4.5" />
-                            {unreadChatCount > 0 && (
-                                <span className="absolute -top-1.5 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white shadow-sm border border-card animate-in zoom-in duration-300">
-                                    {unreadChatCount > 99 ? '99+' : unreadChatCount}
-                                </span>
-                            )}
+                            {unreadChatCount > 0 && <span className="absolute -top-1.5 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white shadow-sm border border-card animate-in zoom-in duration-300">{unreadChatCount > 99 ? '99+' : unreadChatCount}</span>}
                         </div>
                         Chat Hub
                     </NavLink>
 
-                    <NavLink to="/admin/communication" className={desktopNavClasses} title={t('sidebar.broadcast')}>
-                        <Megaphone className="w-4.5 h-4.5" /> {t('sidebar.broadcast')}
-                    </NavLink>
+                    <NavLink to="/admin/communication" className={desktopNavClasses} title={t('sidebar.broadcast')}><Megaphone className="w-4.5 h-4.5" /> {t('sidebar.broadcast')}</NavLink>
                 </div>
 
                 <div className="flex items-center justify-end gap-2 shrink-0 border-l border-border pl-4 ml-2">
-                    <button onClick={() => dispatch(toggleTheme())} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title={t('sidebar.theme')}>
-                        {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-500" />}
-                    </button>
+                    <button onClick={() => dispatch(toggleTheme())} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title={t('sidebar.theme')}>{theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-500" />}</button>
                     <button onClick={() => navigate('/admin/profile')} className="p-1 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors flex items-center justify-center w-9 h-9 overflow-hidden border border-border/50" title={t('sidebar.profile') || 'My Profile'}>
                         {user?.profilePicture ? <img src={user.profilePicture} alt="Admin" className="w-full h-full object-cover rounded-full" /> : <UserCircle className="w-5 h-5" />}
                     </button>
-                    <button onClick={() => setIsSettingsModalOpen(true)} className="p-2 text-muted-foreground md:cursor-pointer hover:text-foreground hover:bg-muted rounded-full transition-colors" title={t('sidebar.settings')}>
-                        <Settings className="w-5 h-5" />
-                    </button>
-                    <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-destructive md:cursor-pointer hover:bg-destructive/10 rounded-full transition-colors" title={t('sidebar.logout')}>
-                        <LogOut className="w-5 h-5" />
-                    </button>
+                    <button onClick={() => setIsSettingsModalOpen(true)} className="p-2 text-muted-foreground md:cursor-pointer hover:text-foreground hover:bg-muted rounded-full transition-colors" title={t('sidebar.settings')}><Settings className="w-5 h-5" /></button>
+                    <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-destructive md:cursor-pointer hover:bg-destructive/10 rounded-full transition-colors" title={t('sidebar.logout')}><LogOut className="w-5 h-5" /></button>
                 </div>
             </nav>
 
             {/* --- MOBILE TOP NAVBAR --- */}
             <header className="2xl:hidden fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4 shadow-sm">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
-                        <Shield className="w-4 h-4 text-primary-foreground" />
-                    </div>
+                    <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm"><Shield className="w-4 h-4 text-primary-foreground" /></div>
                     <h1 className="font-bold text-lg text-foreground tracking-tight">{t('sidebar.brand')}</h1>
                 </div>
 
@@ -410,68 +507,24 @@ const AdminSidebar = () => {
                                 <p className="text-sm font-bold text-foreground truncate">{adminName}</p>
                                 <p className="text-[11px] text-muted-foreground truncate">{adminEmail}</p>
                             </div>
-
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                                onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/learning-hub'); }}
-                            >
-                                <BookOpen className="w-4 h-4 text-primary" /> {t('sidebar.learning_hub') || 'Training Vault'}
-                            </button>
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                                onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leaderboard'); }}
-                            >
-                                <Trophy className="w-4 h-4 text-primary" /> {t('sidebar.leaderboard') || 'Leaderboard'}
-                            </button>
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                                onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/reports'); }}
-                            >
-                                <ClipboardCheck className="w-4 h-4 text-primary" /> {t('sidebar.reports')}
-                            </button>
-
-                            <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                                onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/media'); }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Film className="w-4 h-4 text-primary" /> {t('sidebar.media') || 'Media Gallery'}
-                                </div>
+                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/learning-hub'); }}><BookOpen className="w-4 h-4 text-primary" /> {t('sidebar.learning_hub') || 'Training Vault'}</button>
+                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leaderboard'); }}><Trophy className="w-4 h-4 text-primary" /> {t('sidebar.leaderboard') || 'Leaderboard'}</button>
+                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/reports'); }}><ClipboardCheck className="w-4 h-4 text-primary" /> {t('sidebar.reports')}</button>
+                            <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/media'); }}>
+                                <div className="flex items-center gap-3"><Film className="w-4 h-4 text-primary" /> {t('sidebar.media') || 'Media Gallery'}</div>
                                 {pendingMediaCount > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm animate-pulse" />}
                             </button>
-
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                                onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leave-requests'); }}
-                            >
-                                <CalendarDays className="w-4 h-4 text-primary" /> {t('sidebar.leave')}
-                            </button>
-                            
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                                onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/communication'); }}
-                            >
-                                <Megaphone className="w-4 h-4 text-primary" /> {t('sidebar.broadcast')}
-                            </button>
-
+                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leave-requests'); }}><CalendarDays className="w-4 h-4 text-primary" /> {t('sidebar.leave')}</button>
+                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/communication'); }}><Megaphone className="w-4 h-4 text-primary" /> {t('sidebar.broadcast')}</button>
                             <button onClick={() => { dispatch(toggleTheme()); setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                                <div className="flex items-center gap-3">
-                                    {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}
-                                    <span>{theme === 'dark' ? t('sidebar.light_mode') : t('sidebar.dark_mode')}</span>
-                                </div>
+                                <div className="flex items-center gap-3">{theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}<span>{theme === 'dark' ? t('sidebar.light_mode') : t('sidebar.dark_mode')}</span></div>
                             </button>
-
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                                onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/profile'); }}
-                            >
-                                {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-4 h-4 rounded-full object-cover" /> : <UserCircle className="w-4 h-4 text-primary" />}
-                                {t('sidebar.profile') || 'My Profile'}
+                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/profile'); }}>
+                                {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-4 h-4 rounded-full object-cover" /> : <UserCircle className="w-4 h-4 text-primary" />}{t('sidebar.profile') || 'My Profile'}
                             </button>
-
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                                onClick={() => { setIsMobileMenuOpen(false); setIsSettingsModalOpen(true); }}
-                            >
-                                <Settings className="w-4 h-4 text-primary" /> {t('sidebar.settings')}
-                            </button>
-
+                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); setIsSettingsModalOpen(true); }}><Settings className="w-4 h-4 text-primary" /> {t('sidebar.settings')}</button>
                             <div className="my-1 border-t border-border" />
-                            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors">
-                                <LogOut className="w-4 h-4" /> {t('sidebar.logout')}
-                            </button>
+                            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"><LogOut className="w-4 h-4" /> {t('sidebar.logout')}</button>
                         </div>
                     )}
                 </div>
@@ -479,48 +532,34 @@ const AdminSidebar = () => {
 
             {/* --- MOBILE BOTTOM NAVBAR --- */}
             <nav className="2xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe">
-                <NavLink to="/admin/dashboard" className={mobileNavClasses}>
-                    <LayoutDashboard className="w-6 h-6" />
-                </NavLink>
-                <NavLink to="/admin/employees" className={mobileNavClasses}>
-                    <Users className="w-6 h-6" />
-                </NavLink>
-                <NavLink to="/admin/progress" className={mobileNavClasses}>
-                    <TrendingUp className="w-6 h-6" />
-                </NavLink>
-                <NavLink to="/admin/attendance" className={mobileNavClasses}>
-                    <Radio className="w-6 h-6" />
-                </NavLink>
-
+                <NavLink to="/admin/dashboard" className={mobileNavClasses}><LayoutDashboard className="w-6 h-6" /></NavLink>
+                <NavLink to="/admin/employees" className={mobileNavClasses}><Users className="w-6 h-6" /></NavLink>
+                <NavLink to="/admin/progress" className={mobileNavClasses}><TrendingUp className="w-6 h-6" /></NavLink>
+                <NavLink to="/admin/attendance" className={mobileNavClasses}><Radio className="w-6 h-6" /></NavLink>
                 <NavLink to="/admin/notifications" className={mobileNavClasses}>
                     <div className="relative flex items-center justify-center">
                         <Bell className="w-6 h-6" />
-                        {unreadCount > 0 && (
-                            <span className="absolute -top-1 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white shadow-sm border border-card animate-in zoom-in duration-300">
-                                {unreadCount > 99 ? '99+' : unreadCount}
-                            </span>
-                        )}
+                        {unreadCount > 0 && <span className="absolute -top-1 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white shadow-sm border border-card animate-in zoom-in duration-300">{unreadCount > 99 ? '99+' : unreadCount}</span>}
                     </div>
                 </NavLink>
-                
                 <NavLink to="/admin/chat" className={mobileNavClasses}>
                     <div className="relative flex items-center justify-center">
                         <MessageCircle className="w-6 h-6" />
-                        {unreadChatCount > 0 && (
-                            <span className="absolute -top-1 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white shadow-sm border border-card animate-in zoom-in duration-300">
-                                {unreadChatCount > 99 ? '99+' : unreadChatCount}
-                            </span>
-                        )}
+                        {unreadChatCount > 0 && <span className="absolute -top-1 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white shadow-sm border border-card animate-in zoom-in duration-300">{unreadChatCount > 99 ? '99+' : unreadChatCount}</span>}
                     </div>
                 </NavLink>
             </nav>
 
             {/* --- GLOBAL INCOMING CALL MODAL --- */}
-            {globalIncomingCall && (
+            {globalIncomingCall && !activeCall && (
                 <div className="fixed inset-0 z-9999 bg-black/60 backdrop-blur-sm flex items-center justify-center animate-in fade-in">
                     <div className="bg-card dark:bg-[#13151A] p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-6 w-80 text-center animate-in zoom-in-95 border border-border">
-                        <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_20px_rgba(var(--primary),0.4)]">
-                            <PhoneIncoming className="w-10 h-10 text-primary" />
+                        <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_20px_rgba(var(--primary),0.4)] overflow-hidden border-2 border-primary/50">
+                            {globalIncomingCall.profilePicture ? (
+                                <img src={globalIncomingCall.profilePicture} alt="Caller" className="w-full h-full object-cover" />
+                            ) : (
+                                <PhoneIncoming className="w-10 h-10 text-primary" />
+                            )}
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-foreground">{globalIncomingCall.callerName}</h2>
@@ -534,11 +573,7 @@ const AdminSidebar = () => {
                             }} className="w-14 h-14 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
                                 <PhoneOff className="w-6 h-6" />
                             </button>
-                            <button onClick={() => {
-                                pauseAudio('incoming');
-                                setGlobalIncomingCall(null);
-                                navigate('/admin/chat', { state: { incomingCall: globalIncomingCall, autoAccept: true } });
-                            }} className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
+                            <button onClick={handleAcceptCall} className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
                                 <Phone className="w-6 h-6 fill-current" />
                             </button>
                         </div>

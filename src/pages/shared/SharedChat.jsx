@@ -5,7 +5,7 @@ import { io } from "socket.io-client";
 import {
     Search, Phone, MoreVertical, Paperclip, Send, Download,
     ArrowLeft, Loader2, CheckCheck, Check, MessageSquare, Camera, Image as ImageIcon, X, FileCheck,
-    Trash2, Link as LinkIcon, FileText, Users, PhoneIncoming, PhoneOff, Forward, PlaySquare
+    Trash2, Link as LinkIcon, FileText, Users, Forward, PlaySquare
 } from "lucide-react";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
@@ -128,14 +128,6 @@ const SharedChat = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [showProfileInfo, setShowProfileInfo] = useState(false);
 
-    // Call States (WebRTC)
-    const [incomingCall, setIncomingCall] = useState(null);
-    const [activeCall, setActiveCall] = useState(false);
-    const [callPeer, setCallPeer] = useState(null);
-    const pcRef = useRef(null);
-    const localStreamRef = useRef(null);
-    const remoteAudioRef = useRef(null);
-
     // Delete Context Menu State
     const [contextMenu, setContextMenu] = useState(null);
     const touchTimer = useRef(null);
@@ -212,64 +204,10 @@ const SharedChat = () => {
         return () => { document.body.style.overflow = ''; };
     }, []);
 
-    // --- HANDLE INCOMING CALL AUDIO PLAYBACK ---
-    useEffect(() => {
-        if (incomingCall && !activeCall) {
-            globalAudio.incoming.loop = true;
-            playAudio('incoming');
-        } else {
-            pauseAudio('incoming');
-        }
-    }, [incomingCall, activeCall]);
-
     // --- FETCH INITIAL CHATS ---
     useEffect(() => {
         if (currentUserId) fetchConversations();
     }, [currentUserId]);
-
-    // --- WEBRTC CONFIG ---
-    const iceServers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-
-    const setupMedia = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            localStreamRef.current = stream;
-            return stream;
-        } catch (e) {
-            toast.error("Microphone access denied or not found.");
-            return null;
-        }
-    };
-
-    const cleanupCall = () => {
-        if (localStreamRef.current) {
-            localStreamRef.current.getTracks().forEach(track => track.stop());
-        }
-        if (pcRef.current) pcRef.current.close();
-        if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
-
-        pcRef.current = null;
-        localStreamRef.current = null;
-        setActiveCall(false);
-        setCallPeer(null);
-        setIncomingCall(null);
-    };
-
-    const rejectCall = () => {
-        if (incomingCall) socket.emit('end_call', { to: incomingCall.from });
-        setIncomingCall(null);
-    };
-
-    useEffect(() => {
-        let timer;
-        if (incomingCall && !activeCall) {
-            timer = setTimeout(() => {
-                rejectCall();
-                toast.error("Missed call", { icon: '📵' });
-            }, 60000);
-        }
-        return () => clearTimeout(timer);
-    }, [incomingCall, activeCall]);
 
     // --- SOCKET INIT & EVENT LISTENERS ---
     useEffect(() => {
@@ -316,36 +254,10 @@ const SharedChat = () => {
             }
         };
 
-        const handleIncomingCall = (data) => { setIncomingCall({ from: data.from, callerName: data.callerName, signal: data.signal }); };
-
-        const handleCallAccepted = async (signal) => {
-            if (pcRef.current) {
-                await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
-                toast.success("Call connected", { icon: '📞' });
-            }
-        };
-
-        const handleIceCandidate = async (data) => {
-            if (pcRef.current && data.candidate) {
-                try { await pcRef.current.addIceCandidate(new RTCIceCandidate(data.candidate)); }
-                catch (e) { console.error("Error adding ICE candidate", e); }
-            }
-        };
-
-        const handleCallEnded = () => {
-            cleanupCall();
-            playAudio('hangup');
-            toast("Call ended", { icon: '📵' });
-        };
-
         socket.on("online_users_updated", handleOnlineUsers);
         socket.on("receive_message", handleReceiveMessage);
         socket.on("message_deleted", handleMessageDeleted);
         socket.on("messages_status_update", handleMessageStatusUpdate);
-        socket.on("incoming_call", handleIncomingCall);
-        socket.on("call_accepted", handleCallAccepted);
-        socket.on("ice_candidate", handleIceCandidate);
-        socket.on("call_ended", handleCallEnded);
 
         return () => {
             socket.off("connect", joinChatRoom);
@@ -353,24 +265,8 @@ const SharedChat = () => {
             socket.off("receive_message", handleReceiveMessage);
             socket.off("message_deleted", handleMessageDeleted);
             socket.off("messages_status_update", handleMessageStatusUpdate);
-            socket.off("incoming_call", handleIncomingCall);
-            socket.off("call_accepted", handleCallAccepted);
-            socket.off("ice_candidate", handleIceCandidate);
-            socket.off("call_ended", handleCallEnded);
         };
     }, [currentUserId]);
-
-    // --- CHECK FOR GLOBAL INCOMING CALL REDIRECTION ---
-    useEffect(() => {
-        if (location.state?.incomingCall) {
-            if (location.state.autoAccept) {
-                acceptCall(location.state.incomingCall);
-            } else {
-                setIncomingCall(location.state.incomingCall);
-            }
-            window.history.replaceState({}, document.title);
-        }
-    }, [location.state]);
 
     // --- CLICK OUTSIDE HANDLER ---
     useEffect(() => {
@@ -588,30 +484,21 @@ const SharedChat = () => {
     };
 
     // --- BULLETPROOF BLOB DOWNLOAD LOGIC ---
-    // This fetches the raw file data silently in the background and saves it
-    // ensuring the browser NEVER opens a new tab.
     const downloadToLocal = async (url, type) => {
         const toastId = toast.loading("Downloading file...");
         try {
-            // 1. Fetch raw data from the server
             const response = await fetch(url);
             if (!response.ok) throw new Error("Network response was not ok");
 
-            // 2. Convert raw data to a blob (binary chunk)
             const blob = await response.blob();
-
-            // 3. Create a secure local URL for this blob
             const blobUrl = window.URL.createObjectURL(blob);
 
-            // 4. Create an invisible element to trigger the download
             const a = document.createElement('a');
             a.href = blobUrl;
 
-            // Extract the original filename from the URL, or make a new one
             const fileName = url.split('/').pop().split('?')[0] || `WorkForce_Media_${Date.now()}`;
             a.download = fileName;
 
-            // 5. Fire the click and clean up memory
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -732,65 +619,10 @@ const SharedChat = () => {
         }
     };
 
-    const initiateVoiceCall = async () => {
+    const initiateVoiceCall = () => {
         if (!activeChat) return;
-        const stream = await setupMedia();
-        if (!stream) return;
-
-        setCallPeer(activeChat.name);
-        setActiveCall(true);
-
-        const pc = new RTCPeerConnection(iceServers);
-        pcRef.current = pc;
-
-        stream.getTracks().forEach(track => pc.addTrack(track, stream));
-
-        pc.onicecandidate = (e) => {
-            if (e.candidate) {
-                socket.emit('ice_candidate', { to: activeChat._id || activeChat.id, candidate: e.candidate, from: currentUserId });
-            }
-        };
-
-        pc.ontrack = (e) => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = e.streams[0]; };
-
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-
-        socket.emit('call_user', { userToCall: activeChat._id || activeChat.id, from: currentUserId, callerName: user.name, signalData: offer });
-    };
-
-    const acceptCall = async (callData = incomingCall) => {
-        if (!callData) return;
-        const stream = await setupMedia();
-        if (!stream) return;
-
-        setActiveCall(true);
-        setCallPeer(callData.callerName);
-
-        const pc = new RTCPeerConnection(iceServers);
-        pcRef.current = pc;
-
-        stream.getTracks().forEach(track => pc.addTrack(track, stream));
-
-        pc.onicecandidate = (e) => {
-            if (e.candidate) socket.emit('ice_candidate', { to: callData.from, candidate: e.candidate, from: currentUserId });
-        };
-
-        pc.ontrack = (e) => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = e.streams[0]; };
-
-        await pc.setRemoteDescription(new RTCSessionDescription(callData.signal));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-
-        socket.emit('answer_call', { to: callData.from, signal: answer });
-        setIncomingCall(null);
-    };
-
-    const endCurrentCall = () => {
-        const recipient = incomingCall?.from || (activeChat?._id || activeChat?.id);
-        if (recipient) socket.emit('end_call', { to: recipient });
-        cleanupCall();
-        playAudio('hangup');
+        // Fire the global event to tell the Navbar to start the call!
+        window.dispatchEvent(new CustomEvent('initiate_global_call', { detail: activeChat }));
     };
 
     const handleChatAction = async (action) => {
@@ -1047,29 +879,6 @@ const SharedChat = () => {
                     </div>
                 )}
 
-                {/* INCOMING CALL MODAL OVERLAY */}
-                {incomingCall && !activeCall && (
-                    <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center animate-in fade-in">
-                        <div className="bg-card dark:bg-[#13151A] p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-6 w-80 text-center animate-in zoom-in-95">
-                            <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_20px_rgba(var(--primary),0.4)]">
-                                <PhoneIncoming className="w-10 h-10 text-primary" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-foreground">{incomingCall.callerName}</h2>
-                                <p className="text-sm text-muted-foreground mt-1">is calling you...</p>
-                            </div>
-                            <div className="flex items-center gap-6 w-full justify-center mt-2">
-                                <button onClick={rejectCall} className="w-14 h-14 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
-                                    <PhoneOff className="w-6 h-6" />
-                                </button>
-                                <button onClick={() => acceptCall()} className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
-                                    <Phone className="w-6 h-6 fill-current" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 {/* LEFT SIDEBAR (Contacts) - RESIZABLE */}
                 <div
                     className={`relative flex flex-col h-full bg-card dark:bg-[#11131A] border-r border-border/40 z-20 transition-[width] ease-linear duration-0 ${activeChat ? 'hidden md:flex' : 'flex w-full'}`}
@@ -1162,19 +971,6 @@ const SharedChat = () => {
                         <div className="flex-1 flex w-full h-full relative bg-[#EBEBEB] dark:bg-[#0B0D12]">
                             <div className="flex-1 flex flex-col h-full relative z-10 transition-all duration-300">
 
-                                {/* ACTIVE CALL BANNER */}
-                                {activeCall && (
-                                    <div className="bg-emerald-500 text-white px-4 py-2.5 flex items-center justify-between shadow-md shrink-0 z-30 animate-in slide-in-from-top-2">
-                                        <div className="flex items-center gap-3 font-medium text-sm">
-                                            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                                            <span>In call with {callPeer || activeChat.name}</span>
-                                        </div>
-                                        <button onClick={endCurrentCall} className="bg-rose-500 hover:bg-rose-600 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-2">
-                                            <PhoneOff className="w-3.5 h-3.5" /> End Call
-                                        </button>
-                                    </div>
-                                )}
-
                                 {/* TOP BAR */}
                                 {showSearchInput ? (
                                     <div className="h-16 md:h-17.5 px-2 sm:px-4 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center gap-2 shrink-0 z-20 sticky top-0 animate-in fade-in duration-200">
@@ -1222,11 +1018,9 @@ const SharedChat = () => {
                                                 <Search className="w-5 h-5" />
                                             </button>
 
-                                            {!activeCall && (
-                                                <button onClick={initiateVoiceCall} className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 text-[13px] md:text-[14px] font-bold text-white bg-[#6B66FF] hover:bg-[#5A55E5] rounded-xl transition-all active:scale-95 shadow-sm mx-0.5 md:mx-1">
-                                                    <Phone className="w-4 h-4 fill-current" /> <span className="hidden sm:inline">Call</span>
-                                                </button>
-                                            )}
+                                            <button onClick={initiateVoiceCall} className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 text-[13px] md:text-[14px] font-bold text-white bg-[#6B66FF] hover:bg-[#5A55E5] rounded-xl transition-all active:scale-95 shadow-sm mx-0.5 md:mx-1">
+                                                <Phone className="w-4 h-4 fill-current" /> <span className="hidden sm:inline">Call</span>
+                                            </button>
 
                                             <button onClick={() => setShowTopMenu(!showTopMenu)} className="p-2 md:p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors">
                                                 <MoreVertical className="w-5 h-5" />
