@@ -4,7 +4,7 @@ import { useLocation } from "react-router-dom";
 import { io } from "socket.io-client";
 import {
     Search, Phone, MoreVertical, Paperclip, Send,
-    ArrowLeft, Loader2, CheckCheck, MessageSquare, Camera, Image as ImageIcon, X, FileCheck,
+    ArrowLeft, Loader2, CheckCheck, Check, MessageSquare, Camera, Image as ImageIcon, X, FileCheck,
     Trash2, Link as LinkIcon, FileText, Users, PhoneIncoming, PhoneOff
 } from "lucide-react";
 import api from "../../api/axios";
@@ -38,7 +38,7 @@ const playAudio = (type) => {
             snd.currentTime = 0;
             snd.play().catch(e => console.warn(`Audio blocked for ${type}:`, e));
         }
-    } catch (e) {}
+    } catch (e) { }
 };
 
 const pauseAudio = (type) => {
@@ -48,7 +48,7 @@ const pauseAudio = (type) => {
             snd.pause();
             snd.currentTime = 0;
         }
-    } catch (e) {}
+    } catch (e) { }
 };
 
 // --- NATIVE IMAGE COMPRESSOR ---
@@ -97,6 +97,9 @@ const SharedChat = () => {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
     const [onlineUsers, setOnlineUsers] = useState([]);
+
+    // Unread Badges State
+    const [unreadMap, setUnreadMap] = useState({});
 
     // UI States
     const [isUploading, setIsUploading] = useState(false);
@@ -178,7 +181,7 @@ const SharedChat = () => {
         }
         if (pcRef.current) pcRef.current.close();
         if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
-        
+
         pcRef.current = null;
         localStreamRef.current = null;
         setActiveCall(false);
@@ -211,27 +214,52 @@ const SharedChat = () => {
         if (socket.connected) joinChatRoom();
         socket.on("connect", joinChatRoom);
 
-        // Extracting listeners to named functions so we don't accidentally wipe Navbar's listeners on unmount
         const handleOnlineUsers = (users) => setOnlineUsers(users);
-        
+
         const handleReceiveMessage = (data) => {
             const currentChat = activeChatRef.current;
-            
-            // Play sound if tab is visible, otherwise Sidebar handles it
-            if (!document.hidden) {
-                playAudio('message'); 
-            }
+            const isActivelyChatting = currentChat && (data.senderId === currentChat._id || data.senderId === currentChat.id);
 
-            if (currentChat && (data.senderId === currentChat._id || data.senderId === currentChat.id)) {
+            // 1. Tell the sender the message was delivered to our device
+            socket.emit("message_delivered", { senderId: data.senderId, recipientId: currentUserId });
+
+            if (isActivelyChatting) {
+                // 2. We are currently looking at the chat! Don't play sound/toast.
                 setMessages((prev) => [...prev, data]);
                 scrollToBottom();
+
+                // Tell the sender we saw it immediately (Blue ticks)
+                socket.emit("mark_chat_seen", { senderId: data.senderId, recipientId: currentUserId });
             } else {
-                toast.success(`New message received`, { icon: '💬', style: { borderRadius: '16px' } });
+                // 3. We are NOT looking at this person's chat right now. Play notification.
+                if (!document.hidden) {
+                    playAudio('message');
+                    toast.success(`New message received`, { icon: '💬', id: `chat-msg-${data.senderId}` });
+                }
+                // Increment unread badge for the sender
+                setUnreadMap(prev => ({
+                    ...prev,
+                    [data.senderId]: (prev[data.senderId] || 0) + 1
+                }));
             }
         };
 
         const handleMessageDeleted = ({ messageId, timestamp }) => {
             setMessages((prev) => prev.filter(m => (m._id || m.id) !== messageId && m.timestamp !== timestamp));
+        };
+
+        // Message Status Update Listener (For Sent/Delivered/Seen Ticks)
+        const handleMessageStatusUpdate = ({ viewerId, status }) => {
+            if (activeChatRef.current && (activeChatRef.current._id === viewerId || activeChatRef.current.id === viewerId)) {
+                setMessages(prev => prev.map(m => {
+                    // Update only if we sent it, and don't downgrade from seen to delivered
+                    if (m.senderId === currentUserId) {
+                        if (status === 'seen') return { ...m, status: 'seen' };
+                        if (status === 'delivered' && m.status !== 'seen') return { ...m, status: 'delivered' };
+                    }
+                    return m;
+                }));
+            }
         };
 
         const handleIncomingCall = (data) => {
@@ -261,6 +289,7 @@ const SharedChat = () => {
         socket.on("online_users_updated", handleOnlineUsers);
         socket.on("receive_message", handleReceiveMessage);
         socket.on("message_deleted", handleMessageDeleted);
+        socket.on("messages_status_update", handleMessageStatusUpdate); // Listens for delivered/seen updates
         socket.on("incoming_call", handleIncomingCall);
         socket.on("call_accepted", handleCallAccepted);
         socket.on("ice_candidate", handleIceCandidate);
@@ -269,8 +298,9 @@ const SharedChat = () => {
         return () => {
             socket.off("connect", joinChatRoom);
             socket.off("online_users_updated", handleOnlineUsers);
-            socket.off("receive_message", handleReceiveMessage); // Now specifically targets this component's listener
+            socket.off("receive_message", handleReceiveMessage);
             socket.off("message_deleted", handleMessageDeleted);
+            socket.off("messages_status_update", handleMessageStatusUpdate);
             socket.off("incoming_call", handleIncomingCall);
             socket.off("call_accepted", handleCallAccepted);
             socket.off("ice_candidate", handleIceCandidate);
@@ -296,7 +326,7 @@ const SharedChat = () => {
             if (attachMenuRef.current && !attachMenuRef.current.contains(event.target)) setShowAttachMenu(false);
             if (topMenuRef.current && !topMenuRef.current.contains(event.target)) setShowTopMenu(false);
             if (sidebarMenuRef.current && !sidebarMenuRef.current.contains(event.target)) setShowSidebarMenu(false);
-            
+
             // Close context menu ONLY if clicked outside the actual menu
             if (contextMenuRef.current && !contextMenuRef.current.contains(event.target)) {
                 setContextMenu(null);
@@ -310,10 +340,11 @@ const SharedChat = () => {
         setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, 150);
     };
 
+    // Updated to 12-Hour Format (e.g. 10:30 AM)
     const formatTime = (timeString) => {
         if (!timeString) return '';
         const date = new Date(timeString);
-        return isNaN(date.getTime()) ? '' : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return isNaN(date.getTime()) ? '' : date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     };
 
     // --- API CALLS ---
@@ -323,7 +354,15 @@ const SharedChat = () => {
             const endpoint = user.role === 'Employee' ? '/employee/peers' : '/admin/employees';
             const res = await api.get(endpoint);
             if (res.data.success) {
-                setConversations(res.data.data.filter(p => (p._id || p.id) !== currentUserId));
+                const peers = res.data.data.filter(p => (p._id || p.id) !== currentUserId);
+                setConversations(peers);
+
+                // Initialize unread map if backend provides it
+                const initialUnread = {};
+                peers.forEach(p => {
+                    if (p.unreadCount) initialUnread[p._id || p.id] = p.unreadCount;
+                });
+                setUnreadMap(initialUnread);
             }
         } catch (error) { toast.error("Could not load contact list."); }
         finally { setIsLoadingChats(false); }
@@ -333,7 +372,11 @@ const SharedChat = () => {
         try {
             setMessages([]);
             const res = await api.get(`/chat/history/${currentUserId}/${recipientId}`).catch(() => ({ data: { success: true, data: [] } }));
-            if (res.data.success) setMessages(res.data.data || []);
+            if (res.data.success) {
+                setMessages(res.data.data || []);
+                // Once messages are fetched, tell the sender we've seen them (Blue Ticks)
+                socket.emit("mark_chat_seen", { senderId: recipientId, recipientId: currentUserId });
+            }
             setShowProfileInfo(false);
             setSharedContentView(null);
             scrollToBottom();
@@ -342,9 +385,16 @@ const SharedChat = () => {
 
     // --- MESSAGE ACTIONS ---
     const handleSelectChat = (chatUser) => {
-        if (activeChat && (activeChat._id || activeChat.id) === (chatUser._id || chatUser.id)) return;
+        const userId = chatUser._id || chatUser.id;
+
+        // Clear unread badge instantly
+        setUnreadMap(prev => ({ ...prev, [userId]: 0 }));
+
+        if (activeChat && (activeChat._id || activeChat.id) === userId) return;
+
         setActiveChat(chatUser);
-        fetchMessages(chatUser._id || chatUser.id);
+        fetchMessages(userId);
+
         setShowAttachMenu(false);
         setShowTopMenu(false);
         setShowSidebarMenu(false);
@@ -366,6 +416,7 @@ const SharedChat = () => {
             text: newMessage,
             mediaUrl: null,
             mediaType: 'text',
+            status: 'sent', // Initially sent (single tick)
             timestamp: new Date().toISOString()
         };
 
@@ -381,8 +432,8 @@ const SharedChat = () => {
             if (res.data && res.data._id) {
                 setMessages(prev => prev.map(m => m._id === tempId ? { ...m, _id: res.data._id } : m));
             }
-        } catch (error) { 
-            console.error("Failed to save message"); 
+        } catch (error) {
+            console.error("Failed to save message");
         }
     };
 
@@ -421,6 +472,7 @@ const SharedChat = () => {
                     text: "",
                     mediaUrl: publicUrl,
                     mediaType: type,
+                    status: 'sent',
                     timestamp: new Date().toISOString()
                 };
 
@@ -448,51 +500,35 @@ const SharedChat = () => {
     // --- WHATSAPP STYLE DELETE LOGIC ---
     const handleContextMenu = (e, msg) => {
         e.preventDefault();
-        
         const clientX = e.clientX || (e.touches && e.touches.length > 0 ? e.touches[0].clientX : window.innerWidth / 2);
         const clientY = e.clientY || (e.touches && e.touches.length > 0 ? e.touches[0].clientY : window.innerHeight / 2);
-
         setContextMenu({ mouseX: clientX, mouseY: clientY, msg });
     };
 
     const handleTouchStart = (e, msg) => {
-        touchTimer.current = setTimeout(() => {
-            handleContextMenu(e, msg);
-        }, 600);
+        touchTimer.current = setTimeout(() => { handleContextMenu(e, msg); }, 600);
     };
 
-    const handleTouchEnd = () => {
-        if (touchTimer.current) clearTimeout(touchTimer.current);
-    };
+    const handleTouchEnd = () => { if (touchTimer.current) clearTimeout(touchTimer.current); };
 
     const executeDelete = async (type) => {
         if (!contextMenu) return;
         const { msg } = contextMenu;
         setContextMenu(null);
-        
         const targetId = msg._id || msg.id;
 
-        // Delete for Me (Local Storage hide)
         if (type === 'me') {
             const localDeleted = JSON.parse(localStorage.getItem('deletedChatMessages') || '[]');
             if (targetId) localDeleted.push(targetId);
             localStorage.setItem('deletedChatMessages', JSON.stringify(localDeleted));
-            
             setMessages(prev => prev.filter(m => (m._id || m.id) !== targetId && m.timestamp !== msg.timestamp));
             toast.success("Message deleted for you");
             return;
         }
 
-        // Delete for Everyone (DB + Socket)
         if (type === 'everyone') {
             setMessages(prev => prev.filter(m => (m._id || m.id) !== targetId && m.timestamp !== msg.timestamp));
-            
-            socket.emit("delete_message", {
-                messageId: targetId,
-                timestamp: msg.timestamp,
-                recipientId: activeChat._id || activeChat.id
-            });
-
+            socket.emit("delete_message", { messageId: targetId, timestamp: msg.timestamp, recipientId: activeChat._id || activeChat.id });
             if (targetId && !targetId.startsWith('temp-')) {
                 try { await api.delete(`/chat/message/${targetId}`); }
                 catch (e) { console.error("Failed to delete from DB"); }
@@ -520,19 +556,12 @@ const SharedChat = () => {
             }
         };
 
-        pc.ontrack = (e) => {
-            if (remoteAudioRef.current) remoteAudioRef.current.srcObject = e.streams[0];
-        };
+        pc.ontrack = (e) => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = e.streams[0]; };
 
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
-        socket.emit('call_user', {
-            userToCall: activeChat._id || activeChat.id,
-            from: currentUserId,
-            callerName: user.name,
-            signalData: offer
-        });
+        socket.emit('call_user', { userToCall: activeChat._id || activeChat.id, from: currentUserId, callerName: user.name, signalData: offer });
     };
 
     const acceptCall = async (callData = incomingCall) => {
@@ -549,14 +578,10 @@ const SharedChat = () => {
         stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
         pc.onicecandidate = (e) => {
-            if (e.candidate) {
-                socket.emit('ice_candidate', { to: callData.from, candidate: e.candidate, from: currentUserId });
-            }
+            if (e.candidate) socket.emit('ice_candidate', { to: callData.from, candidate: e.candidate, from: currentUserId });
         };
 
-        pc.ontrack = (e) => {
-            if (remoteAudioRef.current) remoteAudioRef.current.srcObject = e.streams[0];
-        };
+        pc.ontrack = (e) => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = e.streams[0]; };
 
         await pc.setRemoteDescription(new RTCSessionDescription(callData.signal));
         const answer = await pc.createAnswer();
@@ -585,19 +610,26 @@ const SharedChat = () => {
     // --- UI HELPERS ---
     const isOnline = (id) => onlineUsers.includes(id?.toString());
     const filteredConversations = conversations.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    
+
     const localDeletedIds = JSON.parse(localStorage.getItem('deletedChatMessages') || '[]');
     const visibleMessages = messages.filter(m => !localDeletedIds.includes(m._id || m.id));
-    
+
     const displayedMessages = chatSearchQuery.trim() === "" ? visibleMessages : visibleMessages.filter(m => m.text && m.text.toLowerCase().includes(chatSearchQuery.toLowerCase()));
-    
+
     const sharedMedia = visibleMessages.filter(m => m.mediaUrl && (m.mediaType === 'image' || m.mediaType === 'video'));
     const sharedDocs = visibleMessages.filter(m => m.mediaUrl && m.mediaType === 'document');
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const sharedLinks = visibleMessages.filter(m => m.text && m.text.match(urlRegex));
 
+    // Renders WhatsApp Style Status Ticks
+    const renderMessageStatus = (msg) => {
+        if (msg.status === 'seen') return <CheckCheck className="w-4 h-4 text-[#53bdeb] drop-shadow-sm" />; // WhatsApp Blue
+        if (msg.status === 'delivered') return <CheckCheck className="w-4 h-4 text-white/70" />; // Double Gray
+        return <Check className="w-4 h-4 text-white/70" />; // Single Gray Default
+    };
+
     return (
-        <div className="fixed top-16 inset-x-0 bottom-16 2xl:bottom-0 z-30 flex bg-background dark:bg-[#0B0D12] overflow-hidden animate-in fade-in duration-300">
+        <div className="fixed top-16 inset-x-0 bottom-16 xl:bottom-0 z-30 flex bg-background dark:bg-[#0B0D12] overflow-hidden animate-in fade-in duration-300">
 
             {/* HIDDEN AUDIO ELEMENT FOR WEBRTC VOICE CALLS */}
             <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
@@ -612,7 +644,7 @@ const SharedChat = () => {
                     <button onClick={() => executeDelete('me')} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted text-sm font-medium text-foreground transition-colors">
                         <Trash2 className="w-4 h-4 text-muted-foreground" /> Delete for me
                     </button>
-                    
+
                     {String(contextMenu.msg.senderId || contextMenu.msg.sender) === String(currentUserId) && (
                         <button onClick={() => executeDelete('everyone')} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-rose-500/10 text-sm font-medium text-rose-500 transition-colors">
                             <Trash2 className="w-4 h-4" /> Delete for everyone
@@ -645,7 +677,7 @@ const SharedChat = () => {
             )}
 
             {/* LEFT SIDEBAR (Contacts) */}
-            <div className={`w-full md:w-90 lg:w-100 flex flex-col h-full bg-card dark:bg-[#11131A] border-r border-border/40 z-20 transition-all duration-300 ${activeChat ? 'hidden md:flex' : 'flex'}`}>
+            <div className={`w-full md:w-90 lg:w-95 flex flex-col h-full bg-card dark:bg-[#11131A] border-r border-border/40 z-20 transition-all duration-300 ${activeChat ? 'hidden md:flex' : 'flex'}`}>
                 <div className="p-4 sm:p-5 shrink-0 space-y-4 bg-card dark:bg-[#11131A]">
                     <div className="flex items-center justify-between">
                         <h2 className="text-2xl font-black tracking-tight text-foreground">Messages</h2>
@@ -678,6 +710,7 @@ const SharedChat = () => {
                         filteredConversations.map((chatUser) => {
                             const userId = chatUser._id || chatUser.id;
                             const isActive = activeChat && (activeChat._id === userId || activeChat.id === userId);
+                            const unreadCount = unreadMap[userId] || 0;
 
                             return (
                                 <div key={userId} onClick={() => handleSelectChat(chatUser)} className={`flex items-center gap-3.5 p-3 cursor-pointer rounded-xl transition-all duration-200 ${isActive ? 'bg-muted dark:bg-[#1A1D24]' : 'hover:bg-muted/50 dark:hover:bg-[#16181F]'}`}>
@@ -689,12 +722,27 @@ const SharedChat = () => {
                                                 {chatUser.name?.charAt(0) || 'U'}
                                             </div>
                                         )}
+                                        {isOnline(userId) && (
+                                            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-card rounded-full"></span>
+                                        )}
                                     </div>
                                     <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                        <h3 className={`text-[15px] font-semibold truncate ${isActive ? 'text-foreground' : 'text-foreground/90'}`}>{chatUser.name}</h3>
-                                        <p className="text-[12px] text-muted-foreground truncate font-medium mt-0.5">
-                                            {isOnline(userId) ? <span className="text-emerald-500">Online</span> : chatUser.role || 'Employee'}
-                                        </p>
+                                        <div className="flex justify-between items-center mb-0.5">
+                                            <h3 className={`text-[15px] font-semibold truncate ${unreadCount > 0 ? 'text-foreground' : (isActive ? 'text-foreground' : 'text-foreground/90')}`}>
+                                                {chatUser.name}
+                                            </h3>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <p className={`text-[13px] truncate font-medium ${unreadCount > 0 ? 'text-foreground/80' : 'text-muted-foreground'}`}>
+                                                {chatUser.role || 'Employee'}
+                                            </p>
+                                            {/* Unread WhatsApp Badge */}
+                                            {unreadCount > 0 && (
+                                                <span className="w-5 h-5 rounded-full bg-[#25D366] text-white text-[10px] font-bold flex items-center justify-center shrink-0 ml-2 animate-in zoom-in duration-200 shadow-sm">
+                                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             )
@@ -722,72 +770,80 @@ const SharedChat = () => {
                                 </div>
                             )}
 
-                            {/* TOP BAR */}
-                            <div className="h-17.5 px-4 sm:px-5 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center justify-between shrink-0 z-20 sticky top-0">
-                                <div className="flex items-center flex-1 gap-3 sm:gap-4 cursor-pointer" onClick={() => setShowProfileInfo(true)}>
-                                    <button onClick={(e) => { e.stopPropagation(); setActiveChat(null); }} className="md:hidden p-2 -ml-2 text-muted-foreground hover:bg-muted rounded-full">
+                            {/* TOP BAR (Dynamic Search vs Standard Header) */}
+                            {showSearchInput ? (
+                                <div className="h-16 md:h-17.5 px-2 sm:px-4 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center gap-2 shrink-0 z-20 sticky top-0 animate-in fade-in duration-200">
+                                    <button onClick={() => { setShowSearchInput(false); setChatSearchQuery(""); }} className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0">
                                         <ArrowLeft className="w-5 h-5" />
                                     </button>
-                                    <div className="relative shrink-0">
-                                        {activeChat.profilePicture ? (
-                                            <img src={activeChat.profilePicture} alt="Profile" className="w-11 h-11 rounded-full object-cover" />
-                                        ) : (
-                                            <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">{activeChat.name?.charAt(0)}</div>
-                                        )}
-                                    </div>
-                                    <div className="leading-tight flex-1 min-w-0">
-                                        <h3 className="text-[16px] font-bold text-foreground truncate tracking-wide">{activeChat.name}</h3>
-                                        <div className="flex items-center gap-1.5 mt-1">
-                                            <span className={`w-2 h-2 rounded-full ${isOnline(activeChat._id || activeChat.id) ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></span>
-                                            <p className="text-[12px] text-muted-foreground font-medium">{isOnline(activeChat._id || activeChat.id) ? 'Online' : 'Offline'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-1 relative" ref={topMenuRef}>
-                                    <button onClick={() => { setShowSearchInput(!showSearchInput); setChatSearchQuery(""); }} className={`p-2.5 rounded-full transition-colors ${showSearchInput ? 'text-primary bg-muted' : 'text-muted-foreground hover:bg-muted'}`}>
-                                        <Search className="w-5 h-5" />
-                                    </button>
-
-                                    {!activeCall && (
-                                        <button onClick={initiateVoiceCall} className="flex items-center gap-2 px-4 py-2 text-[14px] font-bold text-white bg-[#6B66FF] hover:bg-[#5A55E5] rounded-xl transition-all active:scale-95 shadow-sm mx-1">
-                                            <Phone className="w-4 h-4 fill-current" /> Call
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        value={chatSearchQuery}
+                                        onChange={(e) => setChatSearchQuery(e.target.value)}
+                                        placeholder="Search..."
+                                        className="flex-1 bg-transparent border-none text-[15px] focus:outline-none focus:ring-0 text-foreground placeholder:text-muted-foreground min-w-0"
+                                    />
+                                    {chatSearchQuery && (
+                                        <button onClick={() => setChatSearchQuery("")} className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0">
+                                            <X className="w-5 h-5" />
                                         </button>
                                     )}
-
-                                    <button onClick={() => setShowTopMenu(!showTopMenu)} className="p-2.5 rounded-full text-muted-foreground hover:bg-muted">
-                                        <MoreVertical className="w-5 h-5" />
-                                    </button>
-
-                                    {showTopMenu && (
-                                        <div className="absolute top-12 right-0 w-44 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-30">
-                                            <button onClick={() => handleChatAction('media')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><ImageIcon className="w-4 h-4 text-blue-500" /> Media</button>
-                                            <button onClick={() => handleChatAction('docs')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><FileText className="w-4 h-4 text-amber-500" /> Docs</button>
-                                            <button onClick={() => handleChatAction('links')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><LinkIcon className="w-4 h-4 text-emerald-500" /> Links</button>
-                                        </div>
-                                    )}
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="h-16 md:h-17.5 px-3 sm:px-5 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center justify-between shrink-0 z-20 sticky top-0">
+                                    <div className="flex items-center flex-1 gap-2 sm:gap-4 cursor-pointer" onClick={() => setShowProfileInfo(true)}>
+                                        <button onClick={(e) => { e.stopPropagation(); setActiveChat(null); }} className="md:hidden p-2 -ml-1 text-muted-foreground hover:bg-muted rounded-full">
+                                            <ArrowLeft className="w-5 h-5" />
+                                        </button>
+                                        <div className="relative shrink-0">
+                                            {activeChat.profilePicture ? (
+                                                <img src={activeChat.profilePicture} alt="Profile" className="w-10 h-10 md:w-11 md:h-11 rounded-full object-cover" />
+                                            ) : (
+                                                <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">{activeChat.name?.charAt(0)}</div>
+                                            )}
+                                        </div>
+                                        <div className="leading-tight flex-1 min-w-0">
+                                            <h3 className="text-[15px] md:text-[16px] font-bold text-foreground truncate tracking-wide">{activeChat.name}</h3>
+                                            <div className="flex items-center gap-1.5 mt-0.5 md:mt-1">
+                                                <span className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${isOnline(activeChat._id || activeChat.id) ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                                                <p className="text-[11px] md:text-[12px] text-muted-foreground font-medium">{isOnline(activeChat._id || activeChat.id) ? 'Online' : 'Offline'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                            {/* Inline Search Input */}
-                            {showSearchInput && (
-                                <div className="p-4 bg-muted border-b border-border/40">
-                                    <div className="relative">
-                                        <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                                        <input type="text" value={chatSearchQuery} onChange={(e) => setChatSearchQuery(e.target.value)} placeholder={`Search messages...`} className="w-full bg-card border-none text-sm rounded-xl pl-10 pr-10 py-2.5 focus:outline-none focus:ring-1 focus:ring-primary/50 shadow-sm" />
-                                        {chatSearchQuery.trim() && (
-                                            <button onClick={() => setChatSearchQuery("")} className="p-1.5 text-muted-foreground hover:text-foreground absolute right-2.5 top-1/2 -translate-y-1/2"><X className="w-4 h-4" /></button>
+                                    <div className="flex items-center gap-0.5 md:gap-1 relative" ref={topMenuRef}>
+                                        <button onClick={() => setShowSearchInput(true)} className="p-2 md:p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors">
+                                            <Search className="w-5 h-5" />
+                                        </button>
+
+                                        {!activeCall && (
+                                            <button onClick={initiateVoiceCall} className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 text-[13px] md:text-[14px] font-bold text-white bg-[#6B66FF] hover:bg-[#5A55E5] rounded-xl transition-all active:scale-95 shadow-sm mx-0.5 md:mx-1">
+                                                <Phone className="w-4 h-4 fill-current" /> <span className="hidden sm:inline">Call</span>
+                                            </button>
+                                        )}
+
+                                        <button onClick={() => setShowTopMenu(!showTopMenu)} className="p-2 md:p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors">
+                                            <MoreVertical className="w-5 h-5" />
+                                        </button>
+
+                                        {showTopMenu && (
+                                            <div className="absolute top-12 right-0 w-44 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-30">
+                                                <button onClick={() => handleChatAction('media')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><ImageIcon className="w-4 h-4 text-blue-500" /> Media</button>
+                                                <button onClick={() => handleChatAction('docs')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><FileText className="w-4 h-4 text-amber-500" /> Docs</button>
+                                                <button onClick={() => handleChatAction('links')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><LinkIcon className="w-4 h-4 text-emerald-500" /> Links</button>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
                             )}
 
                             {/* Message Feed */}
-                            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar relative bg-linear-to-b from-[#f0f2f5] to-[#e5e7eb] dark:from-[#0B0D12] dark:to-[#0F1115]">
+                            <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 custom-scrollbar relative bg-linear-to-b from-[#f0f2f5] to-[#e5e7eb] dark:from-[#0B0D12] dark:to-[#0F1115]">
                                 <div className="relative z-10 flex flex-col space-y-4">
                                     {displayedMessages.length === 0 ? (
                                         <div className="h-full flex flex-col items-center justify-center text-muted-foreground mt-20">
-                                            <p className="text-sm font-medium bg-card/80 px-4 py-2 rounded-lg shadow-sm">Send a message to start the conversation.</p>
+                                            <p className="text-sm font-medium bg-card/80 px-4 py-2 rounded-lg shadow-sm text-center mx-4">Send a message to start the conversation.</p>
                                         </div>
                                     ) : (
                                         displayedMessages.map((msg, idx) => {
@@ -801,19 +857,21 @@ const SharedChat = () => {
                                                     onTouchEnd={handleTouchEnd}
                                                     onTouchMove={handleTouchEnd}
                                                 >
-                                                    <div className={`relative max-w-[85%] sm:max-w-[65%] px-3.5 py-2 shadow-sm cursor-pointer select-none ${isMe ? 'bg-[#6B66FF] text-white rounded-2xl rounded-tr-sm shadow-[0_4px_14px_-6px_rgba(var(--primary),0.3)]' : 'bg-card dark:bg-[#1C1F26] text-foreground rounded-2xl rounded-tl-sm border border-border/50 shadow-sm'}`}>
+                                                    <div className={`relative max-w-[85%] sm:max-w-[75%] md:max-w-[65%] px-3 py-2 shadow-sm cursor-pointer select-none ${isMe ? 'bg-[#6B66FF] text-white rounded-2xl rounded-tr-sm shadow-[0_4px_14px_-6px_rgba(var(--primary),0.3)]' : 'bg-card dark:bg-[#1C1F26] text-foreground rounded-2xl rounded-tl-sm border border-border/50 shadow-sm'}`}>
                                                         {msg.mediaType === 'image' && msg.mediaUrl && <img src={msg.mediaUrl} alt="attachment" className="max-w-full rounded-xl mb-1 object-cover hover:opacity-90 transition-transform" style={{ maxHeight: '280px' }} />}
                                                         {msg.mediaType === 'video' && msg.mediaUrl && <video src={msg.mediaUrl} controls className="max-w-full rounded-xl mb-1" style={{ maxHeight: '280px' }} />}
                                                         {msg.mediaType === 'document' && msg.mediaUrl && (
                                                             <div className="flex items-center gap-2 bg-black/10 dark:bg-black/20 p-2 rounded-lg mb-1">
-                                                                <FileCheck className="w-5 h-5" />
-                                                                <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="text-sm hover:underline font-medium">View Document</a>
+                                                                <FileCheck className="w-5 h-5 shrink-0" />
+                                                                <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="text-sm hover:underline font-medium truncate">View Document</a>
                                                             </div>
                                                         )}
                                                         {msg.text && <p className="text-[14.5px] leading-snug whitespace-pre-wrap wrap-break-word">{msg.text}</p>}
+
+                                                        {/* Status Ticks & Timestamp */}
                                                         <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] font-medium uppercase ${isMe ? 'text-white/80' : 'text-muted-foreground/80'}`}>
                                                             <span>{formatTime(msg.createdAt || msg.timestamp)}</span>
-                                                            {isMe && <CheckCheck className="w-3.5 h-3.5" />}
+                                                            {isMe && renderMessageStatus(msg)}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -825,7 +883,7 @@ const SharedChat = () => {
                             </div>
 
                             {/* Message Prompt */}
-                            <div className="px-4 py-3 bg-card dark:bg-[#13151A] border-t border-border/40 shrink-0 z-20 sticky bottom-0">
+                            <div className="p-2.5 sm:p-3 bg-card dark:bg-[#13151A] border-t border-border/40 shrink-0 z-20 sticky bottom-0">
                                 <form onSubmit={handleSendMessage} className="flex items-end gap-2 relative">
                                     <div className="relative" ref={attachMenuRef}>
                                         <input type="file" multiple accept="image/*, video/*" className="hidden" ref={fileInputRef} onChange={(e) => handleMediaUpload(e, { compress: true, maxCount: 5, maxSizeCombinedMb: 50 })} />
@@ -833,20 +891,20 @@ const SharedChat = () => {
                                         <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={(e) => handleMediaUpload(e, { compress: true, maxCount: 1, maxSizeCombinedMb: 50 })} />
 
                                         {showAttachMenu && (
-                                            <div className="absolute bottom-12 left-0 w-48 bg-card border border-border shadow-2xl rounded-2xl p-1.5 flex flex-col gap-1 z-30">
+                                            <div className="absolute bottom-12 left-0 w-48 bg-card border border-border shadow-2xl rounded-2xl p-1.5 flex flex-col gap-1 z-30 animate-in zoom-in-95 duration-200">
                                                 <button type="button" onClick={() => { setShowAttachMenu(false); cameraInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center"><Camera className="w-4 h-4" /></div> Camera</button>
                                                 <button type="button" onClick={() => { setShowAttachMenu(false); fileInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><ImageIcon className="w-4 h-4" /></div> Photos & Videos</button>
                                                 <button type="button" onClick={() => { setShowAttachMenu(false); docInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center"><FileCheck className="w-4 h-4" /></div> Document</button>
                                             </div>
                                         )}
-                                        <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} disabled={isUploading} className="p-3 text-muted-foreground hover:bg-muted rounded-full shrink-0 disabled:opacity-50">
+                                        <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} disabled={isUploading} className="p-2.5 sm:p-3 text-muted-foreground hover:bg-muted rounded-full shrink-0 disabled:opacity-50 transition-colors">
                                             {isUploading ? <Loader2 className="w-5 h-5 animate-spin text-primary" /> : <Paperclip className="w-5 h-5" />}
                                         </button>
                                     </div>
-                                    <div className="flex-1 bg-muted/50 dark:bg-[#1A1D24] rounded-2xl flex items-center pr-1.5 focus-within:ring-1 focus-within:ring-primary/30 transition-all">
-                                        <textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 max-h-32 min-h-12 bg-transparent border-none focus:outline-none focus:ring-0 resize-none py-3.5 px-4 text-[15px] text-foreground placeholder:text-muted-foreground/70 custom-scrollbar" rows="1" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} />
-                                        <button type="submit" disabled={!newMessage.trim() && !isUploading} className={`p-2 rounded-full transition-all shrink-0 ${newMessage.trim() ? 'bg-[#6B66FF] text-white hover:bg-[#5A55E5]' : 'bg-transparent text-muted-foreground'}`}>
-                                            <Send className="w-5 h-5" style={{ marginLeft: newMessage.trim() ? '2px' : '0' }} />
+                                    <div className="flex-1 bg-muted/50 dark:bg-[#1A1D24] rounded-2xl flex items-center pr-1.5 focus-within:ring-1 focus-within:ring-primary/30 transition-all min-w-0">
+                                        <textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 max-h-28 min-h-11 bg-transparent border-none focus:outline-none focus:ring-0 resize-none py-3 px-3 text-[14.5px] sm:text-[15px] text-foreground placeholder:text-muted-foreground/70 custom-scrollbar" rows="1" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} />
+                                        <button type="submit" disabled={!newMessage.trim() && !isUploading} className={`p-2 rounded-full transition-all shrink-0 ${newMessage.trim() ? 'bg-[#6B66FF] text-white hover:bg-[#5A55E5] scale-100' : 'bg-transparent text-muted-foreground scale-95'}`}>
+                                            <Send className="w-4.5 h-4.5 sm:w-5 sm:h-5" style={{ marginLeft: newMessage.trim() ? '2px' : '0' }} />
                                         </button>
                                     </div>
                                 </form>
@@ -856,8 +914,8 @@ const SharedChat = () => {
                         {/* Shared Content Overlay */}
                         {sharedContentView && (
                             <div className="absolute inset-0 z-40 bg-background/95 backdrop-blur-md flex flex-col animate-in fade-in duration-300">
-                                <div className="h-17.5 px-4 sm:px-5 border-b border-border/40 flex items-center gap-4 shrink-0 bg-card/50">
-                                    <button onClick={() => setSharedContentView(null)} className="p-2 -ml-2 text-muted-foreground hover:bg-muted rounded-full">
+                                <div className="h-16 md:h-17.5 px-3 sm:px-5 border-b border-border/40 flex items-center gap-3 md:gap-4 shrink-0 bg-card/50">
+                                    <button onClick={() => setSharedContentView(null)} className="p-2 -ml-1 text-muted-foreground hover:bg-muted rounded-full">
                                         <ArrowLeft className="w-5 h-5" />
                                     </button>
                                     <h2 className="text-lg font-bold text-foreground capitalize flex items-center gap-2">
@@ -866,21 +924,21 @@ const SharedChat = () => {
                                         {sharedContentView === 'links' && <><LinkIcon className="w-5 h-5 text-emerald-500" /> Shared Links</>}
                                     </h2>
                                 </div>
-                                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                                <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
                                     {/* Map content... */}
                                 </div>
                             </div>
                         )}
 
                         {/* Profile Sidebar */}
-                        <div className={`absolute right-0 top-0 h-full w-full sm:w-[320px] lg:w-95 bg-card border-l border-border/50 transform transition-transform duration-300 flex flex-col z-40 ${showProfileInfo ? 'translate-x-0 shadow-2xl' : 'translate-x-full'}`}>
-                            <div className="h-17.5 px-4 flex items-center gap-4 border-b border-border/40 shrink-0">
-                                <button onClick={() => setShowProfileInfo(false)} className="p-2 -ml-2 text-muted-foreground hover:bg-muted rounded-full"><X className="w-5 h-5" /></button>
+                        <div className={`absolute right-0 top-0 h-full w-full sm:w-[320px] lg:w-87.5 bg-card border-l border-border/50 transform transition-transform duration-300 flex flex-col z-40 ${showProfileInfo ? 'translate-x-0 shadow-2xl' : 'translate-x-full'}`}>
+                            <div className="h-16 md:h-17.5 px-3 md:px-4 flex items-center gap-3 border-b border-border/40 shrink-0">
+                                <button onClick={() => setShowProfileInfo(false)} className="p-2 -ml-1 text-muted-foreground hover:bg-muted rounded-full"><X className="w-5 h-5" /></button>
                                 <h2 className="text-lg font-semibold text-foreground">Contact Info</h2>
                             </div>
                             <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center pt-8 pb-4 space-y-6">
-                                <div className="w-44 h-44">
-                                    {activeChat.profilePicture ? <img src={activeChat.profilePicture} className="w-full h-full rounded-full object-cover shadow-lg border-2 border-background" /> : <div className="w-full h-full rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-6xl shadow-lg border-2 border-background">{activeChat.name?.charAt(0)}</div>}
+                                <div className="w-36 h-36 md:w-44 md:h-44">
+                                    {activeChat.profilePicture ? <img src={activeChat.profilePicture} className="w-full h-full rounded-full object-cover shadow-lg border-2 border-background" /> : <div className="w-full h-full rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-5xl md:text-6xl shadow-lg border-2 border-background">{activeChat.name?.charAt(0)}</div>}
                                 </div>
                                 <div className="text-center px-6 w-full border-b border-border/40 pb-6">
                                     <h2 className="text-2xl font-bold text-foreground tracking-tight">{activeChat.name}</h2>
@@ -894,13 +952,13 @@ const SharedChat = () => {
                     <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-background dark:bg-[#0B0D12] animate-in fade-in duration-700">
                         <div className="relative mb-8">
                             <div className="absolute inset-0 bg-primary/5 dark:bg-primary/10 rounded-full blur-2xl scale-150"></div>
-                            <div className="w-28 h-28 bg-card/80 dark:bg-[#13151A]/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg border border-border/30 relative z-10">
-                                <MessageSquare className="w-11 h-11 text-primary/60 dark:text-primary/40" />
+                            <div className="w-24 h-24 md:w-28 md:h-28 bg-card/80 dark:bg-[#13151A]/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg border border-border/30 relative z-10">
+                                <MessageSquare className="w-10 h-10 md:w-11 md:h-11 text-primary/60 dark:text-primary/40" />
                             </div>
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 border border-primary/10 rounded-full animate-ping" style={{ animationDuration: '3s' }}></div>
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 md:w-40 md:h-40 border border-primary/10 rounded-full animate-ping" style={{ animationDuration: '3s' }}></div>
                         </div>
-                        <h2 className="text-2xl font-black text-foreground tracking-tight z-10">Communication Hub</h2>
-                        <p className="text-[15px] mt-3 font-medium opacity-70 max-w-[320px] text-center z-10 leading-relaxed">
+                        <h2 className="text-xl md:text-2xl font-black text-foreground tracking-tight z-10">Communication Hub</h2>
+                        <p className="text-[14px] md:text-[15px] mt-2 md:mt-3 font-medium opacity-70 max-w-70 md:max-w-[320px] text-center z-10 leading-relaxed">
                             Select a team member from the sidebar to send direct messages, compress images, and start voice calls.
                         </p>
                     </div>
