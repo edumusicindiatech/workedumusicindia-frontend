@@ -13,7 +13,7 @@ import CallOverlay from "./CallOverlay";
 import axios from "axios";
 
 // --- IMPORT BACKGROUND IMAGES ---
-import chatBgLight from '../../assets/chat-light.jpg';
+import chatBgLight from '../../assets/chat-light.jpg'; 
 import chatBgDark from '../../assets/chat-dark.jpg';
 
 // --- GLOBAL SOCKET SINGLETON ---
@@ -112,7 +112,6 @@ const isWithin30Mins = (timestamp) => {
 // --- NEW: URL PARSER HELPER ---
 const renderTextWithLinks = (text, isMe) => {
     if (!text) return null;
-    // Regex to match URLs starting with http:// or https://
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const parts = text.split(urlRegex);
 
@@ -125,7 +124,7 @@ const renderTextWithLinks = (text, isMe) => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`underline font-medium transition-opacity hover:opacity-80 ${isMe ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`}
-                    onClick={(e) => e.stopPropagation()} // Prevents message selection when clicking the link
+                    onClick={(e) => e.stopPropagation()}
                 >
                     {part}
                 </a>
@@ -172,6 +171,7 @@ const SharedChat = () => {
     // UI States
     const [isUploading, setIsUploading] = useState(false);
     const [isLoadingChats, setIsLoadingChats] = useState(true);
+    const [isFetchingMessages, setIsFetchingMessages] = useState(false); // FIX: Loading state for chat window
     const [searchQuery, setSearchQuery] = useState("");
     const [showProfileInfo, setShowProfileInfo] = useState(false);
 
@@ -392,6 +392,7 @@ const SharedChat = () => {
 
     const fetchMessages = async (recipientId) => {
         try {
+            setIsFetchingMessages(true); // START SHIMMER
             setMessages([]);
             const res = await api.get(`/chat/history/${currentUserId}/${recipientId}`).catch(() => ({ data: { success: true, data: [] } }));
             if (res.data.success) {
@@ -401,7 +402,11 @@ const SharedChat = () => {
             setShowProfileInfo(false);
             setSharedContentView(null);
             scrollToBottom();
-        } catch (error) { console.error("Failed to load messages:", error); }
+        } catch (error) {
+            console.error("Failed to load messages:", error);
+        } finally {
+            setIsFetchingMessages(false); // END SHIMMER
+        }
     };
 
     // --- MESSAGE ACTIONS ---
@@ -678,7 +683,6 @@ const SharedChat = () => {
     };
 
     const toggleSelection = (msg) => {
-        // ALLOWING TOMBSTONES TO BE SELECTED (for "delete for me")
         const id = msg._id || msg.id;
         setSelectedMessages(prev => prev.includes(id) ? prev.filter(mId => mId !== id) : [...prev, id]);
     };
@@ -695,7 +699,6 @@ const SharedChat = () => {
         setContextMenu(null);
     };
 
-    // --- FIX: CONTEXT MENU SCREEN BOUNDARY DETECTION ---
     const handleContextMenu = (e, msg) => {
         e.preventDefault();
         if (isSelectionMode) {
@@ -704,8 +707,7 @@ const SharedChat = () => {
         }
         const clientX = e.clientX || (e.touches && e.touches.length > 0 ? e.touches[0].clientX : window.innerWidth / 2);
         const clientY = e.clientY || (e.touches && e.touches.length > 0 ? e.touches[0].clientY : window.innerHeight / 2);
-
-        // Ensure menu doesn't spawn off the right edge of the screen (assuming menu is ~200px wide)
+        
         const menuWidth = 200;
         const safeX = (clientX + menuWidth > window.innerWidth) ? (window.innerWidth - menuWidth - 20) : clientX;
 
@@ -784,7 +786,7 @@ const SharedChat = () => {
 
     const chatMediaFiles = visibleMessages.filter(m => m.mediaUrl && !m.isDeletedForEveryone && (m.mediaType === 'image' || m.mediaType === 'video' || m.mediaType === 'document'));
 
-    // --- NEW: MEDIA SWIPE HANDLERS ---
+    // --- MEDIA SWIPE HANDLERS ---
     const onMediaTouchStart = (e) => {
         setTouchEndX(null);
         setTouchStartX(e.targetTouches[0].clientX);
@@ -811,7 +813,7 @@ const SharedChat = () => {
         }
     };
 
-    // Action Bar Evaluators (Filtering out deleted messages for copy/forward/everyone actions)
+    // Action Bar Evaluators 
     const selectedMsgsData = visibleMessages.filter(m => selectedMessages.includes(m._id || m.id));
     const canCopy = selectedMsgsData.some(m => m.text && !m.isDeletedForEveryone);
     const canForward = selectedMsgsData.some(m => !m.isDeletedForEveryone);
@@ -1003,7 +1005,7 @@ const SharedChat = () => {
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar px-2 pb-4 space-y-0.5">
-                        {/* FIX: YOUTUBE-STYLE SHIMMER SKELETON */}
+                        {/* YOUTUBE-STYLE SHIMMER SKELETON */}
                         {isLoadingChats ? (
                             <div className="space-y-3 p-2">
                                 {Array.from({ length: 6 }).map((_, i) => (
@@ -1050,8 +1052,8 @@ const SharedChat = () => {
                 <div className={`flex-1 flex-col h-full relative overflow-hidden transition-all duration-300 ${!activeChat ? 'hidden md:flex' : 'flex animate-in slide-in-from-right-4 md:animate-none'}`}>
                     {activeChat ? (
                         <div className="flex-1 flex w-full h-full relative bg-[#EBEBEB] dark:bg-[#0B0D12]">
-
-                            {/* --- FIX: CHAT BACKGROUND IMAGES --- */}
+                            
+                            {/* CHAT BACKGROUND IMAGES */}
                             <div className="absolute inset-0 z-0 pointer-events-none opacity-50 dark:opacity-30">
                                 <img src={chatBgLight} alt="" className="w-full h-full object-cover dark:hidden" />
                                 <img src={chatBgDark} alt="" className="w-full h-full object-cover hidden dark:block" />
@@ -1127,7 +1129,16 @@ const SharedChat = () => {
                                 {/* Message Feed - Removed Solid Background Colors to show image beneath */}
                                 <div className="flex-1 overflow-y-auto p-3 sm:p-6 custom-scrollbar relative">
                                     <div className="relative z-10 flex flex-col space-y-4 pb-2">
-                                        {displayedMessages.length === 0 ? (
+                                        {/* FIX: CHAT BUBBLE SHIMMER SKELETON */}
+                                        {isFetchingMessages ? (
+                                            <div className="flex flex-col gap-4 p-4 w-full h-full justify-end opacity-70">
+                                                <div className="self-start w-3/4 sm:w-1/2 bg-muted/60 dark:bg-white/5 h-16 rounded-2xl rounded-tl-sm animate-pulse"></div>
+                                                <div className="self-end w-2/3 sm:w-1/2 bg-primary/20 h-12 rounded-2xl rounded-tr-sm animate-pulse"></div>
+                                                <div className="self-start w-1/2 sm:w-1/3 bg-muted/60 dark:bg-white/5 h-20 rounded-2xl rounded-tl-sm animate-pulse"></div>
+                                                <div className="self-end w-3/4 sm:w-2/3 bg-primary/20 h-24 rounded-2xl rounded-tr-sm animate-pulse"></div>
+                                                <div className="self-start w-2/3 sm:w-1/2 bg-muted/60 dark:bg-white/5 h-12 rounded-2xl rounded-tl-sm animate-pulse"></div>
+                                            </div>
+                                        ) : displayedMessages.length === 0 ? (
                                             <div className="h-full flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-500 m-auto mt-10">
                                                 <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 shadow-inner border border-primary/20 backdrop-blur-sm">
                                                     <MessageSquare className="w-10 h-10 text-primary" />
@@ -1314,7 +1325,7 @@ const SharedChat = () => {
                                                 {showAttachMenu && (
                                                     <div className="absolute bottom-full mb-2 left-0 w-48 bg-card border border-border shadow-2xl rounded-2xl p-1.5 flex flex-col gap-1 z-30 animate-in zoom-in-95 duration-200 origin-bottom-left">
                                                         <button type="button" onClick={() => { setShowAttachMenu(false); cameraInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center"><Camera className="w-4 h-4" /></div> Camera</button>
-                                                        <button type="button" onClick={() => { setShowAttachMenu(false); fileInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><ImageIcon className="w-4 h-4" /></div> Photos</button>
+                                                        <button type="button" onClick={() => { setShowAttachMenu(false); fileInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><ImageIcon className="w-4 h-4" /></div> Photos & Videos</button>
                                                         <button type="button" onClick={() => { setShowAttachMenu(false); docInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center"><FileCheck className="w-4 h-4" /></div> Document</button>
                                                     </div>
                                                 )}
