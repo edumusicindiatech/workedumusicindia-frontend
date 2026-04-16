@@ -81,6 +81,9 @@ const AdminSidebar = () => {
     const localStreamRef = useRef(null);
     const mobileMenuRef = useRef(null);
     const currentPeerRef = useRef(null);
+    
+    // FIX APPLIED HERE: Glare/Race Condition Lock
+    const isReadyForRenegotiation = useRef(false);
 
     const pathnameRef = useRef(location.pathname);
     useEffect(() => { pathnameRef.current = location.pathname; }, [location.pathname]);
@@ -175,18 +178,20 @@ const AdminSidebar = () => {
         };
         pc.ontrack = (e) => setRemoteStream(e.streams[0]);
 
-        // Renegotiation for Upgrades & Screen Share
+        // FIX APPLIED HERE: Glare Protection
         pc.onnegotiationneeded = async () => {
+            if (!isReadyForRenegotiation.current || pc.signalingState !== "stable") return;
             try {
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
                 const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
-                if(to) socket.emit('renegotiate', { to, signal: offer });
+                if(to) socket.emit('renegotiate', { to, signal: pc.localDescription });
             } catch (err) { console.error("Negotiation error", err); }
         };
     };
 
     const cleanupCall = () => {
+        isReadyForRenegotiation.current = false; // FIX APPLIED
         if (localStreamRef.current) localStreamRef.current.getTracks().forEach(track => track.stop());
         if (pcRef.current) pcRef.current.close();
         pcRef.current = null;
@@ -225,6 +230,8 @@ const AdminSidebar = () => {
         await pc.setLocalDescription(answer);
 
         socket.emit('answer_call', { to: callData.from, signal: answer });
+        
+        isReadyForRenegotiation.current = true; // FIX APPLIED
         setGlobalIncomingCall(null);
         pauseAudio('incoming');
         setIsCallAccepted(true);
@@ -264,6 +271,8 @@ const AdminSidebar = () => {
                 callerName: user.name, profilePicture: user.profilePicture,
                 signalData: offer, callType: actualType
             });
+            
+            isReadyForRenegotiation.current = true; // FIX APPLIED
         };
 
         window.addEventListener('initiate_global_call', handleInitiateCall);
@@ -306,7 +315,7 @@ const AdminSidebar = () => {
         setVideoUpgradeStatus('idle');
     };
 
-    // --- SCREEN SHARE LOGIC ---
+    // --- FIX APPLIED HERE: SCREEN SHARE LOGIC ---
     const handleToggleScreenShare = async () => {
         try {
             if (!isScreenSharing) {
@@ -320,7 +329,9 @@ const AdminSidebar = () => {
                     pcRef.current.addTrack(screenVideoTrack, localStreamRef.current);
                 }
 
-                const newLocalStream = new MediaStream([...localStreamRef.current.getAudioTracks(), screenVideoTrack]);
+                const audioTracks = localStreamRef.current.getAudioTracks();
+                const newLocalStream = new MediaStream([...audioTracks, screenVideoTrack]);
+                
                 localStreamRef.current = newLocalStream;
                 setLocalStreamState(newLocalStream);
                 setIsScreenSharing(true);

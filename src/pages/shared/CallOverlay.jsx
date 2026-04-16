@@ -34,11 +34,14 @@ const CallOverlay = ({
         }
     }, [isMuted, localStream]);
 
+    // FIX APPLIED HERE: Protect screen sharing track from being muted
     useEffect(() => {
         if (localStream) {
             localStream.getVideoTracks().forEach(track => {
-                if (!isScreenSharing || track.label.includes("camera") || track.label.includes("Integrated")) {
-                     track.enabled = !isVideoMuted;
+                if (isScreenSharing) {
+                    track.enabled = true; // Force on for screen share
+                } else {
+                    track.enabled = !isVideoMuted;
                 }
             });
         }
