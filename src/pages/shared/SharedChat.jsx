@@ -426,7 +426,7 @@ const SharedChat = () => {
     const fetchConversations = async () => {
         try {
             setIsLoadingChats(true);
-            const endpoint = user.role === 'Employee' ? '/employee/peers' : '/admin/employees';
+            const endpoint = user.role === 'Employee' ? '/employee/peers' : '/admin/chat-contacts';
             const res = await api.get(endpoint);
             if (res.data.success) {
                 const peers = res.data.data.filter(p => String(p._id || p.id) !== String(currentUserId));
