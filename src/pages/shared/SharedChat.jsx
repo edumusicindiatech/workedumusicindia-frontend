@@ -188,6 +188,7 @@ const SharedChat = () => {
     const [showSearchInput, setShowSearchInput] = useState(false);
     const [chatSearchQuery, setChatSearchQuery] = useState("");
     const [sharedContentView, setSharedContentView] = useState(null);
+    const [showClearChatModal, setShowClearChatModal] = useState(false);
 
     // WHATSAPP STATES
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -233,9 +234,9 @@ const SharedChat = () => {
     const moveToTop = useCallback((userId) => {
         setConversations(prev => {
             const index = prev.findIndex(c => String(c._id || c.id) === String(userId));
-            if (index === -1) return prev; 
-            if (index === 0) return [...prev]; // Force a fresh array reference to ensure UI re-renders
-            
+            if (index === -1) return prev;
+            if (index === 0) return [...prev];
+
             const updated = [...prev];
             const [chat] = updated.splice(index, 1);
             updated.unshift(chat);
@@ -309,15 +310,15 @@ const SharedChat = () => {
 
         const handleOnlineUsers = (users) => setOnlineUsers(users);
 
+        // --- NEW: Handle Received Message (Moves to top & Stores Missed Offline) ---
         const handleReceiveMessage = (data) => {
             const currentChat = activeChatRef.current;
-            const senderIdStr = String(data.senderId);
+            const senderIdStr = String(data.senderId || data.sender);
             const isActivelyChatting = currentChat && (senderIdStr === String(currentChat._id || currentChat.id));
 
             socket.emit("message_delivered", { senderId: data.senderId, recipientId: currentUserId });
 
-            // Push sender to top of recent chats
-            moveToTop(data.senderId);
+            moveToTop(senderIdStr);
 
             if (isActivelyChatting) {
                 setMessages((prev) => [...prev, data]);
@@ -328,8 +329,17 @@ const SharedChat = () => {
                     playAudio('message');
                     toast.success(`New message received`, { icon: '💬', id: `chat-msg-${data.senderId}` });
                 }
-                // Safely update unread mapping using string cast keys to avoid bugs
                 setUnreadMap(prev => ({ ...prev, [senderIdStr]: (prev[senderIdStr] || 0) + 1 }));
+
+                // Save to offline cache to persist through unmounts
+                try {
+                    const missed = JSON.parse(localStorage.getItem('offline_missed_chats') || '{}');
+                    if (!missed[senderIdStr]) missed[senderIdStr] = [];
+                    if (!missed[senderIdStr].find(m => String(m._id || m.id) === String(data._id || data.id))) {
+                        missed[senderIdStr].push(data);
+                        localStorage.setItem('offline_missed_chats', JSON.stringify(missed));
+                    }
+                } catch (e) { }
             }
         };
 
@@ -420,11 +430,24 @@ const SharedChat = () => {
             const res = await api.get(endpoint);
             if (res.data.success) {
                 const peers = res.data.data.filter(p => String(p._id || p.id) !== String(currentUserId));
-                setConversations(peers);
 
-                // Strictly cast IDs to strings for the unread mapping payload
+                // --- FIX: Inject offline missed chats and sort ---
+                const missedChats = JSON.parse(localStorage.getItem('offline_missed_chats') || '{}');
                 const initialUnread = {};
-                peers.forEach(p => { if (p.unreadCount) initialUnread[String(p._id || p.id)] = p.unreadCount; });
+
+                peers.forEach(p => {
+                    const uid = String(p._id || p.id);
+                    const offlineCount = missedChats[uid] ? missedChats[uid].length : 0;
+                    const totalUnread = (p.unreadCount || 0) + offlineCount;
+                    p.unreadCount = totalUnread; // Override to force sort
+                    if (totalUnread > 0) {
+                        initialUnread[uid] = totalUnread;
+                    }
+                });
+
+                peers.sort((a, b) => (b.unreadCount || 0) - (a.unreadCount || 0));
+
+                setConversations(peers);
                 setUnreadMap(initialUnread);
             }
         } catch (error) { toast.error("Could not load contact list."); }
@@ -433,12 +456,30 @@ const SharedChat = () => {
 
     const fetchMessages = async (recipientId) => {
         try {
-            setIsFetchingMessages(true); 
+            setIsFetchingMessages(true);
             setMessages([]);
             const res = await api.get(`/chat/history/${currentUserId}/${recipientId}`).catch(() => ({ data: { success: true, data: [] } }));
             if (res.data.success) {
-                setMessages(res.data.data || []);
+                let fetchedMsgs = res.data.data || [];
+
+                // --- FIX: Inject offline missed messages ---
+                const missedChats = JSON.parse(localStorage.getItem('offline_missed_chats') || '{}');
+                if (missedChats[recipientId] && missedChats[recipientId].length > 0) {
+                    const existingIds = new Set(fetchedMsgs.map(m => String(m._id || m.id)));
+                    const uniqueMissed = missedChats[recipientId].filter(m => !existingIds.has(String(m._id || m.id)));
+
+                    fetchedMsgs = [...fetchedMsgs, ...uniqueMissed];
+
+                    // Clear from storage
+                    delete missedChats[recipientId];
+                    localStorage.setItem('offline_missed_chats', JSON.stringify(missedChats));
+                }
+
+                setMessages(fetchedMsgs);
                 socket.emit("mark_chat_seen", { senderId: recipientId, recipientId: currentUserId });
+
+                // Also clear the unread map for this user
+                setUnreadMap(prev => ({ ...prev, [recipientId]: 0 }));
             }
             setShowProfileInfo(false);
             setSharedContentView(null);
@@ -446,7 +487,7 @@ const SharedChat = () => {
         } catch (error) {
             console.error("Failed to load messages:", error);
         } finally {
-            setIsFetchingMessages(false); 
+            setIsFetchingMessages(false);
         }
     };
 
@@ -480,7 +521,9 @@ const SharedChat = () => {
 
                 resetContextState();
                 toast.success("Message edited");
-                moveToTop(activeChat._id || activeChat.id); 
+
+                // Instantly move edited chat to top
+                moveToTop(activeChat._id || activeChat.id);
             } catch (err) { toast.error("Failed to edit message"); }
             return;
         }
@@ -505,6 +548,7 @@ const SharedChat = () => {
         scrollToBottom();
         playAudio('sent');
 
+        // FIX: Instantly move the person you just sent a message to to the top of the list
         moveToTop(activeChat._id || activeChat.id);
 
         socket.emit("send_message", payload);
@@ -541,7 +585,7 @@ const SharedChat = () => {
             for (let i = 0; i < files.length; i++) {
                 let fileToUpload = files[i];
                 let safeName = fileToUpload.name || `capture_${Date.now()}_${i}.jpg`;
-                
+
                 // Ultimate Fallback Mime-Type Parsing
                 let mimeType = fileToUpload.type;
                 if (!mimeType) {
@@ -551,7 +595,7 @@ const SharedChat = () => {
                     else if (safeName.endsWith('.doc') || safeName.endsWith('.docx')) mimeType = 'application/msword';
                     else if (safeName.endsWith('.zip')) mimeType = 'application/zip';
                     else if (safeName.endsWith('.rar')) mimeType = 'application/x-rar-compressed';
-                    else mimeType = 'application/octet-stream'; 
+                    else mimeType = 'application/octet-stream';
                 }
 
                 let type = asDocument ? 'document' : (mimeType.startsWith('image/') ? 'image' : (mimeType.startsWith('video/') ? 'video' : 'document'));
@@ -587,12 +631,13 @@ const SharedChat = () => {
                 setDownloadedMedia(prev => new Set(prev).add(tempId));
                 setMessages((prev) => [...prev, optimisticPayload]);
                 scrollToBottom();
-                
+
+                // Move chat to top when starting a media upload
                 moveToTop(activeChat._id || activeChat.id);
 
                 try {
                     const urlRes = await api.post('/chat/generate-presigned-url', {
-                        fileType: mimeType, 
+                        fileType: mimeType,
                         originalName: finalFile.name || safeName
                     });
 
@@ -726,7 +771,7 @@ const SharedChat = () => {
                     }
                     await api.post('/chat/message', payload);
                 }
-                moveToTop(recipientId); 
+                moveToTop(recipientId);
             }
             toast.success("Forwarded successfully", { id: loadingToast });
         } catch (error) { toast.error("Failed to forward", { id: loadingToast }); }
@@ -790,7 +835,7 @@ const SharedChat = () => {
             if (type === 'everyone') {
                 await api.put('/chat/message/delete-everyone', { messageIds: ids, userId: currentUserId });
                 setMessages(prev => prev.map(m => ids.includes(m._id || m.id) ? { ...m, text: "", mediaUrl: "", isDeletedForEveryone: true } : m));
-                
+
                 ids.forEach(id => {
                     socket.emit("delete_message", { messageId: id, recipientId: activeChat._id || activeChat.id });
                 });
@@ -802,7 +847,6 @@ const SharedChat = () => {
         } catch (e) { toast.error("Delete failed"); }
     };
 
-    // --- UPDATED CALL LOGIC ---
     const initiateCall = (type) => {
         setShowCallMenu(false);
         if (!activeChat) return;
@@ -814,9 +858,14 @@ const SharedChat = () => {
         setSharedContentView(action);
     };
 
-    const handleClearChat = async () => {
-        if (!window.confirm(`Clear entire chat with ${activeChat.name}?`)) return;
+    // --- FIX: Custom WhatsApp Style Clear Chat Modal Trigger ---
+    const handleClearChatClick = () => {
         setShowTopMenu(false);
+        setShowClearChatModal(true);
+    };
+
+    const executeClearChat = async () => {
+        setShowClearChatModal(false);
         try {
             await api.put(`/chat/clear/${currentUserId}/${activeChat._id || activeChat.id}`);
             setMessages([]);
@@ -1023,6 +1072,25 @@ const SharedChat = () => {
                 </div>
             )}
 
+            {/* --- FIX: CUSTOM CLEAR CHAT MODAL --- */}
+            {showClearChatModal && (
+                <div className="fixed inset-0 z-1000000 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+                    <div className="bg-card dark:bg-[#1f2c33] w-full max-w-sm rounded-3xl shadow-2xl p-6 flex flex-col items-center gap-4 animate-in zoom-in-95 border border-border/50">
+                        <div className="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center mb-2">
+                            <Trash className="w-8 h-8 text-rose-500" />
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-xl font-bold text-foreground mb-1">Clear this chat?</h3>
+                            <p className="text-sm text-muted-foreground">Messages will be removed from your view. This cannot be undone.</p>
+                        </div>
+                        <div className="flex gap-3 w-full mt-4">
+                            <button onClick={() => setShowClearChatModal(false)} className="flex-1 py-3 bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-xl transition-colors">Cancel</button>
+                            <button onClick={executeClearChat} className="flex-1 py-3 bg-rose-500 hover:bg-rose-600 text-white font-semibold rounded-xl transition-colors">Clear chat</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="fixed top-16 inset-x-0 bottom-16 xl:bottom-0 z-30 flex bg-background dark:bg-[#0B0D12] overflow-hidden animate-in fade-in duration-300">
 
                 {/* DELETE CONTEXT MENU */}
@@ -1100,6 +1168,8 @@ const SharedChat = () => {
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <p className={`text-[13px] truncate font-medium ${unreadCount > 0 ? 'text-foreground/80' : 'text-muted-foreground'}`}>{chatUser.role || 'Employee'}</p>
+
+                                                {/* FIX: Unread Badge styled correctly inside the card */}
                                                 {unreadCount > 0 && <span className="w-5 h-5 rounded-full bg-[#25D366] text-white text-[10px] font-bold flex items-center justify-center shrink-0 ml-2 animate-in zoom-in duration-200 shadow-sm">{unreadCount > 9 ? '9+' : unreadCount}</span>}
                                             </div>
                                         </div>
@@ -1145,7 +1215,7 @@ const SharedChat = () => {
                                     </div>
                                 ) : (
                                     <div className="h-14 sm:h-16 md:h-17.5 px-1.5 sm:px-5 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center justify-between shrink-0 z-20 sticky top-0 w-full">
-                                        
+
                                         {/* LEFT SECTION (Profile) - ADDED flex-1 min-w-0 TO PREVENT PUSHING RIGHT SIDE */}
                                         <div className="flex items-center flex-1 gap-1.5 sm:gap-3 min-w-0 cursor-pointer pr-2" onClick={() => setShowProfileInfo(true)}>
                                             <button onClick={(e) => { e.stopPropagation(); setActiveChat(null); }} className="md:hidden p-1.5 text-muted-foreground hover:bg-muted rounded-full shrink-0">
@@ -1204,7 +1274,9 @@ const SharedChat = () => {
                                                     <button onClick={() => handleChatAction('media')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><ImageIcon className="w-4 h-4 text-blue-500" /> Media</button>
                                                     <button onClick={() => handleChatAction('docs')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><FileText className="w-4 h-4 text-amber-500" /> Docs</button>
                                                     <button onClick={() => handleChatAction('links')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><LinkIcon className="w-4 h-4 text-emerald-500" /> Links</button>
-                                                    <button onClick={handleClearChat} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-rose-500/10 rounded-lg text-sm font-medium text-rose-500"><Trash className="w-4 h-4" /> Clear chat</button>
+
+                                                    {/* FIX: Opens custom modal instead of window.confirm */}
+                                                    <button onClick={handleClearChatClick} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-rose-500/10 rounded-lg text-sm font-medium text-rose-500"><Trash className="w-4 h-4" /> Clear chat</button>
                                                 </div>
                                             )}
                                         </div>
@@ -1425,7 +1497,7 @@ const SharedChat = () => {
                                         <button onClick={() => { setEditingMessage(null); setNewMessage(""); }} className="p-2 hover:bg-muted rounded-full"><X className="w-4 h-4" /></button>
                                     </div>
                                 )}
-                                
+
                                 {/* Added explicit w-full max-w-full to prevent input prompt overflow */}
                                 <div className="p-2 sm:p-3 bg-card dark:bg-[#13151A] border-t border-border/40 shrink-0 z-20 sticky bottom-0 w-full max-w-full">
                                     <form onSubmit={handleSendMessage} className="flex items-end gap-2 relative w-full">

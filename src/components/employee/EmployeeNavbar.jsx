@@ -87,6 +87,12 @@ const EmployeeNavbar = () => {
     useEffect(() => { pathnameRef.current = location.pathname; }, [location.pathname]);
     useEffect(() => { currentPeerRef.current = callPeer; }, [callPeer]);
 
+    // Instant Badge Reset Logic
+    useEffect(() => {
+        if (location.pathname.includes('/notifications')) setNotifCount(0);
+        if (location.pathname.includes('/chat')) setUnreadChatCount(0);
+    }, [location.pathname]);
+
     useEffect(() => {
         const handleVisibilityChange = () => { if (!document.hidden && pathnameRef.current.includes('/chat')) setUnreadChatCount(0); };
         document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -153,10 +159,8 @@ const EmployeeNavbar = () => {
         try {
             const newMode = facingMode === 'user' ? 'environment' : 'user';
             
-            // Stop old video tracks to release the camera hardware
             localStreamRef.current.getVideoTracks().forEach(t => t.stop());
 
-            // Request new camera with HD constraints to avoid low-res macro lenses
             const videoConstraints = { facingMode: { exact: newMode }, ...HQ_VIDEO_CONSTRAINTS };
             const fallbackConstraints = { facingMode: newMode, ...HQ_VIDEO_CONSTRAINTS };
 
@@ -346,10 +350,24 @@ const EmployeeNavbar = () => {
         if (socket.connected) socket.emit("join_room", currentUserId);
         socket.on("connect", () => socket.emit("join_room", currentUserId));
 
-        const handleIncomingChat = () => {
-            if (pathnameRef.current !== '/employee/chat' || document.hidden) {
+        // FIX: Caches missed messages to LocalStorage if chat is unmounted
+        const handleIncomingChat = (data) => {
+            if (!pathnameRef.current.includes('/chat') || document.hidden) {
                 setUnreadChatCount(prev => prev + 1);
+                playAudio('notification'); 
                 toast.success(`New chat message received`, { icon: '💬', id: 'new-chat-toast' });
+
+                if (data && (data.senderId || data.sender)) {
+                    try {
+                        const missed = JSON.parse(localStorage.getItem('offline_missed_chats') || '{}');
+                        const sid = String(data.senderId || data.sender);
+                        if (!missed[sid]) missed[sid] = [];
+                        if (!missed[sid].find(m => String(m._id || m.id) === String(data._id || data.id))) {
+                            missed[sid].push(data);
+                            localStorage.setItem('offline_missed_chats', JSON.stringify(missed));
+                        }
+                    } catch (e) { console.error(e); }
+                }
             }
         };
 
@@ -391,7 +409,7 @@ const EmployeeNavbar = () => {
 
         const handleNewNotification = () => {
             playAudio('notification');
-            if (pathnameRef.current !== '/employee/notifications') {
+            if (!pathnameRef.current.includes('/notifications')) {
                 setNotifCount(prev => prev + 1);
                 toast(t('navbar.new_notif_toast'), { icon: '🔔' });
             }
@@ -401,7 +419,7 @@ const EmployeeNavbar = () => {
             const { senderName, lat, lng } = data;
             playAudio('sos');
             if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 1000]);
-            if (pathnameRef.current !== '/employee/notifications') setNotifCount(prev => prev + 1);
+            if (!pathnameRef.current.includes('/notifications')) setNotifCount(prev => prev + 1);
 
             toast.custom(
                 (toastObj) => (
