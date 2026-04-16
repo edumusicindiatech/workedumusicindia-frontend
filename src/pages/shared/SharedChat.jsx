@@ -835,10 +835,6 @@ const SharedChat = () => {
             if (type === 'everyone') {
                 await api.put('/chat/message/delete-everyone', { messageIds: ids, userId: currentUserId });
                 setMessages(prev => prev.map(m => ids.includes(m._id || m.id) ? { ...m, text: "", mediaUrl: "", isDeletedForEveryone: true } : m));
-
-                ids.forEach(id => {
-                    socket.emit("delete_message", { messageId: id, recipientId: activeChat._id || activeChat.id });
-                });
             } else {
                 await api.put('/chat/message/delete-me', { messageIds: ids, userId: currentUserId });
                 setMessages(prev => prev.filter(m => !ids.includes(m._id || m.id)));
