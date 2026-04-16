@@ -109,7 +109,7 @@ const isWithin30Mins = (timestamp) => {
     return (Date.now() - new Date(timestamp).getTime()) <= 30 * 60 * 1000;
 };
 
-// --- NEW: URL PARSER HELPER ---
+// --- URL PARSER HELPER ---
 const renderTextWithLinks = (text, isMe) => {
     if (!text) return null;
     const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -229,6 +229,20 @@ const SharedChat = () => {
     const activeChatRef = useRef(activeChat);
     useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
 
+    // --- HELPER: MOVE CHAT TO TOP ---
+    const moveToTop = useCallback((userId) => {
+        setConversations(prev => {
+            const index = prev.findIndex(c => String(c._id || c.id) === String(userId));
+            if (index === -1) return prev; 
+            if (index === 0) return [...prev]; // Force a fresh array reference to ensure UI re-renders
+            
+            const updated = [...prev];
+            const [chat] = updated.splice(index, 1);
+            updated.unshift(chat);
+            return updated;
+        });
+    }, []);
+
     // --- INITIALIZE PERSISTENT MEDIA STATE ---
     useEffect(() => {
         const storedRevealed = JSON.parse(localStorage.getItem('downloadedMessages') || '[]');
@@ -297,9 +311,13 @@ const SharedChat = () => {
 
         const handleReceiveMessage = (data) => {
             const currentChat = activeChatRef.current;
-            const isActivelyChatting = currentChat && (data.senderId === currentChat._id || data.senderId === currentChat.id);
+            const senderIdStr = String(data.senderId);
+            const isActivelyChatting = currentChat && (senderIdStr === String(currentChat._id || currentChat.id));
 
             socket.emit("message_delivered", { senderId: data.senderId, recipientId: currentUserId });
+
+            // Push sender to top of recent chats
+            moveToTop(data.senderId);
 
             if (isActivelyChatting) {
                 setMessages((prev) => [...prev, data]);
@@ -310,18 +328,19 @@ const SharedChat = () => {
                     playAudio('message');
                     toast.success(`New message received`, { icon: '💬', id: `chat-msg-${data.senderId}` });
                 }
-                setUnreadMap(prev => ({ ...prev, [data.senderId]: (prev[data.senderId] || 0) + 1 }));
+                // Safely update unread mapping using string cast keys to avoid bugs
+                setUnreadMap(prev => ({ ...prev, [senderIdStr]: (prev[senderIdStr] || 0) + 1 }));
             }
         };
 
         const handleMessageDeleted = ({ messageId }) => {
-            setMessages((prev) => prev.filter(m => (m._id || m.id) !== messageId));
+            setMessages((prev) => prev.map(m => (m._id === messageId || m.id === messageId) ? { ...m, text: "", mediaUrl: "", isDeletedForEveryone: true } : m));
         };
 
         const handleMessageStatusUpdate = ({ viewerId, status }) => {
-            if (activeChatRef.current && (activeChatRef.current._id === viewerId || activeChatRef.current.id === viewerId)) {
+            if (activeChatRef.current && (String(activeChatRef.current._id) === String(viewerId) || String(activeChatRef.current.id) === String(viewerId))) {
                 setMessages(prev => prev.map(m => {
-                    if (m.senderId === currentUserId) {
+                    if (String(m.senderId) === String(currentUserId)) {
                         if (status === 'seen') return { ...m, status: 'seen' };
                         if (status === 'delivered' && m.status !== 'seen') return { ...m, status: 'delivered' };
                     }
@@ -330,7 +349,6 @@ const SharedChat = () => {
             }
         };
 
-        // NEW SOCKET LISTENERS FOR WHATSAPP FEATURES
         const handleMessageEdited = ({ messageId, text }) => {
             setMessages(prev => prev.map(m => (m._id === messageId || m.id === messageId) ? { ...m, text, isEdited: true } : m));
         };
@@ -355,7 +373,7 @@ const SharedChat = () => {
             socket.off("message_edited", handleMessageEdited);
             socket.off("messages_deleted_everyone", handleMessagesDeletedEveryone);
         };
-    }, [currentUserId]);
+    }, [currentUserId, moveToTop]);
 
     // --- CLICK OUTSIDE HANDLER ---
     useEffect(() => {
@@ -401,11 +419,12 @@ const SharedChat = () => {
             const endpoint = user.role === 'Employee' ? '/employee/peers' : '/admin/employees';
             const res = await api.get(endpoint);
             if (res.data.success) {
-                const peers = res.data.data.filter(p => (p._id || p.id) !== currentUserId);
+                const peers = res.data.data.filter(p => String(p._id || p.id) !== String(currentUserId));
                 setConversations(peers);
 
+                // Strictly cast IDs to strings for the unread mapping payload
                 const initialUnread = {};
-                peers.forEach(p => { if (p.unreadCount) initialUnread[p._id || p.id] = p.unreadCount; });
+                peers.forEach(p => { if (p.unreadCount) initialUnread[String(p._id || p.id)] = p.unreadCount; });
                 setUnreadMap(initialUnread);
             }
         } catch (error) { toast.error("Could not load contact list."); }
@@ -414,7 +433,7 @@ const SharedChat = () => {
 
     const fetchMessages = async (recipientId) => {
         try {
-            setIsFetchingMessages(true); // START SHIMMER
+            setIsFetchingMessages(true); 
             setMessages([]);
             const res = await api.get(`/chat/history/${currentUserId}/${recipientId}`).catch(() => ({ data: { success: true, data: [] } }));
             if (res.data.success) {
@@ -427,17 +446,17 @@ const SharedChat = () => {
         } catch (error) {
             console.error("Failed to load messages:", error);
         } finally {
-            setIsFetchingMessages(false); // END SHIMMER
+            setIsFetchingMessages(false); 
         }
     };
 
     // --- MESSAGE ACTIONS ---
     const handleSelectChat = (chatUser) => {
-        const userId = chatUser._id || chatUser.id;
+        const userId = String(chatUser._id || chatUser.id);
 
         setUnreadMap(prev => ({ ...prev, [userId]: 0 }));
 
-        if (activeChat && (activeChat._id || activeChat.id) === userId) return;
+        if (activeChat && String(activeChat._id || activeChat.id) === userId) return;
 
         setActiveChat(chatUser);
         fetchMessages(userId);
@@ -461,6 +480,7 @@ const SharedChat = () => {
 
                 resetContextState();
                 toast.success("Message edited");
+                moveToTop(activeChat._id || activeChat.id); 
             } catch (err) { toast.error("Failed to edit message"); }
             return;
         }
@@ -484,6 +504,8 @@ const SharedChat = () => {
         setNewMessage("");
         scrollToBottom();
         playAudio('sent');
+
+        moveToTop(activeChat._id || activeChat.id);
 
         socket.emit("send_message", payload);
 
@@ -519,8 +541,18 @@ const SharedChat = () => {
             for (let i = 0; i < files.length; i++) {
                 let fileToUpload = files[i];
                 let safeName = fileToUpload.name || `capture_${Date.now()}_${i}.jpg`;
+                
+                // Ultimate Fallback Mime-Type Parsing
                 let mimeType = fileToUpload.type;
-                if (!mimeType && safeName.endsWith('.jpg')) mimeType = 'image/jpeg';
+                if (!mimeType) {
+                    if (safeName.endsWith('.jpg') || safeName.endsWith('.jpeg')) mimeType = 'image/jpeg';
+                    else if (safeName.endsWith('.png')) mimeType = 'image/png';
+                    else if (safeName.endsWith('.pdf')) mimeType = 'application/pdf';
+                    else if (safeName.endsWith('.doc') || safeName.endsWith('.docx')) mimeType = 'application/msword';
+                    else if (safeName.endsWith('.zip')) mimeType = 'application/zip';
+                    else if (safeName.endsWith('.rar')) mimeType = 'application/x-rar-compressed';
+                    else mimeType = 'application/octet-stream'; 
+                }
 
                 let type = asDocument ? 'document' : (mimeType.startsWith('image/') ? 'image' : (mimeType.startsWith('video/') ? 'video' : 'document'));
 
@@ -555,17 +587,19 @@ const SharedChat = () => {
                 setDownloadedMedia(prev => new Set(prev).add(tempId));
                 setMessages((prev) => [...prev, optimisticPayload]);
                 scrollToBottom();
+                
+                moveToTop(activeChat._id || activeChat.id);
 
                 try {
                     const urlRes = await api.post('/chat/generate-presigned-url', {
-                        fileType: finalFile.type || mimeType,
+                        fileType: mimeType, 
                         originalName: finalFile.name || safeName
                     });
 
                     const { presignedUrl, publicUrl } = urlRes.data;
 
                     await axios.put(presignedUrl, finalFile, {
-                        headers: { 'Content-Type': finalFile.type || mimeType },
+                        headers: { 'Content-Type': mimeType },
                         signal: abortController.signal,
                         onUploadProgress: (progressEvent) => {
                             const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -580,6 +614,7 @@ const SharedChat = () => {
 
                     const finalPayload = { ...optimisticPayload, mediaUrl: finalPublicUrl, status: 'sent', isUploading: false };
 
+                    // Broadcast the final payload (Receiver will now correctly render this update)
                     socket.emit("send_message", finalPayload);
                     playAudio('sent');
 
@@ -597,7 +632,7 @@ const SharedChat = () => {
                     }
                 } catch (err) {
                     if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
-                        // Aborted, safely ignored. Bubble already removed by cancel function.
+                        // Aborted, safely ignored.
                     } else {
                         console.error("Upload error sequence:", err);
                         toast.error("Upload process failed.");
@@ -691,6 +726,7 @@ const SharedChat = () => {
                     }
                     await api.post('/chat/message', payload);
                 }
+                moveToTop(recipientId); 
             }
             toast.success("Forwarded successfully", { id: loadingToast });
         } catch (error) { toast.error("Failed to forward", { id: loadingToast }); }
@@ -754,7 +790,10 @@ const SharedChat = () => {
             if (type === 'everyone') {
                 await api.put('/chat/message/delete-everyone', { messageIds: ids, userId: currentUserId });
                 setMessages(prev => prev.map(m => ids.includes(m._id || m.id) ? { ...m, text: "", mediaUrl: "", isDeletedForEveryone: true } : m));
-                socket.emit("delete_messages_everyone", { messageIds: ids, recipientId: activeChat._id || activeChat.id });
+                
+                ids.forEach(id => {
+                    socket.emit("delete_message", { messageId: id, recipientId: activeChat._id || activeChat.id });
+                });
             } else {
                 await api.put('/chat/message/delete-me', { messageIds: ids, userId: currentUserId });
                 setMessages(prev => prev.filter(m => !ids.includes(m._id || m.id)));
@@ -826,7 +865,7 @@ const SharedChat = () => {
         const isLeftSwipe = distance > 50;
         const isRightSwipe = distance < -50;
 
-        const currentIndex = chatMediaFiles.findIndex(m => (m._id || m.id) === (fullscreenMedia._id || fullscreenMedia.id));
+        const currentIndex = chatMediaFiles.findIndex(m => String(m._id || m.id) === String(fullscreenMedia._id || fullscreenMedia.id));
 
         if (isLeftSwipe && currentIndex < chatMediaFiles.length - 1) {
             setSlideDirection("slide-in-from-right-16");
@@ -913,7 +952,7 @@ const SharedChat = () => {
                     {chatMediaFiles.length > 0 && (
                         <div className="h-20 w-full shrink-0 border-t border-white/10 flex items-center justify-center px-4 gap-2 overflow-x-auto custom-scrollbar bg-[#0b141a]">
                             {chatMediaFiles.map((mediaMsg) => {
-                                const isSelected = (fullscreenMedia._id || fullscreenMedia.id) === (mediaMsg._id || mediaMsg.id);
+                                const isSelected = String(fullscreenMedia._id || fullscreenMedia.id) === String(mediaMsg._id || mediaMsg.id);
                                 return (
                                     <div
                                         key={mediaMsg._id || mediaMsg.id}
@@ -1029,7 +1068,6 @@ const SharedChat = () => {
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar px-2 pb-4 space-y-0.5">
-                        {/* YOUTUBE-STYLE SHIMMER SKELETON */}
                         {isLoadingChats ? (
                             <div className="space-y-3 p-2">
                                 {Array.from({ length: 6 }).map((_, i) => (
@@ -1046,8 +1084,8 @@ const SharedChat = () => {
                             <div className="flex justify-center p-8 text-center text-sm font-medium text-muted-foreground">No contacts found.</div>
                         ) : (
                             filteredConversations.map((chatUser) => {
-                                const userId = chatUser._id || chatUser.id;
-                                const isActive = activeChat && (activeChat._id === userId || activeChat.id === userId);
+                                const userId = String(chatUser._id || chatUser.id);
+                                const isActive = activeChat && String(activeChat._id || activeChat.id) === userId;
                                 const unreadCount = unreadMap[userId] || 0;
 
                                 return (
