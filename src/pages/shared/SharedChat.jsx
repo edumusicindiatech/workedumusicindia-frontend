@@ -310,7 +310,7 @@ const SharedChat = () => {
 
         const handleOnlineUsers = (users) => setOnlineUsers(users);
 
-        // --- NEW: Handle Received Message (Moves to top & Stores Missed Offline) ---
+        // --- FIX: Handle Received Message (Audio Swap & Mobile Ghost Suppression) ---
         const handleReceiveMessage = (data) => {
             const currentChat = activeChatRef.current;
             const senderIdStr = String(data.senderId || data.sender);
@@ -324,11 +324,22 @@ const SharedChat = () => {
                 setMessages((prev) => [...prev, data]);
                 scrollToBottom();
                 socket.emit("mark_chat_seen", { senderId: data.senderId, recipientId: currentUserId });
-            } else {
+
+                // NEW: Play 'message' pop tone when actively chatting
                 if (!document.hidden) {
                     playAudio('message');
+                }
+            } else {
+                // NEW: Check if on mobile AND currently looking at a different chat
+                const isMobile = window.innerWidth < 768;
+                const isDeepInAnotherChat = isMobile && currentChat !== null;
+
+                // Only show toast and play 'notification' ring if NOT deep in another chat on mobile
+                if (!document.hidden && !isDeepInAnotherChat) {
+                    playAudio('notification'); // Swapped tone
                     toast.success(`New message received`, { icon: '💬', id: `chat-msg-${data.senderId}` });
                 }
+
                 setUnreadMap(prev => ({ ...prev, [senderIdStr]: (prev[senderIdStr] || 0) + 1 }));
 
                 // Save to offline cache to persist through unmounts
@@ -360,16 +371,16 @@ const SharedChat = () => {
         };
 
         const handleMessageEdited = ({ messageId, text }) => {
+            setMessages(prev => prev.map(m => (m._id === messageId || m.id === messageId) ? { ...m, text, isEdited: true } : m));
+        };
+
+        const handleMessagesDeletedEveryone = ({ messageIds }) => {
             const strIds = messageIds.map(id => String(id));
             setMessages(prev => prev.map(m =>
                 strIds.includes(String(m._id || m.id))
                     ? { ...m, text: "", mediaUrl: "", isDeletedForEveryone: true }
                     : m
             ));
-        };
-
-        const handleMessagesDeletedEveryone = ({ messageIds }) => {
-            setMessages(prev => prev.map(m => messageIds.includes(m._id || m.id) ? { ...m, text: "", mediaUrl: "", isDeletedForEveryone: true } : m));
         };
 
         socket.on("online_users_updated", handleOnlineUsers);
