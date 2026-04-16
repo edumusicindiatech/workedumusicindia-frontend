@@ -12,13 +12,11 @@ export default defineConfig(({ mode }) => ({
     hmr: { overlay: false },
   },
 
-  // --- ADD THIS BUILD BLOCK ---
   build: {
-    chunkSizeWarningLimit: 1000, // Bump the limit to 1MB
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // Put all third-party libraries into a separate 'vendor' chunk
           if (id.includes('node_modules')) {
             return 'vendor';
           }
@@ -26,7 +24,6 @@ export default defineConfig(({ mode }) => ({
       }
     }
   },
-  // ----------------------------
 
   plugins: [
     react(),
@@ -40,7 +37,7 @@ export default defineConfig(({ mode }) => ({
     }),
 
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt', // <-- CHANGED TO PROMPT TO ALLOW UI BLOCKING
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
         name: 'WorkEduMusic India',
@@ -62,7 +59,6 @@ export default defineConfig(({ mode }) => ({
             purpose: 'any maskable'
           }
         ],
-        // --- ADDED SHORTCUTS FOR HOME SCREEN LONG-PRESS ---
         shortcuts: [
           {
             name: "Check In / Out",
@@ -91,9 +87,15 @@ export default defineConfig(({ mode }) => ({
             description: "Log your daily report",
             url: "/employee/report",
             icons: [{ src: "/shortcuts/report.png", sizes: "192x192", type: "image/png" }]
+          },
+          {
+            name: "Chat",
+            short_name: "Chat",
+            description: "Chat with peers or admin",
+            url: "/employee/chat",
+            icons: [{ src: "/shortcuts/message.png", sizes: "192x192", type: "image/png" }]
           }
         ]
-        // ----------------------------------------------------
       }
     })
   ].filter(Boolean),

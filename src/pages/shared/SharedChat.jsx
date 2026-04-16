@@ -5,7 +5,7 @@ import { io } from "socket.io-client";
 import {
     Search, Phone, MoreVertical, Paperclip, Send, Download,
     ArrowLeft, Loader2, CheckCheck, Check, MessageSquare, Camera, Image as ImageIcon, X, FileCheck,
-    Trash2, Link as LinkIcon, FileText, Users, Forward, PlaySquare, Lock, Copy, Ban, Edit2, Trash
+    Trash2, Link as LinkIcon, FileText, Users, Forward, PlaySquare, Lock, Copy, Ban, Edit2, Trash, Info
 } from "lucide-react";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
@@ -13,7 +13,7 @@ import CallOverlay from "./CallOverlay";
 import axios from "axios";
 
 // --- IMPORT BACKGROUND IMAGES ---
-import chatBgLight from '../../assets/chat-light.jpg'; 
+import chatBgLight from '../../assets/chat-light.jpg';
 import chatBgDark from '../../assets/chat-dark.jpg';
 
 // --- GLOBAL SOCKET SINGLETON ---
@@ -194,6 +194,7 @@ const SharedChat = () => {
     const [editingMessage, setEditingMessage] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+
     // ABORT CONTROLLERS FOR UPLOADS
     const uploadControllers = useRef({});
 
@@ -205,6 +206,24 @@ const SharedChat = () => {
     const attachMenuRef = useRef(null);
     const topMenuRef = useRef(null);
     const sidebarMenuRef = useRef(null);
+
+    // Mobile Banner State
+    const [showMobileNotice, setShowMobileNotice] = useState(false);
+    const mobileNoticeTimer = useRef(null);
+
+    const handleShowMobileNotice = () => {
+        setShowMobileNotice(true);
+        if (mobileNoticeTimer.current) clearTimeout(mobileNoticeTimer.current);
+        mobileNoticeTimer.current = setTimeout(() => {
+            setShowMobileNotice(false);
+        }, 5000); // Collapse after 5 seconds
+    };
+
+    useEffect(() => {
+        return () => {
+            if (mobileNoticeTimer.current) clearTimeout(mobileNoticeTimer.current);
+        };
+    }, []);
 
     const activeChatRef = useRef(activeChat);
     useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
@@ -707,7 +726,7 @@ const SharedChat = () => {
         }
         const clientX = e.clientX || (e.touches && e.touches.length > 0 ? e.touches[0].clientX : window.innerWidth / 2);
         const clientY = e.clientY || (e.touches && e.touches.length > 0 ? e.touches[0].clientY : window.innerHeight / 2);
-        
+
         const menuWidth = 200;
         const safeX = (clientX + menuWidth > window.innerWidth) ? (window.innerWidth - menuWidth - 20) : clientX;
 
@@ -1052,7 +1071,7 @@ const SharedChat = () => {
                 <div className={`flex-1 flex-col h-full relative overflow-hidden transition-all duration-300 ${!activeChat ? 'hidden md:flex' : 'flex animate-in slide-in-from-right-4 md:animate-none'}`}>
                     {activeChat ? (
                         <div className="flex-1 flex w-full h-full relative bg-[#EBEBEB] dark:bg-[#0B0D12]">
-                            
+
                             {/* CHAT BACKGROUND IMAGES */}
                             <div className="absolute inset-0 z-0 pointer-events-none opacity-50 dark:opacity-30">
                                 <img src={chatBgLight} alt="" className="w-full h-full object-cover dark:hidden" />
@@ -1121,9 +1140,28 @@ const SharedChat = () => {
                                 )}
 
                                 {/* 7-DAY WARNING BANNER */}
-                                <div className="w-full bg-amber-500/10 dark:bg-amber-500/5 border-b border-amber-500/20 py-2 px-4 flex items-center justify-center gap-2.5 text-amber-600 dark:text-amber-500 shrink-0 backdrop-blur-md relative z-10 shadow-sm animate-in fade-in slide-in-from-top-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                    <span className="text-[12px] font-semibold tracking-wide">These messages will be automatically deleted after 7 days for privacy.</span>
+                                <div className={`w-full flex items-center justify-center text-amber-600 dark:text-amber-500 shrink-0 relative z-10 transition-all duration-300 md:bg-amber-500/10 md:dark:bg-amber-500/5 md:border-b md:border-amber-500/20 md:backdrop-blur-md md:shadow-sm ${showMobileNotice ? 'bg-amber-500/10 dark:bg-amber-500/5 border-b border-amber-500/20 backdrop-blur-md shadow-sm py-1.5' : 'bg-transparent py-1'}`}>
+
+                                    {/* Desktop View (Always fully visible) */}
+                                    <div className="hidden md:flex items-center gap-2.5 py-1 px-4">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+                                        <span className="text-[12px] font-semibold tracking-wide">These messages will be automatically deleted after 7 days for privacy.</span>
+                                    </div>
+
+                                    {/* Mobile View (Toggleable with 5-sec timer) */}
+                                    <div className="flex md:hidden w-full items-center justify-center transition-all duration-300" style={{ height: '28px' }}>
+                                        {showMobileNotice ? (
+                                            <div className="flex items-center gap-2 px-3 animate-in fade-in zoom-in-95 duration-200">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+                                                <span className="text-[11px] leading-tight font-semibold text-center">Messages auto-delete after 7 days.</span>
+                                            </div>
+                                        ) : (
+                                            <button onClick={handleShowMobileNotice} className="flex items-center gap-1.5 px-3 py-1 bg-background/80 dark:bg-[#13151A]/80 backdrop-blur-md rounded-full shadow-sm border border-border/50 text-muted-foreground hover:text-foreground transition-all animate-in fade-in zoom-in duration-300">
+                                                <Info className="w-3.5 h-3.5" />
+                                                <span className="text-[10px] font-bold uppercase tracking-wider">Privacy</span>
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Message Feed - Removed Solid Background Colors to show image beneath */}
