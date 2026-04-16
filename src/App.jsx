@@ -235,7 +235,7 @@ function App() {
     <>
       {/* STRICT PWA UPDATE BLOCKER MODAL */}
       {needRefresh && (
-        <div className="fixed inset-0 z-[999999999] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-999999999 flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-card border border-border rounded-3xl p-8 max-w-sm w-[90%] flex flex-col items-center text-center shadow-2xl animate-in zoom-in-95 duration-500">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
               <DownloadCloud className="w-8 h-8 text-primary animate-bounce" />

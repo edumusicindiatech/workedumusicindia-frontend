@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import {
     LayoutDashboard, Users, Radio, Shield, Megaphone,
     Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle, ClipboardCheck,
-    CalendarDays, Film, Trophy, BookOpen, X, MessageCircle, PhoneIncoming, PhoneOff, Phone
+    CalendarDays, Film, Trophy, BookOpen, X, MessageCircle, PhoneIncoming, PhoneOff, Phone, Video
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -17,7 +17,6 @@ import AdminSettingsModal from "../../modals/admin/AdminSettingsModal";
 import { Button } from "@/components/ui/button";
 import CallOverlay from "../../pages/shared/CallOverlay";
 
-// --- GLOBAL SOCKET SINGLETON ---
 if (!window.__GLOBAL_SOCKET__) {
     window.__GLOBAL_SOCKET__ = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000", {
         autoConnect: true,
@@ -25,7 +24,6 @@ if (!window.__GLOBAL_SOCKET__) {
 }
 const socket = window.__GLOBAL_SOCKET__;
 
-// --- GLOBAL AUDIO SINGLETON ---
 if (!window.__GLOBAL_AUDIO__) {
     window.__GLOBAL_AUDIO__ = {
         notification: new Audio('/sounds/notification-ting.mp3'),
@@ -34,31 +32,13 @@ if (!window.__GLOBAL_AUDIO__) {
         incoming: new Audio('/sounds/incoming.mp3'),
         hangup: new Audio('/sounds/hangup.mp3'),
         sent: new Audio('/sounds/sent.mp3'),
-        calling: new Audio('/sounds/calling.mp3'), // <-- ADDED
-        ringing: new Audio('/sounds/ringing.mp3'), // <-- ADDED
+        calling: new Audio('/sounds/calling.mp3'),
+        ringing: new Audio('/sounds/ringing.mp3'),
     };
 }
 const globalAudio = window.__GLOBAL_AUDIO__;
-
-const playAudio = (type) => {
-    try {
-        const snd = globalAudio[type];
-        if (snd) {
-            snd.currentTime = 0;
-            snd.play().catch(e => console.warn(`Audio blocked for ${type}:`, e));
-        }
-    } catch (e) { }
-};
-
-const pauseAudio = (type) => {
-    try {
-        const snd = globalAudio[type];
-        if (snd) {
-            snd.pause();
-            snd.currentTime = 0;
-        }
-    } catch (e) { }
-};
+const playAudio = (type) => { try { const snd = globalAudio[type]; if (snd) { snd.currentTime = 0; snd.play().catch(e => console.warn(`Audio blocked:`, e)); } } catch (e) { } };
+const pauseAudio = (type) => { try { const snd = globalAudio[type]; if (snd) { snd.pause(); snd.currentTime = 0; } } catch (e) { } };
 
 const iceServers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
@@ -90,48 +70,38 @@ const AdminSidebar = () => {
     const [isCallAccepted, setIsCallAccepted] = useState(false);
     const [onlineUsers, setOnlineUsers] = useState([]);
 
+    // Call Upgrade & Screen Share States
+    const [currentCallType, setCurrentCallType] = useState('voice');
+    const [localStreamState, setLocalStreamState] = useState(null);
+    const [remoteStream, setRemoteStream] = useState(null);
+    const [isScreenSharing, setIsScreenSharing] = useState(false);
+    const [videoUpgradeStatus, setVideoUpgradeStatus] = useState('idle'); // idle, requesting, receiving_request
+
     const pcRef = useRef(null);
     const localStreamRef = useRef(null);
-    const remoteAudioRef = useRef(null);
     const mobileMenuRef = useRef(null);
+    const currentPeerRef = useRef(null);
 
     const pathnameRef = useRef(location.pathname);
-
-    useEffect(() => {
-        pathnameRef.current = location.pathname;
-    }, [location.pathname]);
-
-    useEffect(() => {
-        if (user?.preferences) setUserPreferences(user.preferences);
-    }, [user?.preferences]);
+    useEffect(() => { pathnameRef.current = location.pathname; }, [location.pathname]);
+    useEffect(() => { currentPeerRef.current = callPeer; }, [callPeer]);
+    useEffect(() => { if (user?.preferences) setUserPreferences(user.preferences); }, [user?.preferences]);
 
     useEffect(() => {
         const unlockAudio = () => {
             Object.values(globalAudio).forEach(snd => {
-                snd.volume = 0;
-                snd.play().then(() => {
-                    snd.pause();
-                    snd.currentTime = 0;
-                    snd.volume = 1;
-                }).catch(() => { });
+                if (snd) { snd.volume = 0; snd.play().then(() => { snd.pause(); snd.currentTime = 0; snd.volume = 1; }).catch(() => { }); }
             });
             document.removeEventListener('click', unlockAudio);
             document.removeEventListener('touchstart', unlockAudio);
         };
         document.addEventListener('click', unlockAudio);
         document.addEventListener('touchstart', unlockAudio);
-        return () => {
-            document.removeEventListener('click', unlockAudio);
-            document.removeEventListener('touchstart', unlockAudio);
-        };
+        return () => { document.removeEventListener('click', unlockAudio); document.removeEventListener('touchstart', unlockAudio); };
     }, []);
 
     useEffect(() => {
-        const handleVisibilityChange = () => {
-            if (!document.hidden && pathnameRef.current.includes('/chat')) {
-                setUnreadChatCount(0);
-            }
-        };
+        const handleVisibilityChange = () => { if (!document.hidden && pathnameRef.current.includes('/chat')) setUnreadChatCount(0); };
         document.addEventListener("visibilitychange", handleVisibilityChange);
         return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
     }, []);
@@ -148,135 +118,14 @@ const AdminSidebar = () => {
         }
     }, [globalIncomingCall, activeCall]);
 
-    // --- OUTGOING CALL AUDIO TRACKER ---
     useEffect(() => {
         if (activeCall && !isCallAccepted && callPeer) {
             const isPeerOnline = onlineUsers.includes(String(callPeer._id || callPeer.id));
-            if (isPeerOnline) {
-                pauseAudio('calling');
-                globalAudio.ringing.loop = true;
-                playAudio('ringing');
-            } else {
-                pauseAudio('ringing');
-                globalAudio.calling.loop = true;
-                playAudio('calling');
-            }
-        } else {
-            pauseAudio('calling');
-            pauseAudio('ringing');
-        }
-
-        return () => {
-            pauseAudio('calling');
-            pauseAudio('ringing');
-        };
+            if (isPeerOnline) { pauseAudio('calling'); if (globalAudio.ringing) globalAudio.ringing.loop = true; playAudio('ringing'); } 
+            else { pauseAudio('ringing'); if (globalAudio.calling) globalAudio.calling.loop = true; playAudio('calling'); }
+        } else { pauseAudio('calling'); pauseAudio('ringing'); }
+        return () => { pauseAudio('calling'); pauseAudio('ringing'); };
     }, [activeCall, isCallAccepted, callPeer, onlineUsers]);
-
-    // --- WEBRTC LOGIC ---
-    const setupMedia = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            localStreamRef.current = stream;
-            return stream;
-        } catch (e) {
-            toast.error("Microphone access denied.");
-            return null;
-        }
-    };
-
-    const cleanupCall = () => {
-        if (localStreamRef.current) localStreamRef.current.getTracks().forEach(track => track.stop());
-        if (pcRef.current) pcRef.current.close();
-        if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
-
-        pcRef.current = null;
-        localStreamRef.current = null;
-        setActiveCall(false);
-        setCallPeer(null);
-        setGlobalIncomingCall(null);
-        setIsMinimizedCall(false);
-        setIsCallAccepted(false);
-    };
-
-    const handleAcceptCall = async () => {
-        if (!globalIncomingCall) return;
-        const callData = globalIncomingCall;
-
-        const stream = await setupMedia();
-        if (!stream) return;
-
-        setActiveCall(true);
-        setCallPeer({
-            name: callData.callerName,
-            _id: callData.from,
-            profilePicture: callData.profilePicture
-        });
-
-        const pc = new RTCPeerConnection(iceServers);
-        pcRef.current = pc;
-
-        stream.getTracks().forEach(track => pc.addTrack(track, stream));
-
-        pc.onicecandidate = (e) => {
-            if (e.candidate) socket.emit('ice_candidate', { to: callData.from, candidate: e.candidate, from: user.id || user._id });
-        };
-
-        pc.ontrack = (e) => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = e.streams[0]; };
-
-        await pc.setRemoteDescription(new RTCSessionDescription(callData.signal));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-
-        socket.emit('answer_call', { to: callData.from, signal: answer });
-        setGlobalIncomingCall(null);
-        pauseAudio('incoming');
-        setIsCallAccepted(true); // Timer starts immediately for receiver
-    };
-
-    const endCurrentCall = () => {
-        const recipient = globalIncomingCall?.from || callPeer?._id || callPeer?.id;
-        if (recipient) socket.emit('end_call', { to: recipient });
-        cleanupCall();
-        playAudio('hangup');
-    };
-
-    // Listen for SharedChat asking to start a call
-    useEffect(() => {
-        const handleInitiateCall = async (e) => {
-            const peerToCall = e.detail;
-            const stream = await setupMedia();
-            if (!stream) return;
-
-            setCallPeer(peerToCall);
-            setActiveCall(true);
-            setIsCallAccepted(false); // Wait for peer to accept
-
-            const pc = new RTCPeerConnection(iceServers);
-            pcRef.current = pc;
-
-            stream.getTracks().forEach(track => pc.addTrack(track, stream));
-
-            pc.onicecandidate = (e) => {
-                if (e.candidate) socket.emit('ice_candidate', { to: peerToCall._id || peerToCall.id, candidate: e.candidate, from: user.id || user._id });
-            };
-
-            pc.ontrack = (e) => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = e.streams[0]; };
-
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-
-            socket.emit('call_user', {
-                userToCall: peerToCall._id || peerToCall.id,
-                from: user.id || user._id,
-                callerName: user.name,
-                profilePicture: user.profilePicture,
-                signalData: offer
-            });
-        };
-
-        window.addEventListener('initiate_global_call', handleInitiateCall);
-        return () => window.removeEventListener('initiate_global_call', handleInitiateCall);
-    }, [user]);
 
     useEffect(() => {
         if (!user) return;
@@ -292,7 +141,218 @@ const AdminSidebar = () => {
         fetchPendingMediaCount();
     }, [user, location.pathname]);
 
-    // --- SOCKET LOGIC ---
+    // --- WEBRTC LOGIC ---
+    const setupMedia = async (requestedType) => {
+        try {
+            if (!navigator.mediaDevices) throw new Error("Media devices not supported.");
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: requestedType === 'video' ? { facingMode: "user" } : false });
+            localStreamRef.current = stream;
+            setLocalStreamState(stream);
+            return { stream, actualType: requestedType };
+        } catch (e) {
+            if (requestedType === 'video') {
+                toast.error("Camera access failed. Switching to voice call.", { id: 'cam-error' });
+                try {
+                    const audioOnlyStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    localStreamRef.current = audioOnlyStream;
+                    setLocalStreamState(audioOnlyStream);
+                    return { stream: audioOnlyStream, actualType: 'voice' };
+                } catch (audioErr) {
+                    toast.error("Microphone access denied.");
+                    return { stream: null, actualType: null };
+                }
+            } else {
+                toast.error("Microphone access denied.");
+                return { stream: null, actualType: null };
+            }
+        }
+    };
+
+    const attachPCListeners = (pc) => {
+        pc.onicecandidate = (e) => {
+            const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
+            if (e.candidate && to) socket.emit('ice_candidate', { to, candidate: e.candidate, from: user.id || user._id });
+        };
+        pc.ontrack = (e) => setRemoteStream(e.streams[0]);
+
+        // Renegotiation for Upgrades & Screen Share
+        pc.onnegotiationneeded = async () => {
+            try {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
+                if(to) socket.emit('renegotiate', { to, signal: offer });
+            } catch (err) { console.error("Negotiation error", err); }
+        };
+    };
+
+    const cleanupCall = () => {
+        if (localStreamRef.current) localStreamRef.current.getTracks().forEach(track => track.stop());
+        if (pcRef.current) pcRef.current.close();
+        pcRef.current = null;
+        localStreamRef.current = null;
+        setLocalStreamState(null);
+        setRemoteStream(null);
+        setIsScreenSharing(false);
+        setActiveCall(false);
+        setCallPeer(null);
+        setGlobalIncomingCall(null);
+        setIsMinimizedCall(false);
+        setIsCallAccepted(false);
+        setVideoUpgradeStatus('idle');
+    };
+
+    const handleAcceptCall = async () => {
+        if (!globalIncomingCall) return;
+        const callData = globalIncomingCall;
+        const requestedType = callData.callType || 'voice';
+
+        const mediaResult = await setupMedia(requestedType);
+        if (!mediaResult || !mediaResult.stream) return;
+        setCurrentCallType(requestedType);
+
+        const { stream } = mediaResult;
+        setActiveCall(true);
+        setCallPeer({ name: callData.callerName, _id: callData.from, profilePicture: callData.profilePicture });
+
+        const pc = new RTCPeerConnection(iceServers);
+        pcRef.current = pc;
+        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+        attachPCListeners(pc);
+
+        await pc.setRemoteDescription(new RTCSessionDescription(callData.signal));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        socket.emit('answer_call', { to: callData.from, signal: answer });
+        setGlobalIncomingCall(null);
+        pauseAudio('incoming');
+        setIsCallAccepted(true);
+    };
+
+    const endCurrentCall = () => {
+        const recipient = globalIncomingCall?.from || callPeer?._id || callPeer?.id;
+        if (recipient) socket.emit('end_call', { to: recipient });
+        cleanupCall();
+        playAudio('hangup');
+    };
+
+    useEffect(() => {
+        const handleInitiateCall = async (e) => {
+            const peerToCall = e.detail;
+            const requestedType = peerToCall.callType || 'voice';
+
+            const mediaResult = await setupMedia(requestedType);
+            if (!mediaResult || !mediaResult.stream) return;
+            const { stream, actualType } = mediaResult;
+
+            setCurrentCallType(actualType);
+            setCallPeer(peerToCall);
+            setActiveCall(true);
+            setIsCallAccepted(false);
+
+            const pc = new RTCPeerConnection(iceServers);
+            pcRef.current = pc;
+            stream.getTracks().forEach(track => pc.addTrack(track, stream));
+            attachPCListeners(pc);
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            socket.emit('call_user', {
+                userToCall: peerToCall._id || peerToCall.id, from: user.id || user._id,
+                callerName: user.name, profilePicture: user.profilePicture,
+                signalData: offer, callType: actualType
+            });
+        };
+
+        window.addEventListener('initiate_global_call', handleInitiateCall);
+        return () => window.removeEventListener('initiate_global_call', handleInitiateCall);
+    }, [user]);
+
+    // --- VIDEO UPGRADE LOGIC ---
+    const handleRequestVideo = () => {
+        const to = callPeer?._id || callPeer?.id;
+        socket.emit('video_upgrade_request', { to });
+        setVideoUpgradeStatus('requesting');
+        toast("Requesting video switch...", { icon: '⏳' });
+    };
+
+    const performVideoUpgrade = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const videoTrack = stream.getVideoTracks()[0];
+            
+            localStreamRef.current.addTrack(videoTrack);
+            setLocalStreamState(new MediaStream(localStreamRef.current.getTracks()));
+            
+            if (pcRef.current) pcRef.current.addTrack(videoTrack, localStreamRef.current);
+            setCurrentCallType('video');
+        } catch (error) {
+            toast.error("Could not access camera for video call.");
+        }
+    };
+
+    const handleAcceptVideo = async () => {
+        const to = callPeer?._id || callPeer?.id;
+        socket.emit('video_upgrade_accepted', { to });
+        setVideoUpgradeStatus('idle');
+        await performVideoUpgrade();
+    };
+
+    const handleRejectVideo = () => {
+        const to = callPeer?._id || callPeer?.id;
+        socket.emit('video_upgrade_rejected', { to });
+        setVideoUpgradeStatus('idle');
+    };
+
+    // --- SCREEN SHARE LOGIC ---
+    const handleToggleScreenShare = async () => {
+        try {
+            if (!isScreenSharing) {
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+                const screenVideoTrack = screenStream.getVideoTracks()[0];
+                const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
+
+                if (sender) {
+                    await sender.replaceTrack(screenVideoTrack);
+                } else {
+                    pcRef.current.addTrack(screenVideoTrack, localStreamRef.current);
+                }
+
+                const newLocalStream = new MediaStream([...localStreamRef.current.getAudioTracks(), screenVideoTrack]);
+                localStreamRef.current = newLocalStream;
+                setLocalStreamState(newLocalStream);
+                setIsScreenSharing(true);
+                if (currentCallType === 'voice') setCurrentCallType('video');
+
+                screenVideoTrack.onended = () => stopScreenShareAndRevertToCamera();
+            } else {
+                stopScreenShareAndRevertToCamera();
+            }
+        } catch (error) { console.error("Error sharing screen:", error); }
+    };
+
+    const stopScreenShareAndRevertToCamera = async () => {
+        try {
+            const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const cameraVideoTrack = cameraStream.getVideoTracks()[0];
+            const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
+
+            if (sender) await sender.replaceTrack(cameraVideoTrack);
+
+            const newLocalStream = new MediaStream([...localStreamRef.current.getAudioTracks(), cameraVideoTrack]);
+            localStreamRef.current = newLocalStream;
+            setLocalStreamState(newLocalStream);
+            setIsScreenSharing(false);
+        } catch (error) {
+            console.error("Failed to revert to camera:", error);
+            toast.error("Camera unavailable after screen share.");
+        }
+    };
+
+
+    // --- SOCKET LISTENERS ---
     useEffect(() => {
         if (!user) return;
 
@@ -309,11 +369,7 @@ const AdminSidebar = () => {
         if (pathnameRef.current !== '/admin/notifications') fetchUnreadCount();
 
         const currentUserId = user.id || user._id;
-
-        const joinUserRoom = () => {
-            socket.emit("join_room", currentUserId);
-            socket.emit("join_admin_room");
-        };
+        const joinUserRoom = () => { socket.emit("join_room", currentUserId); socket.emit("join_admin_room"); };
 
         if (socket.connected) joinUserRoom();
         socket.on("connect", joinUserRoom);
@@ -327,12 +383,12 @@ const AdminSidebar = () => {
 
         const handleIncomingCall = (data) => {
             setGlobalIncomingCall(data);
-            globalAudio.incoming.loop = true;
+            if (globalAudio.incoming) globalAudio.incoming.loop = true;
             playAudio('incoming');
         };
 
         const handleCallAccepted = async (signal) => {
-            setIsCallAccepted(true); // Timer starts for caller
+            setIsCallAccepted(true);
             if (pcRef.current) {
                 await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                 toast.success("Call connected", { icon: '📞' });
@@ -345,10 +401,21 @@ const AdminSidebar = () => {
             }
         };
 
-        const handleCallEndedGlobal = () => {
-            cleanupCall();
-            pauseAudio('incoming');
-            playAudio('hangup');
+        // Renegotiation Listener
+        const handleRenegotiate = async ({ signal }) => {
+            if (pcRef.current) {
+                try {
+                    if (signal.type === 'offer') {
+                        await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
+                        const answer = await pcRef.current.createAnswer();
+                        await pcRef.current.setLocalDescription(answer);
+                        const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
+                        if(to) socket.emit('renegotiate', { to, signal: answer });
+                    } else if (signal.type === 'answer') {
+                        await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
+                    }
+                } catch (e) { console.error("Renegotiation error", e); }
+            }
         };
 
         const handleNewNotification = (notif) => {
@@ -394,68 +461,64 @@ const AdminSidebar = () => {
         socket.on("incoming_call", handleIncomingCall);
         socket.on("call_accepted", handleCallAccepted);
         socket.on("ice_candidate", handleIceCandidate);
-        socket.on("call_ended", handleCallEndedGlobal);
+        socket.on("renegotiate", handleRenegotiate);
+        socket.on("call_ended", () => { cleanupCall(); pauseAudio('incoming'); playAudio('hangup'); });
+
+        socket.on("video_upgrade_request", () => { setVideoUpgradeStatus('receiving_request'); playAudio('notification'); });
+        socket.on("video_upgrade_rejected", () => { setVideoUpgradeStatus('idle'); toast.error("Video call request rejected"); });
+        socket.on("video_upgrade_accepted", async () => { setVideoUpgradeStatus('idle'); toast.success("Video call request accepted"); await performVideoUpgrade(); });
+        
         socket.on("new_notification", handleNewNotification);
         socket.on("admin_leaderboard_refresh", handleNewNotification);
         socket.on("sos_alert_received", handleIncomingSOS);
         socket.on("online_users_updated", setOnlineUsers);
 
         return () => {
-            socket.off("connect", joinUserRoom);
-            socket.off("receive_message", handleIncomingChat);
-            socket.off("incoming_call", handleIncomingCall);
-            socket.off("call_accepted", handleCallAccepted);
-            socket.off("ice_candidate", handleIceCandidate);
-            socket.off("call_ended", handleCallEndedGlobal);
-            socket.off("new_notification", handleNewNotification);
-            socket.off("admin_leaderboard_refresh", handleNewNotification);
-            socket.off("sos_alert_received", handleIncomingSOS);
-            socket.off("online_users_updated", setOnlineUsers);
+            socket.off("connect");
+            socket.off("receive_message");
+            socket.off("incoming_call");
+            socket.off("call_accepted");
+            socket.off("ice_candidate");
+            socket.off("renegotiate");
+            socket.off("call_ended");
+            socket.off("video_upgrade_request");
+            socket.off("video_upgrade_rejected");
+            socket.off("video_upgrade_accepted");
+            socket.off("new_notification");
+            socket.off("admin_leaderboard_refresh");
+            socket.off("sos_alert_received");
+            socket.off("online_users_updated");
         };
     }, [user, t]);
-
-    useEffect(() => {
-        if (location.pathname === '/admin/notifications') setUnreadCount(0);
-        if (location.pathname === '/admin/chat') setUnreadChatCount(0);
-    }, [location.pathname]);
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) setIsMobileMenuOpen(false);
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
 
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
         try { await api.post('/auth/logout'); } catch (error) { }
-        finally {
-            toast.remove();
-            sessionStorage.setItem('justLoggedOut', 'true');
-            dispatch(logout());
-        }
+        finally { toast.remove(); sessionStorage.setItem('justLoggedOut', 'true'); dispatch(logout()); }
     };
 
-    const desktopNavClasses = ({ isActive }) =>
-        `flex items-center gap-2 px-3 py-2 rounded-lg transition-all font-medium text-sm whitespace-nowrap shrink-0 ${isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`;
-
-    const mobileNavClasses = ({ isActive }) =>
-        `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`;
+    const desktopNavClasses = ({ isActive }) => `flex items-center gap-2 px-3 py-2 rounded-lg transition-all font-medium text-sm whitespace-nowrap shrink-0 ${isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`;
+    const mobileNavClasses = ({ isActive }) => `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`;
 
     return (
         <>
-            <audio ref={remoteAudioRef} autoPlay className="hidden" />
-
             {activeCall && (
                 <CallOverlay
                     peer={callPeer}
                     onHangup={endCurrentCall}
                     isMinimized={isMinimizedCall}
                     setIsMinimized={setIsMinimizedCall}
-                    localStream={localStreamRef.current}
+                    localStream={localStreamState}
+                    remoteStream={remoteStream}
                     isCallAccepted={isCallAccepted}
                     isOnline={onlineUsers.includes(String(callPeer?._id || callPeer?.id))}
+                    isScreenSharing={isScreenSharing}
+                    onToggleScreenShare={handleToggleScreenShare}
+                    callType={currentCallType}
+                    onRequestVideo={handleRequestVideo}
+                    onAcceptVideo={handleAcceptVideo}
+                    onRejectVideo={handleRejectVideo}
+                    videoUpgradeStatus={videoUpgradeStatus}
                 />
             )}
 
@@ -493,7 +556,6 @@ const AdminSidebar = () => {
                         </div>
                         {t('sidebar.alerts')}
                     </NavLink>
-
                     <NavLink to="/admin/chat" className={desktopNavClasses} title="Chat Hub">
                         <div className="relative flex items-center justify-center">
                             <MessageCircle className="w-4.5 h-4.5" />
@@ -501,7 +563,6 @@ const AdminSidebar = () => {
                         </div>
                         Chat Hub
                     </NavLink>
-
                     <NavLink to="/admin/communication" className={desktopNavClasses} title={t('sidebar.broadcast')}><Megaphone className="w-4.5 h-4.5" /> {t('sidebar.broadcast')}</NavLink>
                 </div>
 
@@ -578,7 +639,7 @@ const AdminSidebar = () => {
 
             {/* --- GLOBAL INCOMING CALL MODAL --- */}
             {globalIncomingCall && !activeCall && (
-                <div className="fixed inset-0 z-9999 bg-black/60 backdrop-blur-sm flex items-center justify-center animate-in fade-in">
+                <div className="fixed inset-0 z-100000 bg-black/60 backdrop-blur-sm flex items-center justify-center animate-in fade-in">
                     <div className="bg-card dark:bg-[#13151A] p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-6 w-80 text-center animate-in zoom-in-95 border border-border">
                         <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_20px_rgba(var(--primary),0.4)] overflow-hidden border-2 border-primary/50">
                             {globalIncomingCall.profilePicture ? (
@@ -589,7 +650,7 @@ const AdminSidebar = () => {
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-foreground">{globalIncomingCall.callerName}</h2>
-                            <p className="text-sm text-muted-foreground mt-1">is calling you...</p>
+                            <p className="text-sm text-muted-foreground mt-1 capitalize">Incoming {globalIncomingCall.callType || 'voice'} call...</p>
                         </div>
                         <div className="flex items-center gap-6 w-full justify-center mt-2">
                             <button onClick={() => {
@@ -600,7 +661,7 @@ const AdminSidebar = () => {
                                 <PhoneOff className="w-6 h-6" />
                             </button>
                             <button onClick={handleAcceptCall} className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
-                                <Phone className="w-6 h-6 fill-current" />
+                                {globalIncomingCall.callType === 'video' ? <Video className="w-6 h-6 fill-current" /> : <Phone className="w-6 h-6 fill-current" />}
                             </button>
                         </div>
                     </div>

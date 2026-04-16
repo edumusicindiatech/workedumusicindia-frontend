@@ -5,11 +5,11 @@ import { io } from "socket.io-client";
 import {
     Search, Phone, MoreVertical, Paperclip, Send, Download,
     ArrowLeft, Loader2, CheckCheck, Check, MessageSquare, Camera, Image as ImageIcon, X, FileCheck,
-    Trash2, Link as LinkIcon, FileText, Users, Forward, PlaySquare, Lock, Copy, Ban, Edit2, Trash, Info
+    Trash2, Link as LinkIcon, FileText, Users, Forward, PlaySquare, Lock, Copy, Ban, Edit2, Trash, Info,
+    Video, ChevronDown
 } from "lucide-react";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import CallOverlay from "./CallOverlay";
 import axios from "axios";
 
 // --- IMPORT BACKGROUND IMAGES ---
@@ -171,7 +171,7 @@ const SharedChat = () => {
     // UI States
     const [isUploading, setIsUploading] = useState(false);
     const [isLoadingChats, setIsLoadingChats] = useState(true);
-    const [isFetchingMessages, setIsFetchingMessages] = useState(false); // FIX: Loading state for chat window
+    const [isFetchingMessages, setIsFetchingMessages] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [showProfileInfo, setShowProfileInfo] = useState(false);
 
@@ -183,6 +183,7 @@ const SharedChat = () => {
     // Menu & Modal States
     const [showAttachMenu, setShowAttachMenu] = useState(false);
     const [showTopMenu, setShowTopMenu] = useState(false);
+    const [showCallMenu, setShowCallMenu] = useState(false);
     const [showSidebarMenu, setShowSidebarMenu] = useState(false);
     const [showSearchInput, setShowSearchInput] = useState(false);
     const [chatSearchQuery, setChatSearchQuery] = useState("");
@@ -193,7 +194,6 @@ const SharedChat = () => {
     const [selectedMessages, setSelectedMessages] = useState([]);
     const [editingMessage, setEditingMessage] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
-
 
     // ABORT CONTROLLERS FOR UPLOADS
     const uploadControllers = useRef({});
@@ -206,6 +206,7 @@ const SharedChat = () => {
     const attachMenuRef = useRef(null);
     const topMenuRef = useRef(null);
     const sidebarMenuRef = useRef(null);
+    const callMenuRef = useRef(null);
 
     // Mobile Banner State
     const [showMobileNotice, setShowMobileNotice] = useState(false);
@@ -216,7 +217,7 @@ const SharedChat = () => {
         if (mobileNoticeTimer.current) clearTimeout(mobileNoticeTimer.current);
         mobileNoticeTimer.current = setTimeout(() => {
             setShowMobileNotice(false);
-        }, 5000); // Collapse after 5 seconds
+        }, 5000);
     };
 
     useEffect(() => {
@@ -362,6 +363,7 @@ const SharedChat = () => {
             if (attachMenuRef.current && !attachMenuRef.current.contains(event.target)) setShowAttachMenu(false);
             if (topMenuRef.current && !topMenuRef.current.contains(event.target)) setShowTopMenu(false);
             if (sidebarMenuRef.current && !sidebarMenuRef.current.contains(event.target)) setShowSidebarMenu(false);
+            if (callMenuRef.current && !callMenuRef.current.contains(event.target)) setShowCallMenu(false);
 
             if (contextMenuRef.current && !contextMenuRef.current.contains(event.target)) {
                 setContextMenu(null);
@@ -389,6 +391,7 @@ const SharedChat = () => {
         setNewMessage("");
         setShowTopMenu(false);
         setShowAttachMenu(false);
+        setShowCallMenu(false);
     };
 
     // --- API CALLS ---
@@ -760,9 +763,11 @@ const SharedChat = () => {
         } catch (e) { toast.error("Delete failed"); }
     };
 
-    const initiateVoiceCall = () => {
+    // --- UPDATED CALL LOGIC ---
+    const initiateCall = (type) => {
+        setShowCallMenu(false);
         if (!activeChat) return;
-        window.dispatchEvent(new CustomEvent('initiate_global_call', { detail: activeChat }));
+        window.dispatchEvent(new CustomEvent('initiate_global_call', { detail: { ...activeChat, callType: type } }));
     };
 
     const handleChatAction = async (action) => {
@@ -1124,7 +1129,31 @@ const SharedChat = () => {
 
                                         <div className="flex items-center gap-0.5 md:gap-1 relative" ref={topMenuRef}>
                                             <button onClick={() => setShowSearchInput(true)} className="p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"><Search className="w-5 h-5" /></button>
-                                            <button onClick={initiateVoiceCall} className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 text-[13px] md:text-[14px] font-bold text-white bg-[#6B66FF] hover:bg-[#5A55E5] rounded-xl transition-all active:scale-95 shadow-sm mx-0.5 md:mx-1"><Phone className="w-4 h-4 fill-current" /> <span className="hidden sm:inline">Call</span></button>
+
+                                            {/* --- UPDATED CALL BUTTON --- */}
+                                            <div className="relative" ref={callMenuRef}>
+                                                <button onClick={() => setShowCallMenu(!showCallMenu)} className="flex items-center gap-1 md:gap-1.5 px-3 py-1.5 md:py-2 text-[13px] md:text-[14px] font-bold text-white bg-[#6B66FF] hover:bg-[#5A55E5] rounded-xl transition-all active:scale-95 shadow-sm mx-0.5 md:mx-1">
+                                                    <Video className="w-4 h-4 fill-current" />
+                                                    <ChevronDown className="w-3.5 h-3.5" />
+                                                </button>
+                                                {showCallMenu && (
+                                                    <div className="absolute top-12 right-0 w-40 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-50">
+                                                        <button
+                                                            onClick={(e) => { e.preventDefault(); initiateCall('video'); }}
+                                                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium text-foreground transition-colors cursor-pointer"
+                                                        >
+                                                            <Video className="w-4 h-4" /> Video call
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.preventDefault(); initiateCall('voice'); }}
+                                                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium text-foreground transition-colors cursor-pointer"
+                                                        >
+                                                            <Phone className="w-4 h-4" /> Voice call
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+
                                             <button onClick={(e) => { e.stopPropagation(); setShowTopMenu(!showTopMenu); }} className="p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"><MoreVertical className="w-5 h-5" /></button>
 
                                             {showTopMenu && (
