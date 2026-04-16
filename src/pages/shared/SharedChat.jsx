@@ -360,7 +360,12 @@ const SharedChat = () => {
         };
 
         const handleMessageEdited = ({ messageId, text }) => {
-            setMessages(prev => prev.map(m => (m._id === messageId || m.id === messageId) ? { ...m, text, isEdited: true } : m));
+            const strIds = messageIds.map(id => String(id));
+            setMessages(prev => prev.map(m =>
+                strIds.includes(String(m._id || m.id))
+                    ? { ...m, text: "", mediaUrl: "", isDeletedForEveryone: true }
+                    : m
+            ));
         };
 
         const handleMessagesDeletedEveryone = ({ messageIds }) => {
