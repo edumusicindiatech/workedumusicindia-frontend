@@ -123,7 +123,7 @@ const renderTextWithLinks = (text, isMe) => {
                     href={part}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`underline font-medium transition-opacity hover:opacity-80 ${isMe ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`}
+                    className={`underline font-medium transition-opacity hover:opacity-80 wrap-break-word ${isMe ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`}
                     onClick={(e) => e.stopPropagation()}
                 >
                     {part}
@@ -1110,10 +1110,10 @@ const SharedChat = () => {
                     </div>
                 </div>
 
-                {/* MAIN CONVERSATION WINDOW */}
-                <div className={`flex-1 flex-col h-full relative overflow-hidden transition-all duration-300 ${!activeChat ? 'hidden md:flex' : 'flex animate-in slide-in-from-right-4 md:animate-none'}`}>
+                {/* MAIN CONVERSATION WINDOW - Added w-full max-w-full overflow-hidden for mobile lock */}
+                <div className={`flex-1 flex flex-col h-full w-full max-w-full relative overflow-hidden transition-all duration-300 ${!activeChat ? 'hidden md:flex' : 'flex animate-in slide-in-from-right-4 md:animate-none'}`}>
                     {activeChat ? (
-                        <div className="flex-1 flex w-full h-full relative bg-[#EBEBEB] dark:bg-[#0B0D12]">
+                        <div className="flex-1 flex w-full max-w-full h-full relative bg-[#EBEBEB] dark:bg-[#0B0D12] overflow-hidden">
 
                             {/* CHAT BACKGROUND IMAGES */}
                             <div className="absolute inset-0 z-0 pointer-events-none opacity-50 dark:opacity-30">
@@ -1122,32 +1122,36 @@ const SharedChat = () => {
                             </div>
 
                             {/* Content wrapper with z-10 to sit above background */}
-                            <div className="flex-1 flex flex-col h-full relative z-10 transition-all duration-300">
+                            <div className="flex-1 flex flex-col w-full h-full relative z-10 transition-all duration-300 overflow-hidden">
 
-                                {/* TOP BAR */}
+                                {/* TOP BAR - REWRITTEN FOR PERFECT MOBILE RESPONSIVENESS */}
                                 {isSelectionMode ? (
-                                    <div className="h-16 md:h-17.5 px-4 bg-primary/10 flex items-center justify-between shrink-0 z-20 border-b border-border/40 animate-in fade-in slide-in-from-top-2 backdrop-blur-sm">
-                                        <div className="flex items-center gap-4 text-foreground">
-                                            <button onClick={resetContextState} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full"><X className="w-5 h-5" /></button>
-                                            <span className="font-semibold text-lg">{selectedMessages.length} selected</span>
+                                    <div className="h-14 sm:h-16 md:h-17.5 px-2 sm:px-4 bg-primary/10 flex items-center justify-between shrink-0 z-20 border-b border-border/40 animate-in fade-in slide-in-from-top-2 backdrop-blur-sm w-full">
+                                        <div className="flex items-center gap-2 sm:gap-4 text-foreground">
+                                            <button onClick={resetContextState} className="p-1.5 sm:p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full"><X className="w-5 h-5" /></button>
+                                            <span className="font-semibold text-base sm:text-lg">{selectedMessages.length} selected</span>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            {canCopy && <button onClick={() => { navigator.clipboard.writeText(selectedMsgsData.map(m => m.text).join('\n')); resetContextState(); toast.success('Copied'); }} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full" title="Copy"><Copy className="w-5 h-5" /></button>}
-                                            {canForward && <button onClick={() => setShowForwardDialog(true)} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full" title="Forward"><Forward className="w-5 h-5" /></button>}
-                                            <button onClick={() => setShowDeleteModal(true)} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full" title="Delete"><Trash className="w-5 h-5 text-rose-500" /></button>
+                                        <div className="flex items-center gap-1 sm:gap-2">
+                                            {canCopy && <button onClick={() => { navigator.clipboard.writeText(selectedMsgsData.map(m => m.text).join('\n')); resetContextState(); toast.success('Copied'); }} className="p-2 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full" title="Copy"><Copy className="w-4 h-4 sm:w-5 sm:h-5" /></button>}
+                                            {canForward && <button onClick={() => setShowForwardDialog(true)} className="p-2 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full" title="Forward"><Forward className="w-4 h-4 sm:w-5 sm:h-5" /></button>}
+                                            <button onClick={() => setShowDeleteModal(true)} className="p-2 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full" title="Delete"><Trash className="w-4 h-4 sm:w-5 sm:h-5 text-rose-500" /></button>
                                         </div>
                                     </div>
                                 ) : showSearchInput ? (
-                                    <div className="h-16 md:h-17.5 px-2 sm:px-4 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center gap-2 shrink-0 z-20 sticky top-0 animate-in fade-in duration-200">
-                                        <button onClick={() => { setShowSearchInput(false); setChatSearchQuery(""); }} className="p-3 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0"><ArrowLeft className="w-5 h-5" /></button>
-                                        <input autoFocus type="text" value={chatSearchQuery} onChange={(e) => setChatSearchQuery(e.target.value)} placeholder="Search..." className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-[15px] text-foreground placeholder:text-muted-foreground min-w-0" />
-                                        {chatSearchQuery && <button onClick={() => setChatSearchQuery("")} className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0"><X className="w-5 h-5" /></button>}
+                                    <div className="h-14 sm:h-16 md:h-17.5 px-1 sm:px-4 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center gap-1 sm:gap-2 shrink-0 z-20 sticky top-0 animate-in fade-in duration-200 w-full">
+                                        <button onClick={() => { setShowSearchInput(false); setChatSearchQuery(""); }} className="p-2 sm:p-3 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0"><ArrowLeft className="w-5 h-5" /></button>
+                                        <input autoFocus type="text" value={chatSearchQuery} onChange={(e) => setChatSearchQuery(e.target.value)} placeholder="Search..." className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-[14px] sm:text-[15px] text-foreground placeholder:text-muted-foreground min-w-0" />
+                                        {chatSearchQuery && <button onClick={() => setChatSearchQuery("")} className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0"><X className="w-4 h-4 sm:w-5 sm:h-5" /></button>}
                                     </div>
                                 ) : (
-                                    <div className="h-16 md:h-17.5 px-2 sm:px-5 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center justify-between shrink-0 z-20 sticky top-0">
-                                        <div className="flex items-center flex-1 gap-2 sm:gap-4 cursor-pointer" onClick={() => setShowProfileInfo(true)}>
-                                            <button onClick={(e) => { e.stopPropagation(); setActiveChat(null); }} className="md:hidden p-2 text-muted-foreground hover:bg-muted rounded-full"><ArrowLeft className="w-5 h-5" /></button>
-                                            <div className="w-10 h-10 md:w-11 md:h-11 shrink-0 rounded-full overflow-hidden">
+                                    <div className="h-14 sm:h-16 md:h-17.5 px-1.5 sm:px-5 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center justify-between shrink-0 z-20 sticky top-0 w-full">
+                                        
+                                        {/* LEFT SECTION (Profile) - ADDED flex-1 min-w-0 TO PREVENT PUSHING RIGHT SIDE */}
+                                        <div className="flex items-center flex-1 gap-1.5 sm:gap-3 min-w-0 cursor-pointer pr-2" onClick={() => setShowProfileInfo(true)}>
+                                            <button onClick={(e) => { e.stopPropagation(); setActiveChat(null); }} className="md:hidden p-1.5 text-muted-foreground hover:bg-muted rounded-full shrink-0">
+                                                <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+                                            </button>
+                                            <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 shrink-0 rounded-full overflow-hidden">
                                                 {activeChat.profilePicture ? (
                                                     <img src={activeChat.profilePicture} alt={activeChat.name} className="w-full h-full object-cover" />
                                                 ) : (
@@ -1156,23 +1160,24 @@ const SharedChat = () => {
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="leading-tight flex-1 min-w-0">
-                                                <h3 className="text-[15px] md:text-[16px] font-bold text-foreground truncate tracking-wide">{activeChat.name}</h3>
-                                                <div className="flex items-center gap-1.5 mt-0.5 md:mt-1">
-                                                    <span className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${isOnline(activeChat._id || activeChat.id) ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></span>
-                                                    <p className="text-[11px] md:text-[12px] text-muted-foreground font-medium">{isOnline(activeChat._id || activeChat.id) ? 'Online' : 'Offline'}</p>
+                                            <div className="leading-tight flex-1 min-w-0 flex flex-col justify-center">
+                                                <h3 className="text-[14px] sm:text-[15px] md:text-[16px] font-bold text-foreground truncate tracking-wide">{activeChat.name}</h3>
+                                                <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5">
+                                                    <span className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shrink-0 ${isOnline(activeChat._id || activeChat.id) ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                                                    <p className="text-[11px] md:text-[12px] text-muted-foreground font-medium truncate">{isOnline(activeChat._id || activeChat.id) ? 'Online' : 'Offline'}</p>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-0.5 md:gap-1 relative" ref={topMenuRef}>
-                                            <button onClick={() => setShowSearchInput(true)} className="p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"><Search className="w-5 h-5" /></button>
+                                        {/* RIGHT SECTION (Icons) - ADDED shrink-0 TO PREVENT GETTING CRUSHED */}
+                                        <div className="flex items-center justify-end shrink-0 gap-0.5 sm:gap-1 relative" ref={topMenuRef}>
+                                            <button onClick={() => setShowSearchInput(true)} className="p-2 sm:p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"><Search className="w-5 h-5 sm:w-5 sm:h-5" /></button>
 
                                             {/* --- UPDATED CALL BUTTON --- */}
                                             <div className="relative" ref={callMenuRef}>
-                                                <button onClick={() => setShowCallMenu(!showCallMenu)} className="flex items-center gap-1 md:gap-1.5 px-3 py-1.5 md:py-2 text-[13px] md:text-[14px] font-bold text-white bg-[#6B66FF] hover:bg-[#5A55E5] rounded-xl transition-all active:scale-95 shadow-sm mx-0.5 md:mx-1">
-                                                    <Video className="w-4 h-4 fill-current" />
-                                                    <ChevronDown className="w-3.5 h-3.5" />
+                                                <button onClick={() => setShowCallMenu(!showCallMenu)} className="flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 text-[13px] sm:text-[14px] font-bold text-white bg-[#6B66FF] hover:bg-[#5A55E5] rounded-xl transition-all active:scale-95 shadow-sm">
+                                                    <Video className="w-4 h-4 fill-current shrink-0" />
+                                                    <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                                                 </button>
                                                 {showCallMenu && (
                                                     <div className="absolute top-12 right-0 w-40 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-50">
@@ -1192,7 +1197,7 @@ const SharedChat = () => {
                                                 )}
                                             </div>
 
-                                            <button onClick={(e) => { e.stopPropagation(); setShowTopMenu(!showTopMenu); }} className="p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"><MoreVertical className="w-5 h-5" /></button>
+                                            <button onClick={(e) => { e.stopPropagation(); setShowTopMenu(!showTopMenu); }} className="p-2 sm:p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"><MoreVertical className="w-5 h-5 sm:w-5 sm:h-5" /></button>
 
                                             {showTopMenu && (
                                                 <div className="absolute top-12 right-0 w-44 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-30" onClick={e => e.stopPropagation()}>
@@ -1231,8 +1236,8 @@ const SharedChat = () => {
                                     </div>
                                 </div>
 
-                                {/* Message Feed - Removed Solid Background Colors to show image beneath */}
-                                <div className="flex-1 overflow-y-auto p-3 sm:p-6 custom-scrollbar relative">
+                                {/* Message Feed - Added overflow-x-hidden and w-full lock */}
+                                <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-6 custom-scrollbar relative w-full">
                                     <div className="relative z-10 flex flex-col space-y-4 pb-2">
                                         {/* FIX: CHAT BUBBLE SHIMMER SKELETON */}
                                         {isFetchingMessages ? (
@@ -1283,9 +1288,9 @@ const SharedChat = () => {
                                                             </div>
                                                         )}
 
-                                                        <div className={`flex flex-col flex-1 px-4 sm:px-6 pointer-events-auto ${isMe ? 'items-end' : 'items-start'}`}>
+                                                        <div className={`flex flex-col flex-1 px-2 sm:px-6 pointer-events-auto ${isMe ? 'items-end' : 'items-start'}`}>
                                                             {/* BUBBLE SIZING RESTRAINT APPLIED HERE */}
-                                                            <div className={`relative max-w-[85%] sm:max-w-[75%] lg:max-w-[60%] px-3 py-2 shadow-sm select-none ${isMe ? 'bg-[#6B66FF] text-white rounded-2xl rounded-tr-sm shadow-[0_4px_14px_-6px_rgba(var(--primary),0.3)]' : 'bg-card dark:bg-[#1C1F26] text-foreground rounded-2xl rounded-tl-sm border border-border/50 shadow-sm'}`}>
+                                                            <div className={`relative max-w-[85%] sm:max-w-[75%] lg:max-w-[60%] px-3 py-2 shadow-sm select-none overflow-hidden ${isMe ? 'bg-[#6B66FF] text-white rounded-2xl rounded-tr-sm shadow-[0_4px_14px_-6px_rgba(var(--primary),0.3)]' : 'bg-card dark:bg-[#1C1F26] text-foreground rounded-2xl rounded-tl-sm border border-border/50 shadow-sm'}`}>
 
                                                                 {msg.isDeletedForEveryone ? (
                                                                     <div className={`flex items-center gap-2 italic text-[14.5px] py-1 ${isMe ? 'text-white/80' : 'text-muted-foreground/80'}`}>
@@ -1306,7 +1311,7 @@ const SharedChat = () => {
                                                                                     <span className="text-white/80 text-xs font-semibold">{formatBytes(msg.fileSize || 0)}</span>
                                                                                 </div>
                                                                             ) : (
-                                                                                <div className="relative mb-1 cursor-pointer group/media" onClick={(e) => { if (!msg.isUploading) { e.stopPropagation(); setFullscreenMedia(msg); } }}>
+                                                                                <div className="relative mb-1 cursor-pointer group/media max-w-full" onClick={(e) => { if (!msg.isUploading) { e.stopPropagation(); setFullscreenMedia(msg); } }}>
                                                                                     {msg.isUploading && (
                                                                                         <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 rounded-xl backdrop-blur-sm">
                                                                                             <div className="relative flex items-center justify-center w-12 h-12 bg-black/40 rounded-full">
@@ -1336,7 +1341,7 @@ const SharedChat = () => {
                                                                                         />
                                                                                     )}
                                                                                     {msg.mediaType === 'video' && (
-                                                                                        <div className="relative w-48 sm:w-64">
+                                                                                        <div className="relative w-48 sm:w-64 max-w-full">
                                                                                             <video src={msg.mediaUrl} className={`w-full h-auto max-h-64 rounded-xl object-cover ${msg.isUploading ? 'blur-sm' : ''}`} />
                                                                                             {!msg.isUploading && (
                                                                                                 <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl group-hover/media:bg-black/30 transition-colors">
@@ -1353,7 +1358,7 @@ const SharedChat = () => {
                                                                         {msg.mediaType === 'document' && msg.mediaUrl && (
                                                                             <div
                                                                                 onClick={(e) => { if (!msg.isUploading) { e.stopPropagation(); setFullscreenMedia(msg); } }}
-                                                                                className="relative flex items-center gap-3 bg-black/10 dark:bg-white/5 p-3 rounded-lg mb-1.5 border border-white/5 cursor-pointer hover:bg-black/20 dark:hover:bg-white/10 transition-colors w-60 sm:w-72 overflow-hidden"
+                                                                                className="relative flex items-center gap-3 bg-black/10 dark:bg-white/5 p-3 rounded-lg mb-1.5 border border-white/5 cursor-pointer hover:bg-black/20 dark:hover:bg-white/10 transition-colors w-60 sm:w-72 max-w-full overflow-hidden"
                                                                             >
                                                                                 {msg.isUploading && (
                                                                                     <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-lg">
@@ -1382,8 +1387,9 @@ const SharedChat = () => {
                                                                             </div>
                                                                         )}
 
+                                                                        {/* FIXED: Changed wrap-break-word to correctly wrap text dynamically */}
                                                                         {msg.text && (
-                                                                            <p className="text-[14.5px] leading-snug whitespace-pre-wrap wrap-break-word">
+                                                                            <p className="text-[14px] sm:text-[14.5px] leading-snug whitespace-pre-wrap wrap-break-word w-full">
                                                                                 {renderTextWithLinks(msg.text, isMe)}
                                                                             </p>
                                                                         )}
@@ -1419,10 +1425,12 @@ const SharedChat = () => {
                                         <button onClick={() => { setEditingMessage(null); setNewMessage(""); }} className="p-2 hover:bg-muted rounded-full"><X className="w-4 h-4" /></button>
                                     </div>
                                 )}
-                                <div className="p-2.5 sm:p-3 bg-card dark:bg-[#13151A] border-t border-border/40 shrink-0 z-20 sticky bottom-0">
-                                    <form onSubmit={handleSendMessage} className="flex items-end gap-2 relative">
+                                
+                                {/* Added explicit w-full max-w-full to prevent input prompt overflow */}
+                                <div className="p-2 sm:p-3 bg-card dark:bg-[#13151A] border-t border-border/40 shrink-0 z-20 sticky bottom-0 w-full max-w-full">
+                                    <form onSubmit={handleSendMessage} className="flex items-end gap-2 relative w-full">
                                         {!editingMessage && (
-                                            <div className="relative" ref={attachMenuRef}>
+                                            <div className="relative shrink-0" ref={attachMenuRef}>
                                                 <input type="file" multiple accept="image/*, video/*" className="hidden" ref={fileInputRef} onChange={(e) => handleMediaUpload(e, { compress: true, maxCount: 5, maxSizeCombinedMb: 50 })} />
                                                 <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar" className="hidden" ref={docInputRef} onChange={(e) => handleMediaUpload(e, { compress: false, maxCount: 5, maxSizeCombinedMb: 50, asDocument: true })} />
                                                 <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={(e) => handleMediaUpload(e, { compress: true, maxCount: 1, maxSizeCombinedMb: 50 })} />
@@ -1439,8 +1447,8 @@ const SharedChat = () => {
                                                 </button>
                                             </div>
                                         )}
-                                        <div className="flex-1 bg-muted/50 dark:bg-[#1A1D24] rounded-2xl flex items-center pr-1.5 focus-within:ring-1 focus-within:ring-primary/30 transition-all min-w-0">
-                                            <textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 max-h-28 min-h-11 bg-transparent border-none focus:outline-none focus:ring-0 resize-none py-3 px-3 text-[14.5px] sm:text-[15px] text-foreground placeholder:text-muted-foreground/70 custom-scrollbar" rows="1" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} />
+                                        <div className="flex-1 bg-muted/50 dark:bg-[#1A1D24] rounded-2xl flex items-center pr-1.5 focus-within:ring-1 focus-within:ring-primary/30 transition-all min-w-0 w-full">
+                                            <textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 w-full max-h-28 min-h-11 bg-transparent border-none focus:outline-none focus:ring-0 resize-none py-3 px-3 text-[14.5px] sm:text-[15px] text-foreground placeholder:text-muted-foreground/70 custom-scrollbar" rows="1" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} />
                                             <button type="submit" disabled={!newMessage.trim() && !isUploading} className={`p-2 rounded-full transition-all shrink-0 ${newMessage.trim() ? 'bg-[#6B66FF] text-white hover:bg-[#5A55E5] scale-100' : 'bg-transparent text-muted-foreground scale-95'}`}>
                                                 {editingMessage ? <Check className="w-4.5 h-4.5 sm:w-5 sm:h-5" /> : <Send className="w-4.5 h-4.5 sm:w-5 sm:h-5" style={{ marginLeft: newMessage.trim() ? '2px' : '0' }} />}
                                             </button>
@@ -1534,7 +1542,7 @@ const SharedChat = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-background dark:bg-[#0B0D12] animate-in fade-in duration-700">
+                        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-background dark:bg-[#0B0D12] animate-in fade-in duration-700 w-full h-full">
                             <div className="relative mb-8">
                                 <div className="absolute inset-0 bg-primary/5 dark:bg-primary/10 rounded-full blur-2xl scale-150"></div>
                                 <div className="w-24 h-24 md:w-28 md:h-28 bg-card/80 dark:bg-[#13151A]/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg border border-border/30 relative z-10">
