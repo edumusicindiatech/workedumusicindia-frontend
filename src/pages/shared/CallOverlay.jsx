@@ -61,28 +61,53 @@ const CallOverlay = ({
 
     const statusText = isCallAccepted ? "" : (isOnline ? "Ringing..." : "Calling...");
 
-    const handleMouseDown = (e) => {
+    // FIX: Combined Mouse & Touch Drag Logic with screen boundaries
+    const handleDragStart = (e) => {
         isDragging.current = false;
-        const startX = e.clientX - position.x;
-        const startY = e.clientY - position.y;
-        const initialClickX = e.clientX;
-        const initialClickY = e.clientY;
 
-        const onMouseMove = (moveEvent) => {
-            if (Math.abs(moveEvent.clientX - initialClickX) > 5 || Math.abs(moveEvent.clientY - initialClickY) > 5) {
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const startX = clientX - position.x;
+        const startY = clientY - position.y;
+        const initialClickX = clientX;
+        const initialClickY = clientY;
+
+        const onDragMove = (moveEvent) => {
+            const moveClientX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
+            const moveClientY = moveEvent.touches ? moveEvent.touches[0].clientY : moveEvent.clientY;
+
+            if (Math.abs(moveClientX - initialClickX) > 5 || Math.abs(moveClientY - initialClickY) > 5) {
                 isDragging.current = true;
             }
-            setPosition({ x: moveEvent.clientX - startX, y: moveEvent.clientY - startY });
+
+            // Boundary logic to prevent dragging off-screen
+            const widgetWidth = dragRef.current?.offsetWidth || 144;
+            const widgetHeight = dragRef.current?.offsetHeight || 200;
+
+            let newX = moveClientX - startX;
+            let newY = moveClientY - startY;
+
+            if (newX < 0) newX = 0;
+            if (newY < 0) newY = 0;
+            if (newX + widgetWidth > window.innerWidth) newX = window.innerWidth - widgetWidth;
+            if (newY + widgetHeight > window.innerHeight) newY = window.innerHeight - widgetHeight;
+
+            setPosition({ x: newX, y: newY });
         };
 
-        const onMouseUp = () => {
-            document.removeEventListener("mousemove", onMouseMove);
-            document.removeEventListener("mouseup", onMouseUp);
+        const onDragEnd = () => {
+            document.removeEventListener("mousemove", onDragMove);
+            document.removeEventListener("mouseup", onDragEnd);
+            document.removeEventListener("touchmove", onDragMove);
+            document.removeEventListener("touchend", onDragEnd);
             setTimeout(() => { isDragging.current = false; }, 50);
         };
 
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
+        document.addEventListener("mousemove", onDragMove);
+        document.addEventListener("mouseup", onDragEnd);
+        document.addEventListener("touchmove", onDragMove, { passive: false });
+        document.addEventListener("touchend", onDragEnd);
     };
 
     const handleMaximize = (e) => {
@@ -144,18 +169,18 @@ const CallOverlay = ({
                                 <p className="text-white/70 text-lg tracking-wide">{statusText}</p>
                             </div>
                         )}
-                        <div className={`absolute transition-all duration-500 group ${isCallAccepted ? 'bottom-40 right-6 w-28 h-40 md:w-36 md:h-48 rounded-xl border-2 border-white/20 shadow-2xl bg-black overflow-hidden z-20' : 'inset-0 w-full h-full opacity-50 bg-black z-20 pointer-events-none'}`}>
+                        <div className={`absolute transition-all duration-500 ${isCallAccepted ? 'bottom-40 right-6 w-28 h-40 md:w-36 md:h-48 rounded-xl border-2 border-white/20 shadow-2xl bg-black overflow-hidden z-20' : 'inset-0 w-full h-full opacity-50 bg-black z-20 pointer-events-none'}`}>
                             {isVideoMuted ? (
                                 <div className="w-full h-full flex items-center justify-center bg-gray-900"><VideoOff className="w-8 h-8 text-white/50" /></div>
                             ) : (
                                 <video ref={localVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${facingMode === 'user' ? 'transform scale-x-[-1]' : ''}`} />
                             )}
 
-                            {/* FLIP CAMERA BUTTON (WhatsApp Style Overlay on PIP) */}
+                            {/* FIX: FLIP CAMERA BUTTON - Removed hover hide, added z-50 to ensure clickability */}
                             {isCallAccepted && !isVideoMuted && (
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); onFlipCamera(); }} 
-                                    className="absolute bottom-2 left-2 p-2 bg-black/40 hover:bg-black/60 rounded-full text-white backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity md:cursor-pointer"
+                                    className="absolute bottom-2 left-2 p-2 bg-black/50 active:bg-black/80 rounded-full text-white backdrop-blur-md z-50 shadow-md transition-colors cursor-pointer"
                                     title="Flip Camera"
                                 >
                                     <SwitchCamera size={18} />
@@ -204,14 +229,20 @@ const CallOverlay = ({
 
             {/* WHATSAPP STYLE MINIMIZED VIEW */}
             {isMinimized && (
-                <div ref={dragRef} onMouseDown={handleMouseDown} style={{ left: `${position.x}px`, top: `${position.y}px` }} className="fixed z-1000000 w-36 bg-[#1f2c33]/95 backdrop-blur-md shadow-2xl rounded-2xl p-2 border border-white/10 cursor-move animate-in zoom-in-95 flex flex-col gap-2">
+                <div 
+                    ref={dragRef} 
+                    onMouseDown={handleDragStart} 
+                    onTouchStart={handleDragStart} 
+                    style={{ left: `${position.x}px`, top: `${position.y}px` }} 
+                    className="fixed z-1000000 w-36 bg-[#1f2c33]/95 backdrop-blur-md shadow-2xl rounded-2xl p-2 border border-white/10 cursor-move animate-in zoom-in-95 flex flex-col gap-2 touch-none"
+                >
                     
                     {/* Maximize Area (Video or Image) */}
                     <div onClick={handleMaximize} className="w-full aspect-3/4 bg-black rounded-xl overflow-hidden relative cursor-pointer border border-white/5 flex items-center justify-center">
                         {callType === 'video' && isCallAccepted ? (
-                            <video ref={minimizedRemoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                            <video ref={minimizedRemoteVideoRef} autoPlay playsInline className="w-full h-full object-cover pointer-events-none" />
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                            <div className="w-full h-full flex items-center justify-center bg-gray-800 pointer-events-none">
                                 {peer?.profilePicture ? (
                                     <img src={peer.profilePicture} className="w-full h-full object-cover opacity-80" />
                                 ) : (
