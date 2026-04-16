@@ -65,12 +65,12 @@ const EmployeeNavbar = () => {
     const [isCallAccepted, setIsCallAccepted] = useState(false);
     const [onlineUsers, setOnlineUsers] = useState([]);
 
-    // Call Upgrade & Screen Share States
+    // Call Upgrade & Camera States
     const [currentCallType, setCurrentCallType] = useState('voice');
     const [localStreamState, setLocalStreamState] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
-    const [isScreenSharing, setIsScreenSharing] = useState(false);
     const [videoUpgradeStatus, setVideoUpgradeStatus] = useState('idle');
+    const [facingMode, setFacingMode] = useState('user'); // 'user' (front) or 'environment' (back)
 
     const pcRef = useRef(null);
     const localStreamRef = useRef(null);
@@ -102,7 +102,7 @@ const EmployeeNavbar = () => {
     useEffect(() => {
         if (activeCall && !isCallAccepted && callPeer) {
             const isPeerOnline = onlineUsers.includes(String(callPeer._id || callPeer.id));
-            if (isPeerOnline) { pauseAudio('calling'); if (globalAudio.ringing) globalAudio.ringing.loop = true; playAudio('ringing'); } 
+            if (isPeerOnline) { pauseAudio('calling'); if (globalAudio.ringing) globalAudio.ringing.loop = true; playAudio('ringing'); }
             else { pauseAudio('ringing'); if (globalAudio.calling) globalAudio.calling.loop = true; playAudio('calling'); }
         } else { pauseAudio('calling'); pauseAudio('ringing'); }
         return () => { pauseAudio('calling'); pauseAudio('ringing'); };
@@ -112,12 +112,16 @@ const EmployeeNavbar = () => {
     const themeMode = useSelector((state) => state.theme.mode);
 
     // --- WEBRTC LOGIC ---
-    const setupMedia = async (requestedType) => {
+    const setupMedia = async (requestedType, specificFacingMode = 'user') => {
         try {
             if (!navigator.mediaDevices) throw new Error("Media devices not supported.");
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: requestedType === 'video' ? { facingMode: "user" } : false });
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: requestedType === 'video' ? { facingMode: specificFacingMode } : false
+            });
             localStreamRef.current = stream;
             setLocalStreamState(stream);
+            setFacingMode(specificFacingMode);
             return { stream, actualType: requestedType };
         } catch (e) {
             if (requestedType === 'video') {
@@ -138,20 +142,48 @@ const EmployeeNavbar = () => {
         }
     };
 
+    const handleFlipCamera = async () => {
+        if (currentCallType !== 'video' || !localStreamRef.current) return;
+        try {
+            const newMode = facingMode === 'user' ? 'environment' : 'user';
+
+            // Stop old video tracks to release the camera hardware
+            localStreamRef.current.getVideoTracks().forEach(t => t.stop());
+
+            // Request new camera
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { exact: newMode } }
+            }).catch(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: newMode } })); // Fallback if exact fails
+
+            const newVideoTrack = stream.getVideoTracks()[0];
+            const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
+            if (sender) await sender.replaceTrack(newVideoTrack);
+
+            const audioTracks = localStreamRef.current.getAudioTracks();
+            const newLocalStream = new MediaStream([...audioTracks, newVideoTrack]);
+
+            localStreamRef.current = newLocalStream;
+            setLocalStreamState(newLocalStream);
+            setFacingMode(newMode);
+        } catch (err) {
+            console.error("Flip camera failed", err);
+            toast.error("Could not switch camera");
+        }
+    };
+
     const attachPCListeners = (pc) => {
         pc.onicecandidate = (e) => {
             const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
             if (e.candidate && to) socket.emit('ice_candidate', { to, candidate: e.candidate, from: user.id || user._id });
         };
-        
-        // FIX: Bulletproof ontrack handler to catch all arriving media tracks cleanly
+
         pc.ontrack = (e) => {
             setRemoteStream((prevStream) => {
                 const stream = prevStream || new MediaStream();
                 if (!stream.getTracks().find(t => t.id === e.track.id)) {
                     stream.addTrack(e.track);
                 }
-                return new MediaStream(stream.getTracks()); // Force fresh reference for React
+                return new MediaStream(stream.getTracks());
             });
         };
     };
@@ -163,7 +195,7 @@ const EmployeeNavbar = () => {
         localStreamRef.current = null;
         setLocalStreamState(null);
         setRemoteStream(null);
-        setIsScreenSharing(false);
+        setFacingMode('user');
         setActiveCall(false);
         setCallPeer(null);
         setGlobalIncomingCall(null);
@@ -175,8 +207,7 @@ const EmployeeNavbar = () => {
     const handleAcceptCall = async () => {
         if (!globalIncomingCall) return;
         const callData = globalIncomingCall;
-        
-        // FIX: Check Raw SDP to absolutely guarantee camera turns on if caller sent video
+
         const isVideoOffer = callData.callType === 'video' || (callData.signal && callData.signal.sdp && callData.signal.sdp.includes('m=video'));
         const requestedType = isVideoOffer ? 'video' : 'voice';
 
@@ -198,7 +229,7 @@ const EmployeeNavbar = () => {
         await pc.setLocalDescription(answer);
 
         socket.emit('answer_call', { to: callData.from, signal: answer });
-        
+
         setGlobalIncomingCall(null);
         pauseAudio('incoming');
         setIsCallAccepted(true);
@@ -254,15 +285,16 @@ const EmployeeNavbar = () => {
 
     const performVideoUpgrade = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
             const videoTrack = stream.getVideoTracks()[0];
-            
+
             localStreamRef.current.addTrack(videoTrack);
             setLocalStreamState(new MediaStream(localStreamRef.current.getTracks()));
-            
+            setFacingMode('user');
+
             if (pcRef.current) {
                 pcRef.current.addTrack(videoTrack, localStreamRef.current);
-                
+
                 const offer = await pcRef.current.createOffer();
                 await pcRef.current.setLocalDescription(offer);
                 const to = callPeer?._id || callPeer?.id;
@@ -287,62 +319,6 @@ const EmployeeNavbar = () => {
         setVideoUpgradeStatus('idle');
     };
 
-    // --- MANUAL SCREEN SHARE LOGIC ---
-    const handleToggleScreenShare = async () => {
-        try {
-            if (!isScreenSharing) {
-                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-                const screenVideoTrack = screenStream.getVideoTracks()[0];
-                const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
-
-                let needsRenegotiation = false;
-
-                if (sender) {
-                    await sender.replaceTrack(screenVideoTrack); 
-                } else {
-                    pcRef.current.addTrack(screenVideoTrack, localStreamRef.current);
-                    needsRenegotiation = true; 
-                }
-
-                const audioTracks = localStreamRef.current.getAudioTracks();
-                const newLocalStream = new MediaStream([...audioTracks, screenVideoTrack]);
-                
-                localStreamRef.current = newLocalStream;
-                setLocalStreamState(newLocalStream);
-                setIsScreenSharing(true);
-                if (currentCallType === 'voice') setCurrentCallType('video');
-
-                if (needsRenegotiation) {
-                    const offer = await pcRef.current.createOffer();
-                    await pcRef.current.setLocalDescription(offer);
-                    const to = callPeer?._id || callPeer?.id;
-                    socket.emit('renegotiate', { to, signal: offer });
-                }
-
-                screenVideoTrack.onended = () => stopScreenShareAndRevertToCamera();
-            } else {
-                stopScreenShareAndRevertToCamera();
-            }
-        } catch (error) { console.error("Error sharing screen:", error); }
-    };
-
-    const stopScreenShareAndRevertToCamera = async () => {
-        try {
-            const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
-            const cameraVideoTrack = cameraStream.getVideoTracks()[0];
-            const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
-
-            if (sender) await sender.replaceTrack(cameraVideoTrack);
-
-            const newLocalStream = new MediaStream([...localStreamRef.current.getAudioTracks(), cameraVideoTrack]);
-            localStreamRef.current = newLocalStream;
-            setLocalStreamState(newLocalStream);
-            setIsScreenSharing(false);
-        } catch (error) {
-            console.error("Failed to revert to camera:", error);
-            toast.error("Camera unavailable after screen share.");
-        }
-    };
 
     // --- SOCKET LISTENERS ---
     useEffect(() => {
@@ -396,7 +372,7 @@ const EmployeeNavbar = () => {
                         const answer = await pcRef.current.createAnswer();
                         await pcRef.current.setLocalDescription(answer);
                         const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
-                        if(to) socket.emit('renegotiate', { to, signal: answer });
+                        if (to) socket.emit('renegotiate', { to, signal: answer });
                     } else if (signal.type === 'answer') {
                         await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                     }
@@ -446,7 +422,7 @@ const EmployeeNavbar = () => {
         socket.on("ice_candidate", handleIceCandidate);
         socket.on("renegotiate", handleRenegotiate);
         socket.on("call_ended", () => { cleanupCall(); pauseAudio('incoming'); playAudio('hangup'); });
-        
+
         socket.on("video_upgrade_request", () => { setVideoUpgradeStatus('receiving_request'); playAudio('notification'); });
         socket.on("video_upgrade_rejected", () => { setVideoUpgradeStatus('idle'); toast.error("Video call request rejected"); });
         socket.on("video_upgrade_accepted", async () => { setVideoUpgradeStatus('idle'); toast.success("Video call request accepted"); await performVideoUpgrade(); });
@@ -510,13 +486,13 @@ const EmployeeNavbar = () => {
                     remoteStream={remoteStream}
                     isCallAccepted={isCallAccepted}
                     isOnline={onlineUsers.includes(String(callPeer?._id || callPeer?.id))}
-                    isScreenSharing={isScreenSharing}
-                    onToggleScreenShare={handleToggleScreenShare}
                     callType={currentCallType}
                     onRequestVideo={handleRequestVideo}
                     onAcceptVideo={handleAcceptVideo}
                     onRejectVideo={handleRejectVideo}
                     videoUpgradeStatus={videoUpgradeStatus}
+                    onFlipCamera={handleFlipCamera}
+                    facingMode={facingMode}
                 />
             )}
 
@@ -603,7 +579,7 @@ const EmployeeNavbar = () => {
                     </div>
                 </div>
             )}
-            
+
             <EmployeeSettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />
         </>
     );

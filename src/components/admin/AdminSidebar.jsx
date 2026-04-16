@@ -71,12 +71,12 @@ const AdminSidebar = () => {
     const [isCallAccepted, setIsCallAccepted] = useState(false);
     const [onlineUsers, setOnlineUsers] = useState([]);
 
-    // Call Upgrade & Screen Share States
+    // Call Upgrade & Camera States
     const [currentCallType, setCurrentCallType] = useState('voice');
     const [localStreamState, setLocalStreamState] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
-    const [isScreenSharing, setIsScreenSharing] = useState(false);
     const [videoUpgradeStatus, setVideoUpgradeStatus] = useState('idle');
+    const [facingMode, setFacingMode] = useState('user'); // 'user' or 'environment'
 
     const pcRef = useRef(null);
     const localStreamRef = useRef(null);
@@ -130,12 +130,16 @@ const AdminSidebar = () => {
     }, [user, location.pathname]);
 
     // --- WEBRTC LOGIC ---
-    const setupMedia = async (requestedType) => {
+    const setupMedia = async (requestedType, specificFacingMode = 'user') => {
         try {
             if (!navigator.mediaDevices) throw new Error("Media devices not supported.");
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: requestedType === 'video' ? { facingMode: "user" } : false });
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: true, 
+                video: requestedType === 'video' ? { facingMode: specificFacingMode } : false 
+            });
             localStreamRef.current = stream;
             setLocalStreamState(stream);
+            setFacingMode(specificFacingMode);
             return { stream, actualType: requestedType };
         } catch (e) {
             if (requestedType === 'video') {
@@ -156,13 +160,39 @@ const AdminSidebar = () => {
         }
     };
 
+    const handleFlipCamera = async () => {
+        if (currentCallType !== 'video' || !localStreamRef.current) return;
+        try {
+            const newMode = facingMode === 'user' ? 'environment' : 'user';
+            
+            localStreamRef.current.getVideoTracks().forEach(t => t.stop());
+
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: { exact: newMode } } 
+            }).catch(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: newMode } }));
+
+            const newVideoTrack = stream.getVideoTracks()[0];
+            const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
+            if (sender) await sender.replaceTrack(newVideoTrack);
+
+            const audioTracks = localStreamRef.current.getAudioTracks();
+            const newLocalStream = new MediaStream([...audioTracks, newVideoTrack]);
+            
+            localStreamRef.current = newLocalStream;
+            setLocalStreamState(newLocalStream);
+            setFacingMode(newMode);
+        } catch (err) {
+            console.error("Flip camera failed", err);
+            toast.error("Could not switch camera");
+        }
+    };
+
     const attachPCListeners = (pc) => {
         pc.onicecandidate = (e) => {
             const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
             if (e.candidate && to) socket.emit('ice_candidate', { to, candidate: e.candidate, from: user.id || user._id });
         };
         
-        // FIX: Bulletproof ontrack handler
         pc.ontrack = (e) => {
             setRemoteStream((prevStream) => {
                 const stream = prevStream || new MediaStream();
@@ -181,7 +211,7 @@ const AdminSidebar = () => {
         localStreamRef.current = null;
         setLocalStreamState(null);
         setRemoteStream(null);
-        setIsScreenSharing(false);
+        setFacingMode('user');
         setActiveCall(false);
         setCallPeer(null);
         setGlobalIncomingCall(null);
@@ -194,7 +224,6 @@ const AdminSidebar = () => {
         if (!globalIncomingCall) return;
         const callData = globalIncomingCall;
         
-        // FIX: Inspect Raw SDP
         const isVideoOffer = callData.callType === 'video' || (callData.signal && callData.signal.sdp && callData.signal.sdp.includes('m=video'));
         const requestedType = isVideoOffer ? 'video' : 'voice';
 
@@ -272,11 +301,12 @@ const AdminSidebar = () => {
 
     const performVideoUpgrade = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
             const videoTrack = stream.getVideoTracks()[0];
             
             localStreamRef.current.addTrack(videoTrack);
             setLocalStreamState(new MediaStream(localStreamRef.current.getTracks()));
+            setFacingMode('user');
             
             if (pcRef.current) {
                 pcRef.current.addTrack(videoTrack, localStreamRef.current);
@@ -304,64 +334,6 @@ const AdminSidebar = () => {
         socket.emit('video_upgrade_rejected', { to });
         setVideoUpgradeStatus('idle');
     };
-
-    // --- MANUAL SCREEN SHARE LOGIC ---
-    const handleToggleScreenShare = async () => {
-        try {
-            if (!isScreenSharing) {
-                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-                const screenVideoTrack = screenStream.getVideoTracks()[0];
-                const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
-
-                let needsRenegotiation = false;
-
-                if (sender) {
-                    await sender.replaceTrack(screenVideoTrack);
-                } else {
-                    pcRef.current.addTrack(screenVideoTrack, localStreamRef.current);
-                    needsRenegotiation = true;
-                }
-
-                const audioTracks = localStreamRef.current.getAudioTracks();
-                const newLocalStream = new MediaStream([...audioTracks, screenVideoTrack]);
-                
-                localStreamRef.current = newLocalStream;
-                setLocalStreamState(newLocalStream);
-                setIsScreenSharing(true);
-                if (currentCallType === 'voice') setCurrentCallType('video');
-
-                if (needsRenegotiation) {
-                    const offer = await pcRef.current.createOffer();
-                    await pcRef.current.setLocalDescription(offer);
-                    const to = callPeer?._id || callPeer?.id;
-                    socket.emit('renegotiate', { to, signal: offer });
-                }
-
-                screenVideoTrack.onended = () => stopScreenShareAndRevertToCamera();
-            } else {
-                stopScreenShareAndRevertToCamera();
-            }
-        } catch (error) { console.error("Error sharing screen:", error); }
-    };
-
-    const stopScreenShareAndRevertToCamera = async () => {
-        try {
-            const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
-            const cameraVideoTrack = cameraStream.getVideoTracks()[0];
-            const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
-
-            if (sender) await sender.replaceTrack(cameraVideoTrack);
-
-            const newLocalStream = new MediaStream([...localStreamRef.current.getAudioTracks(), cameraVideoTrack]);
-            localStreamRef.current = newLocalStream;
-            setLocalStreamState(newLocalStream);
-            setIsScreenSharing(false);
-        } catch (error) {
-            console.error("Failed to revert to camera:", error);
-            toast.error("Camera unavailable after screen share.");
-        }
-    };
-
 
     // --- SOCKET LISTENERS ---
     useEffect(() => {
@@ -522,13 +494,13 @@ const AdminSidebar = () => {
                     remoteStream={remoteStream}
                     isCallAccepted={isCallAccepted}
                     isOnline={onlineUsers.includes(String(callPeer?._id || callPeer?.id))}
-                    isScreenSharing={isScreenSharing}
-                    onToggleScreenShare={handleToggleScreenShare}
                     callType={currentCallType}
                     onRequestVideo={handleRequestVideo}
                     onAcceptVideo={handleAcceptVideo}
                     onRejectVideo={handleRejectVideo}
                     videoUpgradeStatus={videoUpgradeStatus}
+                    onFlipCamera={handleFlipCamera}
+                    facingMode={facingMode}
                 />
             )}
 
@@ -628,7 +600,7 @@ const AdminSidebar = () => {
             </header>
 
             {/* --- MOBILE BOTTOM NAVBAR --- */}
-            <nav className="2xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe">
+            <nav className="2xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] overflow-x-auto overflow-y-hidden">
                 <NavLink to="/admin/dashboard" className={mobileNavClasses}><LayoutDashboard className="w-6 h-6" /></NavLink>
                 <NavLink to="/admin/employees" className={mobileNavClasses}><Users className="w-6 h-6" /></NavLink>
                 <NavLink to="/admin/progress" className={mobileNavClasses}><TrendingUp className="w-6 h-6" /></NavLink>
@@ -677,7 +649,7 @@ const AdminSidebar = () => {
                     </div>
                 </div>
             )}
-
+            
             <AdminSettingsModal
                 isOpen={isSettingsModalOpen}
                 onClose={() => setIsSettingsModalOpen(false)}
