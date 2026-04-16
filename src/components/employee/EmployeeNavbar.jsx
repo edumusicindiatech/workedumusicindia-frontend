@@ -46,6 +46,12 @@ const pauseAudio = (type) => { try { const snd = globalAudio[type]; if (snd) { s
 
 const iceServers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
+// Base high-quality constraints to force primary camera selection
+const HQ_VIDEO_CONSTRAINTS = {
+    width: { ideal: 1280 },
+    height: { ideal: 720 }
+};
+
 const EmployeeNavbar = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -70,7 +76,7 @@ const EmployeeNavbar = () => {
     const [localStreamState, setLocalStreamState] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
     const [videoUpgradeStatus, setVideoUpgradeStatus] = useState('idle');
-    const [facingMode, setFacingMode] = useState('user'); // 'user' (front) or 'environment' (back)
+    const [facingMode, setFacingMode] = useState('user'); 
 
     const pcRef = useRef(null);
     const localStreamRef = useRef(null);
@@ -102,7 +108,7 @@ const EmployeeNavbar = () => {
     useEffect(() => {
         if (activeCall && !isCallAccepted && callPeer) {
             const isPeerOnline = onlineUsers.includes(String(callPeer._id || callPeer.id));
-            if (isPeerOnline) { pauseAudio('calling'); if (globalAudio.ringing) globalAudio.ringing.loop = true; playAudio('ringing'); }
+            if (isPeerOnline) { pauseAudio('calling'); if (globalAudio.ringing) globalAudio.ringing.loop = true; playAudio('ringing'); } 
             else { pauseAudio('ringing'); if (globalAudio.calling) globalAudio.calling.loop = true; playAudio('calling'); }
         } else { pauseAudio('calling'); pauseAudio('ringing'); }
         return () => { pauseAudio('calling'); pauseAudio('ringing'); };
@@ -115,9 +121,9 @@ const EmployeeNavbar = () => {
     const setupMedia = async (requestedType, specificFacingMode = 'user') => {
         try {
             if (!navigator.mediaDevices) throw new Error("Media devices not supported.");
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: true,
-                video: requestedType === 'video' ? { facingMode: specificFacingMode } : false
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: true, 
+                video: requestedType === 'video' ? { facingMode: specificFacingMode, ...HQ_VIDEO_CONSTRAINTS } : false 
             });
             localStreamRef.current = stream;
             setLocalStreamState(stream);
@@ -146,14 +152,16 @@ const EmployeeNavbar = () => {
         if (currentCallType !== 'video' || !localStreamRef.current) return;
         try {
             const newMode = facingMode === 'user' ? 'environment' : 'user';
-
+            
             // Stop old video tracks to release the camera hardware
             localStreamRef.current.getVideoTracks().forEach(t => t.stop());
 
-            // Request new camera
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { exact: newMode } }
-            }).catch(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: newMode } })); // Fallback if exact fails
+            // Request new camera with HD constraints to avoid low-res macro lenses
+            const videoConstraints = { facingMode: { exact: newMode }, ...HQ_VIDEO_CONSTRAINTS };
+            const fallbackConstraints = { facingMode: newMode, ...HQ_VIDEO_CONSTRAINTS };
+
+            const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints })
+                .catch(() => navigator.mediaDevices.getUserMedia({ video: fallbackConstraints })); 
 
             const newVideoTrack = stream.getVideoTracks()[0];
             const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
@@ -161,7 +169,7 @@ const EmployeeNavbar = () => {
 
             const audioTracks = localStreamRef.current.getAudioTracks();
             const newLocalStream = new MediaStream([...audioTracks, newVideoTrack]);
-
+            
             localStreamRef.current = newLocalStream;
             setLocalStreamState(newLocalStream);
             setFacingMode(newMode);
@@ -176,7 +184,7 @@ const EmployeeNavbar = () => {
             const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
             if (e.candidate && to) socket.emit('ice_candidate', { to, candidate: e.candidate, from: user.id || user._id });
         };
-
+        
         pc.ontrack = (e) => {
             setRemoteStream((prevStream) => {
                 const stream = prevStream || new MediaStream();
@@ -207,7 +215,7 @@ const EmployeeNavbar = () => {
     const handleAcceptCall = async () => {
         if (!globalIncomingCall) return;
         const callData = globalIncomingCall;
-
+        
         const isVideoOffer = callData.callType === 'video' || (callData.signal && callData.signal.sdp && callData.signal.sdp.includes('m=video'));
         const requestedType = isVideoOffer ? 'video' : 'voice';
 
@@ -229,7 +237,7 @@ const EmployeeNavbar = () => {
         await pc.setLocalDescription(answer);
 
         socket.emit('answer_call', { to: callData.from, signal: answer });
-
+        
         setGlobalIncomingCall(null);
         pauseAudio('incoming');
         setIsCallAccepted(true);
@@ -285,16 +293,18 @@ const EmployeeNavbar = () => {
 
     const performVideoUpgrade = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'user', ...HQ_VIDEO_CONSTRAINTS } 
+            });
             const videoTrack = stream.getVideoTracks()[0];
-
+            
             localStreamRef.current.addTrack(videoTrack);
             setLocalStreamState(new MediaStream(localStreamRef.current.getTracks()));
             setFacingMode('user');
-
+            
             if (pcRef.current) {
                 pcRef.current.addTrack(videoTrack, localStreamRef.current);
-
+                
                 const offer = await pcRef.current.createOffer();
                 await pcRef.current.setLocalDescription(offer);
                 const to = callPeer?._id || callPeer?.id;
@@ -318,7 +328,6 @@ const EmployeeNavbar = () => {
         socket.emit('video_upgrade_rejected', { to });
         setVideoUpgradeStatus('idle');
     };
-
 
     // --- SOCKET LISTENERS ---
     useEffect(() => {
@@ -372,7 +381,7 @@ const EmployeeNavbar = () => {
                         const answer = await pcRef.current.createAnswer();
                         await pcRef.current.setLocalDescription(answer);
                         const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
-                        if (to) socket.emit('renegotiate', { to, signal: answer });
+                        if(to) socket.emit('renegotiate', { to, signal: answer });
                     } else if (signal.type === 'answer') {
                         await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                     }
@@ -422,7 +431,7 @@ const EmployeeNavbar = () => {
         socket.on("ice_candidate", handleIceCandidate);
         socket.on("renegotiate", handleRenegotiate);
         socket.on("call_ended", () => { cleanupCall(); pauseAudio('incoming'); playAudio('hangup'); });
-
+        
         socket.on("video_upgrade_request", () => { setVideoUpgradeStatus('receiving_request'); playAudio('notification'); });
         socket.on("video_upgrade_rejected", () => { setVideoUpgradeStatus('idle'); toast.error("Video call request rejected"); });
         socket.on("video_upgrade_accepted", async () => { setVideoUpgradeStatus('idle'); toast.success("Video call request accepted"); await performVideoUpgrade(); });
@@ -579,7 +588,7 @@ const EmployeeNavbar = () => {
                     </div>
                 </div>
             )}
-
+            
             <EmployeeSettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />
         </>
     );
