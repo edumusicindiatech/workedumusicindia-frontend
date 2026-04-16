@@ -5,11 +5,16 @@ import { io } from "socket.io-client";
 import {
     Search, Phone, MoreVertical, Paperclip, Send, Download,
     ArrowLeft, Loader2, CheckCheck, Check, MessageSquare, Camera, Image as ImageIcon, X, FileCheck,
-    Trash2, Link as LinkIcon, FileText, Users, Forward, PlaySquare, Lock
+    Trash2, Link as LinkIcon, FileText, Users, Forward, PlaySquare, Lock, Copy, Ban, Edit2, Trash
 } from "lucide-react";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
 import CallOverlay from "./CallOverlay";
+import axios from "axios";
+
+// --- IMPORT BACKGROUND IMAGES ---
+import chatBgLight from '../../assets/chat-light.jpg';
+import chatBgDark from '../../assets/chat-dark.jpg';
 
 // --- GLOBAL SOCKET SINGLETON ---
 if (!window.__GLOBAL_SOCKET__) {
@@ -78,7 +83,6 @@ const compressImage = (file, maxWidth = 1200, quality = 0.7) => {
                 ctx.drawImage(img, 0, 0, width, height);
 
                 canvas.toBlob((blob) => {
-                    // FIX: Mobile cameras sometimes don't provide a file.name
                     const safeName = file.name || `compressed_${Date.now()}.jpg`;
                     const compressedFile = new File([blob], safeName, {
                         type: 'image/jpeg',
@@ -99,6 +103,38 @@ const formatBytes = (bytes, decimals = 2) => {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 };
 
+// --- TIME VALIDATOR (30 MINS) ---
+const isWithin30Mins = (timestamp) => {
+    if (!timestamp) return false;
+    return (Date.now() - new Date(timestamp).getTime()) <= 30 * 60 * 1000;
+};
+
+// --- NEW: URL PARSER HELPER ---
+const renderTextWithLinks = (text, isMe) => {
+    if (!text) return null;
+    // Regex to match URLs starting with http:// or https://
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+
+    return parts.map((part, i) => {
+        if (part.match(urlRegex)) {
+            return (
+                <a
+                    key={i}
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`underline font-medium transition-opacity hover:opacity-80 ${isMe ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`}
+                    onClick={(e) => e.stopPropagation()} // Prevents message selection when clicking the link
+                >
+                    {part}
+                </a>
+            );
+        }
+        return <span key={i}>{part}</span>;
+    });
+};
+
 const SharedChat = () => {
     const { user } = useSelector((state) => state.auth);
     const location = useLocation();
@@ -110,6 +146,7 @@ const SharedChat = () => {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
     const [onlineUsers, setOnlineUsers] = useState([]);
+    const [uploadProgress, setUploadProgress] = useState({});
 
     // Unread Badges State
     const [unreadMap, setUnreadMap] = useState({});
@@ -121,6 +158,11 @@ const SharedChat = () => {
     // Media Handling States
     const [downloadedMedia, setDownloadedMedia] = useState(new Set());
     const [fullscreenMedia, setFullscreenMedia] = useState(null);
+
+    // Media Swipe States
+    const [touchStartX, setTouchStartX] = useState(null);
+    const [touchEndX, setTouchEndX] = useState(null);
+    const [slideDirection, setSlideDirection] = useState("slide-in-from-right-8");
 
     // Forward Media States
     const [showForwardDialog, setShowForwardDialog] = useState(false);
@@ -145,6 +187,15 @@ const SharedChat = () => {
     const [showSearchInput, setShowSearchInput] = useState(false);
     const [chatSearchQuery, setChatSearchQuery] = useState("");
     const [sharedContentView, setSharedContentView] = useState(null);
+
+    // WHATSAPP STATES
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedMessages, setSelectedMessages] = useState([]);
+    const [editingMessage, setEditingMessage] = useState(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+    // ABORT CONTROLLERS FOR UPLOADS
+    const uploadControllers = useRef({});
 
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -259,10 +310,21 @@ const SharedChat = () => {
             }
         };
 
+        // NEW SOCKET LISTENERS FOR WHATSAPP FEATURES
+        const handleMessageEdited = ({ messageId, text }) => {
+            setMessages(prev => prev.map(m => (m._id === messageId || m.id === messageId) ? { ...m, text, isEdited: true } : m));
+        };
+
+        const handleMessagesDeletedEveryone = ({ messageIds }) => {
+            setMessages(prev => prev.map(m => messageIds.includes(m._id || m.id) ? { ...m, text: "", mediaUrl: "", isDeletedForEveryone: true } : m));
+        };
+
         socket.on("online_users_updated", handleOnlineUsers);
         socket.on("receive_message", handleReceiveMessage);
         socket.on("message_deleted", handleMessageDeleted);
         socket.on("messages_status_update", handleMessageStatusUpdate);
+        socket.on("message_edited", handleMessageEdited);
+        socket.on("messages_deleted_everyone", handleMessagesDeletedEveryone);
 
         return () => {
             socket.off("connect", joinChatRoom);
@@ -270,6 +332,8 @@ const SharedChat = () => {
             socket.off("receive_message", handleReceiveMessage);
             socket.off("message_deleted", handleMessageDeleted);
             socket.off("messages_status_update", handleMessageStatusUpdate);
+            socket.off("message_edited", handleMessageEdited);
+            socket.off("messages_deleted_everyone", handleMessagesDeletedEveryone);
         };
     }, [currentUserId]);
 
@@ -296,6 +360,16 @@ const SharedChat = () => {
         if (!timeString) return '';
         const date = new Date(timeString);
         return isNaN(date.getTime()) ? '' : date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    };
+
+    const resetContextState = () => {
+        setContextMenu(null);
+        setIsSelectionMode(false);
+        setSelectedMessages([]);
+        setEditingMessage(null);
+        setNewMessage("");
+        setShowTopMenu(false);
+        setShowAttachMenu(false);
     };
 
     // --- API CALLS ---
@@ -340,12 +414,8 @@ const SharedChat = () => {
 
         setActiveChat(chatUser);
         fetchMessages(userId);
-
-        setShowAttachMenu(false);
-        setShowTopMenu(false);
-        setShowSidebarMenu(false);
+        resetContextState();
         setShowSearchInput(false);
-        setSharedContentView(null);
         setChatSearchQuery("");
     };
 
@@ -353,8 +423,23 @@ const SharedChat = () => {
         e?.preventDefault();
         if (!newMessage.trim() && !isUploading) return;
 
-        const tempId = `temp-${Date.now()}`;
+        // HANDLE EDIT MODE
+        if (editingMessage) {
+            try {
+                const msgId = editingMessage._id || editingMessage.id;
+                await api.put(`/chat/message/edit/${msgId}`, { text: newMessage, userId: currentUserId });
 
+                setMessages(prev => prev.map(m => (m._id === msgId || m.id === msgId) ? { ...m, text: newMessage, isEdited: true } : m));
+                socket.emit("edit_message", { messageId: msgId, text: newMessage, recipientId: activeChat._id || activeChat.id });
+
+                resetContextState();
+                toast.success("Message edited");
+            } catch (err) { toast.error("Failed to edit message"); }
+            return;
+        }
+
+        // HANDLE NORMAL SEND
+        const tempId = `temp-${Date.now()}`;
         const payload = {
             _id: tempId,
             senderId: currentUserId,
@@ -368,7 +453,6 @@ const SharedChat = () => {
         };
 
         setDownloadedMedia(prev => new Set(prev).add(tempId));
-
         setMessages((prev) => [...prev, payload]);
         setNewMessage("");
         scrollToBottom();
@@ -390,6 +474,7 @@ const SharedChat = () => {
         } catch (error) { console.error("Failed to save message"); }
     };
 
+    // --- ENHANCED WHATSAPP-STYLE UPLOADER ---
     const handleMediaUpload = async (e, options = {}) => {
         const files = Array.from(e.target.files);
         if (!files.length) return;
@@ -402,91 +487,99 @@ const SharedChat = () => {
 
         setShowAttachMenu(false);
         setIsUploading(true);
-        const loadingToast = toast.loading(`Preparing ${files.length} item(s)...`);
 
         try {
             for (let i = 0; i < files.length; i++) {
                 let fileToUpload = files[i];
-
-                // FIX: Mobile cameras often do not provide a `.name`. We assign a safe fallback name immediately.
                 let safeName = fileToUpload.name || `capture_${Date.now()}_${i}.jpg`;
                 let mimeType = fileToUpload.type;
                 if (!mimeType && safeName.endsWith('.jpg')) mimeType = 'image/jpeg';
 
-                let type = asDocument
-                    ? 'document'
-                    : (mimeType.startsWith('image/') ? 'image' : (mimeType.startsWith('video/') ? 'video' : 'document'));
+                let type = asDocument ? 'document' : (mimeType.startsWith('image/') ? 'image' : (mimeType.startsWith('video/') ? 'video' : 'document'));
 
                 let finalFile = fileToUpload;
                 if (compress && type === 'image') {
                     finalFile = await compressImage(fileToUpload, 1200, 0.7);
-                    // Safely replace the extension using the fallback name
                     const newName = safeName.includes('.') ? safeName.replace(/\.[^/.]+$/, "") + ".jpg" : `${safeName}.jpg`;
                     finalFile = new File([finalFile], newName, { type: 'image/jpeg' });
                 }
                 const finalSize = finalFile.size;
 
-                toast.loading(`Uploading item ${i + 1}/${files.length}...`, { id: loadingToast });
-
-                // Pass the strictly checked name to the backend
-                const urlRes = await api.post('/chat/generate-presigned-url', {
-                    fileType: finalFile.type || mimeType,
-                    originalName: finalFile.name || safeName
-                });
-
-                const { presignedUrl, publicUrl } = urlRes.data;
-
-                const uploadResponse = await fetch(presignedUrl, {
-                    method: 'PUT',
-                    body: finalFile,
-                    headers: { 'Content-Type': finalFile.type || mimeType }
-                });
-
-                if (!uploadResponse.ok) {
-                    toast.error(`Upload blocked by server (${uploadResponse.status}). Check CORS.`, { id: loadingToast });
-                    continue;
-                }
-
-                let finalPublicUrl = publicUrl;
-                if (finalPublicUrl && !finalPublicUrl.startsWith('http')) {
-                    finalPublicUrl = `https://${finalPublicUrl}`;
-                }
-
                 const tempId = `temp-${Date.now()}-${i}`;
-                const payload = {
+                const abortController = new AbortController();
+                uploadControllers.current[tempId] = abortController;
+
+                // Create a temporary local URL for instant preview
+                const previewUrl = URL.createObjectURL(finalFile);
+
+                const optimisticPayload = {
                     _id: tempId,
                     senderId: currentUserId,
                     recipientId: activeChat._id || activeChat.id,
                     text: "",
-                    mediaUrl: finalPublicUrl,
+                    mediaUrl: previewUrl,
                     mediaType: type,
                     fileSize: finalSize,
-                    status: 'sent',
+                    status: 'uploading',
+                    isUploading: true,
                     timestamp: new Date().toISOString()
                 };
 
                 setDownloadedMedia(prev => new Set(prev).add(tempId));
+                setMessages((prev) => [...prev, optimisticPayload]);
+                scrollToBottom();
 
-                socket.emit("send_message", payload);
-                setMessages((prev) => [...prev, payload]);
-                playAudio('sent');
-
-                const res = await api.post('/chat/message', payload);
-                if (res.data && res.data._id) {
-                    setMessages(prev => prev.map(m => m._id === tempId ? { ...m, _id: res.data._id } : m));
-                    setDownloadedMedia(prev => {
-                        const newSet = new Set(prev);
-                        newSet.delete(tempId);
-                        newSet.add(res.data._id);
-                        return newSet;
+                try {
+                    const urlRes = await api.post('/chat/generate-presigned-url', {
+                        fileType: finalFile.type || mimeType,
+                        originalName: finalFile.name || safeName
                     });
+
+                    const { presignedUrl, publicUrl } = urlRes.data;
+
+                    await axios.put(presignedUrl, finalFile, {
+                        headers: { 'Content-Type': finalFile.type || mimeType },
+                        signal: abortController.signal,
+                        onUploadProgress: (progressEvent) => {
+                            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                            setUploadProgress(prev => ({ ...prev, [tempId]: percentCompleted }));
+                        }
+                    });
+
+                    let finalPublicUrl = publicUrl;
+                    if (finalPublicUrl && !finalPublicUrl.startsWith('http')) {
+                        finalPublicUrl = `https://${finalPublicUrl}`;
+                    }
+
+                    const finalPayload = { ...optimisticPayload, mediaUrl: finalPublicUrl, status: 'sent', isUploading: false };
+
+                    socket.emit("send_message", finalPayload);
+                    playAudio('sent');
+
+                    const res = await api.post('/chat/message', finalPayload);
+                    if (res.data && res.data._id) {
+                        setMessages(prev => prev.map(m => m._id === tempId ? { ...finalPayload, _id: res.data._id } : m));
+                        setDownloadedMedia(prev => {
+                            const newSet = new Set(prev);
+                            newSet.delete(tempId);
+                            newSet.add(res.data._id);
+                            return newSet;
+                        });
+                    } else {
+                        setMessages(prev => prev.map(m => m._id === tempId ? finalPayload : m));
+                    }
+                } catch (err) {
+                    if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+                        // Aborted, safely ignored. Bubble already removed by cancel function.
+                    } else {
+                        console.error("Upload error sequence:", err);
+                        toast.error("Upload process failed.");
+                        setMessages(prev => prev.filter(m => m._id !== tempId));
+                    }
+                } finally {
+                    delete uploadControllers.current[tempId];
                 }
             }
-            toast.success("Sent successfully!", { id: loadingToast });
-            scrollToBottom();
-        } catch (error) {
-            console.error("Upload error sequence:", error);
-            toast.error("Upload process failed.", { id: loadingToast });
         } finally {
             setIsUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = null;
@@ -495,31 +588,32 @@ const SharedChat = () => {
         }
     };
 
+    const cancelUpload = (tempId) => {
+        if (uploadControllers.current[tempId]) {
+            uploadControllers.current[tempId].abort();
+        }
+        setMessages(prev => prev.filter(m => m._id !== tempId && m.id !== tempId));
+    };
+
     const handleRevealMedia = (msgId) => {
         setDownloadedMedia(prev => new Set(prev).add(msgId));
     };
 
-    // --- BULLETPROOF BLOB DOWNLOAD LOGIC ---
     const downloadToLocal = async (url, type) => {
         const toastId = toast.loading("Downloading file...");
         try {
             const response = await fetch(url);
             if (!response.ok) throw new Error("Network response was not ok");
-
             const blob = await response.blob();
             const blobUrl = window.URL.createObjectURL(blob);
-
             const a = document.createElement('a');
             a.href = blobUrl;
-
             const fileName = url.split('/').pop().split('?')[0] || `WorkForce_Media_${Date.now()}`;
             a.download = fileName;
-
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(blobUrl);
-
             toast.success("Downloaded successfully!", { id: toastId });
         } catch (error) {
             console.error("Blob download failed:", error);
@@ -538,101 +632,111 @@ const SharedChat = () => {
         }
 
         setMessages(prev => prev.filter(m => (m._id || m.id) !== targetId));
-
         toast.success("Message deleted for you");
         setFullscreenMedia(null);
     };
 
-    const handleForwardMedia = async () => {
-        if (!fullscreenMedia || forwardSelectedUsers.length === 0) return;
+    const handleBatchForward = async () => {
+        const messagesToForward = fullscreenMedia
+            ? [fullscreenMedia]
+            : messages.filter(m => selectedMessages.includes(m._id || m.id) && !m.isDeletedForEveryone);
 
-        const loadingToast = toast.loading(`Forwarding to ${forwardSelectedUsers.length} chats...`);
+        if (!messagesToForward.length || forwardSelectedUsers.length === 0) return;
 
+        const loadingToast = toast.loading(`Forwarding...`);
         try {
             for (const recipientId of forwardSelectedUsers) {
-                const tempId = `temp-fwd-${Date.now()}-${recipientId}`;
-                const payload = {
-                    _id: tempId,
-                    senderId: currentUserId,
-                    recipientId: recipientId,
-                    text: fullscreenMedia.text || "",
-                    mediaUrl: fullscreenMedia.mediaUrl,
-                    mediaType: fullscreenMedia.mediaType,
-                    fileSize: fullscreenMedia.fileSize,
-                    status: 'sent',
-                    timestamp: new Date().toISOString()
-                };
-
-                if (activeChat && (activeChat._id === recipientId || activeChat.id === recipientId)) {
-                    setDownloadedMedia(prev => new Set(prev).add(tempId));
-                }
-
-                socket.emit("send_message", payload);
-
-                if (activeChat && (activeChat._id === recipientId || activeChat.id === recipientId)) {
-                    setMessages((prev) => [...prev, payload]);
-                }
-
-                const res = await api.post('/chat/message', payload);
-
-                if (res.data && res.data._id && activeChat && (activeChat._id === recipientId || activeChat.id === recipientId)) {
-                    setDownloadedMedia(prev => {
-                        const newSet = new Set(prev);
-                        newSet.delete(tempId);
-                        newSet.add(res.data._id);
-                        return newSet;
-                    });
+                for (const msg of messagesToForward) {
+                    const payload = {
+                        _id: `temp-fwd-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+                        senderId: currentUserId,
+                        recipientId: recipientId,
+                        text: msg.text || "",
+                        mediaUrl: msg.mediaUrl,
+                        mediaType: msg.mediaType,
+                        fileSize: msg.fileSize,
+                        status: 'sent',
+                        timestamp: new Date().toISOString()
+                    };
+                    socket.emit("send_message", payload);
+                    if (activeChat && (activeChat._id === recipientId || activeChat.id === recipientId)) {
+                        setMessages((prev) => [...prev, payload]);
+                    }
+                    await api.post('/chat/message', payload);
                 }
             }
             toast.success("Forwarded successfully", { id: loadingToast });
-        } catch (error) {
-            toast.error("Failed to forward", { id: loadingToast });
-        } finally {
+        } catch (error) { toast.error("Failed to forward", { id: loadingToast }); }
+        finally {
             setShowForwardDialog(false);
             setForwardSelectedUsers([]);
             setForwardSearchQuery("");
             setFullscreenMedia(null);
+            setIsSelectionMode(false);
+            setSelectedMessages([]);
         }
     };
 
+    const toggleSelection = (msg) => {
+        // ALLOWING TOMBSTONES TO BE SELECTED (for "delete for me")
+        const id = msg._id || msg.id;
+        setSelectedMessages(prev => prev.includes(id) ? prev.filter(mId => mId !== id) : [...prev, id]);
+    };
+
+    const enterSelectionMode = (msg) => {
+        setIsSelectionMode(true);
+        setSelectedMessages([msg._id || msg.id]);
+        setContextMenu(null);
+    };
+
+    const startEditing = (msg) => {
+        setEditingMessage(msg);
+        setNewMessage(msg.text);
+        setContextMenu(null);
+    };
+
+    // --- FIX: CONTEXT MENU SCREEN BOUNDARY DETECTION ---
     const handleContextMenu = (e, msg) => {
         e.preventDefault();
+        if (isSelectionMode) {
+            toggleSelection(msg);
+            return;
+        }
         const clientX = e.clientX || (e.touches && e.touches.length > 0 ? e.touches[0].clientX : window.innerWidth / 2);
         const clientY = e.clientY || (e.touches && e.touches.length > 0 ? e.touches[0].clientY : window.innerHeight / 2);
-        setContextMenu({ mouseX: clientX, mouseY: clientY, msg });
+
+        // Ensure menu doesn't spawn off the right edge of the screen (assuming menu is ~200px wide)
+        const menuWidth = 200;
+        const safeX = (clientX + menuWidth > window.innerWidth) ? (window.innerWidth - menuWidth - 20) : clientX;
+
+        setContextMenu({ mouseX: safeX, mouseY: clientY, msg });
     };
 
     const handleTouchStart = (e, msg) => {
         touchTimer.current = setTimeout(() => { handleContextMenu(e, msg); }, 600);
     };
-
     const handleTouchEnd = () => { if (touchTimer.current) clearTimeout(touchTimer.current); };
 
-    const executeDelete = async (type) => {
-        if (!contextMenu) return;
-        const { msg } = contextMenu;
+    const executeBatchDelete = async (type, overrideIds = null) => {
+        setShowDeleteModal(false);
+        const ids = overrideIds || selectedMessages;
+        if (!ids || ids.length === 0) return;
+
+        setIsSelectionMode(false);
+        setSelectedMessages([]);
         setContextMenu(null);
-        const targetId = msg._id || msg.id;
 
-        if (type === 'me') {
-            const localDeleted = JSON.parse(localStorage.getItem('deletedChatMessages') || '[]');
-            if (targetId && !localDeleted.includes(targetId)) {
-                localDeleted.push(targetId);
-                localStorage.setItem('deletedChatMessages', JSON.stringify(localDeleted));
+        try {
+            if (type === 'everyone') {
+                await api.put('/chat/message/delete-everyone', { messageIds: ids, userId: currentUserId });
+                setMessages(prev => prev.map(m => ids.includes(m._id || m.id) ? { ...m, text: "", mediaUrl: "", isDeletedForEveryone: true } : m));
+                socket.emit("delete_messages_everyone", { messageIds: ids, recipientId: activeChat._id || activeChat.id });
+            } else {
+                await api.put('/chat/message/delete-me', { messageIds: ids, userId: currentUserId });
+                setMessages(prev => prev.filter(m => !ids.includes(m._id || m.id)));
             }
-            setMessages(prev => prev.filter(m => (m._id || m.id) !== targetId));
-            toast.success("Message deleted for you");
-            return;
-        }
-
-        if (type === 'everyone') {
-            setMessages(prev => prev.filter(m => (m._id || m.id) !== targetId));
-            socket.emit("delete_message", { messageId: targetId, timestamp: msg.timestamp, recipientId: activeChat._id || activeChat.id });
-            if (targetId && !targetId.startsWith('temp-')) {
-                try { await api.delete(`/chat/message/${targetId}`); }
-                catch (e) { console.error("Failed to delete from DB"); }
-            }
-        }
+            toast.success(type === 'everyone' ? "Deleted for everyone" : "Deleted for you");
+        } catch (e) { toast.error("Delete failed"); }
     };
 
     const initiateVoiceCall = () => {
@@ -642,10 +746,17 @@ const SharedChat = () => {
 
     const handleChatAction = async (action) => {
         setShowTopMenu(false);
-        if (action === 'clear') {
+        setSharedContentView(action);
+    };
+
+    const handleClearChat = async () => {
+        if (!window.confirm(`Clear entire chat with ${activeChat.name}?`)) return;
+        setShowTopMenu(false);
+        try {
+            await api.put(`/chat/clear/${currentUserId}/${activeChat._id || activeChat.id}`);
             setMessages([]);
-            toast.success(`Chat cleared visually.`, { icon: '🗑️' });
-        } else { setSharedContentView(action); }
+            toast.success("Chat cleared visually.");
+        } catch (err) { toast.error("Failed to clear chat"); }
     };
 
     const isOnline = (id) => onlineUsers.includes(id?.toString());
@@ -668,18 +779,50 @@ const SharedChat = () => {
             if (sharedContentView === 'docs') return m.mediaType === 'document';
             if (sharedContentView === 'links') return m.mediaType === 'text' && m.text?.includes('http');
             return false;
-        }).filter(m => m.mediaUrl || m.text);
+        }).filter(m => m.mediaUrl || m.text && !m.isDeletedForEveryone);
     };
 
-    const chatMediaFiles = visibleMessages.filter(m => m.mediaUrl && (m.mediaType === 'image' || m.mediaType === 'video' || m.mediaType === 'document'));
+    const chatMediaFiles = visibleMessages.filter(m => m.mediaUrl && !m.isDeletedForEveryone && (m.mediaType === 'image' || m.mediaType === 'video' || m.mediaType === 'document'));
+
+    // --- NEW: MEDIA SWIPE HANDLERS ---
+    const onMediaTouchStart = (e) => {
+        setTouchEndX(null);
+        setTouchStartX(e.targetTouches[0].clientX);
+    };
+
+    const onMediaTouchMove = (e) => {
+        setTouchEndX(e.targetTouches[0].clientX);
+    };
+
+    const onMediaTouchEnd = () => {
+        if (!touchStartX || !touchEndX || !fullscreenMedia) return;
+        const distance = touchStartX - touchEndX;
+        const isLeftSwipe = distance > 50;
+        const isRightSwipe = distance < -50;
+
+        const currentIndex = chatMediaFiles.findIndex(m => (m._id || m.id) === (fullscreenMedia._id || fullscreenMedia.id));
+
+        if (isLeftSwipe && currentIndex < chatMediaFiles.length - 1) {
+            setSlideDirection("slide-in-from-right-16");
+            setFullscreenMedia(chatMediaFiles[currentIndex + 1]);
+        } else if (isRightSwipe && currentIndex > 0) {
+            setSlideDirection("slide-in-from-left-16");
+            setFullscreenMedia(chatMediaFiles[currentIndex - 1]);
+        }
+    };
+
+    // Action Bar Evaluators (Filtering out deleted messages for copy/forward/everyone actions)
+    const selectedMsgsData = visibleMessages.filter(m => selectedMessages.includes(m._id || m.id));
+    const canCopy = selectedMsgsData.some(m => m.text && !m.isDeletedForEveryone);
+    const canForward = selectedMsgsData.some(m => !m.isDeletedForEveryone);
+    const canDeleteForEveryone = selectedMsgsData.length > 0 && selectedMsgsData.every(m => String(m.senderId || m.sender) === String(currentUserId) && !m.isDeletedForEveryone && isWithin30Mins(m.createdAt || m.timestamp));
 
     return (
         <>
             {/* FULLSCREEN MEDIA VIEWER - RENDERED AT ROOT LEVEL */}
             {fullscreenMedia && !showForwardDialog && (
-                <div className="fixed inset-0! z-999999! w-screen h-screen bg-[#0b141a] flex flex-col animate-in fade-in duration-200">
-                    {/* Top Bar */}
-                    <div className="flex items-center justify-between px-4 sm:px-6 h-16 shrink-0 bg-[#0b141a]">
+                <div className="fixed inset-0 z-999999 w-screen h-screen bg-[#0b141a] flex flex-col animate-in fade-in duration-200">
+                    <div className="w-full flex items-center justify-between px-4 sm:px-6 h-16 min-h-16 shrink-0 bg-[#0b141a] z-10 border-b border-white/5">
                         <div className="flex items-center gap-3">
                             {String(fullscreenMedia.senderId || fullscreenMedia.sender) === String(currentUserId) ? (
                                 user?.profilePicture ? (
@@ -707,35 +850,42 @@ const SharedChat = () => {
                             <button onClick={() => setShowForwardDialog(true)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Forward"><Forward className="w-5 h-5 sm:w-5 sm:h-5" /></button>
                             <button onClick={() => downloadToLocal(fullscreenMedia.mediaUrl, fullscreenMedia.mediaType)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Download"><Download className="w-5 h-5 sm:w-5 sm:h-5" /></button>
                             <div className="w-px h-6 bg-white/10 mx-1 hidden sm:block"></div>
-                            <button onClick={() => setFullscreenMedia(null)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Close"><X className="w-6 h-6 sm:w-6 sm:h-6" /></button>
+                            <button onClick={() => setFullscreenMedia(null)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Close"><X className="w-6 h-6 sm:w-6 sm:h-6 text-white" /></button>
                         </div>
                     </div>
 
-                    <div className="flex-1 w-full flex items-center justify-center overflow-hidden p-4 sm:p-8 select-none">
-                        {fullscreenMedia.mediaType === 'image' && <img src={fullscreenMedia.mediaUrl} alt="Fullscreen Preview" className="w-auto h-auto max-w-full max-h-full object-contain" />}
-                        {fullscreenMedia.mediaType === 'video' && <video src={fullscreenMedia.mediaUrl} controls autoPlay className="w-auto h-auto max-w-full max-h-full object-contain" />}
-                        {fullscreenMedia.mediaType === 'document' && (
-                            <div className="w-full h-full max-w-4xl bg-[#EBEBEB] dark:bg-card rounded-xl overflow-hidden shadow-2xl flex flex-col">
-                                <div className="bg-muted p-4 flex items-center gap-4 shrink-0 border-b border-border">
-                                    <FileText className="w-8 h-8 text-blue-500" />
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-bold text-foreground truncate">{fullscreenMedia.mediaUrl.split('/').pop().split('?')[0]}</p>
-                                        <p className="text-xs text-muted-foreground">Document Preview</p>
+                    <div
+                        className="flex-1 w-full flex items-center justify-center overflow-hidden p-4 sm:p-8 select-none relative"
+                        onTouchStart={onMediaTouchStart}
+                        onTouchMove={onMediaTouchMove}
+                        onTouchEnd={onMediaTouchEnd}
+                    >
+                        <div key={fullscreenMedia._id || fullscreenMedia.id} className={`w-full h-full flex items-center justify-center animate-in fade-in ${slideDirection} duration-300`}>
+                            {fullscreenMedia.mediaType === 'image' && <img src={fullscreenMedia.mediaUrl} alt="Fullscreen Preview" className="w-auto h-auto max-w-full max-h-full object-contain shadow-2xl" />}
+                            {fullscreenMedia.mediaType === 'video' && <video src={fullscreenMedia.mediaUrl} controls autoPlay className="w-auto h-auto max-w-full max-h-full object-contain shadow-2xl" />}
+                            {fullscreenMedia.mediaType === 'document' && (
+                                <div className="w-full h-full max-w-4xl bg-[#EBEBEB] dark:bg-card rounded-xl overflow-hidden shadow-2xl flex flex-col">
+                                    <div className="bg-muted p-4 flex items-center gap-4 shrink-0 border-b border-border">
+                                        <FileText className="w-8 h-8 text-blue-500" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-bold text-foreground truncate">{fullscreenMedia.mediaUrl.split('/').pop().split('?')[0]}</p>
+                                            <p className="text-xs text-muted-foreground">Document Preview</p>
+                                        </div>
                                     </div>
+                                    {fullscreenMedia.mediaUrl.match(/\.(jpeg|jpg|gif|png|webp|bmp)(?:\?.*)?$/i) ? (
+                                        <div className="flex-1 w-full h-full bg-black/5 dark:bg-black/20 flex items-center justify-center p-4 overflow-hidden">
+                                            <img src={fullscreenMedia.mediaUrl} alt="Document Preview" className="max-w-full max-h-full object-contain drop-shadow-md rounded-md" />
+                                        </div>
+                                    ) : (
+                                        <iframe src={fullscreenMedia.mediaUrl} className="flex-1 w-full h-full border-none bg-white" title="Document Viewer" />
+                                    )}
                                 </div>
-                                {fullscreenMedia.mediaUrl.match(/\.(jpeg|jpg|gif|png|webp|bmp)(?:\?.*)?$/i) ? (
-                                    <div className="flex-1 w-full h-full bg-black/5 dark:bg-black/20 flex items-center justify-center p-4 overflow-hidden">
-                                        <img src={fullscreenMedia.mediaUrl} alt="Document Preview" className="max-w-full max-h-full object-contain drop-shadow-md rounded-md" />
-                                    </div>
-                                ) : (
-                                    <iframe src={fullscreenMedia.mediaUrl} className="flex-1 w-full h-full border-none bg-white" title="Document Viewer" />
-                                )}
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
 
                     {chatMediaFiles.length > 0 && (
-                        <div className="h-20 shrink-0 border-t border-white/10 flex items-center justify-center px-4 gap-2 overflow-x-auto custom-scrollbar">
+                        <div className="h-20 w-full shrink-0 border-t border-white/10 flex items-center justify-center px-4 gap-2 overflow-x-auto custom-scrollbar bg-[#0b141a]">
                             {chatMediaFiles.map((mediaMsg) => {
                                 const isSelected = (fullscreenMedia._id || fullscreenMedia.id) === (mediaMsg._id || mediaMsg.id);
                                 return (
@@ -787,9 +937,23 @@ const SharedChat = () => {
                             <span className="text-sm font-medium text-muted-foreground">{forwardSelectedUsers.length > 0 ? `${forwardSelectedUsers.length} selected` : 'Select contacts'}</span>
                             <div className="flex items-center gap-2">
                                 <button onClick={() => { setShowForwardDialog(false); setForwardSelectedUsers([]); setForwardSearchQuery(""); }} className="px-4 py-2.5 text-[14px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors">Cancel</button>
-                                {forwardSelectedUsers.length > 0 && <button onClick={handleForwardMedia} className="w-11 h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-transform active:scale-95 shadow-lg animate-in zoom-in-95 duration-200"><Send className="w-5 h-5 ml-0.5" /></button>}
+                                {forwardSelectedUsers.length > 0 && <button onClick={handleBatchForward} className="w-11 h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-transform active:scale-95 shadow-lg animate-in zoom-in-95 duration-200"><Send className="w-5 h-5 ml-0.5" /></button>}
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* DELETE CONFIRMATION MODAL */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-10000 bg-black/50 flex items-center justify-center p-4">
+                    <div className="bg-card w-full max-w-sm rounded-2xl shadow-2xl p-5 flex flex-col gap-2 animate-in zoom-in-95">
+                        <h3 className="text-lg font-bold text-foreground mb-2">Delete {selectedMessages.length} Message{selectedMessages.length > 1 ? 's' : ''}?</h3>
+                        {canDeleteForEveryone && (
+                            <button onClick={() => executeBatchDelete('everyone')} className="w-full text-left px-4 py-3 bg-muted hover:bg-muted/80 rounded-xl font-medium text-rose-500">Delete for everyone</button>
+                        )}
+                        <button onClick={() => executeBatchDelete('me')} className="w-full text-left px-4 py-3 bg-muted hover:bg-muted/80 rounded-xl font-medium text-foreground">Delete for me</button>
+                        <button onClick={() => setShowDeleteModal(false)} className="w-full text-center px-4 py-3 mt-2 font-medium text-muted-foreground hover:bg-muted/50 rounded-xl">Cancel</button>
                     </div>
                 </div>
             )}
@@ -798,11 +962,17 @@ const SharedChat = () => {
 
                 {/* DELETE CONTEXT MENU */}
                 {contextMenu && (
-                    <div ref={contextMenuRef} className="fixed z-50 bg-card border border-border shadow-2xl rounded-xl py-1 w-44 animate-in fade-in zoom-in-95 duration-150" style={{ top: contextMenu.mouseY, left: contextMenu.mouseX }}>
-                        <button onClick={() => executeDelete('me')} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted text-sm font-medium text-foreground transition-colors"><Trash2 className="w-4 h-4 text-muted-foreground" /> Delete for me</button>
-                        {String(contextMenu.msg.senderId || contextMenu.msg.sender) === String(currentUserId) && (
-                            <button onClick={() => executeDelete('everyone')} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-rose-500/10 text-sm font-medium text-rose-500 transition-colors"><Trash2 className="w-4 h-4" /> Delete for everyone</button>
+                    <div ref={contextMenuRef} className="fixed z-50 bg-card border border-border shadow-2xl rounded-xl py-1 w-48 animate-in fade-in zoom-in-95 duration-150" style={{ top: contextMenu.mouseY, left: contextMenu.mouseX }}>
+                        <button onClick={() => executeBatchDelete('me', [contextMenu.msg._id || contextMenu.msg.id])} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted text-sm font-medium text-foreground transition-colors"><Trash2 className="w-4 h-4 text-muted-foreground" /> Delete for me</button>
+                        {String(contextMenu.msg.senderId || contextMenu.msg.sender) === String(currentUserId) && !contextMenu.msg.isDeletedForEveryone && isWithin30Mins(contextMenu.msg.createdAt || contextMenu.msg.timestamp) && (
+                            <>
+                                <button onClick={() => executeBatchDelete('everyone', [contextMenu.msg._id || contextMenu.msg.id])} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-rose-500/10 text-sm font-medium text-rose-500 transition-colors"><Ban className="w-4 h-4" /> Delete for everyone</button>
+                                {contextMenu.msg.mediaType === 'text' && !contextMenu.msg.mediaUrl && (
+                                    <button onClick={() => startEditing(contextMenu.msg)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted text-sm font-medium"><Edit2 className="w-4 h-4 text-muted-foreground" /> Edit</button>
+                                )}
+                            </>
                         )}
+                        <button onClick={() => enterSelectionMode(contextMenu.msg)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted text-sm font-medium"><Check className="w-4 h-4 text-muted-foreground" /> Select</button>
                     </div>
                 )}
 
@@ -833,8 +1003,19 @@ const SharedChat = () => {
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar px-2 pb-4 space-y-0.5">
+                        {/* FIX: YOUTUBE-STYLE SHIMMER SKELETON */}
                         {isLoadingChats ? (
-                            <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+                            <div className="space-y-3 p-2">
+                                {Array.from({ length: 6 }).map((_, i) => (
+                                    <div key={i} className="flex items-center gap-3.5 p-3 rounded-xl animate-pulse bg-transparent">
+                                        <div className="w-12 h-12 rounded-full bg-muted/60 dark:bg-white/5 shrink-0"></div>
+                                        <div className="flex-1 space-y-2.5">
+                                            <div className="h-3.5 bg-muted/60 dark:bg-white/5 rounded-md w-3/4"></div>
+                                            <div className="h-2.5 bg-muted/60 dark:bg-white/5 rounded-md w-1/2"></div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         ) : filteredConversations.length === 0 ? (
                             <div className="flex justify-center p-8 text-center text-sm font-medium text-muted-foreground">No contacts found.</div>
                         ) : (
@@ -869,21 +1050,47 @@ const SharedChat = () => {
                 <div className={`flex-1 flex-col h-full relative overflow-hidden transition-all duration-300 ${!activeChat ? 'hidden md:flex' : 'flex animate-in slide-in-from-right-4 md:animate-none'}`}>
                     {activeChat ? (
                         <div className="flex-1 flex w-full h-full relative bg-[#EBEBEB] dark:bg-[#0B0D12]">
+
+                            {/* --- FIX: CHAT BACKGROUND IMAGES --- */}
+                            <div className="absolute inset-0 z-0 pointer-events-none opacity-50 dark:opacity-30">
+                                <img src={chatBgLight} alt="" className="w-full h-full object-cover dark:hidden" />
+                                <img src={chatBgDark} alt="" className="w-full h-full object-cover hidden dark:block" />
+                            </div>
+
+                            {/* Content wrapper with z-10 to sit above background */}
                             <div className="flex-1 flex flex-col h-full relative z-10 transition-all duration-300">
 
                                 {/* TOP BAR */}
-                                {showSearchInput ? (
+                                {isSelectionMode ? (
+                                    <div className="h-16 md:h-17.5 px-4 bg-primary/10 flex items-center justify-between shrink-0 z-20 border-b border-border/40 animate-in fade-in slide-in-from-top-2 backdrop-blur-sm">
+                                        <div className="flex items-center gap-4 text-foreground">
+                                            <button onClick={resetContextState} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full"><X className="w-5 h-5" /></button>
+                                            <span className="font-semibold text-lg">{selectedMessages.length} selected</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {canCopy && <button onClick={() => { navigator.clipboard.writeText(selectedMsgsData.map(m => m.text).join('\n')); resetContextState(); toast.success('Copied'); }} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full" title="Copy"><Copy className="w-5 h-5" /></button>}
+                                            {canForward && <button onClick={() => setShowForwardDialog(true)} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full" title="Forward"><Forward className="w-5 h-5" /></button>}
+                                            <button onClick={() => setShowDeleteModal(true)} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full" title="Delete"><Trash className="w-5 h-5 text-rose-500" /></button>
+                                        </div>
+                                    </div>
+                                ) : showSearchInput ? (
                                     <div className="h-16 md:h-17.5 px-2 sm:px-4 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center gap-2 shrink-0 z-20 sticky top-0 animate-in fade-in duration-200">
                                         <button onClick={() => { setShowSearchInput(false); setChatSearchQuery(""); }} className="p-3 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0"><ArrowLeft className="w-5 h-5" /></button>
-                                        <input autoFocus type="text" value={chatSearchQuery} onChange={(e) => setChatSearchQuery(e.target.value)} placeholder="Search..." className="flex-1 bg-transparent border-none text-[15px] focus:outline-none focus:ring-0 text-foreground placeholder:text-muted-foreground min-w-0" />
+                                        <input autoFocus type="text" value={chatSearchQuery} onChange={(e) => setChatSearchQuery(e.target.value)} placeholder="Search..." className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-[15px] text-foreground placeholder:text-muted-foreground min-w-0" />
                                         {chatSearchQuery && <button onClick={() => setChatSearchQuery("")} className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0"><X className="w-5 h-5" /></button>}
                                     </div>
                                 ) : (
                                     <div className="h-16 md:h-17.5 px-2 sm:px-5 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center justify-between shrink-0 z-20 sticky top-0">
                                         <div className="flex items-center flex-1 gap-2 sm:gap-4 cursor-pointer" onClick={() => setShowProfileInfo(true)}>
                                             <button onClick={(e) => { e.stopPropagation(); setActiveChat(null); }} className="md:hidden p-2 text-muted-foreground hover:bg-muted rounded-full"><ArrowLeft className="w-5 h-5" /></button>
-                                            <div className="relative shrink-0">
-                                                {activeChat.profilePicture ? <img src={activeChat.profilePicture} alt="Profile" className="w-10 h-10 md:w-11 md:h-11 rounded-full object-cover" /> : <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">{activeChat.name?.charAt(0)}</div>}
+                                            <div className="w-10 h-10 md:w-11 md:h-11 shrink-0 rounded-full overflow-hidden">
+                                                {activeChat.profilePicture ? (
+                                                    <img src={activeChat.profilePicture} alt={activeChat.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+                                                        {activeChat.name?.charAt(0)}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="leading-tight flex-1 min-w-0">
                                                 <h3 className="text-[15px] md:text-[16px] font-bold text-foreground truncate tracking-wide">{activeChat.name}</h3>
@@ -897,32 +1104,39 @@ const SharedChat = () => {
                                         <div className="flex items-center gap-0.5 md:gap-1 relative" ref={topMenuRef}>
                                             <button onClick={() => setShowSearchInput(true)} className="p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"><Search className="w-5 h-5" /></button>
                                             <button onClick={initiateVoiceCall} className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 text-[13px] md:text-[14px] font-bold text-white bg-[#6B66FF] hover:bg-[#5A55E5] rounded-xl transition-all active:scale-95 shadow-sm mx-0.5 md:mx-1"><Phone className="w-4 h-4 fill-current" /> <span className="hidden sm:inline">Call</span></button>
-                                            <button onClick={() => setShowTopMenu(!showTopMenu)} className="p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"><MoreVertical className="w-5 h-5" /></button>
+                                            <button onClick={(e) => { e.stopPropagation(); setShowTopMenu(!showTopMenu); }} className="p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"><MoreVertical className="w-5 h-5" /></button>
 
                                             {showTopMenu && (
-                                                <div className="absolute top-12 right-0 w-44 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-30">
+                                                <div className="absolute top-12 right-0 w-44 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-30" onClick={e => e.stopPropagation()}>
                                                     <button onClick={() => handleChatAction('media')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><ImageIcon className="w-4 h-4 text-blue-500" /> Media</button>
                                                     <button onClick={() => handleChatAction('docs')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><FileText className="w-4 h-4 text-amber-500" /> Docs</button>
                                                     <button onClick={() => handleChatAction('links')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><LinkIcon className="w-4 h-4 text-emerald-500" /> Links</button>
+                                                    <button onClick={handleClearChat} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-rose-500/10 rounded-lg text-sm font-medium text-rose-500"><Trash className="w-4 h-4" /> Clear chat</button>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Message Feed */}
-                                <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 custom-scrollbar relative bg-linear-to-b from-[#f0f2f5] to-[#e5e7eb] dark:from-[#0B0D12] dark:to-[#0F1115]">
+                                {/* 7-DAY WARNING BANNER */}
+                                <div className="w-full bg-amber-500/10 dark:bg-amber-500/5 border-b border-amber-500/20 py-2 px-4 flex items-center justify-center gap-2.5 text-amber-600 dark:text-amber-500 shrink-0 backdrop-blur-md relative z-10 shadow-sm animate-in fade-in slide-in-from-top-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                    <span className="text-[12px] font-semibold tracking-wide">These messages will be automatically deleted after 7 days for privacy.</span>
+                                </div>
+
+                                {/* Message Feed - Removed Solid Background Colors to show image beneath */}
+                                <div className="flex-1 overflow-y-auto p-3 sm:p-6 custom-scrollbar relative">
                                     <div className="relative z-10 flex flex-col space-y-4 pb-2">
                                         {displayedMessages.length === 0 ? (
                                             <div className="h-full flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-500 m-auto mt-10">
-                                                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 shadow-inner border border-primary/20">
+                                                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 shadow-inner border border-primary/20 backdrop-blur-sm">
                                                     <MessageSquare className="w-10 h-10 text-primary" />
                                                 </div>
                                                 <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2 tracking-tight">Say Hello to {activeChat.name.split(' ')[0]}!</h3>
                                                 <p className="text-muted-foreground text-[14px] sm:text-[15px] max-w-70 sm:max-w-sm mb-8 leading-relaxed">
                                                     Send messages, share photos, or start a secure voice call.
                                                 </p>
-                                                <div className="bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[12px] px-4 py-2.5 rounded-xl flex flex-col sm:flex-row items-center gap-2.5 max-w-sm border border-amber-500/20 shadow-sm backdrop-blur-sm mx-auto">
+                                                <div className="bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[12px] px-4 py-2.5 rounded-xl flex flex-col sm:flex-row items-center gap-2.5 max-w-sm border border-amber-500/20 shadow-sm backdrop-blur-md mx-auto">
                                                     <Lock className="w-4 h-4 shrink-0" />
                                                     <span className="text-center sm:text-left leading-tight">Messages are end-to-end encrypted. No one outside of this chat can read or listen to them.</span>
                                                 </div>
@@ -931,78 +1145,141 @@ const SharedChat = () => {
                                             displayedMessages.map((msg, idx) => {
                                                 const isMe = String(msg.senderId || msg.sender) === String(currentUserId);
                                                 const isMediaRevealed = downloadedMedia.has(msg._id);
+                                                const isSelected = selectedMessages.includes(msg._id || msg.id);
 
                                                 return (
                                                     <div
                                                         key={idx}
-                                                        className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} group animate-in fade-in slide-in-from-bottom-2 duration-200`}
+                                                        className={`flex items-center w-full py-1.5 transition-colors ${isSelected ? 'bg-primary/20 backdrop-blur-xs' : 'hover:bg-black/5 dark:hover:bg-white/5'} cursor-pointer group`}
                                                         onContextMenu={(e) => handleContextMenu(e, msg)}
+                                                        onClick={() => {
+                                                            if (isSelectionMode) toggleSelection(msg);
+                                                        }}
                                                         onTouchStart={(e) => handleTouchStart(e, msg)}
                                                         onTouchEnd={handleTouchEnd}
                                                         onTouchMove={handleTouchEnd}
                                                     >
-                                                        {/* BUBBLE SIZING RESTRAINT APPLIED HERE */}
-                                                        <div className={`relative max-w-[85%] sm:max-w-[75%] lg:max-w-[60%] px-3 py-2 shadow-sm select-none ${isMe ? 'bg-[#6B66FF] text-white rounded-2xl rounded-tr-sm shadow-[0_4px_14px_-6px_rgba(var(--primary),0.3)]' : 'bg-card dark:bg-[#1C1F26] text-foreground rounded-2xl rounded-tl-sm border border-border/50 shadow-sm'}`}>
+                                                        {isSelectionMode && (
+                                                            <div className="pl-4 pr-2 shrink-0 animate-in slide-in-from-left-2">
+                                                                <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${isSelected ? 'bg-primary border-primary' : 'border-muted-foreground bg-background/50'}`}>
+                                                                    {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                                                                </div>
+                                                            </div>
+                                                        )}
 
-                                                            {/* Media Handling (Images/Videos) */}
-                                                            {msg.mediaUrl && (msg.mediaType === 'image' || msg.mediaType === 'video') && (
-                                                                !isMediaRevealed ? (
-                                                                    <div
-                                                                        onClick={() => handleRevealMedia(msg._id)}
-                                                                        className="relative w-48 h-48 sm:w-64 sm:h-64 bg-[#2A2E35] rounded-xl flex flex-col items-center justify-center cursor-pointer mb-1 border border-white/10 hover:bg-[#31363F] transition-colors"
-                                                                    >
-                                                                        <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md mb-2 hover:scale-105 transition-transform border border-white/20">
-                                                                            <Download className="w-6 h-6 text-white" />
-                                                                        </div>
-                                                                        <span className="text-white/80 text-xs font-semibold">{formatBytes(msg.fileSize || 0)}</span>
+                                                        <div className={`flex flex-col flex-1 px-4 sm:px-6 pointer-events-auto ${isMe ? 'items-end' : 'items-start'}`}>
+                                                            {/* BUBBLE SIZING RESTRAINT APPLIED HERE */}
+                                                            <div className={`relative max-w-[85%] sm:max-w-[75%] lg:max-w-[60%] px-3 py-2 shadow-sm select-none ${isMe ? 'bg-[#6B66FF] text-white rounded-2xl rounded-tr-sm shadow-[0_4px_14px_-6px_rgba(var(--primary),0.3)]' : 'bg-card dark:bg-[#1C1F26] text-foreground rounded-2xl rounded-tl-sm border border-border/50 shadow-sm'}`}>
+
+                                                                {msg.isDeletedForEveryone ? (
+                                                                    <div className={`flex items-center gap-2 italic text-[14.5px] py-1 ${isMe ? 'text-white/80' : 'text-muted-foreground/80'}`}>
+                                                                        <Ban className="w-4 h-4" /> This message was deleted
                                                                     </div>
                                                                 ) : (
-                                                                    <div className="relative mb-1 cursor-pointer group/media" onClick={() => setFullscreenMedia(msg)}>
-                                                                        {msg.mediaType === 'image' && (
-                                                                            <img
-                                                                                src={msg.mediaUrl}
-                                                                                alt="Image attachment"
-                                                                                className="w-48 sm:w-64 h-auto max-h-64 rounded-xl object-cover group-hover/media:opacity-90 transition-opacity bg-black/20"
-                                                                                onError={(e) => {
-                                                                                    console.error("Image failed to load. URL:", msg.mediaUrl);
-                                                                                    e.target.src = "https://placehold.co/400x300/13151A/FFF?text=Image+Unavailable";
-                                                                                }}
-                                                                            />
+                                                                    <>
+                                                                        {/* Media Handling (Images/Videos) */}
+                                                                        {msg.mediaUrl && (msg.mediaType === 'image' || msg.mediaType === 'video') && (
+                                                                            !isMediaRevealed ? (
+                                                                                <div
+                                                                                    onClick={(e) => { e.stopPropagation(); handleRevealMedia(msg._id); }}
+                                                                                    className="relative w-48 h-48 sm:w-64 sm:h-64 bg-[#2A2E35] rounded-xl flex flex-col items-center justify-center cursor-pointer mb-1 border border-white/10 hover:bg-[#31363F] transition-colors"
+                                                                                >
+                                                                                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md mb-2 hover:scale-105 transition-transform border border-white/20">
+                                                                                        <Download className="w-6 h-6 text-white" />
+                                                                                    </div>
+                                                                                    <span className="text-white/80 text-xs font-semibold">{formatBytes(msg.fileSize || 0)}</span>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="relative mb-1 cursor-pointer group/media" onClick={(e) => { if (!msg.isUploading) { e.stopPropagation(); setFullscreenMedia(msg); } }}>
+                                                                                    {msg.isUploading && (
+                                                                                        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 rounded-xl backdrop-blur-sm">
+                                                                                            <div className="relative flex items-center justify-center w-12 h-12 bg-black/40 rounded-full">
+                                                                                                <svg className="w-12 h-12 absolute transform -rotate-90">
+                                                                                                    <circle cx="24" cy="24" r="20" stroke="rgba(255,255,255,0.3)" strokeWidth="3" fill="none" />
+                                                                                                    <circle cx="24" cy="24" r="20" stroke="white" strokeWidth="3" fill="none"
+                                                                                                        strokeDasharray="125.6"
+                                                                                                        strokeDashoffset={125.6 - (125.6 * (uploadProgress[msg._id] || 0)) / 100}
+                                                                                                        className="transition-all duration-200 ease-out"
+                                                                                                    />
+                                                                                                </svg>
+                                                                                                <button onClick={(e) => { e.stopPropagation(); cancelUpload(msg._id); }} className="w-8 h-8 rounded-full flex items-center justify-center text-white z-30 hover:bg-black/40 transition-colors">
+                                                                                                    <X className="w-5 h-5" />
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    )}
+                                                                                    {msg.mediaType === 'image' && (
+                                                                                        <img
+                                                                                            src={msg.mediaUrl}
+                                                                                            alt="Image attachment"
+                                                                                            className={`w-48 sm:w-64 h-auto max-h-64 rounded-xl object-cover transition-opacity bg-black/20 ${msg.isUploading ? 'blur-sm' : 'group-hover/media:opacity-90'}`}
+                                                                                            onError={(e) => {
+                                                                                                console.error("Image failed to load. URL:", msg.mediaUrl);
+                                                                                                e.target.src = "https://placehold.co/400x300/13151A/FFF?text=Image+Unavailable";
+                                                                                            }}
+                                                                                        />
+                                                                                    )}
+                                                                                    {msg.mediaType === 'video' && (
+                                                                                        <div className="relative w-48 sm:w-64">
+                                                                                            <video src={msg.mediaUrl} className={`w-full h-auto max-h-64 rounded-xl object-cover ${msg.isUploading ? 'blur-sm' : ''}`} />
+                                                                                            {!msg.isUploading && (
+                                                                                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl group-hover/media:bg-black/30 transition-colors">
+                                                                                                    <div className="w-12 h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/40"><PlaySquare className="w-6 h-6 text-white fill-white/80" /></div>
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            )
                                                                         )}
-                                                                        {msg.mediaType === 'video' && (
-                                                                            <div className="relative w-48 sm:w-64">
-                                                                                <video src={msg.mediaUrl} className="w-full h-auto max-h-64 rounded-xl object-cover" />
-                                                                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl group-hover/media:bg-black/30 transition-colors">
-                                                                                    <div className="w-12 h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/40"><PlaySquare className="w-6 h-6 text-white fill-white/80" /></div>
+
+                                                                        {/* Document Handling */}
+                                                                        {msg.mediaType === 'document' && msg.mediaUrl && (
+                                                                            <div
+                                                                                onClick={(e) => { if (!msg.isUploading) { e.stopPropagation(); setFullscreenMedia(msg); } }}
+                                                                                className="relative flex items-center gap-3 bg-black/10 dark:bg-white/5 p-3 rounded-lg mb-1.5 border border-white/5 cursor-pointer hover:bg-black/20 dark:hover:bg-white/10 transition-colors w-60 sm:w-72 overflow-hidden"
+                                                                            >
+                                                                                {msg.isUploading && (
+                                                                                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-lg">
+                                                                                        <div className="relative flex items-center justify-center w-10 h-10 bg-black/40 rounded-full">
+                                                                                            <svg className="w-10 h-10 absolute transform -rotate-90">
+                                                                                                <circle cx="20" cy="20" r="16" stroke="rgba(255,255,255,0.3)" strokeWidth="2.5" fill="none" />
+                                                                                                <circle cx="20" cy="20" r="16" stroke="white" strokeWidth="2.5" fill="none"
+                                                                                                    strokeDasharray="100.5"
+                                                                                                    strokeDashoffset={100.5 - (100.5 * (uploadProgress[msg._id] || 0)) / 100}
+                                                                                                    className="transition-all duration-200 ease-out"
+                                                                                                />
+                                                                                            </svg>
+                                                                                            <button onClick={(e) => { e.stopPropagation(); cancelUpload(msg._id); }} className="w-6 h-6 rounded-full flex items-center justify-center text-white z-30 hover:bg-black/40 transition-colors">
+                                                                                                <X className="w-4 h-4" />
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+                                                                                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
+                                                                                    <FileCheck className="w-5 h-5 text-blue-500" />
+                                                                                </div>
+                                                                                <div className="flex-1 min-w-0">
+                                                                                    <span className="text-[13.5px] font-semibold truncate block">{msg.mediaUrl.split('/').pop().split('?')[0] || "Document File"}</span>
+                                                                                    <p className="text-[11px] opacity-70 mt-0.5">{formatBytes(msg.fileSize || 0)} • {msg.mediaUrl.split('.').pop().split('?')[0].toUpperCase()}</p>
                                                                                 </div>
                                                                             </div>
                                                                         )}
-                                                                    </div>
-                                                                )
-                                                            )}
 
-                                                            {/* Document Handling */}
-                                                            {msg.mediaType === 'document' && msg.mediaUrl && (
-                                                                <div
-                                                                    onClick={() => setFullscreenMedia(msg)}
-                                                                    className="flex items-center gap-3 bg-black/10 dark:bg-white/5 p-3 rounded-lg mb-1.5 border border-white/5 cursor-pointer hover:bg-black/20 dark:hover:bg-white/10 transition-colors w-60 sm:w-72"
-                                                                >
-                                                                    <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
-                                                                        <FileCheck className="w-5 h-5 text-blue-500" />
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <span className="text-[13.5px] font-semibold truncate block">{msg.mediaUrl.split('/').pop().split('?')[0] || "Document File"}</span>
-                                                                        <p className="text-[11px] opacity-70 mt-0.5">{formatBytes(msg.fileSize || 0)} • {msg.mediaUrl.split('.').pop().split('?')[0].toUpperCase()}</p>
-                                                                    </div>
+                                                                        {msg.text && (
+                                                                            <p className="text-[14.5px] leading-snug whitespace-pre-wrap wrap-break-word">
+                                                                                {renderTextWithLinks(msg.text, isMe)}
+                                                                            </p>
+                                                                        )}
+                                                                    </>
+                                                                )}
+
+                                                                {/* Status Ticks & Timestamp */}
+                                                                <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] font-medium uppercase ${isMe ? 'text-white/80' : 'text-muted-foreground/80'}`}>
+                                                                    {msg.isEdited && <span className="italic mr-1">Edited</span>}
+                                                                    <span>{formatTime(msg.createdAt || msg.timestamp)}</span>
+                                                                    {isMe && !msg.isDeletedForEveryone && renderMessageStatus(msg)}
                                                                 </div>
-                                                            )}
-
-                                                            {msg.text && <p className="text-[14.5px] leading-snug whitespace-pre-wrap break-words">{msg.text}</p>}
-
-                                                            {/* Status Ticks & Timestamp */}
-                                                            <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] font-medium uppercase ${isMe ? 'text-white/80' : 'text-muted-foreground/80'}`}>
-                                                                <span>{formatTime(msg.createdAt || msg.timestamp)}</span>
-                                                                {isMe && renderMessageStatus(msg)}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1014,28 +1291,42 @@ const SharedChat = () => {
                                 </div>
 
                                 {/* Message Prompt */}
+                                {editingMessage && (
+                                    <div className="bg-card px-4 py-2 border-t border-border flex items-center justify-between animate-in slide-in-from-bottom-2 z-20">
+                                        <div className="flex items-center gap-2">
+                                            <Edit2 className="w-4 h-4 text-primary" />
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-semibold text-primary">Editing message</span>
+                                                <span className="text-xs text-muted-foreground truncate max-w-xs">{editingMessage.text}</span>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => { setEditingMessage(null); setNewMessage(""); }} className="p-2 hover:bg-muted rounded-full"><X className="w-4 h-4" /></button>
+                                    </div>
+                                )}
                                 <div className="p-2.5 sm:p-3 bg-card dark:bg-[#13151A] border-t border-border/40 shrink-0 z-20 sticky bottom-0">
                                     <form onSubmit={handleSendMessage} className="flex items-end gap-2 relative">
-                                        <div className="relative" ref={attachMenuRef}>
-                                            <input type="file" multiple accept="image/*, video/*" className="hidden" ref={fileInputRef} onChange={(e) => handleMediaUpload(e, { compress: true, maxCount: 5, maxSizeCombinedMb: 50 })} />
-                                            <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar" className="hidden" ref={docInputRef} onChange={(e) => handleMediaUpload(e, { compress: false, maxCount: 5, maxSizeCombinedMb: 50, asDocument: true })} />
-                                            <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={(e) => handleMediaUpload(e, { compress: true, maxCount: 1, maxSizeCombinedMb: 50 })} />
+                                        {!editingMessage && (
+                                            <div className="relative" ref={attachMenuRef}>
+                                                <input type="file" multiple accept="image/*, video/*" className="hidden" ref={fileInputRef} onChange={(e) => handleMediaUpload(e, { compress: true, maxCount: 5, maxSizeCombinedMb: 50 })} />
+                                                <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar" className="hidden" ref={docInputRef} onChange={(e) => handleMediaUpload(e, { compress: false, maxCount: 5, maxSizeCombinedMb: 50, asDocument: true })} />
+                                                <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={(e) => handleMediaUpload(e, { compress: true, maxCount: 1, maxSizeCombinedMb: 50 })} />
 
-                                            {showAttachMenu && (
-                                                <div className="absolute bottom-full mb-2 left-0 w-48 bg-card border border-border shadow-2xl rounded-2xl p-1.5 flex flex-col gap-1 z-30 animate-in zoom-in-95 duration-200 origin-bottom-left">
-                                                    <button type="button" onClick={() => { setShowAttachMenu(false); cameraInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center"><Camera className="w-4 h-4" /></div> Camera</button>
-                                                    <button type="button" onClick={() => { setShowAttachMenu(false); fileInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><ImageIcon className="w-4 h-4" /></div> Photos & Videos</button>
-                                                    <button type="button" onClick={() => { setShowAttachMenu(false); docInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center"><FileCheck className="w-4 h-4" /></div> Document</button>
-                                                </div>
-                                            )}
-                                            <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} disabled={isUploading} className="p-2.5 sm:p-3 text-muted-foreground hover:bg-muted rounded-full shrink-0 disabled:opacity-50 transition-colors">
-                                                {isUploading ? <Loader2 className="w-5 h-5 animate-spin text-primary" /> : <Paperclip className="w-5 h-5" />}
-                                            </button>
-                                        </div>
+                                                {showAttachMenu && (
+                                                    <div className="absolute bottom-full mb-2 left-0 w-48 bg-card border border-border shadow-2xl rounded-2xl p-1.5 flex flex-col gap-1 z-30 animate-in zoom-in-95 duration-200 origin-bottom-left">
+                                                        <button type="button" onClick={() => { setShowAttachMenu(false); cameraInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center"><Camera className="w-4 h-4" /></div> Camera</button>
+                                                        <button type="button" onClick={() => { setShowAttachMenu(false); fileInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><ImageIcon className="w-4 h-4" /></div> Photos</button>
+                                                        <button type="button" onClick={() => { setShowAttachMenu(false); docInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center"><FileCheck className="w-4 h-4" /></div> Document</button>
+                                                    </div>
+                                                )}
+                                                <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} disabled={isUploading} className="p-2.5 sm:p-3 text-muted-foreground hover:bg-muted rounded-full shrink-0 disabled:opacity-50 transition-colors">
+                                                    <Paperclip className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        )}
                                         <div className="flex-1 bg-muted/50 dark:bg-[#1A1D24] rounded-2xl flex items-center pr-1.5 focus-within:ring-1 focus-within:ring-primary/30 transition-all min-w-0">
                                             <textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 max-h-28 min-h-11 bg-transparent border-none focus:outline-none focus:ring-0 resize-none py-3 px-3 text-[14.5px] sm:text-[15px] text-foreground placeholder:text-muted-foreground/70 custom-scrollbar" rows="1" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} />
                                             <button type="submit" disabled={!newMessage.trim() && !isUploading} className={`p-2 rounded-full transition-all shrink-0 ${newMessage.trim() ? 'bg-[#6B66FF] text-white hover:bg-[#5A55E5] scale-100' : 'bg-transparent text-muted-foreground scale-95'}`}>
-                                                <Send className="w-4.5 h-4.5 sm:w-5 sm:h-5" style={{ marginLeft: newMessage.trim() ? '2px' : '0' }} />
+                                                {editingMessage ? <Check className="w-4.5 h-4.5 sm:w-5 sm:h-5" /> : <Send className="w-4.5 h-4.5 sm:w-5 sm:h-5" style={{ marginLeft: newMessage.trim() ? '2px' : '0' }} />}
                                             </button>
                                         </div>
                                     </form>
