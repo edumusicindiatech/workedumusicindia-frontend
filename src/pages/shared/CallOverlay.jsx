@@ -20,13 +20,19 @@ const CallOverlay = ({
     const dragRef = useRef(null);
     const isDragging = useRef(false);
 
+    // FIX: Added isCallAccepted to dependency array so it attaches right when the UI mounts
     useEffect(() => {
-        if (localVideoRef.current && localStream) localVideoRef.current.srcObject = localStream;
-    }, [localStream, callType]);
+        if (localVideoRef.current && localStream) {
+            localVideoRef.current.srcObject = localStream;
+        }
+    }, [localStream, callType, isCallAccepted]);
 
+    // FIX: Added isCallAccepted to dependency array
     useEffect(() => {
-        if (remoteVideoRef.current && remoteStream) remoteVideoRef.current.srcObject = remoteStream;
-    }, [remoteStream, callType]);
+        if (remoteVideoRef.current && remoteStream) {
+            remoteVideoRef.current.srcObject = remoteStream;
+        }
+    }, [remoteStream, callType, isCallAccepted]);
 
     useEffect(() => {
         if (localStream) {
@@ -34,12 +40,11 @@ const CallOverlay = ({
         }
     }, [isMuted, localStream]);
 
-    // FIX APPLIED HERE: Protect screen sharing track from being muted
     useEffect(() => {
         if (localStream) {
             localStream.getVideoTracks().forEach(track => {
                 if (isScreenSharing) {
-                    track.enabled = true; // Force on for screen share
+                    track.enabled = true; 
                 } else {
                     track.enabled = !isVideoMuted;
                 }
@@ -96,7 +101,6 @@ const CallOverlay = ({
         <>
             <div className={`fixed inset-0 z-1000000 bg-[#0b141a] flex flex-col animate-in fade-in duration-300 ${isMinimized ? 'hidden' : 'flex'}`}>
                 
-                {/* --- REDESIGNED VIDEO UPGRADE REQUEST MODAL --- */}
                 {videoUpgradeStatus === 'receiving_request' && (
                     <div className="absolute inset-0 z-9999999 bg-black/60 backdrop-blur-sm flex items-center justify-center pointer-events-auto">
                         <div className="bg-[#1f2c33] border border-white/20 shadow-2xl p-6 rounded-3xl flex flex-col items-center animate-in zoom-in-95 max-w-xs w-[90%]">
@@ -113,7 +117,6 @@ const CallOverlay = ({
                     </div>
                 )}
 
-                {/* --- TOP LEFT CONTROLS (BACK & ENCRYPTION) --- */}
                 <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-999999 flex items-center gap-3 pointer-events-auto">
                     <button 
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsMinimized(true); }} 

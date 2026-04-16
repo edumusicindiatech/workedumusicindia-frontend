@@ -24,6 +24,7 @@ if (!window.__GLOBAL_SOCKET__) {
 }
 const socket = window.__GLOBAL_SOCKET__;
 
+// --- GLOBAL AUDIO SINGLETON ---
 if (!window.__GLOBAL_AUDIO__) {
     window.__GLOBAL_AUDIO__ = {
         notification: new Audio('/sounds/notification-ting.mp3'),
@@ -75,33 +76,17 @@ const AdminSidebar = () => {
     const [localStreamState, setLocalStreamState] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
     const [isScreenSharing, setIsScreenSharing] = useState(false);
-    const [videoUpgradeStatus, setVideoUpgradeStatus] = useState('idle'); // idle, requesting, receiving_request
+    const [videoUpgradeStatus, setVideoUpgradeStatus] = useState('idle');
 
     const pcRef = useRef(null);
     const localStreamRef = useRef(null);
     const mobileMenuRef = useRef(null);
     const currentPeerRef = useRef(null);
-    
-    // FIX APPLIED HERE: Glare/Race Condition Lock
-    const isReadyForRenegotiation = useRef(false);
 
     const pathnameRef = useRef(location.pathname);
     useEffect(() => { pathnameRef.current = location.pathname; }, [location.pathname]);
     useEffect(() => { currentPeerRef.current = callPeer; }, [callPeer]);
     useEffect(() => { if (user?.preferences) setUserPreferences(user.preferences); }, [user?.preferences]);
-
-    useEffect(() => {
-        const unlockAudio = () => {
-            Object.values(globalAudio).forEach(snd => {
-                if (snd) { snd.volume = 0; snd.play().then(() => { snd.pause(); snd.currentTime = 0; snd.volume = 1; }).catch(() => { }); }
-            });
-            document.removeEventListener('click', unlockAudio);
-            document.removeEventListener('touchstart', unlockAudio);
-        };
-        document.addEventListener('click', unlockAudio);
-        document.addEventListener('touchstart', unlockAudio);
-        return () => { document.removeEventListener('click', unlockAudio); document.removeEventListener('touchstart', unlockAudio); };
-    }, []);
 
     useEffect(() => {
         const handleVisibilityChange = () => { if (!document.hidden && pathnameRef.current.includes('/chat')) setUnreadChatCount(0); };
@@ -176,22 +161,20 @@ const AdminSidebar = () => {
             const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
             if (e.candidate && to) socket.emit('ice_candidate', { to, candidate: e.candidate, from: user.id || user._id });
         };
-        pc.ontrack = (e) => setRemoteStream(e.streams[0]);
-
-        // FIX APPLIED HERE: Glare Protection
-        pc.onnegotiationneeded = async () => {
-            if (!isReadyForRenegotiation.current || pc.signalingState !== "stable") return;
-            try {
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
-                const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
-                if(to) socket.emit('renegotiate', { to, signal: pc.localDescription });
-            } catch (err) { console.error("Negotiation error", err); }
+        
+        // FIX: Bulletproof ontrack handler
+        pc.ontrack = (e) => {
+            setRemoteStream((prevStream) => {
+                const stream = prevStream || new MediaStream();
+                if (!stream.getTracks().find(t => t.id === e.track.id)) {
+                    stream.addTrack(e.track);
+                }
+                return new MediaStream(stream.getTracks());
+            });
         };
     };
 
     const cleanupCall = () => {
-        isReadyForRenegotiation.current = false; // FIX APPLIED
         if (localStreamRef.current) localStreamRef.current.getTracks().forEach(track => track.stop());
         if (pcRef.current) pcRef.current.close();
         pcRef.current = null;
@@ -210,7 +193,10 @@ const AdminSidebar = () => {
     const handleAcceptCall = async () => {
         if (!globalIncomingCall) return;
         const callData = globalIncomingCall;
-        const requestedType = callData.callType || 'voice';
+        
+        // FIX: Inspect Raw SDP
+        const isVideoOffer = callData.callType === 'video' || (callData.signal && callData.signal.sdp && callData.signal.sdp.includes('m=video'));
+        const requestedType = isVideoOffer ? 'video' : 'voice';
 
         const mediaResult = await setupMedia(requestedType);
         if (!mediaResult || !mediaResult.stream) return;
@@ -231,7 +217,6 @@ const AdminSidebar = () => {
 
         socket.emit('answer_call', { to: callData.from, signal: answer });
         
-        isReadyForRenegotiation.current = true; // FIX APPLIED
         setGlobalIncomingCall(null);
         pauseAudio('incoming');
         setIsCallAccepted(true);
@@ -271,15 +256,13 @@ const AdminSidebar = () => {
                 callerName: user.name, profilePicture: user.profilePicture,
                 signalData: offer, callType: actualType
             });
-            
-            isReadyForRenegotiation.current = true; // FIX APPLIED
         };
 
         window.addEventListener('initiate_global_call', handleInitiateCall);
         return () => window.removeEventListener('initiate_global_call', handleInitiateCall);
     }, [user]);
 
-    // --- VIDEO UPGRADE LOGIC ---
+    // --- MANUAL VIDEO UPGRADE LOGIC ---
     const handleRequestVideo = () => {
         const to = callPeer?._id || callPeer?.id;
         socket.emit('video_upgrade_request', { to });
@@ -295,7 +278,14 @@ const AdminSidebar = () => {
             localStreamRef.current.addTrack(videoTrack);
             setLocalStreamState(new MediaStream(localStreamRef.current.getTracks()));
             
-            if (pcRef.current) pcRef.current.addTrack(videoTrack, localStreamRef.current);
+            if (pcRef.current) {
+                pcRef.current.addTrack(videoTrack, localStreamRef.current);
+                
+                const offer = await pcRef.current.createOffer();
+                await pcRef.current.setLocalDescription(offer);
+                const to = callPeer?._id || callPeer?.id;
+                socket.emit('renegotiate', { to, signal: offer });
+            }
             setCurrentCallType('video');
         } catch (error) {
             toast.error("Could not access camera for video call.");
@@ -315,7 +305,7 @@ const AdminSidebar = () => {
         setVideoUpgradeStatus('idle');
     };
 
-    // --- FIX APPLIED HERE: SCREEN SHARE LOGIC ---
+    // --- MANUAL SCREEN SHARE LOGIC ---
     const handleToggleScreenShare = async () => {
         try {
             if (!isScreenSharing) {
@@ -323,10 +313,13 @@ const AdminSidebar = () => {
                 const screenVideoTrack = screenStream.getVideoTracks()[0];
                 const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
 
+                let needsRenegotiation = false;
+
                 if (sender) {
                     await sender.replaceTrack(screenVideoTrack);
                 } else {
                     pcRef.current.addTrack(screenVideoTrack, localStreamRef.current);
+                    needsRenegotiation = true;
                 }
 
                 const audioTracks = localStreamRef.current.getAudioTracks();
@@ -336,6 +329,13 @@ const AdminSidebar = () => {
                 setLocalStreamState(newLocalStream);
                 setIsScreenSharing(true);
                 if (currentCallType === 'voice') setCurrentCallType('video');
+
+                if (needsRenegotiation) {
+                    const offer = await pcRef.current.createOffer();
+                    await pcRef.current.setLocalDescription(offer);
+                    const to = callPeer?._id || callPeer?.id;
+                    socket.emit('renegotiate', { to, signal: offer });
+                }
 
                 screenVideoTrack.onended = () => stopScreenShareAndRevertToCamera();
             } else {
@@ -412,7 +412,6 @@ const AdminSidebar = () => {
             }
         };
 
-        // Renegotiation Listener
         const handleRenegotiate = async ({ signal }) => {
             if (pcRef.current) {
                 try {
