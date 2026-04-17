@@ -46,11 +46,7 @@ const pauseAudio = (type) => { try { const snd = globalAudio[type]; if (snd) { s
 
 const iceServers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-// Base high-quality constraints to force primary camera selection
-const HQ_VIDEO_CONSTRAINTS = {
-    width: { ideal: 1280 },
-    height: { ideal: 720 }
-};
+const HQ_VIDEO_CONSTRAINTS = { width: { ideal: 1280 }, height: { ideal: 720 } };
 
 const EmployeeNavbar = () => {
     const { t } = useTranslation();
@@ -71,6 +67,11 @@ const EmployeeNavbar = () => {
     const [isCallAccepted, setIsCallAccepted] = useState(false);
     const [onlineUsers, setOnlineUsers] = useState([]);
 
+    // --- ADVANCED CALL WAITING & HOLD STATE ---
+    const [remoteCallStatus, setRemoteCallStatus] = useState('active'); 
+    const [waitingIncomingCall, setWaitingIncomingCall] = useState(null);
+    const heldCallRef = useRef(null); 
+
     // Call Upgrade & Camera States
     const [currentCallType, setCurrentCallType] = useState('voice');
     const [localStreamState, setLocalStreamState] = useState(null);
@@ -85,9 +86,10 @@ const EmployeeNavbar = () => {
 
     const pathnameRef = useRef(location.pathname);
     useEffect(() => { pathnameRef.current = location.pathname; }, [location.pathname]);
+    
+    // GUARANTEE LATEST PEER IDENTITY FOR STALE CLOSURES
     useEffect(() => { currentPeerRef.current = callPeer; }, [callPeer]);
 
-    // Instant Badge Reset Logic
     useEffect(() => {
         if (location.pathname.includes('/notifications')) setNotifCount(0);
         if (location.pathname.includes('/chat')) setUnreadChatCount(0);
@@ -112,19 +114,21 @@ const EmployeeNavbar = () => {
     }, [globalIncomingCall, activeCall]);
 
     useEffect(() => {
-        if (activeCall && !isCallAccepted && callPeer) {
+        if (activeCall && !isCallAccepted && callPeer && remoteCallStatus === 'active') {
             const isPeerOnline = onlineUsers.includes(String(callPeer._id || callPeer.id));
             if (isPeerOnline) { pauseAudio('calling'); if (globalAudio.ringing) globalAudio.ringing.loop = true; playAudio('ringing'); } 
             else { pauseAudio('ringing'); if (globalAudio.calling) globalAudio.calling.loop = true; playAudio('calling'); }
         } else { pauseAudio('calling'); pauseAudio('ringing'); }
         return () => { pauseAudio('calling'); pauseAudio('ringing'); };
-    }, [activeCall, isCallAccepted, callPeer, onlineUsers]);
+    }, [activeCall, isCallAccepted, callPeer, onlineUsers, remoteCallStatus]);
 
     const { user, token } = useSelector((state) => state.auth);
     const themeMode = useSelector((state) => state.theme.mode);
 
     // --- WEBRTC LOGIC ---
     const setupMedia = async (requestedType, specificFacingMode = 'user') => {
+        if (localStreamRef.current) return { stream: localStreamRef.current, actualType: requestedType }; 
+
         try {
             if (!navigator.mediaDevices) throw new Error("Media devices not supported.");
             const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -158,7 +162,6 @@ const EmployeeNavbar = () => {
         if (currentCallType !== 'video' || !localStreamRef.current) return;
         try {
             const newMode = facingMode === 'user' ? 'environment' : 'user';
-            
             localStreamRef.current.getVideoTracks().forEach(t => t.stop());
 
             const videoConstraints = { facingMode: { exact: newMode }, ...HQ_VIDEO_CONSTRAINTS };
@@ -168,7 +171,7 @@ const EmployeeNavbar = () => {
                 .catch(() => navigator.mediaDevices.getUserMedia({ video: fallbackConstraints })); 
 
             const newVideoTrack = stream.getVideoTracks()[0];
-            const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
+            const sender = pcRef.current?.getSenders().find(s => s.track && s.track.kind === 'video');
             if (sender) await sender.replaceTrack(newVideoTrack);
 
             const audioTracks = localStreamRef.current.getAudioTracks();
@@ -178,7 +181,6 @@ const EmployeeNavbar = () => {
             setLocalStreamState(newLocalStream);
             setFacingMode(newMode);
         } catch (err) {
-            console.error("Flip camera failed", err);
             toast.error("Could not switch camera");
         }
     };
@@ -192,9 +194,7 @@ const EmployeeNavbar = () => {
         pc.ontrack = (e) => {
             setRemoteStream((prevStream) => {
                 const stream = prevStream || new MediaStream();
-                if (!stream.getTracks().find(t => t.id === e.track.id)) {
-                    stream.addTrack(e.track);
-                }
+                if (!stream.getTracks().find(t => t.id === e.track.id)) { stream.addTrack(e.track); }
                 return new MediaStream(stream.getTracks());
             });
         };
@@ -211,15 +211,15 @@ const EmployeeNavbar = () => {
         setActiveCall(false);
         setCallPeer(null);
         setGlobalIncomingCall(null);
+        setWaitingIncomingCall(null);
         setIsMinimizedCall(false);
         setIsCallAccepted(false);
+        setRemoteCallStatus('active');
         setVideoUpgradeStatus('idle');
+        heldCallRef.current = null;
     };
 
-    const handleAcceptCall = async () => {
-        if (!globalIncomingCall) return;
-        const callData = globalIncomingCall;
-        
+    const answerIncomingCall = async (callData) => {
         const isVideoOffer = callData.callType === 'video' || (callData.signal && callData.signal.sdp && callData.signal.sdp.includes('m=video'));
         const requestedType = isVideoOffer ? 'video' : 'voice';
 
@@ -243,15 +243,69 @@ const EmployeeNavbar = () => {
         socket.emit('answer_call', { to: callData.from, signal: answer });
         
         setGlobalIncomingCall(null);
+        setWaitingIncomingCall(null);
         pauseAudio('incoming');
         setIsCallAccepted(true);
     };
 
-    const endCurrentCall = () => {
-        const recipient = globalIncomingCall?.from || callPeer?._id || callPeer?.id;
-        if (recipient) socket.emit('end_call', { to: recipient });
-        cleanupCall();
+    const handleAcceptWaitingCall = async () => {
+        if (!waitingIncomingCall || !pcRef.current) return;
+        
+        const currentActiveId = currentPeerRef.current?._id || currentPeerRef.current?.id;
+        socket.emit('renegotiate', { to: currentActiveId, signal: { type: 'CUSTOM_EVENT', event: 'call_held' } });
+
+        heldCallRef.current = {
+            pc: pcRef.current,
+            peer: currentPeerRef.current, // Use ref to prevent stale closures
+            callType: currentCallType,
+            isCallAccepted: isCallAccepted,
+            remoteStream: remoteStream
+        };
+
+        pcRef.current = null;
+        setRemoteStream(null);
+        setIsCallAccepted(false);
+        setRemoteCallStatus('active');
+
+        await answerIncomingCall(waitingIncomingCall);
+    };
+
+    const handleRejectWaitingCall = () => {
+        if (!waitingIncomingCall) return;
+        socket.emit('renegotiate', { to: waitingIncomingCall.from, signal: { type: 'CUSTOM_EVENT', event: 'call_rejected_busy' } });
+        setWaitingIncomingCall(null);
+    };
+
+    // --- BULLETPROOF HANGUP LOGIC ---
+    const endCurrentCall = (skipEmit = false) => {
+        const activePeer = currentPeerRef.current;
+        const recipient = activePeer?._id || activePeer?.id;
+        
+        if (recipient && !skipEmit) {
+            socket.emit('end_call', { to: recipient });
+            socket.emit('renegotiate', { to: recipient, signal: { type: 'CUSTOM_EVENT', event: 'explicit_end', from: user.id || user._id } });
+        }
+
+        if (pcRef.current) pcRef.current.close();
+        pcRef.current = null;
+        setRemoteStream(null);
         playAudio('hangup');
+
+        if (heldCallRef.current) {
+            const held = heldCallRef.current;
+            pcRef.current = held.pc;
+            setCallPeer(held.peer);
+            setCurrentCallType(held.callType);
+            setIsCallAccepted(held.isCallAccepted);
+            setRemoteStream(held.remoteStream);
+            setRemoteCallStatus('active');
+            
+            socket.emit('renegotiate', { to: held.peer._id || held.peer.id, signal: { type: 'CUSTOM_EVENT', event: 'call_resumed' } });
+            heldCallRef.current = null;
+            toast.success(`Resumed call with ${held.peer.name}`);
+        } else {
+            cleanupCall();
+        }
     };
 
     useEffect(() => {
@@ -267,6 +321,7 @@ const EmployeeNavbar = () => {
             setCallPeer(peerToCall);
             setActiveCall(true);
             setIsCallAccepted(false);
+            setRemoteCallStatus('active');
 
             const pc = new RTCPeerConnection(iceServers);
             pcRef.current = pc;
@@ -287,9 +342,8 @@ const EmployeeNavbar = () => {
         return () => window.removeEventListener('initiate_global_call', handleInitiateCall);
     }, [user]);
 
-    // --- MANUAL VIDEO UPGRADE LOGIC ---
     const handleRequestVideo = () => {
-        const to = callPeer?._id || callPeer?.id;
+        const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
         socket.emit('video_upgrade_request', { to });
         setVideoUpgradeStatus('requesting');
         toast("Requesting video switch...", { icon: '⏳' });
@@ -297,9 +351,7 @@ const EmployeeNavbar = () => {
 
     const performVideoUpgrade = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'user', ...HQ_VIDEO_CONSTRAINTS } 
-            });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', ...HQ_VIDEO_CONSTRAINTS } });
             const videoTrack = stream.getVideoTracks()[0];
             
             localStreamRef.current.addTrack(videoTrack);
@@ -308,27 +360,24 @@ const EmployeeNavbar = () => {
             
             if (pcRef.current) {
                 pcRef.current.addTrack(videoTrack, localStreamRef.current);
-                
                 const offer = await pcRef.current.createOffer();
                 await pcRef.current.setLocalDescription(offer);
-                const to = callPeer?._id || callPeer?.id;
+                const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
                 socket.emit('renegotiate', { to, signal: offer });
             }
             setCurrentCallType('video');
-        } catch (error) {
-            toast.error("Could not access camera for video call.");
-        }
+        } catch (error) { toast.error("Could not access camera."); }
     };
 
     const handleAcceptVideo = async () => {
-        const to = callPeer?._id || callPeer?.id;
+        const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
         socket.emit('video_upgrade_accepted', { to });
         setVideoUpgradeStatus('idle');
         await performVideoUpgrade();
     };
 
     const handleRejectVideo = () => {
-        const to = callPeer?._id || callPeer?.id;
+        const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
         socket.emit('video_upgrade_rejected', { to });
         setVideoUpgradeStatus('idle');
     };
@@ -337,48 +386,33 @@ const EmployeeNavbar = () => {
     useEffect(() => {
         if (!user || !token) return;
 
-        const fetchInitialUnreadCount = async () => {
-            try {
-                const response = await api.get('/employee/notifications');
-                if (response.data.success) setNotifCount(response.data.data.filter(n => !n.isRead).length);
-            } catch (error) { }
-        };
-
-        if (pathnameRef.current !== '/employee/notifications') fetchInitialUnreadCount();
-
         const currentUserId = user.id || user._id;
         if (socket.connected) socket.emit("join_room", currentUserId);
         socket.on("connect", () => socket.emit("join_room", currentUserId));
 
-        // FIX: Caches missed messages to LocalStorage if chat is unmounted
         const handleIncomingChat = (data) => {
             if (!pathnameRef.current.includes('/chat')) {
                 setUnreadChatCount(prev => prev + 1);
                 playAudio('notification'); 
                 toast.success(`New chat message received`, { icon: '💬', id: 'new-chat-toast' });
-
-                if (data && (data.senderId || data.sender)) {
-                    try {
-                        const missed = JSON.parse(localStorage.getItem('offline_missed_chats') || '{}');
-                        const sid = String(data.senderId || data.sender);
-                        if (!missed[sid]) missed[sid] = [];
-                        if (!missed[sid].find(m => String(m._id || m.id) === String(data._id || data.id))) {
-                            missed[sid].push(data);
-                            localStorage.setItem('offline_missed_chats', JSON.stringify(missed));
-                        }
-                    } catch (e) { console.error(e); }
-                }
             }
         };
 
         const handleIncomingCall = (data) => {
-            setGlobalIncomingCall(data);
-            if (globalAudio.incoming) globalAudio.incoming.loop = true;
-            playAudio('incoming');
+            if (activeCall) {
+                socket.emit('renegotiate', { to: data.from, signal: { type: 'CUSTOM_EVENT', event: 'call_waiting' } });
+                setWaitingIncomingCall(data);
+                playAudio('notification');
+            } else {
+                setGlobalIncomingCall(data);
+                if (globalAudio.incoming) globalAudio.incoming.loop = true;
+                playAudio('incoming');
+            }
         };
 
         const handleCallAccepted = async (signal) => {
             setIsCallAccepted(true);
+            setRemoteCallStatus('active');
             if (pcRef.current) {
                 await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                 toast.success("Call connected", { icon: '📞' });
@@ -392,6 +426,40 @@ const EmployeeNavbar = () => {
         };
 
         const handleRenegotiate = async ({ signal }) => {
+            if (signal && signal.type === 'CUSTOM_EVENT') {
+                if (signal.event === 'call_waiting') {
+                    setRemoteCallStatus('busy');
+                } else if (signal.event === 'call_held') {
+                    setRemoteCallStatus('held');
+                } else if (signal.event === 'call_resumed') {
+                    setRemoteCallStatus('active');
+                } else if (signal.event === 'call_rejected_busy') {
+                    toast.error("User is busy on another call.");
+                    cleanupCall();
+                } else if (signal.event === 'explicit_end') {
+                    // SAFE HANGUP ROUTING
+                    const senderId = signal.from;
+                    const activeId = currentPeerRef.current?._id || currentPeerRef.current?.id;
+                    const heldId = heldCallRef.current?.peer?._id || heldCallRef.current?.peer?.id;
+
+                    if (String(senderId) === String(activeId)) {
+                        if (heldCallRef.current) {
+                            toast("Current call ended. Restoring held call...");
+                            endCurrentCall(true);
+                        } else {
+                            cleanupCall();
+                            pauseAudio('incoming');
+                            playAudio('hangup');
+                        }
+                    } else if (String(senderId) === String(heldId)) {
+                        toast(`${heldCallRef.current.peer.name} ended the held call.`);
+                        if (heldCallRef.current.pc) heldCallRef.current.pc.close();
+                        heldCallRef.current = null;
+                    }
+                }
+                return;
+            }
+
             if (pcRef.current) {
                 try {
                     if (signal.type === 'offer') {
@@ -403,44 +471,8 @@ const EmployeeNavbar = () => {
                     } else if (signal.type === 'answer') {
                         await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                     }
-                } catch (e) { console.error("Renegotiation error", e); }
+                } catch (e) {}
             }
-        };
-
-        const handleNewNotification = () => {
-            playAudio('notification');
-            if (!pathnameRef.current.includes('/notifications')) {
-                setNotifCount(prev => prev + 1);
-                toast(t('navbar.new_notif_toast'), { icon: '🔔' });
-            }
-        };
-
-        const handleIncomingSOS = (data) => {
-            const { senderName, lat, lng } = data;
-            playAudio('sos');
-            if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 1000]);
-            if (!pathnameRef.current.includes('/notifications')) setNotifCount(prev => prev + 1);
-
-            toast.custom(
-                (toastObj) => (
-                    <div className={`${toastObj.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-red-600 shadow-2xl rounded-xl pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
-                        <div className="flex-1 w-0 p-4">
-                            <div className="flex items-start">
-                                <div className="ml-1 flex-1">
-                                    <p className="text-lg font-black text-white drop-shadow-md">{t('sos_alert.title')}</p>
-                                    <p className="mt-1 text-sm text-white/90 font-medium"><strong>{senderName}</strong> {t('sos_alert.description')}</p>
-                                    <Button size="sm" className="mt-3 bg-white text-red-600 hover:bg-gray-100 font-bold shadow-sm w-full" onClick={() => window.open(`https://maps.google.com/?q=${lat},${lng}`, '_blank')}>
-                                        {t('sos_alert.btn_view_location')}
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex border-l border-red-700/50">
-                            <button onClick={() => toast.dismiss(toastObj.id)} className="w-full border border-transparent rounded-none rounded-r-xl p-4 flex items-center justify-center text-white/80 hover:text-white hover:bg-red-700 focus:outline-none transition-colors"><X className="w-5 h-5" /></button>
-                        </div>
-                    </div>
-                ), { duration: 30000, id: `emp-sos-alert-${senderName}`, position: "top-right" }
-            );
         };
 
         socket.on("receive_message", handleIncomingChat);
@@ -448,16 +480,19 @@ const EmployeeNavbar = () => {
         socket.on("call_accepted", handleCallAccepted);
         socket.on("ice_candidate", handleIceCandidate);
         socket.on("renegotiate", handleRenegotiate);
-        socket.on("call_ended", () => { cleanupCall(); pauseAudio('incoming'); playAudio('hangup'); });
+        
+        socket.on("call_ended", () => {
+            // If we have multiple calls, ignore standard broadcast and wait for 'explicit_end' tunnel
+            if (!heldCallRef.current) {
+                cleanupCall(); 
+                pauseAudio('incoming'); 
+                playAudio('hangup');
+            }
+        });
         
         socket.on("video_upgrade_request", () => { setVideoUpgradeStatus('receiving_request'); playAudio('notification'); });
         socket.on("video_upgrade_rejected", () => { setVideoUpgradeStatus('idle'); toast.error("Video call request rejected"); });
         socket.on("video_upgrade_accepted", async () => { setVideoUpgradeStatus('idle'); toast.success("Video call request accepted"); await performVideoUpgrade(); });
-
-        socket.on("new_notification", handleNewNotification);
-        socket.on("leaderboard_refresh", handleNewNotification);
-        socket.on('new_notification_for_user', handleNewNotification);
-        socket.on("sos_alert_received", handleIncomingSOS);
         socket.on("online_users_updated", setOnlineUsers);
 
         return () => {
@@ -470,13 +505,9 @@ const EmployeeNavbar = () => {
             socket.off("video_upgrade_request");
             socket.off("video_upgrade_rejected");
             socket.off("video_upgrade_accepted");
-            socket.off("new_notification");
-            socket.off("leaderboard_refresh");
-            socket.off('new_notification_for_user');
-            socket.off("sos_alert_received");
             socket.off("online_users_updated");
         };
-    }, [user, token, t]);
+    }, [user, token, activeCall]); // Re-bind on activeCall to capture state, but rely on currentPeerRef!
 
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
@@ -506,7 +537,7 @@ const EmployeeNavbar = () => {
             {activeCall && (
                 <CallOverlay
                     peer={callPeer}
-                    onHangup={endCurrentCall}
+                    onHangup={() => endCurrentCall(false)}
                     isMinimized={isMinimizedCall}
                     setIsMinimized={setIsMinimizedCall}
                     localStream={localStreamState}
@@ -520,6 +551,10 @@ const EmployeeNavbar = () => {
                     videoUpgradeStatus={videoUpgradeStatus}
                     onFlipCamera={handleFlipCamera}
                     facingMode={facingMode}
+                    remoteCallStatus={remoteCallStatus}
+                    waitingCall={waitingIncomingCall}
+                    onAcceptWaitingCall={handleAcceptWaitingCall}
+                    onRejectWaitingCall={handleRejectWaitingCall}
                 />
             )}
 
@@ -584,7 +619,6 @@ const EmployeeNavbar = () => {
                 ))}
             </nav>
 
-            {/* GLOBAL INCOMING CALL MODAL */}
             {globalIncomingCall && !activeCall && (
                 <div className="fixed inset-0 z-100000 bg-black/60 backdrop-blur-sm flex items-center justify-center animate-in fade-in">
                     <div className="bg-card dark:bg-[#13151A] p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-6 w-80 text-center animate-in zoom-in-95 border border-border">
@@ -599,7 +633,7 @@ const EmployeeNavbar = () => {
                             <button onClick={() => { socket.emit('end_call', { to: globalIncomingCall.from }); setGlobalIncomingCall(null); pauseAudio('incoming'); }} className="w-14 h-14 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
                                 <PhoneOff className="w-6 h-6" />
                             </button>
-                            <button onClick={handleAcceptCall} className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
+                            <button onClick={() => answerIncomingCall(globalIncomingCall)} className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
                                 {globalIncomingCall.callType === 'video' ? <Video className="w-6 h-6 fill-current" /> : <Phone className="w-6 h-6 fill-current" />}
                             </button>
                         </div>

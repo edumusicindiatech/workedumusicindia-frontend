@@ -1,26 +1,53 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
     Mic, MicOff, Volume2, VolumeX, PhoneOff,
-    Maximize2, ChevronLeft, User, Video, VideoOff, Lock, SwitchCamera
+    Maximize2, ChevronLeft, User, Video, VideoOff, Lock, SwitchCamera, PhoneIncoming, Phone
 } from "lucide-react";
 
 const CallOverlay = ({ 
     peer, onHangup, isMinimized, setIsMinimized, localStream, remoteStream, 
     isCallAccepted, isOnline, callType, onRequestVideo, onAcceptVideo, 
-    onRejectVideo, videoUpgradeStatus, onFlipCamera, facingMode
+    onRejectVideo, videoUpgradeStatus, onFlipCamera, facingMode,
+    remoteCallStatus, waitingCall, onAcceptWaitingCall, onRejectWaitingCall
 }) => {
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoMuted, setIsVideoMuted] = useState(false);
     const [isLoudspeaker, setIsLoudspeaker] = useState(false);
     const [timer, setTimer] = useState(0);
 
+    // Auto-Hide Controls State
+    const [controlsVisible, setControlsVisible] = useState(true);
+    const activityTimerRef = useRef(null);
+
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
     const minimizedRemoteVideoRef = useRef(null);
 
-    const [position, setPosition] = useState({ x: 20, y: 80 });
-    const dragRef = useRef(null);
-    const isDragging = useRef(false);
+    // Minimized Widget Drag State
+    const [minPosition, setMinPosition] = useState({ x: 20, y: 80 });
+    const minDragRef = useRef(null);
+    const isMinDragging = useRef(false);
+
+    // Local Video (PiP) Drag State
+    const [pipPosition, setPipPosition] = useState({ x: window.innerWidth - 140, y: window.innerHeight - 200 });
+    const pipDragRef = useRef(null);
+    const isPipDragging = useRef(false);
+
+    // --- ACTIVITY MONITOR FOR AUTO-HIDE ---
+    const resetActivityTimer = useCallback(() => {
+        setControlsVisible(true);
+        if (activityTimerRef.current) clearTimeout(activityTimerRef.current);
+        if (isCallAccepted) {
+            activityTimerRef.current = setTimeout(() => {
+                setControlsVisible(false);
+            }, 5000);
+        }
+    }, [isCallAccepted]);
+
+    useEffect(() => {
+        resetActivityTimer();
+        return () => { if (activityTimerRef.current) clearTimeout(activityTimerRef.current); };
+    }, [resetActivityTimer]);
 
     useEffect(() => {
         const assignStreams = () => {
@@ -29,29 +56,23 @@ const CallOverlay = ({
             if (minimizedRemoteVideoRef.current && remoteStream) minimizedRemoteVideoRef.current.srcObject = remoteStream;
         };
         assignStreams();
-    }, [localStream, remoteStream, callType, isCallAccepted, isMinimized]);
+    }, [localStream, remoteStream, callType, isCallAccepted, isMinimized, remoteCallStatus]);
 
     useEffect(() => {
-        if (localStream) {
-            localStream.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
-        }
+        if (localStream) localStream.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
     }, [isMuted, localStream]);
 
     useEffect(() => {
-        if (localStream) {
-            localStream.getVideoTracks().forEach(track => {
-                track.enabled = !isVideoMuted;
-            });
-        }
+        if (localStream) localStream.getVideoTracks().forEach(track => { track.enabled = !isVideoMuted; });
     }, [isVideoMuted, localStream]);
 
     useEffect(() => {
         let interval;
-        if (isCallAccepted) {
+        if (isCallAccepted && remoteCallStatus === 'active') {
             interval = setInterval(() => { setTimer((prev) => prev + 1); }, 1000);
         }
         return () => clearInterval(interval);
-    }, [isCallAccepted]);
+    }, [isCallAccepted, remoteCallStatus]);
 
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);
@@ -59,17 +80,17 @@ const CallOverlay = ({
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const statusText = isCallAccepted ? "" : (isOnline ? "Ringing..." : "Calling...");
+    let statusText = isCallAccepted ? "" : (isOnline ? "Ringing..." : "Calling...");
+    if (remoteCallStatus === 'busy') statusText = "Person is on another call...";
 
-    // FIX: Combined Mouse & Touch Drag Logic with screen boundaries
-    const handleDragStart = (e) => {
-        isDragging.current = false;
-
+    // --- GENERIC DRAG HANDLER FOR PIP AND MINIMIZED WIDGET ---
+    const createDragHandler = (positionState, setPositionState, dragRefElement, dragFlag) => (e) => {
+        dragFlag.current = false;
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-        const startX = clientX - position.x;
-        const startY = clientY - position.y;
+        const startX = clientX - positionState.x;
+        const startY = clientY - positionState.y;
         const initialClickX = clientX;
         const initialClickY = clientY;
 
@@ -78,22 +99,22 @@ const CallOverlay = ({
             const moveClientY = moveEvent.touches ? moveEvent.touches[0].clientY : moveEvent.clientY;
 
             if (Math.abs(moveClientX - initialClickX) > 5 || Math.abs(moveClientY - initialClickY) > 5) {
-                isDragging.current = true;
+                dragFlag.current = true;
+                setControlsVisible(true); // Keep controls visible while dragging
             }
 
-            // Boundary logic to prevent dragging off-screen
-            const widgetWidth = dragRef.current?.offsetWidth || 144;
-            const widgetHeight = dragRef.current?.offsetHeight || 200;
+            const widgetWidth = dragRefElement.current?.offsetWidth || 100;
+            const widgetHeight = dragRefElement.current?.offsetHeight || 150;
 
             let newX = moveClientX - startX;
             let newY = moveClientY - startY;
 
-            if (newX < 0) newX = 0;
-            if (newY < 0) newY = 0;
-            if (newX + widgetWidth > window.innerWidth) newX = window.innerWidth - widgetWidth;
-            if (newY + widgetHeight > window.innerHeight) newY = window.innerHeight - widgetHeight;
+            if (newX < 10) newX = 10;
+            if (newY < 10) newY = 10;
+            if (newX + widgetWidth > window.innerWidth - 10) newX = window.innerWidth - widgetWidth - 10;
+            if (newY + widgetHeight > window.innerHeight - 10) newY = window.innerHeight - widgetHeight - 10;
 
-            setPosition({ x: newX, y: newY });
+            setPositionState({ x: newX, y: newY });
         };
 
         const onDragEnd = () => {
@@ -101,7 +122,7 @@ const CallOverlay = ({
             document.removeEventListener("mouseup", onDragEnd);
             document.removeEventListener("touchmove", onDragMove);
             document.removeEventListener("touchend", onDragEnd);
-            setTimeout(() => { isDragging.current = false; }, 50);
+            setTimeout(() => { dragFlag.current = false; }, 50);
         };
 
         document.addEventListener("mousemove", onDragMove);
@@ -110,15 +131,24 @@ const CallOverlay = ({
         document.addEventListener("touchend", onDragEnd);
     };
 
+    const handleMinDragStart = createDragHandler(minPosition, setMinPosition, minDragRef, isMinDragging);
+    const handlePipDragStart = createDragHandler(pipPosition, setPipPosition, pipDragRef, isPipDragging);
+
     const handleMaximize = (e) => {
-        if (isDragging.current) { e.stopPropagation(); return; }
+        if (isMinDragging.current) { e.stopPropagation(); return; }
         setIsMinimized(false);
     };
 
     return (
         <>
-            <div className={`fixed inset-0 z-1000000 bg-[#0b141a] flex flex-col animate-in fade-in duration-300 ${isMinimized ? 'hidden' : 'flex'}`}>
+            <div 
+                className={`fixed inset-0 z-1000000 bg-[#0b141a] flex flex-col animate-in fade-in duration-300 ${isMinimized ? 'hidden' : 'flex'}`}
+                onMouseMove={resetActivityTimer}
+                onClick={resetActivityTimer}
+                onTouchStart={resetActivityTimer}
+            >
                 
+                {/* VIDEO UPGRADE REQUEST MODAL */}
                 {videoUpgradeStatus === 'receiving_request' && (
                     <div className="absolute inset-0 z-9999999 bg-black/60 backdrop-blur-sm flex items-center justify-center pointer-events-auto">
                         <div className="bg-[#1f2c33] border border-white/20 shadow-2xl p-6 rounded-3xl flex flex-col items-center animate-in zoom-in-95 max-w-xs w-[90%]">
@@ -135,7 +165,29 @@ const CallOverlay = ({
                     </div>
                 )}
 
-                <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-999999 flex flex-col items-start gap-3 pointer-events-auto">
+                {/* INCOMING WAITING CALL POPUP */}
+                {waitingCall && (
+                    <div className="absolute top-20 left-1/2 -translate-x-1/2 z-9999999 bg-card border border-border shadow-2xl p-4 rounded-3xl flex items-center gap-4 animate-in slide-in-from-top-10 fade-in duration-300 pointer-events-auto max-w-sm w-[90%]">
+                        <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden shrink-0 border border-primary/30">
+                            {waitingCall.profilePicture ? <img src={waitingCall.profilePicture} className="w-full h-full object-cover" /> : <User className="text-primary w-6 h-6" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-foreground font-bold text-[15px] truncate">{waitingCall.callerName}</p>
+                            <p className="text-muted-foreground text-[12px] capitalize font-medium">{waitingCall.callType} call incoming...</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button onClick={(e) => { e.stopPropagation(); onRejectWaitingCall(); }} className="w-10 h-10 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center text-white shadow-md transition-transform active:scale-95">
+                                <PhoneOff className="w-4 h-4" />
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); onAcceptWaitingCall(); }} className="w-10 h-10 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center text-white shadow-md transition-transform active:scale-95">
+                                {waitingCall.callType === 'video' ? <Video className="w-4 h-4 fill-current" /> : <Phone className="w-4 h-4 fill-current" />}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* TOP HEADER TAGS (AUTO-HIDES) */}
+                <div className={`absolute top-4 left-4 sm:top-6 sm:left-6 z-999999 flex flex-col items-start gap-3 pointer-events-auto transition-all duration-500 ease-in-out ${controlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10 pointer-events-none'}`}>
                     <div className="flex items-center gap-3">
                         <button 
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsMinimized(true); }} 
@@ -149,17 +201,34 @@ const CallOverlay = ({
                             <span className="text-white/90 font-medium text-[11px] sm:text-xs tracking-wide">End-to-end encrypted</span>
                         </div>
                     </div>
-                    {isCallAccepted && (
-                        <div className="bg-black/40 backdrop-blur-md border border-white/10 px-4 py-1.5 rounded-full ml-12">
-                            <span className="text-white font-semibold text-sm tracking-widest">{formatTime(timer)}</span>
-                        </div>
-                    )}
                 </div>
 
+                {/* TIMER OVERLAY (ALWAYS VISIBLE) */}
+                {isCallAccepted && (
+                    <div className="absolute top-5 sm:top-7 right-5 sm:right-7 z-999999 pointer-events-none">
+                        <div className="bg-black/40 backdrop-blur-md border border-white/10 px-4 py-1.5 rounded-full shadow-sm flex items-center gap-2">
+                            {remoteCallStatus === 'held' && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>}
+                            <span className={`text-white font-semibold text-sm tracking-widest ${remoteCallStatus === 'held' ? 'opacity-70' : ''}`}>{formatTime(timer)}</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* REMOTE ON HOLD OVERLAY */}
+                {remoteCallStatus === 'held' && (
+                    <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center">
+                        <div className="w-24 h-24 rounded-full bg-amber-500/20 border-2 border-amber-500 flex items-center justify-center mb-6 animate-pulse shadow-[0_0_30px_rgba(245,158,11,0.3)]">
+                            <Phone className="text-amber-500 w-10 h-10" />
+                        </div>
+                        <h2 className="text-white text-2xl font-bold mb-2 text-center px-4">{peer?.name} put your call on hold.</h2>
+                        <p className="text-white/60 text-sm">Please wait while they finish another call...</p>
+                    </div>
+                )}
+
+                {/* MAIN VIDEO AREA */}
                 {callType === 'video' ? (
-                    <div className="absolute inset-0 z-0 bg-black flex items-center justify-center">
+                    <div className="absolute inset-0 z-0 bg-black flex items-center justify-center overflow-hidden">
                         {isCallAccepted ? (
-                            <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                            <video ref={remoteVideoRef} autoPlay playsInline className={`w-full h-full object-cover transition-opacity duration-500 ${remoteCallStatus === 'held' ? 'opacity-0' : 'opacity-100'}`} />
                         ) : (
                             <div className="flex flex-col items-center justify-center z-10 absolute inset-0 bg-black/60 backdrop-blur-md pointer-events-none">
                                 <div className="w-32 h-32 rounded-full bg-primary/20 border-2 border-white/10 flex items-center justify-center overflow-hidden shadow-2xl mb-6 animate-pulse">
@@ -169,90 +238,105 @@ const CallOverlay = ({
                                 <p className="text-white/70 text-lg tracking-wide">{statusText}</p>
                             </div>
                         )}
-                        <div className={`absolute transition-all duration-500 ${isCallAccepted ? 'bottom-40 right-6 w-28 h-40 md:w-36 md:h-48 rounded-xl border-2 border-white/20 shadow-2xl bg-black overflow-hidden z-20' : 'inset-0 w-full h-full opacity-50 bg-black z-20 pointer-events-none'}`}>
+
+                        {/* DRAGGABLE LOCAL VIDEO (PiP) */}
+                        <div 
+                            ref={pipDragRef}
+                            onMouseDown={handlePipDragStart} 
+                            onTouchStart={handlePipDragStart} 
+                            style={{ 
+                                left: `${pipPosition.x}px`, 
+                                top: `${pipPosition.y}px`,
+                                transition: isPipDragging.current ? 'none' : 'opacity 0.3s ease'
+                            }} 
+                            className={`absolute w-28 h-40 md:w-36 md:h-48 rounded-xl border-2 border-white/20 shadow-2xl bg-black overflow-hidden z-40 cursor-move touch-none ${!isCallAccepted ? 'hidden' : ''} ${remoteCallStatus === 'held' ? 'opacity-50 blur-sm' : 'opacity-100'}`}
+                        >
                             {isVideoMuted ? (
-                                <div className="w-full h-full flex items-center justify-center bg-gray-900"><VideoOff className="w-8 h-8 text-white/50" /></div>
+                                <div className="w-full h-full flex items-center justify-center bg-gray-900 pointer-events-none"><VideoOff className="w-8 h-8 text-white/50" /></div>
                             ) : (
-                                <video ref={localVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${facingMode === 'user' ? 'transform scale-x-[-1]' : ''}`} />
+                                <video ref={localVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover pointer-events-none ${facingMode === 'user' ? 'transform scale-x-[-1]' : ''}`} />
                             )}
 
-                            {/* FIX: FLIP CAMERA BUTTON - Removed hover hide, added z-50 to ensure clickability */}
+                            {/* FLIP CAMERA BUTTON */}
                             {isCallAccepted && !isVideoMuted && (
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); onFlipCamera(); }} 
-                                    className="absolute bottom-2 left-2 p-2 bg-black/50 active:bg-black/80 rounded-full text-white backdrop-blur-md z-50 shadow-md transition-colors cursor-pointer"
+                                    className={`absolute bottom-2 left-2 p-2 bg-black/50 active:bg-black/80 rounded-full text-white backdrop-blur-md z-50 shadow-md transition-all duration-300 cursor-pointer ${controlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
                                     title="Flip Camera"
                                 >
-                                    <SwitchCamera size={18} />
+                                    <SwitchCamera size={16} />
                                 </button>
                             )}
                         </div>
                     </div>
                 ) : (
+                    // MAIN VOICE AREA
                     <div className="flex-1 flex flex-col items-center justify-center -mt-20 pointer-events-none z-10 relative">
-                        <div className={`w-40 h-40 md:w-56 md:h-56 rounded-full bg-primary/10 border-2 border-white/5 flex items-center justify-center overflow-hidden shadow-2xl mb-6 ${!isCallAccepted ? 'animate-pulse' : ''}`}>
+                        <div className={`w-40 h-40 md:w-56 md:h-56 rounded-full bg-primary/10 border-2 border-white/5 flex items-center justify-center overflow-hidden shadow-2xl mb-6 ${!isCallAccepted || remoteCallStatus === 'held' ? 'animate-pulse' : ''}`}>
                             {peer?.profilePicture ? <img src={peer.profilePicture} className="w-full h-full object-cover" /> : <User className="text-primary w-20 h-20" />}
                         </div>
                         <h2 className="text-white text-3xl font-bold mb-2">{peer?.name || "Unknown"}</h2>
                         {!isCallAccepted && <p className="text-white/70 text-lg tracking-wide">{statusText}</p>}
+                        {isCallAccepted && remoteCallStatus === 'active' && <p className="text-emerald-400 font-medium">In call</p>}
                         
                         <video ref={localVideoRef} autoPlay playsInline muted className="hidden" />
                         <video ref={remoteVideoRef} autoPlay playsInline className="hidden" />
                     </div>
                 )}
 
-                <div className="absolute bottom-0 left-0 w-full h-32 md:h-40 bg-linear-to-t from-black/80 to-transparent flex items-center justify-center gap-4 md:gap-8 px-4 z-50 pointer-events-auto pb-4">
+                {/* BOTTOM CONTROL BAR (AUTO-HIDES) */}
+                <div className={`absolute bottom-0 left-0 w-full bg-linear-to-t from-black/90 via-black/50 to-transparent flex flex-col items-center justify-end z-50 pointer-events-none transition-all duration-500 ease-in-out ${controlsVisible ? 'opacity-100 translate-y-0 h-40 md:h-48' : 'opacity-0 translate-y-full h-0'}`}>
                     
-                    {callType === 'video' ? (
-                        <button onClick={() => setIsVideoMuted(!isVideoMuted)} className={`p-4 rounded-full transition-all shadow-lg ${isVideoMuted ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'}`}>
-                            {isVideoMuted ? <VideoOff size={24} /> : <Video size={24} />}
-                        </button>
-                    ) : (
-                        <button onClick={onRequestVideo} disabled={videoUpgradeStatus === 'requesting'} className={`p-4 rounded-full transition-all shadow-lg ${videoUpgradeStatus === 'requesting' ? 'bg-white/5 text-white/30 cursor-wait' : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'}`} title="Request Video Upgrade">
-                            <Video size={24} />
-                        </button>
-                    )}
+                    <div className="flex items-center justify-center gap-4 md:gap-8 px-4 pb-8 pointer-events-auto">
+                        {callType === 'video' ? (
+                            <button onClick={(e) => { e.stopPropagation(); setIsVideoMuted(!isVideoMuted); resetActivityTimer(); }} className={`p-4 rounded-full transition-all shadow-lg ${isVideoMuted ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'}`}>
+                                {isVideoMuted ? <VideoOff size={24} /> : <Video size={24} />}
+                            </button>
+                        ) : (
+                            <button onClick={(e) => { e.stopPropagation(); onRequestVideo(); resetActivityTimer(); }} disabled={videoUpgradeStatus === 'requesting'} className={`p-4 rounded-full transition-all shadow-lg ${videoUpgradeStatus === 'requesting' ? 'bg-white/5 text-white/30 cursor-wait' : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'}`} title="Request Video Upgrade">
+                                <Video size={24} />
+                            </button>
+                        )}
 
-                    <button onClick={() => setIsLoudspeaker(!isLoudspeaker)} className={`p-4 rounded-full transition-all shadow-lg hidden sm:block ${isLoudspeaker ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'}`}>
-                        <Volume2 size={24} />
-                    </button>
-                    
-                    <button onClick={onHangup} className="p-5 md:p-6 bg-rose-500 hover:bg-rose-600 rounded-full text-white transition-transform active:scale-90 shadow-xl border border-rose-400 mx-2">
-                        <PhoneOff size={28} fill="currentColor" />
-                    </button>
-                    
-                    <button onClick={() => setIsMuted(!isMuted)} className={`p-4 rounded-full transition-all shadow-lg ${isMuted ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'}`}>
-                        {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
-                    </button>
+                        <button onClick={(e) => { e.stopPropagation(); setIsLoudspeaker(!isLoudspeaker); resetActivityTimer(); }} className={`p-4 rounded-full transition-all shadow-lg hidden sm:block ${isLoudspeaker ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'}`}>
+                            <Volume2 size={24} />
+                        </button>
+                        
+                        <button onClick={(e) => { e.stopPropagation(); onHangup(); }} className="p-5 md:p-6 bg-rose-500 hover:bg-rose-600 rounded-full text-white transition-transform active:scale-90 shadow-xl border border-rose-400 mx-2">
+                            <PhoneOff size={28} fill="currentColor" />
+                        </button>
+                        
+                        <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); resetActivityTimer(); }} className={`p-4 rounded-full transition-all shadow-lg ${isMuted ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'}`}>
+                            {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* WHATSAPP STYLE MINIMIZED VIEW */}
             {isMinimized && (
                 <div 
-                    ref={dragRef} 
-                    onMouseDown={handleDragStart} 
-                    onTouchStart={handleDragStart} 
-                    style={{ left: `${position.x}px`, top: `${position.y}px` }} 
+                    ref={minDragRef} 
+                    onMouseDown={handleMinDragStart} 
+                    onTouchStart={handleMinDragStart} 
+                    style={{ left: `${minPosition.x}px`, top: `${minPosition.y}px` }} 
                     className="fixed z-1000000 w-36 bg-[#1f2c33]/95 backdrop-blur-md shadow-2xl rounded-2xl p-2 border border-white/10 cursor-move animate-in zoom-in-95 flex flex-col gap-2 touch-none"
                 >
-                    
-                    {/* Maximize Area (Video or Image) */}
                     <div onClick={handleMaximize} className="w-full aspect-3/4 bg-black rounded-xl overflow-hidden relative cursor-pointer border border-white/5 flex items-center justify-center">
-                        {callType === 'video' && isCallAccepted ? (
+                        {callType === 'video' && isCallAccepted && remoteCallStatus === 'active' ? (
                             <video ref={minimizedRemoteVideoRef} autoPlay playsInline className="w-full h-full object-cover pointer-events-none" />
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-800 pointer-events-none">
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-800 pointer-events-none">
                                 {peer?.profilePicture ? (
-                                    <img src={peer.profilePicture} className="w-full h-full object-cover opacity-80" />
+                                    <img src={peer.profilePicture} className={`w-full h-full object-cover opacity-80 ${remoteCallStatus === 'held' ? 'blur-sm' : ''}`} />
                                 ) : (
                                     <User className="text-white/50 w-12 h-12" />
                                 )}
+                                {remoteCallStatus === 'held' && <span className="absolute text-amber-500 font-bold text-xs bg-black/60 px-2 py-1 rounded">ON HOLD</span>}
                             </div>
                         )}
 
-                        {/* Status / Timer Overlay */}
-                        {isCallAccepted ? (
+                        {isCallAccepted && remoteCallStatus === 'active' ? (
                             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-[11px] font-medium text-white shadow-sm whitespace-nowrap pointer-events-none">
                                 {formatTime(timer)}
                             </div>
@@ -261,7 +345,6 @@ const CallOverlay = ({
                         )}
                     </div>
 
-                    {/* Minimized Controls */}
                     <div className="flex items-center justify-center gap-2 pointer-events-auto pb-1">
                         {callType === 'video' && (
                             <button onClick={(e) => { e.stopPropagation(); setIsVideoMuted(!isVideoMuted); }} className={`p-2.5 rounded-full transition-colors ${isVideoMuted ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`}>
