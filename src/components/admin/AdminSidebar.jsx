@@ -49,7 +49,7 @@ const AdminSidebar = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const { user } = useSelector((state) => state.auth);
+    const { user, token } = useSelector((state) => state.auth);
     const theme = useSelector((state) => state.theme?.mode || 'light');
 
     const adminName = user?.name || "Admin User";
@@ -63,7 +63,6 @@ const AdminSidebar = () => {
     const [unreadChatCount, setUnreadChatCount] = useState(0);
     const [pendingMediaCount, setPendingMediaCount] = useState(0);
 
-    // --- GLOBAL WEBRTC CALL STATE ---
     const [globalIncomingCall, setGlobalIncomingCall] = useState(null);
     const [activeCall, setActiveCall] = useState(false);
     const [callPeer, setCallPeer] = useState(null);
@@ -71,12 +70,10 @@ const AdminSidebar = () => {
     const [isCallAccepted, setIsCallAccepted] = useState(false);
     const [onlineUsers, setOnlineUsers] = useState([]);
 
-    // --- ADVANCED CALL WAITING & HOLD STATE ---
     const [remoteCallStatus, setRemoteCallStatus] = useState('active');
     const [waitingIncomingCall, setWaitingIncomingCall] = useState(null);
     const heldCallRef = useRef(null);
 
-    // Call Upgrade & Camera States
     const [currentCallType, setCurrentCallType] = useState('voice');
     const [localStreamState, setLocalStreamState] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
@@ -88,12 +85,12 @@ const AdminSidebar = () => {
     const mobileMenuRef = useRef(null);
     const currentPeerRef = useRef(null);
 
+    const [isMuted, setIsMuted] = useState(false);
+    const [isVideoMuted, setIsVideoMuted] = useState(false);
+
     const pathnameRef = useRef(location.pathname);
     useEffect(() => { pathnameRef.current = location.pathname; }, [location.pathname]);
-
-    // GUARANTEE LATEST PEER IDENTITY FOR STALE CLOSURES
     useEffect(() => { currentPeerRef.current = callPeer; }, [callPeer]);
-
     useEffect(() => { if (user?.preferences) setUserPreferences(user.preferences); }, [user?.preferences]);
 
     useEffect(() => {
@@ -145,7 +142,6 @@ const AdminSidebar = () => {
     // --- WEBRTC LOGIC ---
     const setupMedia = async (requestedType, specificFacingMode = 'user') => {
         if (localStreamRef.current) return { stream: localStreamRef.current, actualType: requestedType };
-
         try {
             if (!navigator.mediaDevices) throw new Error("Media devices not supported.");
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -188,6 +184,7 @@ const AdminSidebar = () => {
                 .catch(() => navigator.mediaDevices.getUserMedia({ video: fallbackConstraints }));
 
             const newVideoTrack = stream.getVideoTracks()[0];
+
             const sender = pcRef.current?.getSenders().find(s => s.track && s.track.kind === 'video');
             if (sender) await sender.replaceTrack(newVideoTrack);
 
@@ -203,18 +200,31 @@ const AdminSidebar = () => {
     };
 
     const attachPCListeners = (pc) => {
+        pc.iceQueue = [];
         pc.onicecandidate = (e) => {
             const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
             if (e.candidate && to) socket.emit('ice_candidate', { to, candidate: e.candidate, from: user.id || user._id });
         };
-
         pc.ontrack = (e) => {
-            setRemoteStream((prevStream) => {
-                const stream = prevStream || new MediaStream();
-                if (!stream.getTracks().find(t => t.id === e.track.id)) { stream.addTrack(e.track); }
-                return new MediaStream(stream.getTracks());
-            });
+            if (e.streams && e.streams[0]) {
+                setRemoteStream(e.streams[0]);
+            } else {
+                setRemoteStream((prevStream) => {
+                    const stream = prevStream || new MediaStream();
+                    if (!stream.getTracks().find(t => t.id === e.track.id)) { stream.addTrack(e.track); }
+                    return new MediaStream(stream.getTracks());
+                });
+            }
         };
+    };
+
+    const processIceQueue = async (pc) => {
+        if (pc && pc.iceQueue && pc.iceQueue.length > 0) {
+            for (const candidate of pc.iceQueue) {
+                try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { console.warn(e); }
+            }
+            pc.iceQueue = [];
+        }
     };
 
     const cleanupCall = () => {
@@ -239,21 +249,21 @@ const AdminSidebar = () => {
     const answerIncomingCall = async (callData) => {
         const isVideoOffer = callData.callType === 'video' || (callData.signal && callData.signal.sdp && callData.signal.sdp.includes('m=video'));
         const requestedType = isVideoOffer ? 'video' : 'voice';
-
         const mediaResult = await setupMedia(requestedType);
         if (!mediaResult || !mediaResult.stream) return;
         setCurrentCallType(requestedType);
-
         const { stream } = mediaResult;
         setActiveCall(true);
-        setCallPeer({ name: callData.callerName, _id: callData.from, profilePicture: callData.profilePicture });
 
+        setCallPeer({ name: callData.callerName, _id: callData.from, profilePicture: callData.profilePicture });
         const pc = new RTCPeerConnection(iceServers);
         pcRef.current = pc;
         stream.getTracks().forEach(track => pc.addTrack(track, stream));
         attachPCListeners(pc);
 
         await pc.setRemoteDescription(new RTCSessionDescription(callData.signal));
+        await processIceQueue(pc);
+
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
 
@@ -267,23 +277,13 @@ const AdminSidebar = () => {
 
     const handleAcceptWaitingCall = async () => {
         if (!waitingIncomingCall || !pcRef.current) return;
-
         const currentActiveId = currentPeerRef.current?._id || currentPeerRef.current?.id;
         socket.emit('renegotiate', { to: currentActiveId, signal: { type: 'CUSTOM_EVENT', event: 'call_held' } });
-
-        heldCallRef.current = {
-            pc: pcRef.current,
-            peer: currentPeerRef.current,
-            callType: currentCallType,
-            isCallAccepted: isCallAccepted,
-            remoteStream: remoteStream
-        };
-
+        heldCallRef.current = { pc: pcRef.current, peer: currentPeerRef.current, callType: currentCallType, isCallAccepted: isCallAccepted, remoteStream: remoteStream };
         pcRef.current = null;
         setRemoteStream(null);
         setIsCallAccepted(false);
         setRemoteCallStatus('active');
-
         await answerIncomingCall(waitingIncomingCall);
     };
 
@@ -293,7 +293,6 @@ const AdminSidebar = () => {
         setWaitingIncomingCall(null);
     };
 
-    // --- BULLETPROOF HANGUP LOGIC ---
     const endCurrentCall = (skipEmit = false) => {
         const activePeer = currentPeerRef.current;
         const recipient = activePeer?._id || activePeer?.id;
@@ -316,7 +315,6 @@ const AdminSidebar = () => {
             setIsCallAccepted(held.isCallAccepted);
             setRemoteStream(held.remoteStream);
             setRemoteCallStatus('active');
-
             socket.emit('renegotiate', { to: held.peer._id || held.peer.id, signal: { type: 'CUSTOM_EVENT', event: 'call_resumed' } });
             heldCallRef.current = null;
             toast.success(`Resumed call with ${held.peer.name}`);
@@ -329,17 +327,16 @@ const AdminSidebar = () => {
         const handleInitiateCall = async (e) => {
             const peerToCall = e.detail;
             const requestedType = peerToCall.callType || 'voice';
-
             const mediaResult = await setupMedia(requestedType);
             if (!mediaResult || !mediaResult.stream) return;
             const { stream, actualType } = mediaResult;
 
             setCurrentCallType(actualType);
-            setCallPeer(peerToCall);
-            setActiveCall(true);
             setIsCallAccepted(false);
             setRemoteCallStatus('active');
 
+            setCallPeer(peerToCall);
+            setActiveCall(true);
             const pc = new RTCPeerConnection(iceServers);
             pcRef.current = pc;
             stream.getTracks().forEach(track => pc.addTrack(track, stream));
@@ -370,7 +367,6 @@ const AdminSidebar = () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', ...HQ_VIDEO_CONSTRAINTS } });
             const videoTrack = stream.getVideoTracks()[0];
-
             localStreamRef.current.addTrack(videoTrack);
             setLocalStreamState(new MediaStream(localStreamRef.current.getTracks()));
             setFacingMode('user');
@@ -399,8 +395,9 @@ const AdminSidebar = () => {
         setVideoUpgradeStatus('idle');
     };
 
+    // --- SOCKET LISTENERS ---
     useEffect(() => {
-        if (!user) return;
+        if (!user || !token) return;
 
         const currentUserId = user.id || user._id;
         const joinUserRoom = () => { socket.emit("join_room", currentUserId); socket.emit("join_admin_room"); };
@@ -433,13 +430,20 @@ const AdminSidebar = () => {
             setRemoteCallStatus('active');
             if (pcRef.current) {
                 await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
+                await processIceQueue(pcRef.current);
                 toast.success("Call connected", { icon: '📞' });
             }
         };
 
         const handleIceCandidate = async (data) => {
             if (pcRef.current && data.candidate) {
-                try { await pcRef.current.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch (e) { }
+                const pc = pcRef.current;
+                if (pc.remoteDescription && pc.remoteDescription.type) {
+                    try { await pc.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch (e) { }
+                } else {
+                    if (!pc.iceQueue) pc.iceQueue = [];
+                    pc.iceQueue.push(data.candidate);
+                }
             }
         };
 
@@ -455,7 +459,6 @@ const AdminSidebar = () => {
                     toast.error("User is busy on another call.");
                     cleanupCall();
                 } else if (signal.event === 'explicit_end') {
-                    // SAFE HANGUP ROUTING
                     const senderId = signal.from;
                     const activeId = currentPeerRef.current?._id || currentPeerRef.current?.id;
                     const heldId = heldCallRef.current?.peer?._id || heldCallRef.current?.peer?.id;
@@ -482,12 +485,14 @@ const AdminSidebar = () => {
                 try {
                     if (signal.type === 'offer') {
                         await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
+                        await processIceQueue(pcRef.current);
                         const answer = await pcRef.current.createAnswer();
                         await pcRef.current.setLocalDescription(answer);
                         const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
                         if (to) socket.emit('renegotiate', { to, signal: answer });
                     } else if (signal.type === 'answer') {
                         await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
+                        await processIceQueue(pcRef.current);
                     }
                 } catch (e) { }
             }
@@ -539,7 +544,6 @@ const AdminSidebar = () => {
         socket.on("renegotiate", handleRenegotiate);
 
         socket.on("call_ended", () => {
-            // Ignore standard broadcast if we are juggling calls, wait for explicit_end tunnel
             if (!heldCallRef.current) {
                 cleanupCall();
                 pauseAudio('incoming');
@@ -735,15 +739,15 @@ const AdminSidebar = () => {
                             )}
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-foreground">{globalIncomingCall.callerName}</h2>
-                            <p className="text-sm text-muted-foreground mt-1 capitalize">Incoming {globalIncomingCall.callType || 'voice'} call...</p>
+                            <h2 className="text-xl font-bold text-foreground">
+                                {globalIncomingCall.callerName}
+                            </h2>
+                            <p className="text-sm text-muted-foreground mt-1 capitalize">
+                                Incoming {globalIncomingCall.callType || 'voice'} call...
+                            </p>
                         </div>
                         <div className="flex items-center gap-6 w-full justify-center mt-2">
-                            <button onClick={() => {
-                                socket.emit('end_call', { to: globalIncomingCall.from });
-                                setGlobalIncomingCall(null);
-                                pauseAudio('incoming');
-                            }} className="w-14 h-14 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
+                            <button onClick={() => { socket.emit('end_call', { to: globalIncomingCall.from }); setGlobalIncomingCall(null); pauseAudio('incoming'); }} className="w-14 h-14 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
                                 <PhoneOff className="w-6 h-6" />
                             </button>
                             <button onClick={() => answerIncomingCall(globalIncomingCall)} className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
