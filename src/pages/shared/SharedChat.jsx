@@ -149,6 +149,8 @@ const SharedChat = () => {
     const sidebarMenuRef = useRef(null);
     const callMenuRef = useRef(null);
 
+    const inputRef = useRef(null);
+
     const [showMobileNotice, setShowMobileNotice] = useState(false);
     const mobileNoticeTimer = useRef(null);
 
@@ -489,6 +491,8 @@ const SharedChat = () => {
 
         const messageText = newMessage.trim();
         setNewMessage("");
+
+        inputRef.current?.focus();
 
         const tempId = `temp-${Date.now()}`;
         const targetId = activeChat._id || activeChat.id;
@@ -1482,7 +1486,7 @@ const SharedChat = () => {
                                             </button>
                                         </div>
                                         <div className="flex-1 bg-muted/50 dark:bg-[#1A1D24] rounded-2xl flex items-center pr-1.5 focus-within:ring-1 focus-within:ring-primary/30 transition-all min-w-0 w-full">
-                                            <textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 w-full max-h-28 min-h-11 bg-transparent border-none focus:outline-none focus:ring-0 resize-none py-3 px-3 text-[14.5px] sm:text-[15px] text-foreground placeholder:text-muted-foreground/70 custom-scrollbar" rows="1" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} />
+                                            <textarea value={newMessage} ref={inputRef} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 w-full max-h-28 min-h-11 bg-transparent border-none focus:outline-none focus:ring-0 resize-none py-3 px-3 text-[14.5px] sm:text-[15px] text-foreground placeholder:text-muted-foreground/70 custom-scrollbar" rows="1" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} />
                                             <button type="submit" disabled={!newMessage.trim() && !isUploading} className={`p-2 rounded-full transition-all shrink-0 ${newMessage.trim() ? 'bg-[#6B66FF] text-white hover:bg-[#5A55E5] scale-100' : 'bg-transparent text-muted-foreground scale-95'}`}>
                                                 <Send className="w-4.5 h-4.5 sm:w-5 sm:h-5" style={{ marginLeft: newMessage.trim() ? '2px' : '0' }} />
                                             </button>
