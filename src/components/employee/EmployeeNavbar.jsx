@@ -352,7 +352,7 @@ const EmployeeNavbar = () => {
 
         // FIX: Caches missed messages to LocalStorage if chat is unmounted
         const handleIncomingChat = (data) => {
-            if (!pathnameRef.current.includes('/chat') || document.hidden) {
+            if (!pathnameRef.current.includes('/chat')) {
                 setUnreadChatCount(prev => prev + 1);
                 playAudio('notification'); 
                 toast.success(`New chat message received`, { icon: '💬', id: 'new-chat-toast' });

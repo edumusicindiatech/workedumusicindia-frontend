@@ -121,7 +121,7 @@ const AdminSidebar = () => {
     useEffect(() => {
         if (activeCall && !isCallAccepted && callPeer) {
             const isPeerOnline = onlineUsers.includes(String(callPeer._id || callPeer.id));
-            if (isPeerOnline) { pauseAudio('calling'); if (globalAudio.ringing) globalAudio.ringing.loop = true; playAudio('ringing'); } 
+            if (isPeerOnline) { pauseAudio('calling'); if (globalAudio.ringing) globalAudio.ringing.loop = true; playAudio('ringing'); }
             else { pauseAudio('ringing'); if (globalAudio.calling) globalAudio.calling.loop = true; playAudio('calling'); }
         } else { pauseAudio('calling'); pauseAudio('ringing'); }
         return () => { pauseAudio('calling'); pauseAudio('ringing'); };
@@ -145,9 +145,9 @@ const AdminSidebar = () => {
     const setupMedia = async (requestedType, specificFacingMode = 'user') => {
         try {
             if (!navigator.mediaDevices) throw new Error("Media devices not supported.");
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                audio: true, 
-                video: requestedType === 'video' ? { facingMode: specificFacingMode, ...HQ_VIDEO_CONSTRAINTS } : false 
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: requestedType === 'video' ? { facingMode: specificFacingMode, ...HQ_VIDEO_CONSTRAINTS } : false
             });
             localStreamRef.current = stream;
             setLocalStreamState(stream);
@@ -176,7 +176,7 @@ const AdminSidebar = () => {
         if (currentCallType !== 'video' || !localStreamRef.current) return;
         try {
             const newMode = facingMode === 'user' ? 'environment' : 'user';
-            
+
             localStreamRef.current.getVideoTracks().forEach(t => t.stop());
 
             const videoConstraints = { facingMode: { exact: newMode }, ...HQ_VIDEO_CONSTRAINTS };
@@ -191,7 +191,7 @@ const AdminSidebar = () => {
 
             const audioTracks = localStreamRef.current.getAudioTracks();
             const newLocalStream = new MediaStream([...audioTracks, newVideoTrack]);
-            
+
             localStreamRef.current = newLocalStream;
             setLocalStreamState(newLocalStream);
             setFacingMode(newMode);
@@ -206,7 +206,7 @@ const AdminSidebar = () => {
             const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
             if (e.candidate && to) socket.emit('ice_candidate', { to, candidate: e.candidate, from: user.id || user._id });
         };
-        
+
         pc.ontrack = (e) => {
             setRemoteStream((prevStream) => {
                 const stream = prevStream || new MediaStream();
@@ -237,7 +237,7 @@ const AdminSidebar = () => {
     const handleAcceptCall = async () => {
         if (!globalIncomingCall) return;
         const callData = globalIncomingCall;
-        
+
         const isVideoOffer = callData.callType === 'video' || (callData.signal && callData.signal.sdp && callData.signal.sdp.includes('m=video'));
         const requestedType = isVideoOffer ? 'video' : 'voice';
 
@@ -259,7 +259,7 @@ const AdminSidebar = () => {
         await pc.setLocalDescription(answer);
 
         socket.emit('answer_call', { to: callData.from, signal: answer });
-        
+
         setGlobalIncomingCall(null);
         pauseAudio('incoming');
         setIsCallAccepted(true);
@@ -315,18 +315,18 @@ const AdminSidebar = () => {
 
     const performVideoUpgrade = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'user', ...HQ_VIDEO_CONSTRAINTS } 
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', ...HQ_VIDEO_CONSTRAINTS }
             });
             const videoTrack = stream.getVideoTracks()[0];
-            
+
             localStreamRef.current.addTrack(videoTrack);
             setLocalStreamState(new MediaStream(localStreamRef.current.getTracks()));
             setFacingMode('user');
-            
+
             if (pcRef.current) {
                 pcRef.current.addTrack(videoTrack, localStreamRef.current);
-                
+
                 const offer = await pcRef.current.createOffer();
                 await pcRef.current.setLocalDescription(offer);
                 const to = callPeer?._id || callPeer?.id;
@@ -375,9 +375,9 @@ const AdminSidebar = () => {
 
         // FIX: Caches missed messages to LocalStorage if chat is unmounted
         const handleIncomingChat = (data) => {
-            if (!pathnameRef.current.includes('/chat') || document.hidden) {
+            if (!pathnameRef.current.includes('/chat')) {
                 setUnreadChatCount(prev => prev + 1);
-                playAudio('notification'); 
+                playAudio('notification');
                 toast.success(`New chat message received`, { icon: '💬', id: 'admin-new-chat' });
 
                 if (data && (data.senderId || data.sender)) {
@@ -422,7 +422,7 @@ const AdminSidebar = () => {
                         const answer = await pcRef.current.createAnswer();
                         await pcRef.current.setLocalDescription(answer);
                         const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
-                        if(to) socket.emit('renegotiate', { to, signal: answer });
+                        if (to) socket.emit('renegotiate', { to, signal: answer });
                     } else if (signal.type === 'answer') {
                         await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                     }
@@ -479,7 +479,7 @@ const AdminSidebar = () => {
         socket.on("video_upgrade_request", () => { setVideoUpgradeStatus('receiving_request'); playAudio('notification'); });
         socket.on("video_upgrade_rejected", () => { setVideoUpgradeStatus('idle'); toast.error("Video call request rejected"); });
         socket.on("video_upgrade_accepted", async () => { setVideoUpgradeStatus('idle'); toast.success("Video call request accepted"); await performVideoUpgrade(); });
-        
+
         socket.on("new_notification", handleNewNotification);
         socket.on("admin_leaderboard_refresh", handleNewNotification);
         socket.on("sos_alert_received", handleIncomingSOS);
@@ -679,7 +679,7 @@ const AdminSidebar = () => {
                     </div>
                 </div>
             )}
-            
+
             <AdminSettingsModal
                 isOpen={isSettingsModalOpen}
                 onClose={() => setIsSettingsModalOpen(false)}
