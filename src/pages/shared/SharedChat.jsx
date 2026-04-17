@@ -249,8 +249,6 @@ const SharedChat = () => {
         if (socket.connected) joinChatRoom();
         socket.on("connect", joinChatRoom);
 
-        socket.on("online_users_updated", setOnlineUsers);
-
         const handleReceiveMessage = (data) => {
             const currentChat = activeChatRef.current;
 
@@ -302,9 +300,8 @@ const SharedChat = () => {
             }
         };
 
-        socket.on("receive_message", handleReceiveMessage);
-
-        socket.on("added_to_group", (groupData) => {
+        // NEW: Extracted anonymous functions
+        const handleAddedToGroup = (groupData) => {
             groupData.isGroup = true;
             setConversations(prev => {
                 if (prev.some(c => String(c._id) === String(groupData._id))) return prev;
@@ -313,9 +310,9 @@ const SharedChat = () => {
             toast.success(`You were added to group: ${groupData.name}`, { icon: '👥' });
             playAudio('notification');
             socket.emit('join_group_room', groupData._id);
-        });
+        };
 
-        socket.on("group_updated", (updatedGroup) => {
+        const handleGroupUpdated = (updatedGroup) => {
             updatedGroup.isGroup = true;
             setConversations(prev => prev.map(c => String(c._id) === String(updatedGroup._id) ? updatedGroup : c));
 
@@ -329,11 +326,13 @@ const SharedChat = () => {
                     setActiveChat(updatedGroup);
                 }
             }
-        });
+        };
 
-        socket.on("message_deleted", ({ messageId }) => { setMessages(prev => prev.map(m => (m._id === messageId || m.id === messageId) ? { ...m, text: "", mediaUrl: "", isDeletedForEveryone: true } : m)); });
+        const handleMessageDeleted = ({ messageId }) => {
+            setMessages(prev => prev.map(m => (m._id === messageId || m.id === messageId) ? { ...m, text: "", mediaUrl: "", isDeletedForEveryone: true } : m));
+        };
 
-        socket.on("messages_status_update", ({ viewerId, status }) => {
+        const handleMessagesStatusUpdate = ({ viewerId, status }) => {
             if (activeChatRef.current && String(activeChatRef.current._id || activeChatRef.current.id) === String(viewerId)) {
                 setMessages(prev => prev.map(m => {
                     if (String(m.senderId || m.sender) === String(currentUserId)) {
@@ -343,22 +342,31 @@ const SharedChat = () => {
                     return m;
                 }));
             }
-        });
+        };
 
-        socket.on("messages_deleted_everyone", ({ messageIds }) => {
+        const handleMessagesDeletedEveryone = ({ messageIds }) => {
             const strIds = messageIds.map(id => String(id));
             setMessages(prev => prev.map(m => strIds.includes(String(m._id || m.id)) ? { ...m, text: "", mediaUrl: "", isDeletedForEveryone: true } : m));
-        });
+        };
+
+        socket.on("online_users_updated", setOnlineUsers);
+        socket.on("receive_message", handleReceiveMessage);
+        socket.on("added_to_group", handleAddedToGroup);
+        socket.on("group_updated", handleGroupUpdated);
+        socket.on("message_deleted", handleMessageDeleted);
+        socket.on("messages_status_update", handleMessagesStatusUpdate);
+        socket.on("messages_deleted_everyone", handleMessagesDeletedEveryone);
 
         return () => {
+            // PROPER CLEANUP
             socket.off("connect", joinChatRoom);
-            socket.off("online_users_updated");
+            socket.off("online_users_updated", setOnlineUsers);
             socket.off("receive_message", handleReceiveMessage);
-            socket.off("added_to_group");
-            socket.off("group_updated");
-            socket.off("message_deleted");
-            socket.off("messages_status_update");
-            socket.off("messages_deleted_everyone");
+            socket.off("added_to_group", handleAddedToGroup);
+            socket.off("group_updated", handleGroupUpdated);
+            socket.off("message_deleted", handleMessageDeleted);
+            socket.off("messages_status_update", handleMessagesStatusUpdate);
+            socket.off("messages_deleted_everyone", handleMessagesDeletedEveryone);
         };
     }, [currentUserId, moveToTop]);
 

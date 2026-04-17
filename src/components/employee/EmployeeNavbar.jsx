@@ -171,7 +171,7 @@ const EmployeeNavbar = () => {
     };
 
     const attachPCListeners = (pc) => {
-        pc.iceQueue = []; 
+        pc.iceQueue = [];
         pc.onicecandidate = (e) => {
             const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
             if (e.candidate && to) socket.emit('ice_candidate', { to, candidate: e.candidate, from: user.id || user._id });
@@ -383,6 +383,7 @@ const EmployeeNavbar = () => {
         if (socket.connected) joinUserRoom();
         socket.on("connect", joinUserRoom);
 
+        // (Your existing named functions remain exactly the same)
         const handleIncomingChat = (data) => {
             if (!pathnameRef.current.includes('/chat')) {
                 setUnreadChatCount(prev => prev + 1);
@@ -476,37 +477,43 @@ const EmployeeNavbar = () => {
             }
         };
 
-        socket.on("receive_message", handleIncomingChat);
-        socket.on("incoming_call", handleIncomingCall);
-        socket.on("call_accepted", handleCallAccepted);
-        socket.on("ice_candidate", handleIceCandidate);
-        socket.on("renegotiate", handleRenegotiate);
-
-        socket.on("call_ended", () => {
+        // NEW: Extracted anonymous functions into named variables
+        const handleCallEnded = () => {
             if (!heldCallRef.current) {
                 cleanupCall();
                 pauseAudio('incoming');
                 playAudio('hangup');
             }
-        });
+        };
 
-        socket.on("video_upgrade_request", () => { setVideoUpgradeStatus('receiving_request'); playAudio('notification'); });
-        socket.on("video_upgrade_rejected", () => { setVideoUpgradeStatus('idle'); toast.error("Video call request rejected"); });
-        socket.on("video_upgrade_accepted", async () => { setVideoUpgradeStatus('idle'); toast.success("Video call request accepted"); await performVideoUpgrade(); });
+        const handleVideoUpgradeRequest = () => { setVideoUpgradeStatus('receiving_request'); playAudio('notification'); };
+        const handleVideoUpgradeRejected = () => { setVideoUpgradeStatus('idle'); toast.error("Video call request rejected"); };
+        const handleVideoUpgradeAccepted = async () => { setVideoUpgradeStatus('idle'); toast.success("Video call request accepted"); await performVideoUpgrade(); };
+
+        socket.on("receive_message", handleIncomingChat);
+        socket.on("incoming_call", handleIncomingCall);
+        socket.on("call_accepted", handleCallAccepted);
+        socket.on("ice_candidate", handleIceCandidate);
+        socket.on("renegotiate", handleRenegotiate);
+        socket.on("call_ended", handleCallEnded);
+        socket.on("video_upgrade_request", handleVideoUpgradeRequest);
+        socket.on("video_upgrade_rejected", handleVideoUpgradeRejected);
+        socket.on("video_upgrade_accepted", handleVideoUpgradeAccepted);
         socket.on("online_users_updated", setOnlineUsers);
 
         return () => {
-            socket.off("connect");
-            socket.off("receive_message");
-            socket.off("incoming_call");
-            socket.off("call_accepted");
-            socket.off("ice_candidate");
-            socket.off("renegotiate");
-            socket.off("call_ended");
-            socket.off("video_upgrade_request");
-            socket.off("video_upgrade_rejected");
-            socket.off("video_upgrade_accepted");
-            socket.off("online_users_updated");
+            // PROPER CLEANUP
+            socket.off("connect", joinUserRoom);
+            socket.off("receive_message", handleIncomingChat);
+            socket.off("incoming_call", handleIncomingCall);
+            socket.off("call_accepted", handleCallAccepted);
+            socket.off("ice_candidate", handleIceCandidate);
+            socket.off("renegotiate", handleRenegotiate);
+            socket.off("call_ended", handleCallEnded);
+            socket.off("video_upgrade_request", handleVideoUpgradeRequest);
+            socket.off("video_upgrade_rejected", handleVideoUpgradeRejected);
+            socket.off("video_upgrade_accepted", handleVideoUpgradeAccepted);
+            socket.off("online_users_updated", setOnlineUsers);
         };
     }, [user, token, activeCall]);
 
