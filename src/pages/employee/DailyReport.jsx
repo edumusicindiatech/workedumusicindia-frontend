@@ -229,7 +229,7 @@ const DailyReport = () => {
                     </div>
 
                     {/* Category Selection Dropdown */}
-                    <div className="space-y-2 sm:space-y-2.5 md:space-y-3 relative z-10" ref={dropdownRef}>
+                    <div className={`space-y-2 sm:space-y-2.5 md:space-y-3 relative ${isDropdownOpen ? "z-50" : "z-10"}`} ref={dropdownRef}>
                         <Label className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
                             {t('daily_report.label_category', 'Report Type')} <span className="text-destructive">*</span>
                         </Label>
@@ -249,7 +249,7 @@ const DailyReport = () => {
                         </button>
 
                         {isDropdownOpen && (
-                            <div className="absolute top-full left-0 w-full mt-1.5 sm:mt-2 bg-card border border-border/60 rounded-xl sm:rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-100 max-h-60 overflow-y-auto">
+                            <div className="absolute top-full left-0 w-full mt-1.5 sm:mt-2 bg-card border border-border/60 rounded-xl sm:rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50 max-h-60 overflow-y-auto">
                                 <div className="p-1.5 sm:p-2 flex flex-col gap-1">
                                     {[
                                         { label: t('daily_report.categories.regular', 'Regular Report'), value: "Regular Report", icon: FileText },
@@ -277,45 +277,45 @@ const DailyReport = () => {
                                 </div>
                             </div>
                         )}
-                        {/* Students Present Input */}
-                        <div className="space-y-2 sm:space-y-2.5 md:space-y-3 relative z-0 animate-in fade-in slide-in-from-top-2">
-                            <Label className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
-                                {t('daily_report.label_students', 'No. of Students Present')} <span className="text-destructive">*</span>
-                            </Label>
-                            <div className="relative group">
-                                {/* Left Icon */}
-                                <div className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
-                                    <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-4.5 md:h-4.5 text-primary/70" />
-                                </div>
+                    </div>
+                    
+                    {/* Students Present Input */}
+                    <div className="space-y-2 sm:space-y-2.5 md:space-y-3 relative z-0 animate-in fade-in slide-in-from-top-2">
+                        <Label className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
+                            {t('daily_report.label_students', 'No. of Students Present')} <span className="text-destructive">*</span>
+                        </Label>
+                        <div className="relative group">
+                            {/* Left Icon */}
+                            <div className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                                <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-4.5 md:h-4.5 text-primary/70" />
+                            </div>
 
-                                {/* Input Field */}
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    placeholder={t('daily_report.placeholder_students', 'e.g. 45')}
-                                    value={studentsPresent}
-                                    onChange={(e) => setStudentsPresent(e.target.value)}
-                                    // Added pr-10/12 for right padding, and standard CSS trick to hide native spin buttons
-                                    className="w-full h-10 sm:h-12 md:h-14 rounded-xl sm:rounded-2xl bg-muted/20 border border-border/60 pl-9 sm:pl-10 md:pl-11 pr-10 sm:pr-12 text-xs sm:text-sm font-bold focus-visible:ring-primary/30 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                />
+                            {/* Input Field */}
+                            <Input
+                                type="number"
+                                min="0"
+                                placeholder={t('daily_report.placeholder_students', 'e.g. 45')}
+                                value={studentsPresent}
+                                onChange={(e) => setStudentsPresent(e.target.value)}
+                                className="w-full h-10 sm:h-12 md:h-14 rounded-xl sm:rounded-2xl bg-muted/20 border border-border/60 pl-9 sm:pl-10 md:pl-11 pr-10 sm:pr-12 text-xs sm:text-sm font-bold focus-visible:ring-primary/30 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
 
-                                {/* Custom Increment/Decrement Buttons */}
-                                <div className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 opacity-70 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                        type="button"
-                                        onClick={() => setStudentsPresent(prev => prev ? String(Number(prev) + 1) : "1")}
-                                        className="p-0.5 sm:p-1 md:p-1.5 hover:bg-primary/20 hover:text-primary text-muted-foreground rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-primary/50"
-                                    >
-                                        <ChevronUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setStudentsPresent(prev => (prev && Number(prev) > 0) ? String(Number(prev) - 1) : "0")}
-                                        className="p-0.5 sm:p-1 md:p-1.5 hover:bg-primary/20 hover:text-primary text-muted-foreground rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-primary/50"
-                                    >
-                                        <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
-                                    </button>
-                                </div>
+                            {/* Custom Increment/Decrement Buttons */}
+                            <div className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 opacity-70 group-hover:opacity-100 transition-opacity">
+                                <button
+                                    type="button"
+                                    onClick={() => setStudentsPresent(prev => prev ? String(Number(prev) + 1) : "1")}
+                                    className="p-0.5 sm:p-1 md:p-1.5 hover:bg-primary/20 hover:text-primary text-muted-foreground rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-primary/50"
+                                >
+                                    <ChevronUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setStudentsPresent(prev => (prev && Number(prev) > 0) ? String(Number(prev) - 1) : "0")}
+                                    className="p-0.5 sm:p-1 md:p-1.5 hover:bg-primary/20 hover:text-primary text-muted-foreground rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-primary/50"
+                                >
+                                    <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
+                                </button>
                             </div>
                         </div>
                     </div>
