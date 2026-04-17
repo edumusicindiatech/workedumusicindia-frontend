@@ -508,17 +508,27 @@ const SharedChat = () => {
             timestamp: new Date().toISOString()
         };
 
+        // 1. Optimistic UI: Show instantly on the sender's screen
         setMessages((prev) => [...prev, payload]);
         scrollToBottom();
         playAudio('sent');
         moveToTop(targetId);
 
-        socket.emit("send_message", payload);
-
         try {
+            // 2. Await the Real ID from the database BEFORE emitting to the socket
             const res = await api.post('/chat/message', payload);
+
             if (res.data && res.data._id) {
-                setMessages(prev => prev.map(m => m._id === tempId ? { ...payload, _id: res.data._id } : m));
+                const realId = res.data._id;
+
+                // Update local state so the sender now has the Real ID
+                setMessages(prev => prev.map(m => m._id === tempId ? { ...payload, _id: realId } : m));
+
+                // 3. Broadcast to the recipient with the Real ID
+                socket.emit("send_message", { ...payload, _id: realId });
+            } else {
+                // Fallback just in case the API response is malformed
+                socket.emit("send_message", payload);
             }
         } catch (error) {
             console.error("API Send Error:", error);
@@ -623,13 +633,42 @@ const SharedChat = () => {
                 try {
                     const urlRes = await api.post('/chat/generate-presigned-url', { fileType: mimeType, originalName: finalFile.name || safeName });
                     await axios.put(urlRes.data.presignedUrl, finalFile, { headers: { 'Content-Type': mimeType }, signal: abortController.signal, onUploadProgress: (p) => setUploadProgress(prev => ({ ...prev, [tempId]: Math.round((p.loaded * 100) / p.total) })) });
+
                     const finalPayload = { ...optimisticPayload, mediaUrl: urlRes.data.publicUrl.startsWith('http') ? urlRes.data.publicUrl : `https://${urlRes.data.publicUrl}`, status: 'sent', isUploading: false };
-                    socket.emit("send_message", finalPayload); playAudio('sent');
+
+                    // 1. Await the Real ID from the database BEFORE emitting to the socket
                     const res = await api.post('/chat/message', finalPayload);
-                    if (res.data && res.data._id) { setMessages(prev => prev.map(m => m._id === tempId ? { ...finalPayload, _id: res.data._id } : m)); setDownloadedMedia(prev => { const n = new Set(prev); n.delete(tempId); n.add(res.data._id); return n; }); }
-                } catch (err) { if (err.name !== 'CanceledError') { toast.error("Upload process failed."); setMessages(prev => prev.filter(m => m._id !== tempId)); } } finally { delete uploadControllers.current[tempId]; }
+
+                    if (res.data && res.data._id) {
+                        const realId = res.data._id;
+
+                        // Update local state so the sender now has the Real ID
+                        setMessages(prev => prev.map(m => m._id === tempId ? { ...finalPayload, _id: realId } : m));
+                        setDownloadedMedia(prev => { const n = new Set(prev); n.delete(tempId); n.add(realId); return n; });
+
+                        // 2. Broadcast to the recipient with the Real ID
+                        socket.emit("send_message", { ...finalPayload, _id: realId });
+                        playAudio('sent');
+                    } else {
+                        socket.emit("send_message", finalPayload);
+                        playAudio('sent');
+                    }
+
+                } catch (err) {
+                    if (err.name !== 'CanceledError') {
+                        toast.error("Upload process failed.");
+                        setMessages(prev => prev.filter(m => m._id !== tempId));
+                    }
+                } finally {
+                    delete uploadControllers.current[tempId];
+                }
             }
-        } finally { setIsUploading(false); if (fileInputRef.current) fileInputRef.current.value = null; if (cameraInputRef.current) cameraInputRef.current.value = null; if (docInputRef.current) docInputRef.current.value = null; }
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = null;
+            if (cameraInputRef.current) cameraInputRef.current.value = null;
+            if (docInputRef.current) docInputRef.current.value = null;
+        }
     };
 
     const cancelUpload = (tempId) => { if (uploadControllers.current[tempId]) uploadControllers.current[tempId].abort(); setMessages(prev => prev.filter(m => m._id !== tempId && m.id !== tempId)); };
