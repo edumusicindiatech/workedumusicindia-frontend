@@ -5,7 +5,7 @@ import { io } from "socket.io-client";
 import {
     Search, Phone, MoreVertical, Paperclip, Send, Download,
     ArrowLeft, Loader2, CheckCheck, Check, MessageSquare, Camera, Image as ImageIcon, X, FileCheck,
-    Trash2, Link as LinkIcon, FileText, Users, Forward, PlaySquare, Lock, Copy, Ban, Edit2, Trash, Info,
+    Trash2, Link as LinkIcon, FileText, Users, Forward, PlaySquare, Lock, Copy, Ban, Trash, Info,
     Video, ChevronDown
 } from "lucide-react";
 import api from "../../api/axios";
@@ -193,7 +193,6 @@ const SharedChat = () => {
     // WHATSAPP STATES
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedMessages, setSelectedMessages] = useState([]);
-    const [editingMessage, setEditingMessage] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
 
     // ABORT CONTROLLERS FOR UPLOADS
@@ -370,10 +369,6 @@ const SharedChat = () => {
             }
         };
 
-        const handleMessageEdited = ({ messageId, text }) => {
-            setMessages(prev => prev.map(m => (m._id === messageId || m.id === messageId) ? { ...m, text, isEdited: true } : m));
-        };
-
         const handleMessagesDeletedEveryone = ({ messageIds }) => {
             const strIds = messageIds.map(id => String(id));
             setMessages(prev => prev.map(m =>
@@ -387,7 +382,6 @@ const SharedChat = () => {
         socket.on("receive_message", handleReceiveMessage);
         socket.on("message_deleted", handleMessageDeleted);
         socket.on("messages_status_update", handleMessageStatusUpdate);
-        socket.on("message_edited", handleMessageEdited);
         socket.on("messages_deleted_everyone", handleMessagesDeletedEveryone);
 
         return () => {
@@ -396,7 +390,6 @@ const SharedChat = () => {
             socket.off("receive_message", handleReceiveMessage);
             socket.off("message_deleted", handleMessageDeleted);
             socket.off("messages_status_update", handleMessageStatusUpdate);
-            socket.off("message_edited", handleMessageEdited);
             socket.off("messages_deleted_everyone", handleMessagesDeletedEveryone);
         };
     }, [currentUserId, moveToTop]);
@@ -431,7 +424,6 @@ const SharedChat = () => {
         setContextMenu(null);
         setIsSelectionMode(false);
         setSelectedMessages([]);
-        setEditingMessage(null);
         setNewMessage("");
         setShowTopMenu(false);
         setShowAttachMenu(false);
@@ -525,24 +517,6 @@ const SharedChat = () => {
     const handleSendMessage = async (e) => {
         e?.preventDefault();
         if (!newMessage.trim() && !isUploading) return;
-
-        // HANDLE EDIT MODE
-        if (editingMessage) {
-            try {
-                const msgId = editingMessage._id || editingMessage.id;
-                await api.put(`/chat/message/edit/${msgId}`, { text: newMessage, userId: currentUserId });
-
-                setMessages(prev => prev.map(m => (m._id === msgId || m.id === msgId) ? { ...m, text: newMessage, isEdited: true } : m));
-                socket.emit("edit_message", { messageId: msgId, text: newMessage, recipientId: activeChat._id || activeChat.id });
-
-                resetContextState();
-                toast.success("Message edited");
-
-                // Instantly move edited chat to top
-                moveToTop(activeChat._id || activeChat.id);
-            } catch (err) { toast.error("Failed to edit message"); }
-            return;
-        }
 
         // HANDLE NORMAL SEND
         const tempId = `temp-${Date.now()}`;
@@ -812,12 +786,6 @@ const SharedChat = () => {
         setContextMenu(null);
     };
 
-    const startEditing = (msg) => {
-        setEditingMessage(msg);
-        setNewMessage(msg.text);
-        setContextMenu(null);
-    };
-
     const handleContextMenu = (e, msg) => {
         e.preventDefault();
         if (isSelectionMode) {
@@ -849,7 +817,12 @@ const SharedChat = () => {
 
         try {
             if (type === 'everyone') {
-                await api.put('/chat/message/delete-everyone', { messageIds: ids, userId: currentUserId });
+                // FIX: Explicitly send the recipientId so the backend doesn't have to guess
+                await api.put('/chat/message/delete-everyone', {
+                    messageIds: ids,
+                    userId: currentUserId,
+                    recipientId: activeChat._id || activeChat.id // <-- ADD THIS LINE
+                });
                 setMessages(prev => prev.map(m => ids.includes(m._id || m.id) ? { ...m, text: "", mediaUrl: "", isDeletedForEveryone: true } : m));
             } else {
                 await api.put('/chat/message/delete-me', { messageIds: ids, userId: currentUserId });
@@ -1112,9 +1085,6 @@ const SharedChat = () => {
                         {String(contextMenu.msg.senderId || contextMenu.msg.sender) === String(currentUserId) && !contextMenu.msg.isDeletedForEveryone && isWithin30Mins(contextMenu.msg.createdAt || contextMenu.msg.timestamp) && (
                             <>
                                 <button onClick={() => executeBatchDelete('everyone', [contextMenu.msg._id || contextMenu.msg.id])} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-rose-500/10 text-sm font-medium text-rose-500 transition-colors"><Ban className="w-4 h-4" /> Delete for everyone</button>
-                                {contextMenu.msg.mediaType === 'text' && !contextMenu.msg.mediaUrl && (
-                                    <button onClick={() => startEditing(contextMenu.msg)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted text-sm font-medium"><Edit2 className="w-4 h-4 text-muted-foreground" /> Edit</button>
-                                )}
                             </>
                         )}
                         <button onClick={() => enterSelectionMode(contextMenu.msg)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted text-sm font-medium"><Check className="w-4 h-4 text-muted-foreground" /> Select</button>
@@ -1482,7 +1452,6 @@ const SharedChat = () => {
 
                                                                 {/* Status Ticks & Timestamp */}
                                                                 <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] font-medium uppercase ${isMe ? 'text-white/80' : 'text-muted-foreground/80'}`}>
-                                                                    {msg.isEdited && <span className="italic mr-1">Edited</span>}
                                                                     <span>{formatTime(msg.createdAt || msg.timestamp)}</span>
                                                                     {isMe && !msg.isDeletedForEveryone && renderMessageStatus(msg)}
                                                                 </div>
@@ -1497,44 +1466,29 @@ const SharedChat = () => {
                                 </div>
 
                                 {/* Message Prompt */}
-                                {editingMessage && (
-                                    <div className="bg-card px-4 py-2 border-t border-border flex items-center justify-between animate-in slide-in-from-bottom-2 z-20">
-                                        <div className="flex items-center gap-2">
-                                            <Edit2 className="w-4 h-4 text-primary" />
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-semibold text-primary">Editing message</span>
-                                                <span className="text-xs text-muted-foreground truncate max-w-xs">{editingMessage.text}</span>
-                                            </div>
-                                        </div>
-                                        <button onClick={() => { setEditingMessage(null); setNewMessage(""); }} className="p-2 hover:bg-muted rounded-full"><X className="w-4 h-4" /></button>
-                                    </div>
-                                )}
-
                                 {/* Added explicit w-full max-w-full to prevent input prompt overflow */}
                                 <div className="p-2 sm:p-3 bg-card dark:bg-[#13151A] border-t border-border/40 shrink-0 z-20 sticky bottom-0 w-full max-w-full">
                                     <form onSubmit={handleSendMessage} className="flex items-end gap-2 relative w-full">
-                                        {!editingMessage && (
-                                            <div className="relative shrink-0" ref={attachMenuRef}>
-                                                <input type="file" multiple accept="image/*, video/*" className="hidden" ref={fileInputRef} onChange={(e) => handleMediaUpload(e, { compress: true, maxCount: 5, maxSizeCombinedMb: 50 })} />
-                                                <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar" className="hidden" ref={docInputRef} onChange={(e) => handleMediaUpload(e, { compress: false, maxCount: 5, maxSizeCombinedMb: 50, asDocument: true })} />
-                                                <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={(e) => handleMediaUpload(e, { compress: true, maxCount: 1, maxSizeCombinedMb: 50 })} />
+                                        <div className="relative shrink-0" ref={attachMenuRef}>
+                                            <input type="file" multiple accept="image/*, video/*" className="hidden" ref={fileInputRef} onChange={(e) => handleMediaUpload(e, { compress: true, maxCount: 5, maxSizeCombinedMb: 50 })} />
+                                            <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar" className="hidden" ref={docInputRef} onChange={(e) => handleMediaUpload(e, { compress: false, maxCount: 5, maxSizeCombinedMb: 50, asDocument: true })} />
+                                            <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={(e) => handleMediaUpload(e, { compress: true, maxCount: 1, maxSizeCombinedMb: 50 })} />
 
-                                                {showAttachMenu && (
-                                                    <div className="absolute bottom-full mb-2 left-0 w-48 bg-card border border-border shadow-2xl rounded-2xl p-1.5 flex flex-col gap-1 z-30 animate-in zoom-in-95 duration-200 origin-bottom-left">
-                                                        <button type="button" onClick={() => { setShowAttachMenu(false); cameraInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center"><Camera className="w-4 h-4" /></div> Camera</button>
-                                                        <button type="button" onClick={() => { setShowAttachMenu(false); fileInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><ImageIcon className="w-4 h-4" /></div> Photos</button>
-                                                        <button type="button" onClick={() => { setShowAttachMenu(false); docInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center"><FileCheck className="w-4 h-4" /></div> Document</button>
-                                                    </div>
-                                                )}
-                                                <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} disabled={isUploading} className="p-2.5 sm:p-3 text-muted-foreground hover:bg-muted rounded-full shrink-0 disabled:opacity-50 transition-colors">
-                                                    <Paperclip className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        )}
+                                            {showAttachMenu && (
+                                                <div className="absolute bottom-full mb-2 left-0 w-48 bg-card border border-border shadow-2xl rounded-2xl p-1.5 flex flex-col gap-1 z-30 animate-in zoom-in-95 duration-200 origin-bottom-left">
+                                                    <button type="button" onClick={() => { setShowAttachMenu(false); cameraInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center"><Camera className="w-4 h-4" /></div> Camera</button>
+                                                    <button type="button" onClick={() => { setShowAttachMenu(false); fileInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><ImageIcon className="w-4 h-4" /></div> Photos</button>
+                                                    <button type="button" onClick={() => { setShowAttachMenu(false); docInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center"><FileCheck className="w-4 h-4" /></div> Document</button>
+                                                </div>
+                                            )}
+                                            <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} disabled={isUploading} className="p-2.5 sm:p-3 text-muted-foreground hover:bg-muted rounded-full shrink-0 disabled:opacity-50 transition-colors">
+                                                <Paperclip className="w-5 h-5" />
+                                            </button>
+                                        </div>
                                         <div className="flex-1 bg-muted/50 dark:bg-[#1A1D24] rounded-2xl flex items-center pr-1.5 focus-within:ring-1 focus-within:ring-primary/30 transition-all min-w-0 w-full">
                                             <textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 w-full max-h-28 min-h-11 bg-transparent border-none focus:outline-none focus:ring-0 resize-none py-3 px-3 text-[14.5px] sm:text-[15px] text-foreground placeholder:text-muted-foreground/70 custom-scrollbar" rows="1" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} />
                                             <button type="submit" disabled={!newMessage.trim() && !isUploading} className={`p-2 rounded-full transition-all shrink-0 ${newMessage.trim() ? 'bg-[#6B66FF] text-white hover:bg-[#5A55E5] scale-100' : 'bg-transparent text-muted-foreground scale-95'}`}>
-                                                {editingMessage ? <Check className="w-4.5 h-4.5 sm:w-5 sm:h-5" /> : <Send className="w-4.5 h-4.5 sm:w-5 sm:h-5" style={{ marginLeft: newMessage.trim() ? '2px' : '0' }} />}
+                                                <Send className="w-4.5 h-4.5 sm:w-5 sm:h-5" style={{ marginLeft: newMessage.trim() ? '2px' : '0' }} />
                                             </button>
                                         </div>
                                     </form>
