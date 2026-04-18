@@ -9,6 +9,7 @@ import {
     CalendarDays, Film, Trophy, BookOpen, X, MessageCircle, PhoneIncoming, PhoneOff, Phone, Video, ChevronDown
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { Haptics } from '@capacitor/haptics'; // --- ADDED ---
 
 import api from "../../api/axios";
 import { logout } from "../../store/slices/authSlice";
@@ -442,8 +443,8 @@ const AdminSidebar = () => {
             }
         };
 
-        const handleIncomingCall = (data) => {
-            // --- TRACE LOGS ---
+        const handleIncomingCall = async (data) => {
+            // --- PHASE 1 TRACE LOGS ---
             console.warn("🚨🚨🚨 [PHASE 1 TRACE] INCOMING CALL SIGNAL RECEIVED! 🚨🚨🚨", data);
             toast.success(`🚨 SIGNAL ARRIVED: Call from ${data.callerName || 'Unknown'}`, {
                 duration: 8000,
@@ -451,15 +452,19 @@ const AdminSidebar = () => {
                 style: { background: '#000', color: '#0f0', border: '2px solid #0f0' }
             });
 
-            // ADD VIBRATION
-            if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+            // --- NATIVE VIBRATION ---
+            try { 
+                await Haptics.vibrate({ duration: 1000 });
+                setTimeout(async () => { await Haptics.vibrate({ duration: 1000 }); }, 1500);
+            } catch (e) { console.error("Haptics failed", e); }
 
             if (activeCall) {
                 socket.emit('renegotiate', { to: data.from, signal: { type: 'CUSTOM_EVENT', event: 'call_waiting' } });
                 setWaitingIncomingCall(data);
                 playAudio('notification');
             } else {
-                setGlobalIncomingCall(data);
+                setGlobalIncomingCall(null);
+                setTimeout(() => setGlobalIncomingCall(data), 20);
 
                 if (document.hasFocus()) {
                     if (globalAudio.incoming) globalAudio.incoming.loop = true;
@@ -646,6 +651,41 @@ const AdminSidebar = () => {
 
     return (
         <>
+            {/* --- CALL MODAL AT THE VERY TOP --- */}
+            {globalIncomingCall && !activeCall && (
+                <div 
+                    style={{ zIndex: 9999999, position: 'fixed', inset: 0 }} 
+                    className="bg-black/85 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-300"
+                >
+                    {console.log("💎 [UI TRACE] Admin Call Modal attempting to render!")}
+                    <div className="bg-card dark:bg-[#13151A] p-8 rounded-[2.5rem] shadow-2xl flex flex-col items-center gap-6 w-80 text-center border border-white/10 animate-in zoom-in-95">
+                        <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_30px_rgba(var(--primary),0.4)] overflow-hidden border-2 border-primary/50">
+                            {globalIncomingCall.profilePicture ? (
+                                <img src={globalIncomingCall.profilePicture} alt="Caller" className="w-full h-full object-cover" />
+                            ) : (
+                                <PhoneIncoming className="w-12 h-12 text-primary" />
+                            )}
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-bold text-foreground">
+                                {globalIncomingCall.callerName}
+                            </h2>
+                            <p className="text-sm text-muted-foreground mt-1 capitalize tracking-wide">
+                                {t('sidebar.incoming_call', { type: globalIncomingCall.callType || 'voice' })}
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-8 w-full justify-center mt-2">
+                            <button onClick={() => { socket.emit('end_call', { to: globalIncomingCall.from }); setGlobalIncomingCall(null); pauseAudio('incoming'); }} className="w-16 h-16 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 text-white">
+                                <PhoneOff className="w-7 h-7" />
+                            </button>
+                            <button onClick={() => answerIncomingCall(globalIncomingCall)} className="w-16 h-16 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 text-white">
+                                {globalIncomingCall.callType === 'video' ? <Video className="w-7 h-7 fill-current" /> : <Phone className="w-7 h-7 fill-current" />}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {activeCall && (
                 <CallOverlay
                     peer={callPeer}
@@ -672,6 +712,7 @@ const AdminSidebar = () => {
 
             <nav className="hidden 2xl:flex fixed top-0 w-full h-16 bg-card border-b border-border z-50 items-center justify-between px-6 shadow-sm">
                 <div className="flex items-center gap-3 shrink-0 mr-2">
+                    {/* Updated Icon Box */}
                     <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
                         <span className="text-primary-foreground font-bold text-base">
                             {t('sidebar.brand').charAt(0)}
@@ -729,6 +770,7 @@ const AdminSidebar = () => {
 
             <header className="2xl:hidden fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4 shadow-sm">
                 <div className="flex items-center gap-2">
+                    {/* Updated Icon Box */}
                     <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
                         <span className="text-primary-foreground font-bold text-sm">
                             {t('sidebar.brand').charAt(0)}
@@ -744,6 +786,7 @@ const AdminSidebar = () => {
                         {user?.profilePicture ? <img src={user.profilePicture} alt="Admin" className="w-full h-full object-cover rounded-full" /> : <UserCircle className="w-7 h-7 text-muted-foreground" />}
                     </button>
 
+                    {/* Smooth Transition wrapper for Mobile Menu */}
                     <div className={`absolute top-12 right-0 w-56 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50 origin-top-right transition-all duration-200 ease-out ${isMobileMenuOpen ? "opacity-100 scale-100 translate-y-0 pointer-events-auto" : "opacity-0 scale-95 -translate-y-2 pointer-events-none"}`}>
                         <div className="px-3 py-2 mb-1 border-b border-border">
                             <p className="text-sm font-bold text-foreground truncate">{adminName}</p>
@@ -789,40 +832,6 @@ const AdminSidebar = () => {
                     </div>
                 </NavLink>
             </nav>
-
-            {globalIncomingCall && !activeCall && (
-                <div 
-                    style={{ zIndex: 9999999 }}
-                    className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center animate-in fade-in"
-                >
-                    {console.log("💎 [UI TRACE] Admin Call Modal attempting to render!")}
-                    <div className="bg-card dark:bg-[#13151A] p-8 rounded-[2.5rem] shadow-2xl flex flex-col items-center gap-6 w-80 text-center border border-white/10 animate-in zoom-in-95">
-                        <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_30px_rgba(var(--primary),0.4)] overflow-hidden border-2 border-primary/50">
-                            {globalIncomingCall.profilePicture ? (
-                                <img src={globalIncomingCall.profilePicture} alt="Caller" className="w-full h-full object-cover" />
-                            ) : (
-                                <PhoneIncoming className="w-12 h-12 text-primary" />
-                            )}
-                        </div>
-                        <div>
-                            <h2 className="text-2xl font-bold text-foreground">
-                                {globalIncomingCall.callerName}
-                            </h2>
-                            <p className="text-sm text-muted-foreground mt-1 capitalize tracking-wide">
-                                {t('sidebar.incoming_call', { type: globalIncomingCall.callType || 'voice' })}
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-8 w-full justify-center mt-2">
-                            <button onClick={() => { socket.emit('end_call', { to: globalIncomingCall.from }); setGlobalIncomingCall(null); pauseAudio('incoming'); }} className="w-16 h-16 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 text-white">
-                                <PhoneOff className="w-7 h-7" />
-                            </button>
-                            <button onClick={() => answerIncomingCall(globalIncomingCall)} className="w-16 h-16 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 text-white">
-                                {globalIncomingCall.callType === 'video' ? <Video className="w-7 h-7 fill-current" /> : <Phone className="w-7 h-7 fill-current" />}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             <AdminSettingsModal
                 isOpen={isSettingsModalOpen}
