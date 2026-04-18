@@ -435,13 +435,16 @@ const EmployeeNavbar = () => {
         };
 
         const handleIncomingCall = (data) => {
-            // --- PHASE 1 TRACE LOGS ---
+            // --- TRACE LOGS ---
             console.warn("🚨🚨🚨 [PHASE 1 TRACE] INCOMING CALL SIGNAL RECEIVED! 🚨🚨🚨", data);
             toast.success(`🚨 SIGNAL ARRIVED: Call from ${data.callerName || 'Unknown'}`, {
                 duration: 8000,
                 position: 'top-center',
                 style: { background: '#000', color: '#0f0', border: '2px solid #0f0' }
             });
+
+            // ADD VIBRATION
+            if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
 
             if (activeCall) {
                 socket.emit('renegotiate', { to: data.from, signal: { type: 'CUSTOM_EVENT', event: 'call_waiting' } });
@@ -694,29 +697,33 @@ const EmployeeNavbar = () => {
             </nav>
 
             {globalIncomingCall && !activeCall && (
-                <div className="fixed inset-0 z-100000 bg-black/60 backdrop-blur-sm flex items-center justify-center animate-in fade-in">
-                    <div className="bg-card dark:bg-[#13151A] p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-6 w-80 text-center animate-in zoom-in-95 border border-border">
-                        <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_20px_rgba(var(--primary),0.4)] overflow-hidden border-2 border-primary/50">
+                <div
+                    style={{ zIndex: 9999999 }}
+                    className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center animate-in fade-in"
+                >
+                    {console.log("💎 [UI TRACE] Employee Call Modal attempting to render!")}
+                    <div className="bg-card dark:bg-[#13151A] p-8 rounded-[2.5rem] shadow-2xl flex flex-col items-center gap-6 w-80 text-center border border-white/10 animate-in zoom-in-95">
+                        <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_30px_rgba(var(--primary),0.4)] overflow-hidden border-2 border-primary/50">
                             {globalIncomingCall.profilePicture ? (
                                 <img src={globalIncomingCall.profilePicture} alt="Caller" className="w-full h-full object-cover" />
                             ) : (
-                                <PhoneIncoming className="w-10 h-10 text-primary" />
+                                <PhoneIncoming className="w-12 h-12 text-primary" />
                             )}
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-foreground">
+                            <h2 className="text-2xl font-bold text-foreground">
                                 {globalIncomingCall.callerName}
                             </h2>
-                            <p className="text-sm text-muted-foreground mt-1 capitalize">
+                            <p className="text-sm text-muted-foreground mt-1 capitalize tracking-wide">
                                 {t('navbar.incoming_call', { type: globalIncomingCall.callType || 'voice' })}
                             </p>
                         </div>
-                        <div className="flex items-center gap-6 w-full justify-center mt-2">
-                            <button onClick={() => { socket.emit('end_call', { to: globalIncomingCall.from }); setGlobalIncomingCall(null); pauseAudio('incoming'); }} className="w-14 h-14 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
-                                <PhoneOff className="w-6 h-6" />
+                        <div className="flex items-center gap-8 w-full justify-center mt-2">
+                            <button onClick={() => { socket.emit('end_call', { to: globalIncomingCall.from }); setGlobalIncomingCall(null); pauseAudio('incoming'); }} className="w-16 h-16 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 text-white">
+                                <PhoneOff className="w-7 h-7" />
                             </button>
-                            <button onClick={() => answerIncomingCall(globalIncomingCall)} className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 text-white">
-                                {globalIncomingCall.callType === 'video' ? <Video className="w-6 h-6 fill-current" /> : <Phone className="w-6 h-6 fill-current" />}
+                            <button onClick={() => answerIncomingCall(globalIncomingCall)} className="w-16 h-16 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 text-white">
+                                {globalIncomingCall.callType === 'video' ? <Video className="w-7 h-7 fill-current" /> : <Phone className="w-7 h-7 fill-current" />}
                             </button>
                         </div>
                     </div>
