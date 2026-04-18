@@ -6,9 +6,13 @@ import api, { setAxiosToken } from "./api/axios";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "react-hot-toast";
 
+// --- NEW CAPACITOR & FIREBASE IMPORTS ---
+import { Capacitor } from '@capacitor/core';
+import { FirebaseMessaging } from '@capacitor-firebase/messaging';
+
 // --- NEW IMPORT FOR PWA UPDATE HOOK ---
 import { useRegisterSW } from 'virtual:pwa-register/react';
-import { DownloadCloud } from "lucide-react"; // Nice icon for the update screen
+import { DownloadCloud } from "lucide-react";
 
 // ==========================================
 // 1. SYNCHRONOUS IMPORTS
@@ -71,8 +75,6 @@ const PageLoader = () => (
 // ==========================================
 const GlobalToaster = () => {
   const location = useLocation();
-
-  // Hide this global toaster if we are on the employee reset password page
   if (location.pathname === '/employee/reset-password') {
     return null;
   }
@@ -105,8 +107,10 @@ function App() {
   const dispatch = useDispatch();
   const { user, isHydrating, token } = useSelector((state) => state.auth);
   const { i18n } = useTranslation();
-
   const currentTheme = useSelector((state) => state.theme?.mode || 'light');
+
+  // --- PLATFORM CHECK ---
+  const isNative = Capacitor.isNativePlatform();
 
   // --- STRICT PWA UPDATE LOGIC ---
   const {
@@ -114,8 +118,8 @@ function App() {
     updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r) {
-      // Check for updates every 60 minutes if the user leaves the tab open forever
-      if (r) {
+      // ONLY run the update interval if NOT on native platform
+      if (r && !isNative) {
         setInterval(() => {
           r.update();
         }, 60 * 60 * 1000); // 1 hour
@@ -138,12 +142,10 @@ function App() {
   // --- SEAMLESS BACKGROUND SYNC ---
   useEffect(() => {
     const initializeApp = async () => {
-      // SCENARIO 1: We already have a token from Redux-Persist (User just refreshed)
       if (token) {
         setAxiosToken(token);
-        dispatch(setHydrationComplete()); // Unblock UI immediately, zero jerk!
+        dispatch(setHydrationComplete());
 
-        // Silently verify and update profile in the background
         try {
           const profileRes = await api.get('/employee/me/profile');
           if (profileRes.data.success) {
@@ -153,14 +155,11 @@ function App() {
             }));
           }
         } catch (error) {
-          // We DO NOT logout here. If the token is truly expired, 
-          // your global Axios interceptor handles the 401 and refresh logic.
           console.warn("Background profile sync failed (offline or expired). Using cache.");
         }
         return;
       }
 
-      // SCENARIO 2: No token in Redux (User returning after days, or cleared cache)
       try {
         const refreshRes = await api.get('/auth/refresh-token', {
           withCredentials: true
@@ -180,7 +179,6 @@ function App() {
           dispatch(logout());
         }
       } catch (error) {
-        // If we have NO token and refresh fails, they are definitely logged out.
         dispatch(logout());
       } finally {
         dispatch(setHydrationComplete());
@@ -188,8 +186,34 @@ function App() {
     };
 
     initializeApp();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run ONLY once on mount to prevent infinite loops
+  }, []);
+
+  // --- FIREBASE FCM INITIALIZATION ---
+  useEffect(() => {
+    const setupFirebase = async () => {
+      // Only request token if user is logged in AND on a native device
+      if (token && isNative) {
+        try {
+          const result = await FirebaseMessaging.requestPermissions();
+
+          if (result.receive === 'granted') {
+            const { token: fcmToken } = await FirebaseMessaging.getToken();
+            console.log("🔥 FCM Token generated:", fcmToken);
+
+            // TODO: Uncomment and update the endpoint below to save this token to your Render backend
+            // await api.post('/employee/save-fcm-token', { fcmToken });
+
+          } else {
+            console.warn("User denied push notification permissions");
+          }
+        } catch (error) {
+          console.error("Firebase setup failed:", error);
+        }
+      }
+    };
+
+    setupFirebase();
+  }, [token, isNative]);
 
   // --- OFFLINE SYNC ---
   useEffect(() => {
@@ -234,7 +258,7 @@ function App() {
   return (
     <>
       {/* STRICT PWA UPDATE BLOCKER MODAL */}
-      {needRefresh && (
+      {needRefresh && !isNative && (
         <div className="fixed inset-0 z-999999999 flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-card border border-border rounded-3xl p-8 max-w-sm w-[90%] flex flex-col items-center text-center shadow-2xl animate-in zoom-in-95 duration-500">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
@@ -245,7 +269,15 @@ function App() {
               A new mandatory version of the app is available. You must update to continue using the system.
             </p>
             <button
-              onClick={() => updateServiceWorker(true)}
+              onClick={async () => {
+                if ('caches' in window) {
+                  try {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(cacheNames.map((name) => caches.delete(name)));
+                  } catch (err) { console.error("Cache wipe failed", err); }
+                }
+                updateServiceWorker(true);
+              }}
               className="w-full py-3.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-bold text-base transition-transform active:scale-95 shadow-lg"
             >
               Update App Now
@@ -259,11 +291,9 @@ function App() {
         <FloatingUploadManager />
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            {/* Public Routes */}
             <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/contact-admin" element={<PublicRoute><AdminContact /></PublicRoute>} />
 
-            {/* SECURE RESET PASSWORD ROUTES */}
             <Route
               path="/admin/reset-password"
               element={<ProtectedRoute requireAdmin={true}><AdminResetPassword /></ProtectedRoute>}
@@ -273,7 +303,6 @@ function App() {
               element={<ProtectedRoute requireAdmin={false}><EmployeeResetPassword /></ProtectedRoute>}
             />
 
-            {/* Employee Routes */}
             <Route path="/employee" element={<ProtectedRoute requireAdmin={false}><EmployeeLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/employee/dashboard" replace />} />
               <Route path="dashboard" element={<EmployeeDashboard />} />
@@ -289,7 +318,6 @@ function App() {
               <Route path="chat" element={<SharedChat />} />
             </Route>
 
-            {/* Admin Routes */}
             <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
@@ -308,12 +336,11 @@ function App() {
               <Route path="chat" element={<SharedChat />} />
             </Route>
 
-            {/* 404 Fallback */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </Router>
-    </  >
+    </>
   );
 }
 

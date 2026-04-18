@@ -38,7 +38,6 @@ if (!window.__GLOBAL_AUDIO__) {
 }
 const globalAudio = window.__GLOBAL_AUDIO__;
 
-// FIX: Play audio without constantly resetting if already playing
 const playAudio = (type) => {
     try {
         const audioStore = typeof globalAudio !== 'undefined' ? globalAudio : window.__GLOBAL_AUDIO__;
@@ -116,7 +115,6 @@ const AdminSidebar = () => {
         return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
     }, []);
 
-    // Handle clicks outside the mobile menu to close it smoothly
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
@@ -162,7 +160,6 @@ const AdminSidebar = () => {
         fetchPendingMediaCount();
     }, [user, location.pathname]);
 
-    // --- WEBRTC LOGIC ---
     const setupMedia = async (requestedType, specificFacingMode = 'user') => {
         if (localStreamRef.current) return { stream: localStreamRef.current, actualType: requestedType };
         try {
@@ -402,11 +399,15 @@ const AdminSidebar = () => {
     useEffect(() => {
         if (!user || !token) return;
 
-        // 1. Initialize the communication channel for this tab
         const ringChannel = new BroadcastChannel('workedu_call_channel');
 
         const currentUserId = user.id || user._id;
-        const joinUserRoom = () => { socket.emit("join_room", currentUserId); socket.emit("join_admin_room"); };
+        const joinUserRoom = () => { 
+            console.log("🟢 [PHASE 1 TRACE] SOCKET CONNECTED! ID:", socket.id);
+            console.log("🚪 [PHASE 1 TRACE] Joining room for user:", currentUserId); 
+            socket.emit("join_room", currentUserId); 
+            socket.emit("join_admin_room"); 
+        };
         if (socket.connected) joinUserRoom();
         socket.on("connect", joinUserRoom);
 
@@ -418,8 +419,15 @@ const AdminSidebar = () => {
             }
         };
 
-        // 2. Updated Exclusive Ringer handleIncomingCall
         const handleIncomingCall = (data) => {
+            // --- PHASE 1 TRACE LOGS ---
+            console.warn("🚨🚨🚨 [PHASE 1 TRACE] INCOMING CALL SIGNAL RECEIVED! 🚨🚨🚨", data);
+            toast.success(`🚨 SIGNAL ARRIVED: Call from ${data.callerName || 'Unknown'}`, {
+                duration: 8000,
+                position: 'top-center',
+                style: { background: '#000', color: '#0f0', border: '2px solid #0f0' }
+            });
+
             if (activeCall) {
                 socket.emit('renegotiate', { to: data.from, signal: { type: 'CUSTOM_EVENT', event: 'call_waiting' } });
                 setWaitingIncomingCall(data);
@@ -427,7 +435,6 @@ const AdminSidebar = () => {
             } else {
                 setGlobalIncomingCall(data);
 
-                // --- EXCLUSIVE RINGER LOGIC START ---
                 if (document.hasFocus()) {
                     if (globalAudio.incoming) globalAudio.incoming.loop = true;
                     playAudio('incoming');
@@ -457,7 +464,6 @@ const AdminSidebar = () => {
                         }
                     }, 50);
                 }
-                // --- EXCLUSIVE RINGER LOGIC END ---
             }
         };
 
@@ -585,9 +591,7 @@ const AdminSidebar = () => {
         socket.on("online_users_updated", setOnlineUsers);
 
         return () => {
-            // 3. Close the channel when the component unmounts
             ringChannel.close();
-
             socket.off("connect", joinUserRoom);
             socket.off("receive_message", handleIncomingChat);
             socket.off("incoming_call", handleIncomingCall);
@@ -640,10 +644,8 @@ const AdminSidebar = () => {
                 />
             )}
 
-            {/* --- DESKTOP TOP NAVBAR --- */}
             <nav className="hidden 2xl:flex fixed top-0 w-full h-16 bg-card border-b border-border z-50 items-center justify-between px-6 shadow-sm">
                 <div className="flex items-center gap-3 shrink-0 mr-2">
-                    {/* Updated Icon Box */}
                     <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
                         <span className="text-primary-foreground font-bold text-base">
                             {t('sidebar.brand').charAt(0)}
@@ -699,10 +701,8 @@ const AdminSidebar = () => {
                 </div>
             </nav>
 
-            {/* --- MOBILE TOP NAVBAR --- */}
             <header className="2xl:hidden fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4 shadow-sm">
                 <div className="flex items-center gap-2">
-                    {/* Updated Icon Box */}
                     <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
                         <span className="text-primary-foreground font-bold text-sm">
                             {t('sidebar.brand').charAt(0)}
@@ -718,7 +718,6 @@ const AdminSidebar = () => {
                         {user?.profilePicture ? <img src={user.profilePicture} alt="Admin" className="w-full h-full object-cover rounded-full" /> : <UserCircle className="w-7 h-7 text-muted-foreground" />}
                     </button>
 
-                    {/* Smooth Transition wrapper for Mobile Menu */}
                     <div className={`absolute top-12 right-0 w-56 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50 origin-top-right transition-all duration-200 ease-out ${isMobileMenuOpen ? "opacity-100 scale-100 translate-y-0 pointer-events-auto" : "opacity-0 scale-95 -translate-y-2 pointer-events-none"}`}>
                         <div className="px-3 py-2 mb-1 border-b border-border">
                             <p className="text-sm font-bold text-foreground truncate">{adminName}</p>
@@ -746,7 +745,6 @@ const AdminSidebar = () => {
                 </div>
             </header>
 
-            {/* --- MOBILE BOTTOM NAVBAR --- */}
             <nav className="2xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] overflow-x-auto overflow-y-hidden">
                 <NavLink to="/admin/dashboard" className={mobileNavClasses}><LayoutDashboard className="w-6 h-6" /></NavLink>
                 <NavLink to="/admin/employees" className={mobileNavClasses}><Users className="w-6 h-6" /></NavLink>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "281177668349",
+    "project_id": "workedumusic",
+    "storage_bucket": "workedumusic.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:281177668349:android:7d6db4675fbcc4f5e81c94",
+        "android_client_info": {
+          "package_name": "com.workedumusic.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0TVBNGiSJgjdKM5jOpdvTjT2Y1hbb1WI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

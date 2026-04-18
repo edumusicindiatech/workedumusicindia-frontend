@@ -41,7 +41,6 @@ if (!window.__GLOBAL_AUDIO__) {
 }
 const globalAudio = window.__GLOBAL_AUDIO__;
 
-// FIX: Play audio without constantly resetting if already playing
 const playAudio = (type) => {
     try {
         const audioStore = typeof globalAudio !== 'undefined' ? globalAudio : window.__GLOBAL_AUDIO__;
@@ -85,7 +84,6 @@ const EmployeeNavbar = () => {
     const [waitingIncomingCall, setWaitingIncomingCall] = useState(null);
     const heldCallRef = useRef(null);
 
-    // Call Upgrade & Camera States
     const [currentCallType, setCurrentCallType] = useState('voice');
     const [localStreamState, setLocalStreamState] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
@@ -109,7 +107,6 @@ const EmployeeNavbar = () => {
         if (location.pathname.includes('/chat')) setUnreadChatCount(0);
     }, [location.pathname]);
 
-    // --- BUG FIX: ADDED MISSING OUTBOUND AUDIO LOGIC HERE ---
     useEffect(() => {
         if (activeCall && !isCallAccepted && callPeer && remoteCallStatus === 'active') {
             const isPeerOnline = onlineUsers.includes(String(callPeer._id || callPeer.id));
@@ -126,12 +123,8 @@ const EmployeeNavbar = () => {
             pauseAudio('calling');
             pauseAudio('ringing');
         }
-        return () => {
-            pauseAudio('calling');
-            pauseAudio('ringing');
-        };
+        return () => { pauseAudio('calling'); pauseAudio('ringing'); };
     }, [activeCall, isCallAccepted, callPeer, onlineUsers, remoteCallStatus]);
-    // --------------------------------------------------------
 
     useEffect(() => {
         if (globalIncomingCall && !activeCall) {
@@ -145,7 +138,6 @@ const EmployeeNavbar = () => {
         }
     }, [globalIncomingCall, activeCall, t]);
 
-    // Handle clicks outside the mobile menu to close it smoothly
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
@@ -159,7 +151,6 @@ const EmployeeNavbar = () => {
     const { user, token } = useSelector((state) => state.auth);
     const themeMode = useSelector((state) => state.theme.mode);
 
-    // --- WEBRTC LOGIC ---
     const setupMedia = async (requestedType, specificFacingMode = 'user') => {
         if (localStreamRef.current) return { stream: localStreamRef.current, actualType: requestedType };
         try {
@@ -399,11 +390,15 @@ const EmployeeNavbar = () => {
     useEffect(() => {
         if (!user || !token) return;
 
-        // 1. Initialize the communication channel for this tab
         const ringChannel = new BroadcastChannel('workedu_call_channel');
 
         const currentUserId = user.id || user._id;
-        const joinUserRoom = () => { socket.emit("join_room", currentUserId); socket.emit("join_admin_room"); };
+        const joinUserRoom = () => {
+            console.log("🟢 [PHASE 1 TRACE] SOCKET CONNECTED! ID:", socket.id);
+            console.log("🚪 [PHASE 1 TRACE] Joining room for user:", currentUserId);
+            socket.emit("join_room", currentUserId);
+            socket.emit("join_admin_room");
+        };
         if (socket.connected) joinUserRoom();
         socket.on("connect", joinUserRoom);
 
@@ -415,8 +410,15 @@ const EmployeeNavbar = () => {
             }
         };
 
-        // 2. Updated Exclusive Ringer handleIncomingCall
         const handleIncomingCall = (data) => {
+            // --- PHASE 1 TRACE LOGS ---
+            console.warn("🚨🚨🚨 [PHASE 1 TRACE] INCOMING CALL SIGNAL RECEIVED! 🚨🚨🚨", data);
+            toast.success(`🚨 SIGNAL ARRIVED: Call from ${data.callerName || 'Unknown'}`, {
+                duration: 8000,
+                position: 'top-center',
+                style: { background: '#000', color: '#0f0', border: '2px solid #0f0' }
+            });
+
             if (activeCall) {
                 socket.emit('renegotiate', { to: data.from, signal: { type: 'CUSTOM_EVENT', event: 'call_waiting' } });
                 setWaitingIncomingCall(data);
@@ -424,7 +426,6 @@ const EmployeeNavbar = () => {
             } else {
                 setGlobalIncomingCall(data);
 
-                // --- EXCLUSIVE RINGER LOGIC START ---
                 if (document.hasFocus()) {
                     if (globalAudio.incoming) globalAudio.incoming.loop = true;
                     playAudio('incoming');
@@ -454,7 +455,6 @@ const EmployeeNavbar = () => {
                         }
                     }, 50);
                 }
-                // --- EXCLUSIVE RINGER LOGIC END ---
             }
         };
 
@@ -543,9 +543,7 @@ const EmployeeNavbar = () => {
         socket.on("online_users_updated", setOnlineUsers);
 
         return () => {
-            // 3. Close the channel when the component unmounts
             ringChannel.close();
-
             socket.off("connect", joinUserRoom);
             socket.off("receive_message", handleIncomingChat);
             socket.off("incoming_call", handleIncomingCall);
@@ -637,7 +635,6 @@ const EmployeeNavbar = () => {
                                 {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-7 h-7 rounded-full object-cover border border-border" /> : <UserCircle className="w-7 h-7 text-muted-foreground" />}
                             </button>
 
-                            {/* Smooth Transition wrapper for Mobile Menu */}
                             <div className={`absolute top-12 right-0 w-56 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50 origin-top-right transition-all duration-200 ease-out ${isMobileMenuOpen ? "opacity-100 scale-100 translate-y-0 pointer-events-auto" : "opacity-0 scale-95 -translate-y-2 pointer-events-none"}`}>
                                 <div className="px-3 py-2.5 mb-1 border-b border-border flex items-center gap-3">
                                     {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-9 h-9 rounded-full object-cover shrink-0 border border-border" /> : <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><User className="w-4 h-4 text-primary" /></div>}
