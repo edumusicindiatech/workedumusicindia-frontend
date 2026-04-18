@@ -45,8 +45,12 @@ public class MainActivity extends BridgeActivity {
 
     // THE MAGIC BRIDGE: Pulls data from Android and fires it into React
     private void checkAndFireCallIntent(Intent intent) {
+        android.util.Log.e("VOIP_DEBUG", "GATE 3: checkAndFireCallIntent triggered.");
+
         if (intent != null && intent.hasExtra("isIncomingCall")) {
             boolean isIncoming = intent.getBooleanExtra("isIncomingCall", false);
+            android.util.Log.e("VOIP_DEBUG", "GATE 3: Intent HAS the isIncomingCall extra! Value: " + isIncoming);
+            
             if (isIncoming) {
                 try {
                     // Securely build the JSON payload
@@ -59,6 +63,8 @@ public class MainActivity extends BridgeActivity {
                     String signalStr = intent.getStringExtra("signal");
                     JSONObject signalJson = new JSONObject(signalStr != null ? signalStr : "{}");
                     json.put("signal", signalJson);
+                    
+                    android.util.Log.e("VOIP_DEBUG", "GATE 3: JSON payload built successfully. Waiting 1.5s to inject into React...");
 
                     // Create the JavaScript command
                     String jsCode = "window.dispatchEvent(new CustomEvent('native_call_trigger', { detail: " + json.toString() + " }));";
@@ -66,17 +72,22 @@ public class MainActivity extends BridgeActivity {
                     // Delay injection by 1.5 seconds to guarantee React has loaded the DOM
                     new Handler(Looper.getMainLooper()).postDelayed(() -> {
                         if (bridge != null && bridge.getWebView() != null) {
+                            android.util.Log.e("VOIP_DEBUG", "GATE 3: INJECTING JAVASCRIPT NOW!");
                             bridge.getWebView().evaluateJavascript(jsCode, null);
+                        } else {
+                            android.util.Log.e("VOIP_DEBUG", "GATE 3 FAILED: WebView is null!");
                         }
                     }, 1500);
 
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    android.util.Log.e("VOIP_DEBUG", "GATE 3 FAILED: JSON Exception - " + e.getMessage());
                 }
 
                 // Remove the extra so it doesn't trigger again if the user rotates the screen
                 intent.removeExtra("isIncomingCall");
             }
+        } else {
+            android.util.Log.e("VOIP_DEBUG", "GATE 3: No VoIP data found in this intent.");
         }
     }
 }

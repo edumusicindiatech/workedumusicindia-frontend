@@ -12,21 +12,25 @@ import com.google.firebase.messaging.RemoteMessage;
 
 public class CallBackgroundService extends FirebaseMessagingService {
 
-    @Override
+   @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
         super.onMessageReceived(remoteMessage);
+        
+        // DEBUG: Did the OS even wake up this service?
+        android.util.Log.e("VOIP_DEBUG", "GATE 1: FCM Message Received in Background!");
 
         if (remoteMessage.getData().size() > 0) {
             String type = remoteMessage.getData().get("type");
+            android.util.Log.e("VOIP_DEBUG", "GATE 1: Message Type is: " + type);
             
             if ("incoming_call".equals(type)) {
-                // Extract WebRTC data from Firebase
                 String callerId = remoteMessage.getData().get("callerId");
                 String callerName = remoteMessage.getData().get("callerName");
                 String callType = remoteMessage.getData().get("callType");
                 String profilePicture = remoteMessage.getData().get("profilePicture");
                 String signal = remoteMessage.getData().get("signal");
 
+                android.util.Log.e("VOIP_DEBUG", "GATE 2: Attempting to wake screen and launch MainActivity for: " + callerName);
                 wakeUpDeviceAndLaunchApp(callerId, callerName, callType, profilePicture, signal);
             }
         }
