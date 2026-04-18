@@ -8,44 +8,104 @@
         "error": "कुछ गलत हो गया"
     },
     "sidebar": {
-        "brand": "वर्कएडम्यूजिक",
-        "new_alert_toast": "नया अलर्ट!",
+        "brand": "W एडमिन",
         "dashboard": "डैशबोर्ड",
-        "roster": "कर्मचारी सूची",
+        "roster": "कर्मचारी",
         "attendance": "उपस्थिति",
         "learning_hub": "ट्रेनिंग वॉल्ट",
         "progress": "प्रगति",
         "leaderboard": "लीडरबोर्ड",
-        "reports": "रिपोर्ट्स",
-        "media": "मीडिया गैलरी",
+        "reports": "रिपोर्ट",
+        "media": "मीडिया",
+        "media_gallery": "मीडिया गैलरी",
         "leave": "छुट्टी के अनुरोध",
-        "alerts": "अलर्ट्स",
-        "broadcast": "ब्रॉडकास्ट",
+        "alerts": "अलर्ट",
+        "chat_hub": "चैट हब",
+        "broadcast": "प्रसारण",
         "theme": "थीम बदलें",
         "profile": "मेरी प्रोफ़ाइल",
         "settings": "सेटिंग्स",
         "logout": "लॉग आउट",
         "dark_mode": "डार्क मोड",
-        "light_mode": "लाइट मोड"
+        "light_mode": "लाइट मोड",
+        "incoming_call": "इनकमिंग {{type}} कॉल...",
+        "admin_fallback_name": "एडमिन उपयोगकर्ता",
+        "new_alert_toast": "नया अलर्ट प्राप्त हुआ"
     },
     "navbar": {
-        "help": "मदद",
-        "brand": "वर्कएडम्यूजिक",
-        "new_notif_toast": "नया नोटिफिकेशन!",
+        "brand": "W",
         "dashboard": "डैशबोर्ड",
         "assignments": "असाइनमेंट",
-        "tasks": "टास्क",
+        "tasks": "कार्य",
         "media": "मीडिया",
-        "learning_hub": "ट्रेनिंग वॉल्ट",
+        "learning_hub": "लर्निंग हब",
         "leaderboard": "लीडरबोर्ड",
         "report": "दैनिक रिपोर्ट",
-        "notifications": "नोटिफिकेशन",
-        "profile": "मेरी प्रोफ़ाइल",
-        "theme_tooltip": "थीम बदलें",
+        "help": "सहायता और अक्सर पूछे जाने वाले प्रश्न",
+        "notifications": "सूचनाएं",
+        "chat": "चैट",
+        "profile": "प्रोफ़ाइल",
+        "dark_mode": "डार्क मोड",
+        "light_mode": "लाइट मोड",
         "settings": "सेटिंग्स",
         "logout": "लॉग आउट",
-        "dark_mode": "डार्क मोड",
-        "light_mode": "लाइट मोड"
+        "employee": "कर्मचारी",
+        "training_vault": "ट्रेनिंग वॉल्ट",
+        "incoming_call": "इनकमिंग {{type}} कॉल..."
+    },
+    "toast": {
+        "missed_call": "{{name}} से मिस्ड कॉल",
+        "camera_access_failed": "कैमरा एक्सेस विफल। वॉयस कॉल पर स्विच कर रहे हैं।",
+        "mic_denied": "माइक्रोफ़ोन एक्सेस अस्वीकृत।",
+        "camera_switch_failed": "कैमरा स्विच नहीं किया जा सका",
+        "call_connected": "कॉल कनेक्ट हो गई",
+        "user_busy": "उपयोगकर्ता किसी अन्य कॉल पर व्यस्त है।",
+        "call_ended_restoring": "वर्तमान कॉल समाप्त। होल्ड की गई कॉल को बहाल कर रहे हैं...",
+        "ended_held_call": "{{name}} ने होल्ड की गई कॉल समाप्त कर दी।",
+        "resumed_call": "{{name}} के साथ कॉल फिर से शुरू की",
+        "requesting_video": "वीडियो स्विच का अनुरोध कर रहे हैं...",
+        "camera_access_error": "कैमरे तक नहीं पहुंचा जा सका।",
+        "video_rejected": "वीडियो कॉल अनुरोध अस्वीकृत कर दिया गया",
+        "video_accepted": "वीडियो कॉल अनुरोध स्वीकार कर लिया गया",
+        "new_chat": "नया चैट संदेश प्राप्त हुआ",
+        "updating_group_name": "समूह का नाम अपडेट हो रहा है...",
+        "group_name_updated": "समूह का नाम अपडेट हो गया",
+        "failed_update_group_name": "समूह का नाम अपडेट करने में विफल",
+        "uploading_group_icon": "नया समूह आइकन अपलोड हो रहा है...",
+        "group_icon_updated": "समूह आइकन अपडेट हो गया",
+        "failed_upload_group_icon": "समूह आइकन अपलोड करने में विफल",
+        "removing_group_icon": "समूह आइकन हटाया जा रहा है...",
+        "group_icon_removed": "समूह आइकन हटा दिया गया",
+        "failed_remove_group_icon": "समूह आइकन हटाने में विफल",
+        "action_completed": "कार्रवाई सफलतापूर्वक पूरी हुई",
+        "action_failed": "कार्रवाई करने में विफल",
+        "msg_send_fail": "संदेश भेजने में विफल। कनेक्शन की जाँच करें।",
+        "max_items": "एक बार में अधिकतम {{maxCount}} आइटम की अनुमति है।",
+        "max_size": "कुल आकार {{maxSize}}MB से अधिक नहीं हो सकता।",
+        "upload_fail": "अपलोड प्रक्रिया विफल रही।",
+        "downloading": "डाउनलोड हो रहा है...",
+        "download_success": "सफलतापूर्वक डाउनलोड किया गया!",
+        "download_fail": "डाउनलोड विफल रहा।",
+        "msg_deleted": "संदेश हटा दिया गया",
+        "del_everyone": "सभी के लिए हटा दिया गया",
+        "del_me": "आपके लिए हटा दिया गया",
+        "del_fail": "हटाने में विफल",
+        "forwarding": "अग्रेषित किया जा रहा है...",
+        "forward_success": "सफलतापूर्वक अग्रेषित किया गया",
+        "forward_fail": "अग्रेषित करने में विफल",
+        "clear_success": "चैट दृष्टिगत रूप से साफ़ कर दी गई।",
+        "clear_fail": "चैट साफ़ करने में विफल",
+        "copied": "कॉपी किया गया",
+        "new_msg_group": "{{name}} में नया संदेश",
+        "new_msg": "नया संदेश प्राप्त हुआ",
+        "added_to_group": "आपको समूह में जोड़ा गया: {{name}}",
+        "removed_from_group": "अब आप {{name}} के भागीदार नहीं हैं",
+        "load_contacts_failed": "संपर्क सूची लोड नहीं की जा सकी।",
+        "group_name_req": "समूह का नाम आवश्यक है",
+        "select_member_req": "कम से कम 1 सदस्य चुनें",
+        "creating_group": "समूह बनाया जा रहा है...",
+        "group_created": "समूह सफलतापूर्वक बन गया!",
+        "group_create_failed": "समूह बनाने में विफल"
     },
     "add_user_modal": {
         "title_employee": "नया कर्मचारी जोड़ें",
@@ -1898,6 +1958,148 @@
                 "q": "मेरे साप्ताहिक स्कोर (Weekly Score) की गणना कैसे की जाती है?",
                 "a": "हर शनिवार रात 9:00 बजे सिस्टम आपके प्रदर्शन का हिसाब लगाता है:\n• 50% अटेंडेंस (समय पर आना)\n• 50% मीडिया स्कोर (वीडियो की क्वालिटी)\n• पेनल्टी: हर चेतावनी (Warning) के लिए -10 पॉइंट्स काटे जाते हैं।"
             }
+        }
+    },
+    "call": {
+        "ringing": "घंटी बज रही है...",
+        "calling": "कॉल कर रहे हैं...",
+        "busy": "व्यक्ति किसी अन्य कॉल पर व्यस्त है...",
+        "encrypted": "एंड-टू-एंड एन्क्रिप्टेड",
+        "on_hold_title": "{{name}} ने आपकी कॉल होल्ड पर रख दी है।",
+        "on_hold_desc": "कृपया प्रतीक्षा करें जब तक वे दूसरी कॉल समाप्त करते हैं...",
+        "unknown": "अज्ञात",
+        "in_call": "कॉल में",
+        "video_request_desc": "वीडियो कॉल पर स्विच करने का अनुरोध कर रहे हैं।",
+        "decline": "अस्वीकार करें",
+        "accept": "स्वीकार करें",
+        "incoming_type": "{{type}} कॉल आ रही है...",
+        "on_hold_badge": "होल्ड पर",
+        "minimize_title": "कॉल छोटा करें",
+        "flip_camera": "कैमरा पलटें",
+        "request_video": "वीडियो अपग्रेड का अनुरोध करें"
+    },
+    "chat": {
+        "messages": "संदेश",
+        "new_group": "नया समूह",
+        "search_placeholder": "चैट खोजें...",
+        "no_chats": "कोई चैट नहीं मिली।",
+        "members_count": "{{count}} सदस्य",
+        "default_role": "कर्मचारी",
+        "unread_overflow": "9+"
+    },
+    "chat_sidebar": {
+        "group_info": "समूह की जानकारी",
+        "contact_info": "संपर्क जानकारी",
+        "change_photo": "फ़ोटो बदलें",
+        "remove_photo": "फ़ोटो हटाएं",
+        "employee_role": "कर्मचारी",
+        "members_count": "{{count}} सदस्य",
+        "participants": "प्रतिभागी",
+        "add_member": "+ सदस्य जोड़ें",
+        "you": "आप",
+        "role_creator": "निर्माता",
+        "role_admin": "व्यवस्थापक",
+        "action_demote": "व्यवस्थापक पद से हटाएं",
+        "action_promote": "समूह व्यवस्थापक बनाएं",
+        "action_remove": "सदस्य को हटाएं",
+        "leave_group": "समूह छोड़ें"
+    },
+    "chat_window": {
+        "empty": {
+            "title": "कम्युनिकेशन हब",
+            "subtitle": "सीधे संदेश भेजने, मीडिया साझा करने और सहयोग करने के लिए साइडबार से किसी टीम सदस्य या समूह का चयन करें।"
+        },
+        "top_bar": {
+            "selected_count": "{{count}} चयनित",
+            "search": "खोजें...",
+            "group_chat": "समूह चैट",
+            "online": "ऑनलाइन",
+            "offline": "ऑफ़लाइन"
+        },
+        "top_menu": {
+            "video_call": "वीडियो कॉल",
+            "voice_call": "वॉयस कॉल",
+            "media": "मीडिया",
+            "docs": "दस्तावेज़",
+            "links": "लिंक्स",
+            "clear_chat": "चैट साफ़ करें"
+        },
+        "privacy": {
+            "desktop": "गोपनीयता के लिए ये संदेश 7 दिनों के बाद स्वचालित रूप से हटा दिए जाएंगे।",
+            "mobile_notice": "संदेश 7 दिनों के बाद स्वतः हट जाएंगे।",
+            "label": "गोपनीयता"
+        },
+        "feed": {
+            "say_hello": "{{name}} को नमस्ते कहें!",
+            "start_secure": "संदेश भेजें, फ़ोटो साझा करें, या एक सुरक्षित {{type}} शुरू करें।",
+            "type_group_chat": "समूह चैट",
+            "type_voice_call": "वॉयस कॉल",
+            "e2e": "संदेश एंड-टू-एंड एन्क्रिप्टेड हैं। इस चैट के बाहर कोई भी उन्हें पढ़ या सुन नहीं सकता है।"
+        },
+        "message": {
+            "deleted": "यह संदेश हटा दिया गया था",
+            "document_file": "दस्तावेज़ फ़ाइल",
+            "you": "आप",
+            "member": "सदस्य"
+        },
+        "input": {
+            "placeholder": "एक संदेश टाइप करें...",
+            "camera": "कैमरा",
+            "photos": "फ़ोटो",
+            "document": "दस्तावेज़"
+        },
+        "context_menu": {
+            "delete_me": "मेरे लिए हटाएं",
+            "delete_everyone": "सभी के लिए हटाएं",
+            "select": "चुनें"
+        },
+        "shared": {
+            "media": "साझा मीडिया",
+            "docs": "साझा दस्तावेज़",
+            "links": "साझा लिंक्स",
+            "no_shared_media": "अभी तक कोई साझा मीडिया नहीं।",
+            "no_shared_docs": "अभी तक कोई साझा दस्तावेज़ नहीं।",
+            "no_shared_links": "अभी तक कोई साझा लिंक नहीं।",
+            "will_appear": "इस चैट में साझा की गई फ़ाइलें यहाँ दिखाई देंगी।",
+            "shared_doc": "साझा दस्तावेज़",
+            "preview": "दस्तावेज़ पूर्वावलोकन"
+        }
+    },
+    "modal": {
+        "forward": {
+            "title": "संदेश अग्रेषित करें (Forward)",
+            "search": "चैट खोजें...",
+            "no_chats": "कोई चैट नहीं मिली",
+            "select_chats": "चैट चुनें"
+        },
+        "add_member": {
+            "title": "{{name}} में सदस्य जोड़ें",
+            "search": "संपर्क खोजें...",
+            "add": "जोड़ें"
+        },
+        "delete": {
+            "title": "{{count}} संदेश हटाएं?",
+            "delete_everyone": "सभी के लिए हटाएं",
+            "delete_me": "मेरे लिए हटाएं"
+        },
+        "clear_chat": {
+            "title": "क्या यह चैट साफ़ करें?",
+            "desc": "संदेश आपके दृश्य से हटा दिए जाएंगे। इसे पूर्ववत नहीं किया जा सकता।",
+            "clear": "चैट साफ़ करें"
+        },
+        "common": {
+            "cancel": "रद्द करें"
+        }
+    },
+    "shared_chat": {
+        "modal": {
+            "title": "नया समूह बनाएं",
+            "name_placeholder": "समूह का नाम",
+            "search_placeholder": "संपर्क खोजें...",
+            "select_members": "सदस्य चुनें",
+            "selected_count": "{{count}} चयनित",
+            "cancel": "रद्द करें",
+            "create": "बनाएं"
         }
     }
 }

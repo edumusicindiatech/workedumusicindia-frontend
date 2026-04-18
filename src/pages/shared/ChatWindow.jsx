@@ -8,6 +8,7 @@ import {
 import api from "../../api/axios";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 import chatBgLight from '../../assets/chat-light.jpg';
 import chatBgDark from '../../assets/chat-dark.jpg';
@@ -50,6 +51,7 @@ const ChatWindow = ({
     isFetchingMessages,
     moveToTop
 }) => {
+    const { t } = useTranslation();
     const socket = window.__GLOBAL_SOCKET__;
 
     const [newMessage, setNewMessage] = useState("");
@@ -200,7 +202,7 @@ const ChatWindow = ({
                 socket.emit("send_message", payload);
             }
         } catch (error) {
-            toast.error("Message failed to send. Check connection.");
+            toast.error(t('toast.msg_send_fail'));
             setMessages(prev => prev.filter(m => m._id !== tempId));
         }
     };
@@ -209,9 +211,9 @@ const ChatWindow = ({
         const files = Array.from(e.target.files);
         if (!files.length) return;
         const { compress = false, maxCount = 5, maxSizeCombinedMb = 50, asDocument = false } = options;
-        if (files.length > maxCount) return toast.error(`Maximum of ${maxCount} items allowed at once.`);
+        if (files.length > maxCount) return toast.error(t('toast.max_items', { maxCount }));
         const combinedSizeMb = files.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024);
-        if (combinedSizeMb > maxSizeCombinedMb) return toast.error(`Total size cannot exceed ${maxSizeCombinedMb}MB.`);
+        if (combinedSizeMb > maxSizeCombinedMb) return toast.error(t('toast.max_size', { maxSize: maxSizeCombinedMb }));
         setShowAttachMenu(false); setIsUploading(true);
 
         try {
@@ -268,7 +270,7 @@ const ChatWindow = ({
 
                 } catch (err) {
                     if (err.name !== 'CanceledError') {
-                        toast.error("Upload process failed.");
+                        toast.error(t('toast.upload_fail'));
                         setMessages(prev => prev.filter(m => m._id !== tempId));
                     }
                 } finally {
@@ -287,13 +289,13 @@ const ChatWindow = ({
     const handleRevealMedia = (msgId) => setDownloadedMedia(prev => new Set(prev).add(msgId));
 
     const downloadToLocal = async (url) => {
-        const tid = toast.loading("Downloading...");
+        const tid = toast.loading(t('toast.downloading'));
         try {
             const res = await fetch(url); const blob = await res.blob(); const blobUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = blobUrl; a.download = url.split('/').pop().split('?')[0] || `File_${Date.now()}`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(blobUrl);
-            toast.success("Downloaded successfully!", { id: tid });
-        } catch (error) { toast.error("Download failed.", { id: tid }); }
+            toast.success(t('toast.download_success'), { id: tid });
+        } catch (error) { toast.error(t('toast.download_fail'), { id: tid }); }
     };
 
     const handleDeleteMediaFromViewer = async (msg) => {
@@ -301,7 +303,7 @@ const ChatWindow = ({
         const targetId = msg._id || msg.id;
         const localDeleted = JSON.parse(localStorage.getItem('deletedChatMessages') || '[]');
         if (!localDeleted.includes(targetId)) { localDeleted.push(targetId); localStorage.setItem('deletedChatMessages', JSON.stringify(localDeleted)); }
-        setMessages(prev => prev.filter(m => (m._id || m.id) !== targetId)); toast.success("Message deleted"); setFullscreenMedia(null);
+        setMessages(prev => prev.filter(m => (m._id || m.id) !== targetId)); toast.success(t('toast.msg_deleted')); setFullscreenMedia(null);
     };
 
     // --- Message Management ---
@@ -329,14 +331,14 @@ const ChatWindow = ({
                 await api.put('/chat/message/delete-me', { messageIds: ids, userId: currentUserId });
                 setMessages(prev => prev.filter(m => !ids.includes(m._id || m.id)));
             }
-            toast.success(type === 'everyone' ? "Deleted for everyone" : "Deleted for you");
-        } catch (e) { toast.error("Delete failed"); }
+            toast.success(type === 'everyone' ? t('toast.del_everyone') : t('toast.del_me'));
+        } catch (e) { toast.error(t('toast.del_fail')); }
     };
 
     const handleBatchForward = async () => {
         const msgs = fullscreenMedia ? [fullscreenMedia] : messages.filter(m => selectedMessages.includes(m._id || m.id) && !m.isDeletedForEveryone);
         if (!msgs.length || forwardSelectedUsers.length === 0) return;
-        const tid = toast.loading(`Forwarding...`);
+        const tid = toast.loading(t('toast.forwarding'));
         try {
             for (const recipientId of forwardSelectedUsers) {
                 const targetConv = conversations.find(c => String(c._id || c.id) === String(recipientId));
@@ -352,8 +354,8 @@ const ChatWindow = ({
                 }
                 moveToTop(recipientId);
             }
-            toast.success("Forwarded successfully", { id: tid });
-        } catch (error) { toast.error("Failed to forward", { id: tid }); }
+            toast.success(t('toast.forward_success'), { id: tid });
+        } catch (error) { toast.error(t('toast.forward_fail'), { id: tid }); }
         finally { setShowForwardDialog(false); setForwardSelectedUsers([]); setForwardSearchQuery(""); setFullscreenMedia(null); setIsSelectionMode(false); setSelectedMessages([]); }
     };
 
@@ -361,8 +363,8 @@ const ChatWindow = ({
         setShowClearChatModal(false);
         try {
             const url = isGroupChat ? `/chat/clear/group/${activeChat._id || activeChat.id}/${currentUserId}` : `/chat/clear/${currentUserId}/${activeChat._id || activeChat.id}`;
-            await api.put(url); setMessages([]); toast.success("Chat cleared visually.");
-        } catch (err) { toast.error("Failed to clear chat"); }
+            await api.put(url); setMessages([]); toast.success(t('toast.clear_success'));
+        } catch (err) { toast.error(t('toast.clear_fail')); }
     };
 
     // --- Media Viewer Setup ---
@@ -406,6 +408,13 @@ const ChatWindow = ({
         return <Check className="w-4 h-4 text-white/70" />;
     };
 
+    const getSharedContentPlaceholder = () => {
+        if (sharedContentView === 'media') return t('chat_window.shared.no_shared_media');
+        if (sharedContentView === 'docs') return t('chat_window.shared.no_shared_docs');
+        if (sharedContentView === 'links') return t('chat_window.shared.no_shared_links');
+        return '';
+    };
+
     if (!activeChat) {
         return (
             <div className={`flex-1 flex flex-col h-full w-full max-w-full relative overflow-hidden transition-all duration-300 md:flex`}>
@@ -417,9 +426,9 @@ const ChatWindow = ({
                         </div>
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 md:w-40 md:h-40 border border-primary/10 rounded-full animate-ping" style={{ animationDuration: '3s' }}></div>
                     </div>
-                    <h2 className="text-xl md:text-2xl font-black text-foreground tracking-tight z-10">Communication Hub</h2>
+                    <h2 className="text-xl md:text-2xl font-black text-foreground tracking-tight z-10">{t('chat_window.empty.title')}</h2>
                     <p className="text-[14px] md:text-[15px] mt-2 md:mt-3 font-medium opacity-70 max-w-70 md:max-w-[320px] text-center z-10 leading-relaxed">
-                        Select a team member or group from the sidebar to send direct messages, share media, and collaborate.
+                        {t('chat_window.empty.subtitle')}
                     </p>
                 </div>
             </div>
@@ -453,18 +462,18 @@ const ChatWindow = ({
                             )}
                             <div className="text-foreground flex flex-col justify-center">
                                 <span className="font-medium text-[15px] leading-tight">
-                                    {String(fullscreenMedia.senderId || fullscreenMedia.sender?._id || fullscreenMedia.sender) === String(currentUserId) ? "You" : (fullscreenMedia.sender?.name || activeChat?.name)}
+                                    {String(fullscreenMedia.senderId || fullscreenMedia.sender?._id || fullscreenMedia.sender) === String(currentUserId) ? t('chat_window.message.you') : (fullscreenMedia.sender?.name || activeChat?.name)}
                                 </span>
                                 <span className="text-xs text-muted-foreground mt-0.5">{formatTime(fullscreenMedia.timestamp || fullscreenMedia.createdAt)}</span>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-2 sm:gap-4 text-muted-foreground">
-                            <button onClick={() => handleDeleteMediaFromViewer(fullscreenMedia)} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground rounded-full transition-colors" title="Delete for me"><Trash2 className="w-5 h-5 sm:w-5 sm:h-5" /></button>
-                            <button onClick={() => setShowForwardDialog(true)} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground rounded-full transition-colors" title="Forward"><Forward className="w-5 h-5 sm:w-5 sm:h-5" /></button>
+                            <button onClick={() => handleDeleteMediaFromViewer(fullscreenMedia)} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground rounded-full transition-colors" title={t('modal.delete.delete_me')}><Trash2 className="w-5 h-5 sm:w-5 sm:h-5" /></button>
+                            <button onClick={() => setShowForwardDialog(true)} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground rounded-full transition-colors" title={t('modal.forward.title')}><Forward className="w-5 h-5 sm:w-5 sm:h-5" /></button>
                             <button onClick={() => downloadToLocal(fullscreenMedia.mediaUrl)} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground rounded-full transition-colors" title="Download"><Download className="w-5 h-5 sm:w-5 sm:h-5" /></button>
                             <div className="w-px h-6 bg-border dark:bg-white/10 mx-1 hidden sm:block"></div>
-                            <button onClick={() => setFullscreenMedia(null)} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 text-foreground rounded-full transition-colors" title="Close"><X className="w-6 h-6 sm:w-6 sm:h-6" /></button>
+                            <button onClick={() => setFullscreenMedia(null)} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 text-foreground rounded-full transition-colors" title={t('modal.common.cancel')}><X className="w-6 h-6 sm:w-6 sm:h-6" /></button>
                         </div>
                     </div>
 
@@ -484,7 +493,7 @@ const ChatWindow = ({
                                         <FileText className="w-8 h-8 text-blue-500" />
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-bold text-foreground truncate">{fullscreenMedia.mediaUrl.split('/').pop().split('?')[0]}</p>
-                                            <p className="text-xs text-muted-foreground">Document Preview</p>
+                                            <p className="text-xs text-muted-foreground">{t('chat_window.shared.preview')}</p>
                                         </div>
                                     </div>
                                     {fullscreenMedia.mediaUrl.match(/\.(jpeg|jpg|gif|png|webp|bmp)(?:\?.*)?$/i) ? (
@@ -530,10 +539,10 @@ const ChatWindow = ({
                 <div className="fixed inset-0 z-1000000 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="w-full max-w-sm md:max-w-md bg-card border border-border shadow-2xl rounded-3xl overflow-hidden flex flex-col max-h-[85vh] md:max-h-[75vh] animate-in zoom-in-95 duration-200 ease-out">
                         <div className="p-4 md:p-5 border-b border-border/50 bg-muted/20">
-                            <h3 className="text-lg font-bold text-foreground mb-4">Forward message</h3>
+                            <h3 className="text-lg font-bold text-foreground mb-4">{t('modal.forward.title')}</h3>
                             <div className="relative">
                                 <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                                <input type="text" placeholder="Search chats..." value={forwardSearchQuery} onChange={(e) => setForwardSearchQuery(e.target.value)} className="w-full bg-background border border-border/60 rounded-xl pl-10 pr-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm" autoFocus />
+                                <input type="text" placeholder={t('modal.forward.search')} value={forwardSearchQuery} onChange={(e) => setForwardSearchQuery(e.target.value)} className="w-full bg-background border border-border/60 rounded-xl pl-10 pr-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm" autoFocus />
                             </div>
                         </div>
 
@@ -552,13 +561,13 @@ const ChatWindow = ({
                                     </label>
                                 );
                             })}
-                            {conversations.filter(c => c.name.toLowerCase().includes(forwardSearchQuery.toLowerCase())).length === 0 && <p className="text-center text-muted-foreground p-6 text-sm font-medium">No chats found</p>}
+                            {conversations.filter(c => c.name.toLowerCase().includes(forwardSearchQuery.toLowerCase())).length === 0 && <p className="text-center text-muted-foreground p-6 text-sm font-medium">{t('modal.forward.no_chats')}</p>}
                         </div>
 
                         <div className="p-4 md:p-5 border-t border-border/50 flex items-center justify-between bg-muted/20">
-                            <span className="text-sm font-medium text-muted-foreground">{forwardSelectedUsers.length > 0 ? `${forwardSelectedUsers.length} selected` : 'Select chats'}</span>
+                            <span className="text-sm font-medium text-muted-foreground">{forwardSelectedUsers.length > 0 ? t('chat_window.top_bar.selected_count', { count: forwardSelectedUsers.length }) : t('modal.forward.select_chats')}</span>
                             <div className="flex items-center gap-2">
-                                <button onClick={() => { setShowForwardDialog(false); setForwardSelectedUsers([]); setForwardSearchQuery(""); }} className="px-4 py-2.5 text-[14px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors">Cancel</button>
+                                <button onClick={() => { setShowForwardDialog(false); setForwardSelectedUsers([]); setForwardSearchQuery(""); }} className="px-4 py-2.5 text-[14px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors">{t('modal.common.cancel')}</button>
                                 {forwardSelectedUsers.length > 0 && <button onClick={handleBatchForward} className="w-11 h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-transform active:scale-95 shadow-lg animate-in zoom-in-95 duration-200"><Send className="w-5 h-5 ml-0.5" /></button>}
                             </div>
                         </div>
@@ -571,10 +580,10 @@ const ChatWindow = ({
                 <div className="fixed inset-0 z-1000000 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="w-full max-w-sm md:max-w-md bg-card border border-border shadow-2xl rounded-3xl overflow-hidden flex flex-col max-h-[85vh] md:max-h-[75vh] animate-in zoom-in-95 duration-200 ease-out">
                         <div className="p-4 md:p-5 border-b border-border/50 bg-muted/20">
-                            <h3 className="text-lg font-bold text-foreground mb-4">Add Members to {activeChat?.name}</h3>
+                            <h3 className="text-lg font-bold text-foreground mb-4">{t('modal.add_member.title', { name: activeChat?.name })}</h3>
                             <div className="relative">
                                 <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                                <input type="text" placeholder="Search contacts..." value={createGroupSearchQuery} onChange={(e) => setCreateGroupSearchQuery(e.target.value)} className="w-full bg-background border border-border/60 rounded-xl pl-10 pr-4 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" autoFocus />
+                                <input type="text" placeholder={t('modal.add_member.search')} value={createGroupSearchQuery} onChange={(e) => setCreateGroupSearchQuery(e.target.value)} className="w-full bg-background border border-border/60 rounded-xl pl-10 pr-4 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" autoFocus />
                             </div>
                         </div>
 
@@ -600,10 +609,10 @@ const ChatWindow = ({
                         </div>
 
                         <div className="p-4 md:p-5 border-t border-border/50 flex items-center justify-between bg-muted/20">
-                            <span className="text-sm font-medium text-muted-foreground">{createGroupSelectedUsers.length} selected</span>
+                            <span className="text-sm font-medium text-muted-foreground">{t('chat_window.top_bar.selected_count', { count: createGroupSelectedUsers.length })}</span>
                             <div className="flex items-center gap-2">
-                                <button onClick={() => { setShowAddMemberModal(false); setCreateGroupSelectedUsers([]); setCreateGroupSearchQuery(""); }} className="px-4 py-2.5 text-[14px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors">Cancel</button>
-                                {createGroupSelectedUsers.length > 0 && <button onClick={() => { /* Handled in Sidebar or parent if passed correctly, but we leave it here for the modal */ }} className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-transform active:scale-95 shadow-md flex items-center gap-2">Add</button>}
+                                <button onClick={() => { setShowAddMemberModal(false); setCreateGroupSelectedUsers([]); setCreateGroupSearchQuery(""); }} className="px-4 py-2.5 text-[14px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors">{t('modal.common.cancel')}</button>
+                                {createGroupSelectedUsers.length > 0 && <button onClick={() => { /* Handled in Sidebar or parent if passed correctly, but we leave it here for the modal */ }} className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-transform active:scale-95 shadow-md flex items-center gap-2">{t('modal.add_member.add')}</button>}
                             </div>
                         </div>
                     </div>
@@ -614,12 +623,12 @@ const ChatWindow = ({
             {showDeleteModal && (
                 <div className="fixed inset-0 z-10000 bg-black/50 flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="bg-card w-full max-w-sm rounded-2xl shadow-2xl p-5 flex flex-col gap-2 animate-in zoom-in-95 duration-200 ease-out">
-                        <h3 className="text-lg font-bold text-foreground mb-2">Delete {selectedMessages.length} Message{selectedMessages.length > 1 ? 's' : ''}?</h3>
+                        <h3 className="text-lg font-bold text-foreground mb-2">{t('modal.delete.title', { count: selectedMessages.length })}</h3>
                         {canDeleteForEveryone && (
-                            <button onClick={() => executeBatchDelete('everyone')} className="w-full text-left px-4 py-3 bg-muted hover:bg-muted/80 rounded-xl font-medium text-rose-500 transition-colors">Delete for everyone</button>
+                            <button onClick={() => executeBatchDelete('everyone')} className="w-full text-left px-4 py-3 bg-muted hover:bg-muted/80 rounded-xl font-medium text-rose-500 transition-colors">{t('modal.delete.delete_everyone')}</button>
                         )}
-                        <button onClick={() => executeBatchDelete('me')} className="w-full text-left px-4 py-3 bg-muted hover:bg-muted/80 rounded-xl font-medium text-foreground transition-colors">Delete for me</button>
-                        <button onClick={() => setShowDeleteModal(false)} className="w-full text-center px-4 py-3 mt-2 font-medium text-muted-foreground hover:bg-muted/50 rounded-xl transition-colors">Cancel</button>
+                        <button onClick={() => executeBatchDelete('me')} className="w-full text-left px-4 py-3 bg-muted hover:bg-muted/80 rounded-xl font-medium text-foreground transition-colors">{t('modal.delete.delete_me')}</button>
+                        <button onClick={() => setShowDeleteModal(false)} className="w-full text-center px-4 py-3 mt-2 font-medium text-muted-foreground hover:bg-muted/50 rounded-xl transition-colors">{t('modal.common.cancel')}</button>
                     </div>
                 </div>
             )}
@@ -632,12 +641,12 @@ const ChatWindow = ({
                             <Trash className="w-8 h-8 text-rose-500" />
                         </div>
                         <div className="text-center">
-                            <h3 className="text-xl font-bold text-foreground mb-1">Clear this chat?</h3>
-                            <p className="text-sm text-muted-foreground">Messages will be removed from your view. This cannot be undone.</p>
+                            <h3 className="text-xl font-bold text-foreground mb-1">{t('modal.clear_chat.title')}</h3>
+                            <p className="text-sm text-muted-foreground">{t('modal.clear_chat.desc')}</p>
                         </div>
                         <div className="flex gap-3 w-full mt-4">
-                            <button onClick={() => setShowClearChatModal(false)} className="flex-1 py-3 bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-xl transition-colors">Cancel</button>
-                            <button onClick={executeClearChat} className="flex-1 py-3 bg-rose-500 hover:bg-rose-600 text-white font-semibold rounded-xl transition-colors">Clear chat</button>
+                            <button onClick={() => setShowClearChatModal(false)} className="flex-1 py-3 bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-xl transition-colors">{t('modal.common.cancel')}</button>
+                            <button onClick={executeClearChat} className="flex-1 py-3 bg-rose-500 hover:bg-rose-600 text-white font-semibold rounded-xl transition-colors">{t('modal.clear_chat.clear')}</button>
                         </div>
                     </div>
                 </div>
@@ -646,11 +655,11 @@ const ChatWindow = ({
             {/* CONTEXT MENU */}
             {contextMenu && (
                 <div ref={contextMenuRef} className="fixed z-50 bg-card border border-border shadow-2xl rounded-xl py-1 w-48 animate-in fade-in zoom-in-95 duration-150 ease-out origin-top-left" style={{ top: contextMenu.mouseY, left: contextMenu.mouseX }}>
-                    <button onClick={() => executeBatchDelete('me', [contextMenu.msg._id || contextMenu.msg.id])} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted text-sm font-medium text-foreground transition-colors"><Trash2 className="w-4 h-4 text-muted-foreground" /> Delete for me</button>
+                    <button onClick={() => executeBatchDelete('me', [contextMenu.msg._id || contextMenu.msg.id])} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted text-sm font-medium text-foreground transition-colors"><Trash2 className="w-4 h-4 text-muted-foreground" /> {t('chat_window.context_menu.delete_me')}</button>
                     {String(contextMenu.msg.senderId || contextMenu.msg.sender?._id || contextMenu.msg.sender) === String(currentUserId) && !contextMenu.msg.isDeletedForEveryone && isWithin30Mins(contextMenu.msg.createdAt || contextMenu.msg.timestamp) && (
-                        <button onClick={() => executeBatchDelete('everyone', [contextMenu.msg._id || contextMenu.msg.id])} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-rose-500/10 text-sm font-medium text-rose-500 transition-colors"><Ban className="w-4 h-4" /> Delete for everyone</button>
+                        <button onClick={() => executeBatchDelete('everyone', [contextMenu.msg._id || contextMenu.msg.id])} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-rose-500/10 text-sm font-medium text-rose-500 transition-colors"><Ban className="w-4 h-4" /> {t('chat_window.context_menu.delete_everyone')}</button>
                     )}
-                    <button onClick={() => enterSelectionMode(contextMenu.msg)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted text-sm font-medium transition-colors"><Check className="w-4 h-4 text-muted-foreground" /> Select</button>
+                    <button onClick={() => enterSelectionMode(contextMenu.msg)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted text-sm font-medium transition-colors"><Check className="w-4 h-4 text-muted-foreground" /> {t('chat_window.context_menu.select')}</button>
                 </div>
             )}
 
@@ -668,10 +677,10 @@ const ChatWindow = ({
                         <div className="h-14 sm:h-16 md:h-17.5 px-2 sm:px-4 bg-primary/10 flex items-center justify-between shrink-0 z-20 border-b border-border/40 animate-in fade-in slide-in-from-top-2 backdrop-blur-sm w-full">
                             <div className="flex items-center gap-2 sm:gap-4 text-foreground">
                                 <button onClick={resetContextState} className="p-1.5 sm:p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full"><X className="w-5 h-5" /></button>
-                                <span className="font-semibold text-base sm:text-lg">{selectedMessages.length} selected</span>
+                                <span className="font-semibold text-base sm:text-lg">{t('chat_window.top_bar.selected_count', { count: selectedMessages.length })}</span>
                             </div>
                             <div className="flex items-center gap-1 sm:gap-2">
-                                {canCopy && <button onClick={() => { navigator.clipboard.writeText(selectedMsgsData.map(m => m.text).join('\n')); resetContextState(); toast.success('Copied'); }} className="p-2 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors" title="Copy"><Copy className="w-4 h-4 sm:w-5 sm:h-5" /></button>}
+                                {canCopy && <button onClick={() => { navigator.clipboard.writeText(selectedMsgsData.map(m => m.text).join('\n')); resetContextState(); toast.success(t('toast.copied')); }} className="p-2 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors" title="Copy"><Copy className="w-4 h-4 sm:w-5 sm:h-5" /></button>}
                                 {canForward && <button onClick={() => setShowForwardDialog(true)} className="p-2 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors" title="Forward"><Forward className="w-4 h-4 sm:w-5 sm:h-5" /></button>}
                                 <button onClick={() => setShowDeleteModal(true)} className="p-2 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors" title="Delete"><Trash className="w-4 h-4 sm:w-5 sm:h-5 text-rose-500" /></button>
                             </div>
@@ -679,7 +688,7 @@ const ChatWindow = ({
                     ) : showSearchInput ? (
                         <div className="h-14 sm:h-16 md:h-17.5 px-1 sm:px-4 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center gap-1 sm:gap-2 shrink-0 z-20 sticky top-0 animate-in fade-in duration-200 w-full">
                             <button onClick={() => { setShowSearchInput(false); setChatSearchQuery(""); }} className="p-2 sm:p-3 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0"><ArrowLeft className="w-5 h-5" /></button>
-                            <input autoFocus type="text" value={chatSearchQuery} onChange={(e) => setChatSearchQuery(e.target.value)} placeholder="Search..." className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-[14px] sm:text-[15px] text-foreground placeholder:text-muted-foreground min-w-0 transition-all" />
+                            <input autoFocus type="text" value={chatSearchQuery} onChange={(e) => setChatSearchQuery(e.target.value)} placeholder={t('chat_window.top_bar.search')} className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-[14px] sm:text-[15px] text-foreground placeholder:text-muted-foreground min-w-0 transition-all" />
                             {chatSearchQuery && <button onClick={() => setChatSearchQuery("")} className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0"><X className="w-4 h-4 sm:w-5 sm:h-5" /></button>}
                         </div>
                     ) : (
@@ -702,7 +711,7 @@ const ChatWindow = ({
                                     <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5">
                                         {!isGroupChat && <span className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shrink-0 ${isOnline(activeChat._id || activeChat.id) ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></span>}
                                         <p className="text-[11px] md:text-[12px] text-muted-foreground font-medium truncate">
-                                            {isGroupChat ? 'Group Chat' : (isOnline(activeChat._id || activeChat.id) ? 'Online' : 'Offline')}
+                                            {isGroupChat ? t('chat_window.top_bar.group_chat') : (isOnline(activeChat._id || activeChat.id) ? t('chat_window.top_bar.online') : t('chat_window.top_bar.offline'))}
                                         </p>
                                     </div>
                                 </div>
@@ -719,8 +728,8 @@ const ChatWindow = ({
                                         </button>
                                         {showCallMenu && (
                                             <div className="absolute top-12 right-0 w-40 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-50 animate-in zoom-in-95 duration-200 ease-out origin-top-right">
-                                                <button onClick={(e) => { e.preventDefault(); initiateCall('video'); }} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium text-foreground transition-colors cursor-pointer"><Video className="w-4 h-4" /> Video call</button>
-                                                <button onClick={(e) => { e.preventDefault(); initiateCall('voice'); }} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium text-foreground transition-colors cursor-pointer"><Phone className="w-4 h-4" /> Voice call</button>
+                                                <button onClick={(e) => { e.preventDefault(); initiateCall('video'); }} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium text-foreground transition-colors cursor-pointer"><Video className="w-4 h-4" /> {t('chat_window.top_menu.video_call')}</button>
+                                                <button onClick={(e) => { e.preventDefault(); initiateCall('voice'); }} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium text-foreground transition-colors cursor-pointer"><Phone className="w-4 h-4" /> {t('chat_window.top_menu.voice_call')}</button>
                                             </div>
                                         )}
                                     </div>
@@ -730,10 +739,10 @@ const ChatWindow = ({
 
                                 {showTopMenu && (
                                     <div className="absolute top-12 right-0 w-44 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-30 animate-in zoom-in-95 duration-200 ease-out origin-top-right" onClick={e => e.stopPropagation()}>
-                                        <button onClick={() => handleChatAction('media')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><ImageIcon className="w-4 h-4 text-blue-500" /> Media</button>
-                                        <button onClick={() => handleChatAction('docs')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><FileText className="w-4 h-4 text-amber-500" /> Docs</button>
-                                        <button onClick={() => handleChatAction('links')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><LinkIcon className="w-4 h-4 text-emerald-500" /> Links</button>
-                                        <button onClick={() => setShowClearChatModal(true)} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-rose-500/10 rounded-lg text-sm font-medium text-rose-500 transition-colors"><Trash className="w-4 h-4" /> Clear chat</button>
+                                        <button onClick={() => handleChatAction('media')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><ImageIcon className="w-4 h-4 text-blue-500" /> {t('chat_window.top_menu.media')}</button>
+                                        <button onClick={() => handleChatAction('docs')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><FileText className="w-4 h-4 text-amber-500" /> {t('chat_window.top_menu.docs')}</button>
+                                        <button onClick={() => handleChatAction('links')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><LinkIcon className="w-4 h-4 text-emerald-500" /> {t('chat_window.top_menu.links')}</button>
+                                        <button onClick={() => setShowClearChatModal(true)} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-rose-500/10 rounded-lg text-sm font-medium text-rose-500 transition-colors"><Trash className="w-4 h-4" /> {t('chat_window.top_menu.clear_chat')}</button>
                                     </div>
                                 )}
                             </div>
@@ -744,18 +753,18 @@ const ChatWindow = ({
                     <div className={`w-full flex items-center justify-center text-amber-600 dark:text-amber-500 shrink-0 relative z-10 transition-all duration-300 md:bg-amber-500/10 md:dark:bg-amber-500/5 md:border-b md:border-amber-500/20 md:backdrop-blur-md md:shadow-sm ${showMobileNotice ? 'bg-amber-500/10 dark:bg-amber-500/5 border-b border-amber-500/20 backdrop-blur-md shadow-sm py-1.5' : 'bg-transparent py-1'}`}>
                         <div className="hidden md:flex items-center gap-2.5 py-1 px-4">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
-                            <span className="text-[12px] font-semibold tracking-wide">These messages will be automatically deleted after 7 days for privacy.</span>
+                            <span className="text-[12px] font-semibold tracking-wide">{t('chat_window.privacy.desktop')}</span>
                         </div>
                         <div className="flex md:hidden w-full items-center justify-center transition-all duration-300" style={{ height: '28px' }}>
                             {showMobileNotice ? (
                                 <div className="flex items-center gap-2 px-3 animate-in fade-in zoom-in-95 duration-200">
                                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
-                                    <span className="text-[11px] leading-tight font-semibold text-center">Messages auto-delete after 7 days.</span>
+                                    <span className="text-[11px] leading-tight font-semibold text-center">{t('chat_window.privacy.mobile_notice')}</span>
                                 </div>
                             ) : (
                                 <button onClick={handleShowMobileNotice} className="flex items-center gap-1.5 px-3 py-1 bg-background/80 dark:bg-[#13151A]/80 backdrop-blur-md rounded-full shadow-sm border border-border/50 text-muted-foreground hover:text-foreground transition-all animate-in fade-in zoom-in duration-300">
                                     <Info className="w-3.5 h-3.5" />
-                                    <span className="text-[10px] font-bold uppercase tracking-wider">Privacy</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider">{t('chat_window.privacy.label')}</span>
                                 </button>
                             )}
                         </div>
@@ -776,13 +785,13 @@ const ChatWindow = ({
                                     <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 shadow-inner border border-primary/20 backdrop-blur-sm">
                                         <MessageSquare className="w-10 h-10 text-primary" />
                                     </div>
-                                    <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2 tracking-tight">Say Hello to {activeChat.name.split(' ')[0]}!</h3>
+                                    <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2 tracking-tight">{t('chat_window.feed.say_hello', { name: activeChat.name.split(' ')[0] })}</h3>
                                     <p className="text-muted-foreground text-[14px] sm:text-[15px] max-w-70 sm:max-w-sm mb-8 leading-relaxed">
-                                        Send messages, share photos, or start a secure {isGroupChat ? 'group chat' : 'voice call'}.
+                                        {t('chat_window.feed.start_secure', { type: isGroupChat ? t('chat_window.feed.type_group_chat') : t('chat_window.feed.type_voice_call') })}
                                     </p>
                                     <div className="bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[12px] px-4 py-2.5 rounded-xl flex flex-col sm:flex-row items-center gap-2.5 max-w-sm border border-amber-500/20 shadow-sm backdrop-blur-md mx-auto">
                                         <Lock className="w-4 h-4 shrink-0" />
-                                        <span className="text-center sm:text-left leading-tight">Messages are end-to-end encrypted. No one outside of this chat can read or listen to them.</span>
+                                        <span className="text-center sm:text-left leading-tight">{t('chat_window.feed.e2e')}</span>
                                     </div>
                                 </div>
                             ) : (
@@ -812,14 +821,14 @@ const ChatWindow = ({
                                             <div className={`flex flex-col flex-1 px-2 sm:px-6 pointer-events-auto ${isMe ? 'items-end' : 'items-start'}`}>
                                                 {isGroupChat && !isMe && !msg.isDeletedForEveryone && (
                                                     <span className="text-[10.5px] text-[#6B66FF] font-bold mb-0.5 ml-1 drop-shadow-sm tracking-wide">
-                                                        {msg.sender?.name || "Member"}
+                                                        {msg.sender?.name || t('chat_window.message.member')}
                                                     </span>
                                                 )}
 
                                                 <div className={`relative max-w-[85%] sm:max-w-[75%] lg:max-w-[60%] px-3 py-2 shadow-sm select-none overflow-hidden ${isMe ? 'bg-[#6B66FF] text-white rounded-2xl rounded-tr-sm shadow-[0_4px_14px_-6px_rgba(var(--primary),0.3)]' : 'bg-card dark:bg-[#1C1F26] text-foreground rounded-2xl rounded-tl-sm border border-border/50 shadow-sm'}`}>
                                                     {msg.isDeletedForEveryone ? (
                                                         <div className={`flex items-center gap-2 italic text-[14.5px] py-1 ${isMe ? 'text-white/80' : 'text-muted-foreground/80'}`}>
-                                                            <Ban className="w-4 h-4" /> This message was deleted
+                                                            <Ban className="w-4 h-4" /> {t('chat_window.message.deleted')}
                                                         </div>
                                                     ) : (
                                                         <>
@@ -878,7 +887,7 @@ const ChatWindow = ({
                                                                     )}
                                                                     <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0"><FileCheck className="w-5 h-5 text-blue-500" /></div>
                                                                     <div className="flex-1 min-w-0">
-                                                                        <span className="text-[13.5px] font-semibold truncate block">{msg.mediaUrl.split('/').pop().split('?')[0] || "Document File"}</span>
+                                                                        <span className="text-[13.5px] font-semibold truncate block">{msg.mediaUrl.split('/').pop().split('?')[0] || t('chat_window.message.document_file')}</span>
                                                                         <p className="text-[11px] opacity-70 mt-0.5">{formatBytes(msg.fileSize || 0)} • {msg.mediaUrl.split('.').pop().split('?')[0].toUpperCase()}</p>
                                                                     </div>
                                                                 </div>
@@ -914,9 +923,9 @@ const ChatWindow = ({
                                 <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={(e) => handleMediaUpload(e, { compress: true, maxCount: 1, maxSizeCombinedMb: 50 })} />
                                 {showAttachMenu && (
                                     <div className="absolute bottom-full mb-2 left-0 w-48 bg-card border border-border shadow-2xl rounded-2xl p-1.5 flex flex-col gap-1 z-30 animate-in zoom-in-95 duration-200 ease-out origin-bottom-left">
-                                        <button type="button" onClick={() => { setShowAttachMenu(false); cameraInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><div className="w-8 h-8 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center"><Camera className="w-4 h-4" /></div> Camera</button>
-                                        <button type="button" onClick={() => { setShowAttachMenu(false); fileInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><ImageIcon className="w-4 h-4" /></div> Photos</button>
-                                        <button type="button" onClick={() => { setShowAttachMenu(false); docInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center"><FileCheck className="w-4 h-4" /></div> Document</button>
+                                        <button type="button" onClick={() => { setShowAttachMenu(false); cameraInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><div className="w-8 h-8 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center"><Camera className="w-4 h-4" /></div> {t('chat_window.input.camera')}</button>
+                                        <button type="button" onClick={() => { setShowAttachMenu(false); fileInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><ImageIcon className="w-4 h-4" /></div> {t('chat_window.input.photos')}</button>
+                                        <button type="button" onClick={() => { setShowAttachMenu(false); docInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center"><FileCheck className="w-4 h-4" /></div> {t('chat_window.input.document')}</button>
                                     </div>
                                 )}
                                 <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} disabled={isUploading} className="p-2.5 sm:p-3 text-muted-foreground hover:bg-muted rounded-full shrink-0 disabled:opacity-50 transition-colors">
@@ -924,7 +933,7 @@ const ChatWindow = ({
                                 </button>
                             </div>
                             <div className="flex-1 bg-muted/50 dark:bg-[#1A1D24] rounded-2xl flex items-center pr-1.5 focus-within:ring-1 focus-within:ring-primary/30 transition-all min-w-0 w-full">
-                                <textarea value={newMessage} ref={inputRef} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 w-full max-h-28 min-h-11 bg-transparent border-none focus:outline-none focus:ring-0 resize-none py-3 px-3 text-[14.5px] sm:text-[15px] text-foreground placeholder:text-muted-foreground/70 custom-scrollbar transition-all" rows="1" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} />
+                                <textarea value={newMessage} ref={inputRef} onChange={(e) => setNewMessage(e.target.value)} placeholder={t('chat_window.input.placeholder')} className="flex-1 w-full max-h-28 min-h-11 bg-transparent border-none focus:outline-none focus:ring-0 resize-none py-3 px-3 text-[14.5px] sm:text-[15px] text-foreground placeholder:text-muted-foreground/70 custom-scrollbar transition-all" rows="1" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} />
                                 <button type="submit" disabled={!newMessage.trim() && !isUploading} className={`p-2 rounded-full transition-all shrink-0 ${newMessage.trim() ? 'bg-[#6B66FF] text-white hover:bg-[#5A55E5] scale-100' : 'bg-transparent text-muted-foreground scale-95'}`}>
                                     <Send className="w-4.5 h-4.5 sm:w-5 sm:h-5" style={{ marginLeft: newMessage.trim() ? '2px' : '0' }} />
                                 </button>
@@ -939,9 +948,9 @@ const ChatWindow = ({
                         <div className="h-16 md:h-17.5 px-3 sm:px-5 border-b border-border/40 flex items-center gap-3 md:gap-4 shrink-0 bg-card/50">
                             <button onClick={() => setSharedContentView(null)} className="p-2 -ml-1 text-muted-foreground hover:bg-muted rounded-full transition-colors"><ArrowLeft className="w-5 h-5" /></button>
                             <h2 className="text-lg font-bold text-foreground capitalize flex items-center gap-2">
-                                {sharedContentView === 'media' && <><ImageIcon className="w-5 h-5 text-blue-500" /> Shared Media</>}
-                                {sharedContentView === 'docs' && <><FileText className="w-5 h-5 text-amber-500" /> Shared Documents</>}
-                                {sharedContentView === 'links' && <><LinkIcon className="w-5 h-5 text-emerald-500" /> Shared Links</>}
+                                {sharedContentView === 'media' && <><ImageIcon className="w-5 h-5 text-blue-500" /> {t('chat_window.shared.media')}</>}
+                                {sharedContentView === 'docs' && <><FileText className="w-5 h-5 text-amber-500" /> {t('chat_window.shared.docs')}</>}
+                                {sharedContentView === 'links' && <><LinkIcon className="w-5 h-5 text-emerald-500" /> {t('chat_window.shared.links')}</>}
                             </h2>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
@@ -952,8 +961,8 @@ const ChatWindow = ({
                                         {sharedContentView === 'docs' && <FileText className="w-8 h-8 opacity-50" />}
                                         {sharedContentView === 'links' && <LinkIcon className="w-8 h-8 opacity-50" />}
                                     </div>
-                                    <p className="text-sm font-semibold">No shared {sharedContentView} yet.</p>
-                                    <p className="text-xs opacity-70 mt-1 max-w-xs">Files shared in this chat will appear here.</p>
+                                    <p className="text-sm font-semibold">{getSharedContentPlaceholder()}</p>
+                                    <p className="text-xs opacity-70 mt-1 max-w-xs">{t('chat_window.shared.will_appear')}</p>
                                 </div>
                             ) : (
                                 sharedContentView === 'media' ? (
@@ -972,7 +981,7 @@ const ChatWindow = ({
                                                 <div key={msg._id} className="flex items-center gap-4 bg-muted/40 p-3.5 rounded-xl border border-border/50 shadow-sm transition-all hover:bg-muted/60">
                                                     <div className="w-11 h-11 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0 border border-amber-500/20"><FileText className="w-5 h-5" /></div>
                                                     <div className="flex-1 min-w-0 cursor-pointer hover:underline" onClick={() => downloadToLocal(msg.mediaUrl)}>
-                                                        <span className="text-[13.5px] font-semibold truncate block">{msg.mediaUrl.split('/').pop().split('?')[0] || "Shared Document"}</span>
+                                                        <span className="text-[13.5px] font-semibold truncate block">{msg.mediaUrl.split('/').pop().split('?')[0] || t('chat_window.shared.shared_doc')}</span>
                                                         <p className="text-[11px] opacity-70 mt-0.5">{formatBytes(msg.fileSize)} • {msg.mediaUrl.split('.').pop().toUpperCase()}</p>
                                                     </div>
                                                     <button onClick={() => downloadToLocal(msg.mediaUrl)} className="p-2.5 text-muted-foreground hover:bg-muted rounded-full shrink-0 transition-colors"><Download className="w-4 h-4" /></button>

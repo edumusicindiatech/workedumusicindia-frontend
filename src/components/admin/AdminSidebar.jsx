@@ -52,7 +52,7 @@ const AdminSidebar = () => {
     const { user, token } = useSelector((state) => state.auth);
     const theme = useSelector((state) => state.theme?.mode || 'light');
 
-    const adminName = user?.name || "Admin User";
+    const adminName = user?.name || t('sidebar.admin_fallback_name');
     const adminEmail = user?.email || "edumusicindia.tech@gmail.com";
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -108,13 +108,15 @@ const AdminSidebar = () => {
         if (globalIncomingCall && !activeCall) {
             const timer = setTimeout(() => {
                 socket.emit('end_call', { to: globalIncomingCall.from });
+
+                toast.error(t('toast.missed_call', { name: globalIncomingCall.callerName }));
+
                 setGlobalIncomingCall(null);
                 pauseAudio('incoming');
-                toast.error(`Missed call from ${globalIncomingCall.callerName}`);
             }, 60000);
             return () => clearTimeout(timer);
         }
-    }, [globalIncomingCall, activeCall]);
+    }, [globalIncomingCall, activeCall, t]);
 
     useEffect(() => {
         if (activeCall && !isCallAccepted && callPeer && remoteCallStatus === 'active') {
@@ -154,18 +156,18 @@ const AdminSidebar = () => {
             return { stream, actualType: requestedType };
         } catch (e) {
             if (requestedType === 'video') {
-                toast.error("Camera access failed. Switching to voice call.", { id: 'cam-error' });
+                toast.error(t('toast.camera_access_failed'), { id: 'cam-error' });
                 try {
                     const audioOnlyStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                     localStreamRef.current = audioOnlyStream;
                     setLocalStreamState(audioOnlyStream);
                     return { stream: audioOnlyStream, actualType: 'voice' };
                 } catch (audioErr) {
-                    toast.error("Microphone access denied.");
+                    toast.error(t('toast.mic_denied'));
                     return { stream: null, actualType: null };
                 }
             } else {
-                toast.error("Microphone access denied.");
+                toast.error(t('toast.mic_denied'));
                 return { stream: null, actualType: null };
             }
         }
@@ -195,7 +197,7 @@ const AdminSidebar = () => {
             setLocalStreamState(newLocalStream);
             setFacingMode(newMode);
         } catch (err) {
-            toast.error("Could not switch camera");
+            toast.error(t('toast.camera_switch_failed'));
         }
     };
 
@@ -317,7 +319,7 @@ const AdminSidebar = () => {
             setRemoteCallStatus('active');
             socket.emit('renegotiate', { to: held.peer._id || held.peer.id, signal: { type: 'CUSTOM_EVENT', event: 'call_resumed' } });
             heldCallRef.current = null;
-            toast.success(`Resumed call with ${held.peer.name}`);
+            toast.success(t('toast.resumed_call', { name: held.peer.name }));
         } else {
             cleanupCall();
         }
@@ -360,7 +362,7 @@ const AdminSidebar = () => {
         const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
         socket.emit('video_upgrade_request', { to });
         setVideoUpgradeStatus('requesting');
-        toast("Requesting video switch...", { icon: '⏳' });
+        toast(t('toast.requesting_video'), { icon: '⏳' });
     };
 
     const performVideoUpgrade = async () => {
@@ -379,7 +381,7 @@ const AdminSidebar = () => {
                 socket.emit('renegotiate', { to, signal: offer });
             }
             setCurrentCallType('video');
-        } catch (error) { toast.error("Could not access camera."); }
+        } catch (error) { toast.error(t('toast.camera_access_error')); }
     };
 
     const handleAcceptVideo = async () => {
@@ -409,7 +411,7 @@ const AdminSidebar = () => {
             if (!pathnameRef.current.includes('/chat')) {
                 setUnreadChatCount(prev => prev + 1);
                 playAudio('notification');
-                toast.success(`New chat message received`, { icon: '💬', id: 'admin-new-chat' });
+                toast.success(t('toast.new_chat'), { icon: '💬', id: 'admin-new-chat' });
             }
         };
 
@@ -431,7 +433,7 @@ const AdminSidebar = () => {
             if (pcRef.current) {
                 await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                 await processIceQueue(pcRef.current);
-                toast.success("Call connected", { icon: '📞' });
+                toast.success(t('toast.call_connected'), { icon: '📞' });
             }
         };
 
@@ -456,7 +458,7 @@ const AdminSidebar = () => {
                 } else if (signal.event === 'call_resumed') {
                     setRemoteCallStatus('active');
                 } else if (signal.event === 'call_rejected_busy') {
-                    toast.error("User is busy on another call.");
+                    toast.error(t('toast.user_busy'));
                     cleanupCall();
                 } else if (signal.event === 'explicit_end') {
                     const senderId = signal.from;
@@ -465,7 +467,7 @@ const AdminSidebar = () => {
 
                     if (String(senderId) === String(activeId)) {
                         if (heldCallRef.current) {
-                            toast("Current call ended. Restoring held call...");
+                            toast(t('toast.call_ended_restoring'));
                             endCurrentCall(true);
                         } else {
                             cleanupCall();
@@ -473,7 +475,7 @@ const AdminSidebar = () => {
                             playAudio('hangup');
                         }
                     } else if (String(senderId) === String(heldId)) {
-                        toast(`${heldCallRef.current.peer.name} ended the held call.`);
+                        toast(t('toast.ended_held_call', { name: heldCallRef.current.peer.name }));
                         if (heldCallRef.current.pc) heldCallRef.current.pc.close();
                         heldCallRef.current = null;
                     }
@@ -537,7 +539,6 @@ const AdminSidebar = () => {
             );
         };
 
-        // NEW: Extracted anonymous functions
         const handleCallEnded = () => {
             if (!heldCallRef.current) {
                 cleanupCall();
@@ -547,8 +548,8 @@ const AdminSidebar = () => {
         };
 
         const handleVideoUpgradeRequest = () => { setVideoUpgradeStatus('receiving_request'); playAudio('notification'); };
-        const handleVideoUpgradeRejected = () => { setVideoUpgradeStatus('idle'); toast.error("Video call request rejected"); };
-        const handleVideoUpgradeAccepted = async () => { setVideoUpgradeStatus('idle'); toast.success("Video call request accepted"); await performVideoUpgrade(); };
+        const handleVideoUpgradeRejected = () => { setVideoUpgradeStatus('idle'); toast.error(t('toast.video_rejected')); };
+        const handleVideoUpgradeAccepted = async () => { setVideoUpgradeStatus('idle'); toast.success(t('toast.video_accepted')); await performVideoUpgrade(); };
 
         socket.on("receive_message", handleIncomingChat);
         socket.on("incoming_call", handleIncomingCall);
@@ -633,16 +634,16 @@ const AdminSidebar = () => {
                     <NavLink to="/admin/dashboard" className={desktopNavClasses} title={t('sidebar.dashboard')}><LayoutDashboard className="w-4.5 h-4.5" /> {t('sidebar.dashboard')}</NavLink>
                     <NavLink to="/admin/employees" className={desktopNavClasses} title={t('sidebar.roster')}><Users className="w-4.5 h-4.5" /> {t('sidebar.roster')}</NavLink>
                     <NavLink to="/admin/attendance" className={desktopNavClasses} title={t('sidebar.attendance')}><Radio className="w-4.5 h-4.5" /> {t('sidebar.attendance')}</NavLink>
-                    <NavLink to="/admin/learning-hub" className={desktopNavClasses} title={t('sidebar.learning_hub') || 'Training Vault'}><BookOpen className="w-4.5 h-4.5" /> {t('sidebar.learning_hub') || 'Learn'}</NavLink>
+                    <NavLink to="/admin/learning-hub" className={desktopNavClasses} title={t('sidebar.learning_hub')}><BookOpen className="w-4.5 h-4.5" /> {t('sidebar.learning_hub')}</NavLink>
                     <NavLink to="/admin/progress" className={desktopNavClasses} title={t('sidebar.progress')}><TrendingUp className="w-4.5 h-4.5" /> {t('sidebar.progress')}</NavLink>
-                    <NavLink to="/admin/leaderboard" className={desktopNavClasses} title={t('sidebar.leaderboard') || 'Leaderboard'}><Trophy className="w-4.5 h-4.5" /> {t('sidebar.leaderboard') || 'Leaderboard'}</NavLink>
+                    <NavLink to="/admin/leaderboard" className={desktopNavClasses} title={t('sidebar.leaderboard')}><Trophy className="w-4.5 h-4.5" /> {t('sidebar.leaderboard')}</NavLink>
                     <NavLink to="/admin/reports" className={desktopNavClasses} title={t('sidebar.reports')}><ClipboardCheck className="w-4.5 h-4.5" /> {t('sidebar.reports')}</NavLink>
-                    <NavLink to="/admin/media" className={desktopNavClasses} title={t('sidebar.media') || 'Media Gallery'}>
+                    <NavLink to="/admin/media" className={desktopNavClasses} title={t('sidebar.media_gallery')}>
                         <div className="relative flex items-center justify-center">
                             <Film className="w-4.5 h-4.5" />
                             {pendingMediaCount > 0 && <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-amber-500 shadow-sm animate-pulse border-2 border-card" />}
                         </div>
-                        {t('sidebar.media') || 'Media'}
+                        {t('sidebar.media')}
                     </NavLink>
                     <NavLink to="/admin/leave-requests" className={desktopNavClasses} title={t('sidebar.leave')}><CalendarDays className="w-4.5 h-4.5" /> {t('sidebar.leave')}</NavLink>
                     <NavLink to="/admin/notifications" className={desktopNavClasses} title={t('sidebar.alerts')}>
@@ -652,19 +653,19 @@ const AdminSidebar = () => {
                         </div>
                         {t('sidebar.alerts')}
                     </NavLink>
-                    <NavLink to="/admin/chat" className={desktopNavClasses} title="Chat Hub">
+                    <NavLink to="/admin/chat" className={desktopNavClasses} title={t('sidebar.chat_hub')}>
                         <div className="relative flex items-center justify-center">
                             <MessageCircle className="w-4.5 h-4.5" />
                             {unreadChatCount > 0 && <span className="absolute -top-1.5 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white shadow-sm border border-card animate-in zoom-in duration-300">{unreadChatCount > 99 ? '99+' : unreadChatCount}</span>}
                         </div>
-                        Chat Hub
+                        {t('sidebar.chat_hub')}
                     </NavLink>
                     <NavLink to="/admin/communication" className={desktopNavClasses} title={t('sidebar.broadcast')}><Megaphone className="w-4.5 h-4.5" /> {t('sidebar.broadcast')}</NavLink>
                 </div>
 
                 <div className="flex items-center justify-end gap-2 shrink-0 border-l border-border pl-4 ml-2">
                     <button onClick={() => dispatch(toggleTheme())} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title={t('sidebar.theme')}>{theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-500" />}</button>
-                    <button onClick={() => navigate('/admin/profile')} className="p-1 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors flex items-center justify-center w-9 h-9 overflow-hidden border border-border/50" title={t('sidebar.profile') || 'My Profile'}>
+                    <button onClick={() => navigate('/admin/profile')} className="p-1 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors flex items-center justify-center w-9 h-9 overflow-hidden border border-border/50" title={t('sidebar.profile')}>
                         {user?.profilePicture ? <img src={user.profilePicture} alt="Admin" className="w-full h-full object-cover rounded-full" /> : <UserCircle className="w-5 h-5" />}
                     </button>
                     <button onClick={() => setIsSettingsModalOpen(true)} className="p-2 text-muted-foreground md:cursor-pointer hover:text-foreground hover:bg-muted rounded-full transition-colors" title={t('sidebar.settings')}><Settings className="w-5 h-5" /></button>
@@ -690,11 +691,11 @@ const AdminSidebar = () => {
                                 <p className="text-sm font-bold text-foreground truncate">{adminName}</p>
                                 <p className="text-[11px] text-muted-foreground truncate">{adminEmail}</p>
                             </div>
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/learning-hub'); }}><BookOpen className="w-4 h-4 text-primary" /> {t('sidebar.learning_hub') || 'Training Vault'}</button>
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leaderboard'); }}><Trophy className="w-4 h-4 text-primary" /> {t('sidebar.leaderboard') || 'Leaderboard'}</button>
+                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/learning-hub'); }}><BookOpen className="w-4 h-4 text-primary" /> {t('sidebar.learning_hub')}</button>
+                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leaderboard'); }}><Trophy className="w-4 h-4 text-primary" /> {t('sidebar.leaderboard')}</button>
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/reports'); }}><ClipboardCheck className="w-4 h-4 text-primary" /> {t('sidebar.reports')}</button>
                             <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/media'); }}>
-                                <div className="flex items-center gap-3"><Film className="w-4 h-4 text-primary" /> {t('sidebar.media') || 'Media Gallery'}</div>
+                                <div className="flex items-center gap-3"><Film className="w-4 h-4 text-primary" /> {t('sidebar.media_gallery')}</div>
                                 {pendingMediaCount > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm animate-pulse" />}
                             </button>
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leave-requests'); }}><CalendarDays className="w-4 h-4 text-primary" /> {t('sidebar.leave')}</button>
@@ -703,7 +704,7 @@ const AdminSidebar = () => {
                                 <div className="flex items-center gap-3">{theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}<span>{theme === 'dark' ? t('sidebar.light_mode') : t('sidebar.dark_mode')}</span></div>
                             </button>
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/profile'); }}>
-                                {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-4 h-4 rounded-full object-cover" /> : <UserCircle className="w-4 h-4 text-primary" />}{t('sidebar.profile') || 'My Profile'}
+                                {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-4 h-4 rounded-full object-cover" /> : <UserCircle className="w-4 h-4 text-primary" />}{t('sidebar.profile')}
                             </button>
                             <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); setIsSettingsModalOpen(true); }}><Settings className="w-4 h-4 text-primary" /> {t('sidebar.settings')}</button>
                             <div className="my-1 border-t border-border" />
@@ -748,7 +749,7 @@ const AdminSidebar = () => {
                                 {globalIncomingCall.callerName}
                             </h2>
                             <p className="text-sm text-muted-foreground mt-1 capitalize">
-                                Incoming {globalIncomingCall.callType || 'voice'} call...
+                                {t('sidebar.incoming_call', { type: globalIncomingCall.callType || 'voice' })}
                             </p>
                         </div>
                         <div className="flex items-center gap-6 w-full justify-center mt-2">

@@ -4,6 +4,7 @@ import api from "../../api/axios";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { compressImage } from "../../utils/chatUtils";
+import { useTranslation } from "react-i18next";
 
 const ChatSidebar = ({
     currentUserId,
@@ -15,6 +16,7 @@ const ChatSidebar = ({
     setShowAddMemberModal,
     setShowLeaveGroupModal
 }) => {
+    const { t } = useTranslation();
     const [isEditingGroupName, setIsEditingGroupName] = useState(false);
     const [editGroupName, setEditGroupName] = useState("");
     const [memberMenuOpen, setMemberMenuOpen] = useState(null);
@@ -35,7 +37,7 @@ const ChatSidebar = ({
         if (!editGroupName.trim() || editGroupName === activeChat.name) {
             return setIsEditingGroupName(false);
         }
-        const tid = toast.loading("Updating group name...");
+        const tid = toast.loading(t('toast.updating_group_name'));
         try {
             await api.put('/group/update', {
                 groupId: activeChat._id,
@@ -47,9 +49,9 @@ const ChatSidebar = ({
             setConversations(prev => prev.map(c => String(c._id) === String(activeChat._id) ? { ...c, name: editGroupName } : c));
 
             setIsEditingGroupName(false);
-            toast.success("Group name updated", { id: tid });
+            toast.success(t('toast.group_name_updated'), { id: tid });
         } catch (e) {
-            toast.error("Failed to update group name", { id: tid });
+            toast.error(t('toast.failed_update_group_name'), { id: tid });
         }
     };
 
@@ -57,7 +59,7 @@ const ChatSidebar = ({
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const tid = toast.loading("Uploading new group icon...");
+        const tid = toast.loading(t('toast.uploading_group_icon'));
         try {
             const compressedFile = await compressImage(file, 600, 0.8);
             let mimeType = compressedFile.type || 'image/jpeg';
@@ -82,9 +84,9 @@ const ChatSidebar = ({
             setActiveChat(prev => ({ ...prev, groupIcon: newIconUrl }));
             setConversations(prev => prev.map(c => String(c._id) === String(activeChat._id) ? { ...c, groupIcon: newIconUrl } : c));
 
-            toast.success("Group icon updated", { id: tid });
+            toast.success(t('toast.group_icon_updated'), { id: tid });
         } catch (e) {
-            toast.error("Failed to upload group icon", { id: tid });
+            toast.error(t('toast.failed_upload_group_icon'), { id: tid });
         } finally {
             if (groupIconInputRef.current) groupIconInputRef.current.value = null;
         }
@@ -92,7 +94,7 @@ const ChatSidebar = ({
 
     const handleRemoveGroupIcon = async (e) => {
         if (e) e.stopPropagation();
-        const tid = toast.loading("Removing group icon...");
+        const tid = toast.loading(t('toast.removing_group_icon'));
         try {
             await api.put('/group/update', {
                 groupId: activeChat._id,
@@ -103,9 +105,9 @@ const ChatSidebar = ({
             setActiveChat(prev => ({ ...prev, groupIcon: "" }));
             setConversations(prev => prev.map(c => String(c._id) === String(activeChat._id) ? { ...c, groupIcon: "" } : c));
 
-            toast.success("Group icon removed", { id: tid });
+            toast.success(t('toast.group_icon_removed'), { id: tid });
         } catch (err) {
-            toast.error("Failed to remove group icon", { id: tid });
+            toast.error(t('toast.failed_remove_group_icon'), { id: tid });
         }
     };
 
@@ -118,15 +120,15 @@ const ChatSidebar = ({
             else if (action === 'demote') endpoint = '/group/demote';
 
             await api.put(endpoint, { groupId: activeChat._id, requesterId: currentUserId, targetUserId });
-            toast.success("Action completed successfully");
-        } catch (e) { toast.error("Failed to perform action"); }
+            toast.success(t('toast.action_completed'));
+        } catch (e) { toast.error(t('toast.action_failed')); }
     };
 
     return (
         <div className={`absolute right-0 top-0 h-full w-full sm:w-[320px] lg:w-87.5 bg-card border-l border-border/50 transform transition-transform duration-300 ease-out flex flex-col z-40 ${showProfileInfo ? 'translate-x-0 shadow-2xl' : 'translate-x-full'}`}>
             <div className="h-16 md:h-17.5 px-3 md:px-4 flex items-center gap-3 border-b border-border/40 shrink-0">
                 <button onClick={() => setShowProfileInfo(false)} className="p-2 -ml-1 text-muted-foreground hover:bg-muted rounded-full transition-colors"><X className="w-5 h-5" /></button>
-                <h2 className="text-lg font-semibold text-foreground">{isGroupChat ? 'Group Info' : 'Contact Info'}</h2>
+                <h2 className="text-lg font-semibold text-foreground">{isGroupChat ? t('chat_sidebar.group_info') : t('chat_sidebar.contact_info')}</h2>
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center pt-8 space-y-6 pb-20">
@@ -147,7 +149,7 @@ const ChatSidebar = ({
                             <button
                                 onClick={(e) => { e.stopPropagation(); groupIconInputRef.current?.click(); }}
                                 className="w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex flex-col items-center justify-center text-white transition-colors"
-                                title="Change Photo"
+                                title={t('chat_sidebar.change_photo')}
                             >
                                 <Camera className="w-5 h-5" />
                             </button>
@@ -156,7 +158,7 @@ const ChatSidebar = ({
                                 <button
                                     onClick={handleRemoveGroupIcon}
                                     className="w-12 h-12 bg-rose-500/20 hover:bg-rose-500/40 rounded-full flex flex-col items-center justify-center text-rose-500 hover:text-rose-100 transition-colors"
-                                    title="Remove Photo"
+                                    title={t('chat_sidebar.remove_photo')}
                                 >
                                     <Trash className="w-5 h-5" />
                                 </button>
@@ -198,20 +200,20 @@ const ChatSidebar = ({
                     {!isGroupChat && (
                         <>
                             <p className="text-[15px] text-muted-foreground font-medium mt-1 truncate">{activeChat.email}</p>
-                            <p className="text-[14px] text-muted-foreground mt-0.5">{activeChat.role || 'Employee'}</p>
+                            <p className="text-[14px] text-muted-foreground mt-0.5">{activeChat.role || t('chat_sidebar.employee_role')}</p>
                         </>
                     )}
-                    {isGroupChat && <p className="text-[14px] text-muted-foreground mt-1">{activeChat.members?.length || 0} Members</p>}
+                    {isGroupChat && <p className="text-[14px] text-muted-foreground mt-1">{t('chat_sidebar.members_count', { count: activeChat.members?.length || 0 })}</p>}
                 </div>
 
                 {/* Group Members List */}
                 {isGroupChat && (
                     <div className="w-full px-2">
                         <div className="flex items-center justify-between px-4 py-2 border-b border-border/40 mb-2">
-                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Participants</span>
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('chat_sidebar.participants')}</span>
                             {(myRoleInGroup() === 'admin' || myRoleInGroup() === 'creator') && (
                                 <button onClick={() => setShowAddMemberModal(true)} className="text-xs font-bold text-primary hover:text-primary/80 transition-colors bg-primary/10 px-2 py-1 rounded-md">
-                                    + Add Member
+                                    {t('chat_sidebar.add_member')}
                                 </button>
                             )}
                         </div>
@@ -232,14 +234,14 @@ const ChatSidebar = ({
                                             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">{mUser.name?.charAt(0)}</div>
                                         )}
                                         <div className="flex flex-col min-w-0">
-                                            <span className="text-sm font-semibold text-foreground truncate">{isMeInGroup ? "You" : mUser.name}</span>
+                                            <span className="text-sm font-semibold text-foreground truncate">{isMeInGroup ? t('chat_sidebar.you') : mUser.name}</span>
                                             <span className="text-xs text-muted-foreground truncate">{mUser.email}</span>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center gap-2">
-                                        {isCreator && <span className="text-[10px] font-bold bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full flex items-center gap-1 border border-amber-500/20"><ShieldAlert className="w-3 h-3" /> Creator</span>}
-                                        {isAdmin && !isCreator && <span className="text-[10px] font-bold bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full flex items-center gap-1 border border-blue-500/20"><ShieldCheck className="w-3 h-3" /> Admin</span>}
+                                        {isCreator && <span className="text-[10px] font-bold bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full flex items-center gap-1 border border-amber-500/20"><ShieldAlert className="w-3 h-3" /> {t('chat_sidebar.role_creator')}</span>}
+                                        {isAdmin && !isCreator && <span className="text-[10px] font-bold bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full flex items-center gap-1 border border-blue-500/20"><ShieldCheck className="w-3 h-3" /> {t('chat_sidebar.role_admin')}</span>}
 
                                         {!isMeInGroup && (myRoleInGroup() === 'admin' || myRoleInGroup() === 'creator') && (
                                             <div className="relative">
@@ -248,9 +250,9 @@ const ChatSidebar = ({
                                                 </button>
                                                 {memberMenuOpen === mUser._id && (
                                                     <div className="member-dropdown absolute right-0 top-8 w-40 bg-card border border-border shadow-2xl rounded-xl py-1 z-50 animate-in zoom-in-95 duration-200 ease-out origin-top-right">
-                                                        {myRoleInGroup() === 'creator' && isAdmin && !isCreator && <button onClick={() => handleGroupAction('demote', mUser._id)} className="w-full text-left px-3 py-2 text-sm hover:bg-muted text-foreground font-medium transition-colors">Dismiss as admin</button>}
-                                                        {(myRoleInGroup() === 'creator' || myRoleInGroup() === 'admin') && !isAdmin && !isCreator && <button onClick={() => handleGroupAction('promote', mUser._id)} className="w-full text-left px-3 py-2 text-sm hover:bg-muted text-foreground font-medium transition-colors">Make group admin</button>}
-                                                        {!isCreator && <button onClick={() => handleGroupAction('remove', mUser._id)} className="w-full text-left px-3 py-2 text-sm hover:bg-rose-500/10 text-rose-500 font-medium transition-colors">Remove member</button>}
+                                                        {myRoleInGroup() === 'creator' && isAdmin && !isCreator && <button onClick={() => handleGroupAction('demote', mUser._id)} className="w-full text-left px-3 py-2 text-sm hover:bg-muted text-foreground font-medium transition-colors">{t('chat_sidebar.action_demote')}</button>}
+                                                        {(myRoleInGroup() === 'creator' || myRoleInGroup() === 'admin') && !isAdmin && !isCreator && <button onClick={() => handleGroupAction('promote', mUser._id)} className="w-full text-left px-3 py-2 text-sm hover:bg-muted text-foreground font-medium transition-colors">{t('chat_sidebar.action_promote')}</button>}
+                                                        {!isCreator && <button onClick={() => handleGroupAction('remove', mUser._id)} className="w-full text-left px-3 py-2 text-sm hover:bg-rose-500/10 text-rose-500 font-medium transition-colors">{t('chat_sidebar.action_remove')}</button>}
                                                     </div>
                                                 )}
                                             </div>
@@ -265,7 +267,7 @@ const ChatSidebar = ({
             {isGroupChat && (
                 <div className="absolute bottom-0 left-0 w-full p-4 bg-card border-t border-border/50">
                     <button onClick={() => setShowLeaveGroupModal(true)} className="w-full flex items-center justify-center gap-2 py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold rounded-xl transition-colors">
-                        <LogOut className="w-5 h-5" /> Leave Group
+                        <LogOut className="w-5 h-5" /> {t('chat_sidebar.leave_group')}
                     </button>
                 </div>
             )}

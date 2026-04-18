@@ -8,44 +8,104 @@
         "error": "Something went wrong"
     },
     "sidebar": {
-        "brand": "WorkEduMusic",
-        "new_alert_toast": "New Alert!",
+        "brand": "W Admin",
         "dashboard": "Dashboard",
-        "roster": "Employee Roster",
+        "roster": "Employees",
         "attendance": "Attendance",
         "learning_hub": "Training Vault",
         "progress": "Progress",
         "leaderboard": "Leaderboard",
         "reports": "Reports",
-        "media": "Media Gallery",
+        "media": "Media",
+        "media_gallery": "Media Gallery",
         "leave": "Leave Requests",
         "alerts": "Alerts",
+        "chat_hub": "Chat Hub",
         "broadcast": "Broadcast",
         "theme": "Toggle Theme",
         "profile": "My Profile",
         "settings": "Settings",
         "logout": "Logout",
         "dark_mode": "Dark Mode",
-        "light_mode": "Light Mode"
+        "light_mode": "Light Mode",
+        "incoming_call": "Incoming {{type}} call...",
+        "admin_fallback_name": "Admin User",
+        "new_alert_toast": "New alert received"
     },
     "navbar": {
-        "help": "Help",
-        "brand": "WorkEduMusic",
-        "new_notif_toast": "New Notification!",
+        "brand": "W",
         "dashboard": "Dashboard",
         "assignments": "Assignments",
         "tasks": "Tasks",
         "media": "Media",
-        "learning_hub": "Training Vault",
+        "learning_hub": "Learning Hub",
         "leaderboard": "Leaderboard",
         "report": "Daily Report",
+        "help": "Help & FAQs",
         "notifications": "Notifications",
-        "profile": "My Profile",
-        "theme_tooltip": "Toggle Theme",
+        "chat": "Chat",
+        "profile": "Profile",
+        "dark_mode": "Dark Mode",
+        "light_mode": "Light Mode",
         "settings": "Settings",
         "logout": "Logout",
-        "dark_mode": "Dark Mode",
-        "light_mode": "Light Mode"
+        "employee": "Employee",
+        "training_vault": "Training Vault",
+        "incoming_call": "Incoming {{type}} call..."
+    },
+    "toast": {
+        "missed_call": "Missed call from {{name}}",
+        "camera_access_failed": "Camera access failed. Switching to voice call.",
+        "mic_denied": "Microphone access denied.",
+        "camera_switch_failed": "Could not switch camera",
+        "requesting_video": "Requesting video switch...",
+        "camera_access_error": "Could not access camera.",
+        "new_chat": "New chat message received",
+        "call_connected": "Call connected",
+        "user_busy": "User is busy on another call.",
+        "call_ended_restoring": "Current call ended. Restoring held call...",
+        "ended_held_call": "{{name}} ended the held call.",
+        "resumed_call": "Resumed call with {{name}}",
+        "video_rejected": "Video call request rejected",
+        "video_accepted": "Video call request accepted",
+        "updating_group_name": "Updating group name...",
+        "group_name_updated": "Group name updated",
+        "failed_update_group_name": "Failed to update group name",
+        "uploading_group_icon": "Uploading new group icon...",
+        "group_icon_updated": "Group icon updated",
+        "failed_upload_group_icon": "Failed to upload group icon",
+        "removing_group_icon": "Removing group icon...",
+        "group_icon_removed": "Group icon removed",
+        "failed_remove_group_icon": "Failed to remove group icon",
+        "action_completed": "Action completed successfully",
+        "action_failed": "Failed to perform action",
+        "msg_send_fail": "Message failed to send. Check connection.",
+        "max_items": "Maximum of {{maxCount}} items allowed at once.",
+        "max_size": "Total size cannot exceed {{maxSize}}MB.",
+        "upload_fail": "Upload process failed.",
+        "downloading": "Downloading...",
+        "download_success": "Downloaded successfully!",
+        "download_fail": "Download failed.",
+        "msg_deleted": "Message deleted",
+        "del_everyone": "Deleted for everyone",
+        "del_me": "Deleted for you",
+        "del_fail": "Delete failed",
+        "forwarding": "Forwarding...",
+        "forward_success": "Forwarded successfully",
+        "forward_fail": "Failed to forward",
+        "clear_success": "Chat cleared visually.",
+        "clear_fail": "Failed to clear chat",
+        "copied": "Copied",
+        "new_msg_group": "New message in {{name}}",
+        "new_msg": "New message received",
+        "added_to_group": "You were added to group: {{name}}",
+        "removed_from_group": "You are no longer a participant of {{name}}",
+        "load_contacts_failed": "Could not load contact list.",
+        "group_name_req": "Group name is required",
+        "select_member_req": "Select at least 1 member",
+        "creating_group": "Creating group...",
+        "group_created": "Group created successfully!",
+        "group_create_failed": "Failed to create group"
     },
     "add_user_modal": {
         "title_employee": "Add New Employee",
@@ -1893,6 +1953,148 @@
                 "q": "How is my Weekly Score calculated?",
                 "a": "Every Saturday at 9:00 PM, the system calculates your performance:\n• 50% Attendance (Punctuality)\n• 50% Media Score (Video Quality)\n• Penalty: -10 points for every Warning received."
             }
+        }
+    },
+    "call": {
+        "ringing": "Ringing...",
+        "calling": "Calling...",
+        "busy": "Person is on another call...",
+        "encrypted": "End-to-end encrypted",
+        "on_hold_title": "{{name}} put your call on hold.",
+        "on_hold_desc": "Please wait while they finish another call...",
+        "unknown": "Unknown",
+        "in_call": "In call",
+        "video_request_desc": "is requesting to switch to a video call.",
+        "decline": "Decline",
+        "accept": "Accept",
+        "incoming_type": "{{type}} call incoming...",
+        "on_hold_badge": "ON HOLD",
+        "minimize_title": "Minimize Call",
+        "flip_camera": "Flip Camera",
+        "request_video": "Request Video Upgrade"
+    },
+    "chat": {
+        "messages": "Messages",
+        "new_group": "New group",
+        "search_placeholder": "Search chats...",
+        "no_chats": "No chats found.",
+        "members_count": "{{count}} members",
+        "default_role": "Employee",
+        "unread_overflow": "9+"
+    },
+    "chat_sidebar": {
+        "group_info": "Group Info",
+        "contact_info": "Contact Info",
+        "change_photo": "Change Photo",
+        "remove_photo": "Remove Photo",
+        "employee_role": "Employee",
+        "members_count": "{{count}} Members",
+        "participants": "Participants",
+        "add_member": "+ Add Member",
+        "you": "You",
+        "role_creator": "Creator",
+        "role_admin": "Admin",
+        "action_demote": "Dismiss as admin",
+        "action_promote": "Make group admin",
+        "action_remove": "Remove member",
+        "leave_group": "Leave Group"
+    },
+    "chat_window": {
+        "empty": {
+            "title": "Communication Hub",
+            "subtitle": "Select a team member or group from the sidebar to send direct messages, share media, and collaborate."
+        },
+        "top_bar": {
+            "selected_count": "{{count}} selected",
+            "search": "Search...",
+            "group_chat": "Group Chat",
+            "online": "Online",
+            "offline": "Offline"
+        },
+        "top_menu": {
+            "video_call": "Video call",
+            "voice_call": "Voice call",
+            "media": "Media",
+            "docs": "Docs",
+            "links": "Links",
+            "clear_chat": "Clear chat"
+        },
+        "privacy": {
+            "desktop": "These messages will be automatically deleted after 7 days for privacy.",
+            "mobile_notice": "Messages auto-delete after 7 days.",
+            "label": "Privacy"
+        },
+        "feed": {
+            "say_hello": "Say Hello to {{name}}!",
+            "start_secure": "Send messages, share photos, or start a secure {{type}}.",
+            "type_group_chat": "group chat",
+            "type_voice_call": "voice call",
+            "e2e": "Messages are end-to-end encrypted. No one outside of this chat can read or listen to them."
+        },
+        "message": {
+            "deleted": "This message was deleted",
+            "document_file": "Document File",
+            "you": "You",
+            "member": "Member"
+        },
+        "input": {
+            "placeholder": "Type a message...",
+            "camera": "Camera",
+            "photos": "Photos",
+            "document": "Document"
+        },
+        "context_menu": {
+            "delete_me": "Delete for me",
+            "delete_everyone": "Delete for everyone",
+            "select": "Select"
+        },
+        "shared": {
+            "media": "Shared Media",
+            "docs": "Shared Documents",
+            "links": "Shared Links",
+            "no_shared_media": "No shared media yet.",
+            "no_shared_docs": "No shared documents yet.",
+            "no_shared_links": "No shared links yet.",
+            "will_appear": "Files shared in this chat will appear here.",
+            "shared_doc": "Shared Document",
+            "preview": "Document Preview"
+        }
+    },
+    "modal": {
+        "forward": {
+            "title": "Forward message",
+            "search": "Search chats...",
+            "no_chats": "No chats found",
+            "select_chats": "Select chats"
+        },
+        "add_member": {
+            "title": "Add Members to {{name}}",
+            "search": "Search contacts...",
+            "add": "Add"
+        },
+        "delete": {
+            "title": "Delete {{count}} Message(s)?",
+            "delete_everyone": "Delete for everyone",
+            "delete_me": "Delete for me"
+        },
+        "clear_chat": {
+            "title": "Clear this chat?",
+            "desc": "Messages will be removed from your view. This cannot be undone.",
+            "clear": "Clear chat"
+        },
+        "common": {
+            "cancel": "Cancel"
+        }
+    },
+    "shared_chat": {
+        "modal": {
+            "title": "Create New Group",
+            "name_placeholder": "Group Name",
+            "search_placeholder": "Search contacts...",
+            "select_members": "Select Members",
+            "selected_count": "{{count}} selected",
+            "cancel": "Cancel",
+            "create": "Create"
         }
     }
 }

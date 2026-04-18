@@ -98,13 +98,16 @@ const EmployeeNavbar = () => {
         if (globalIncomingCall && !activeCall) {
             const timer = setTimeout(() => {
                 socket.emit('end_call', { to: globalIncomingCall.from });
+                
+                // Translated Toast
+                toast.error(t('toast.missed_call', { name: globalIncomingCall.callerName }));
+                
                 setGlobalIncomingCall(null);
                 pauseAudio('incoming');
-                toast.error(`Missed call from ${globalIncomingCall.callerName}`);
             }, 60000);
             return () => clearTimeout(timer);
         }
-    }, [globalIncomingCall, activeCall]);
+    }, [globalIncomingCall, activeCall, t]);
 
     const { user, token } = useSelector((state) => state.auth);
     const themeMode = useSelector((state) => state.theme.mode);
@@ -125,18 +128,18 @@ const EmployeeNavbar = () => {
             return { stream, actualType: requestedType };
         } catch (e) {
             if (requestedType === 'video') {
-                toast.error("Camera access failed. Switching to voice call.", { id: 'cam-error' });
+                toast.error(t('toast.camera_access_failed'), { id: 'cam-error' });
                 try {
                     const audioOnlyStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                     localStreamRef.current = audioOnlyStream;
                     setLocalStreamState(audioOnlyStream);
                     return { stream: audioOnlyStream, actualType: 'voice' };
                 } catch (audioErr) {
-                    toast.error("Microphone access denied.");
+                    toast.error(t('toast.mic_denied'));
                     return { stream: null, actualType: null };
                 }
             } else {
-                toast.error("Microphone access denied.");
+                toast.error(t('toast.mic_denied'));
                 return { stream: null, actualType: null };
             }
         }
@@ -166,7 +169,7 @@ const EmployeeNavbar = () => {
             setLocalStreamState(newLocalStream);
             setFacingMode(newMode);
         } catch (err) {
-            toast.error("Could not switch camera");
+            toast.error(t('toast.camera_switch_failed'));
         }
     };
 
@@ -293,7 +296,7 @@ const EmployeeNavbar = () => {
 
             socket.emit('renegotiate', { to: held.peer._id || held.peer.id, signal: { type: 'CUSTOM_EVENT', event: 'call_resumed' } });
             heldCallRef.current = null;
-            toast.success(`Resumed call with ${held.peer.name}`);
+            toast.success(t('toast.resumed_call', { name: held.peer.name }));
         } else {
             cleanupCall();
         }
@@ -337,7 +340,7 @@ const EmployeeNavbar = () => {
         const to = currentPeerRef.current?._id || currentPeerRef.current?.id;
         socket.emit('video_upgrade_request', { to });
         setVideoUpgradeStatus('requesting');
-        toast("Requesting video switch...", { icon: '⏳' });
+        toast(t('toast.requesting_video'), { icon: '⏳' });
     };
 
     const performVideoUpgrade = async () => {
@@ -357,7 +360,7 @@ const EmployeeNavbar = () => {
                 socket.emit('renegotiate', { to, signal: offer });
             }
             setCurrentCallType('video');
-        } catch (error) { toast.error("Could not access camera."); }
+        } catch (error) { toast.error(t('toast.camera_access_error')); }
     };
 
     const handleAcceptVideo = async () => {
@@ -383,12 +386,11 @@ const EmployeeNavbar = () => {
         if (socket.connected) joinUserRoom();
         socket.on("connect", joinUserRoom);
 
-        // (Your existing named functions remain exactly the same)
         const handleIncomingChat = (data) => {
             if (!pathnameRef.current.includes('/chat')) {
                 setUnreadChatCount(prev => prev + 1);
                 playAudio('notification');
-                toast.success(`New chat message received`, { icon: '💬', id: 'new-chat-toast' });
+                toast.success(t('toast.new_chat'), { icon: '💬', id: 'new-chat-toast' });
             }
         };
 
@@ -410,7 +412,7 @@ const EmployeeNavbar = () => {
             if (pcRef.current) {
                 await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                 await processIceQueue(pcRef.current);
-                toast.success("Call connected", { icon: '📞' });
+                toast.success(t('toast.call_connected'), { icon: '📞' });
             }
         };
 
@@ -435,7 +437,7 @@ const EmployeeNavbar = () => {
                 } else if (signal.event === 'call_resumed') {
                     setRemoteCallStatus('active');
                 } else if (signal.event === 'call_rejected_busy') {
-                    toast.error("User is busy on another call.");
+                    toast.error(t('toast.user_busy'));
                     cleanupCall();
                 } else if (signal.event === 'explicit_end') {
                     const senderId = signal.from;
@@ -444,7 +446,7 @@ const EmployeeNavbar = () => {
 
                     if (String(senderId) === String(activeId)) {
                         if (heldCallRef.current) {
-                            toast("Current call ended. Restoring held call...");
+                            toast(t('toast.call_ended_restoring'));
                             endCurrentCall(true);
                         } else {
                             cleanupCall();
@@ -452,7 +454,7 @@ const EmployeeNavbar = () => {
                             playAudio('hangup');
                         }
                     } else if (String(senderId) === String(heldId)) {
-                        toast(`${heldCallRef.current.peer.name} ended the held call.`);
+                        toast(t('toast.ended_held_call', { name: heldCallRef.current.peer.name }));
                         if (heldCallRef.current.pc) heldCallRef.current.pc.close();
                         heldCallRef.current = null;
                     }
@@ -477,7 +479,6 @@ const EmployeeNavbar = () => {
             }
         };
 
-        // NEW: Extracted anonymous functions into named variables
         const handleCallEnded = () => {
             if (!heldCallRef.current) {
                 cleanupCall();
@@ -487,8 +488,8 @@ const EmployeeNavbar = () => {
         };
 
         const handleVideoUpgradeRequest = () => { setVideoUpgradeStatus('receiving_request'); playAudio('notification'); };
-        const handleVideoUpgradeRejected = () => { setVideoUpgradeStatus('idle'); toast.error("Video call request rejected"); };
-        const handleVideoUpgradeAccepted = async () => { setVideoUpgradeStatus('idle'); toast.success("Video call request accepted"); await performVideoUpgrade(); };
+        const handleVideoUpgradeRejected = () => { setVideoUpgradeStatus('idle'); toast.error(t('toast.video_rejected')); };
+        const handleVideoUpgradeAccepted = async () => { setVideoUpgradeStatus('idle'); toast.success(t('toast.video_accepted')); await performVideoUpgrade(); };
 
         socket.on("receive_message", handleIncomingChat);
         socket.on("incoming_call", handleIncomingCall);
@@ -502,7 +503,6 @@ const EmployeeNavbar = () => {
         socket.on("online_users_updated", setOnlineUsers);
 
         return () => {
-            // PROPER CLEANUP
             socket.off("connect", joinUserRoom);
             socket.off("receive_message", handleIncomingChat);
             socket.off("incoming_call", handleIncomingCall);
@@ -515,7 +515,7 @@ const EmployeeNavbar = () => {
             socket.off("video_upgrade_accepted", handleVideoUpgradeAccepted);
             socket.off("online_users_updated", setOnlineUsers);
         };
-    }, [user, token, activeCall]);
+    }, [user, token, activeCall, t]);
 
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
@@ -531,12 +531,12 @@ const EmployeeNavbar = () => {
         { path: "/employee/assignments", icon: <CalendarCheck className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.assignments') },
         { path: "/employee/optional", icon: <ListTodo className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.tasks') },
         { path: "/employee/media", icon: <PlaySquare className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.media') },
-        { path: "/employee/learning-hub", icon: <BookOpen className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.learning_hub') || 'Learn' },
-        { path: "/employee/leaderboard", icon: <Trophy className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.leaderboard') || 'Leaderboard' },
+        { path: "/employee/learning-hub", icon: <BookOpen className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.learning_hub') },
+        { path: "/employee/leaderboard", icon: <Trophy className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.leaderboard') },
         { path: "/employee/report", icon: <BarChartBig className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.report') },
-        { path: "/employee/help", icon: <HelpCircle className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.help') || 'Help & FAQs' },
+        { path: "/employee/help", icon: <HelpCircle className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.help') },
         { path: "/employee/notifications", icon: <Bell className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.notifications'), badge: notifCount },
-        { path: "/employee/chat", icon: <MessageCircle className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: 'Chat', badge: unreadChatCount },
+        { path: "/employee/chat", icon: <MessageCircle className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.chat'), badge: unreadChatCount },
         { path: "/employee/profile", icon: user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-6 h-6 lg:w-5 lg:h-5 rounded-full object-cover shrink-0 border border-border/50" /> : <User className="w-6 h-6 lg:w-5 lg:h-5 shrink-0" />, label: t('navbar.profile') },
     ];
 
@@ -569,7 +569,7 @@ const EmployeeNavbar = () => {
             <header className="fixed top-0 left-0 w-full z-50 bg-card/90 backdrop-blur-md border-b border-border shadow-sm h-16">
                 <div className="max-w-400 mx-auto px-4 lg:px-6 h-full flex items-center justify-between">
                     <div className="flex items-center gap-3 shrink-0">
-                        <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm"><span className="text-primary-foreground font-bold text-base">W</span></div>
+                        <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm"><span className="text-primary-foreground font-bold text-base">{t('navbar.brand')}</span></div>
                         <h1 className="font-display font-bold text-lg text-foreground tracking-tight hidden sm:block">{t('navbar.brand')}</h1>
                     </div>
                     <nav className="hidden xl:flex items-center gap-1.5 flex-1 justify-start overflow-x-auto px-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -596,14 +596,14 @@ const EmployeeNavbar = () => {
                                     <div className="px-3 py-2.5 mb-1 border-b border-border flex items-center gap-3">
                                         {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-9 h-9 rounded-full object-cover shrink-0 border border-border" /> : <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><User className="w-4 h-4 text-primary" /></div>}
                                         <div className="overflow-hidden">
-                                            <p className="text-sm font-bold text-foreground truncate">{user?.name || "Employee"}</p>
+                                            <p className="text-sm font-bold text-foreground truncate">{user?.name || t('navbar.employee')}</p>
                                             <p className="text-[11px] text-muted-foreground truncate">{user?.email || ""}</p>
                                         </div>
                                     </div>
-                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/learning-hub'); }}><BookOpen className="w-4 h-4 text-primary" /> {t('navbar.learning_hub') || 'Training Vault'}</button>
-                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/report'); }}><BarChartBig className="w-4 h-4 text-primary" /> {t('navbar.report') || 'Daily Report'}</button>
-                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/leaderboard'); }}><Trophy className="w-4 h-4 text-primary" /> {t('navbar.leaderboard') || 'Leaderboard'}</button>
-                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/help'); }}><HelpCircle className="w-4 h-4 text-primary" /> {t('navbar.help') || 'Help & FAQs'}</button>
+                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/learning-hub'); }}><BookOpen className="w-4 h-4 text-primary" /> {t('navbar.training_vault')}</button>
+                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/report'); }}><BarChartBig className="w-4 h-4 text-primary" /> {t('navbar.report')}</button>
+                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/leaderboard'); }}><Trophy className="w-4 h-4 text-primary" /> {t('navbar.leaderboard')}</button>
+                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/help'); }}><HelpCircle className="w-4 h-4 text-primary" /> {t('navbar.help')}</button>
                                     <NavLink to="/employee/profile" onClick={() => setIsMobileMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"><User className="w-4 h-4" /> {t('navbar.profile')}</NavLink>
                                     <div className="my-1 border-t border-border" />
                                     <button onClick={() => { dispatch(toggleTheme()); setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"><div className="flex items-center gap-3">{themeMode === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}<span>{themeMode === 'dark' ? t('navbar.dark_mode') : t('navbar.light_mode')}</span></div></button>
@@ -642,7 +642,7 @@ const EmployeeNavbar = () => {
                                 {globalIncomingCall.callerName}
                             </h2>
                             <p className="text-sm text-muted-foreground mt-1 capitalize">
-                                Incoming {globalIncomingCall.callType || 'voice'} call...
+                                {t('navbar.incoming_call', { type: globalIncomingCall.callType || 'voice' })}
                             </p>
                         </div>
                         <div className="flex items-center gap-6 w-full justify-center mt-2">

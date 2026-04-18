@@ -5,6 +5,7 @@ import { io } from "socket.io-client";
 import { Search, ArrowLeft } from "lucide-react";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 import ChatList from "./ChatList";
 import ChatWindow from "./ChatWindow";
@@ -24,6 +25,7 @@ if (!window.__GLOBAL_AUDIO__) {
 const playAudio = (type) => { try { const snd = window.__GLOBAL_AUDIO__[type]; if (snd) { snd.currentTime = 0; snd.play().catch(e => { }); } } catch (e) { } };
 
 const SharedChat = () => {
+    const { t } = useTranslation();
     const { user } = useSelector((state) => state.auth);
     const location = useLocation();
     const currentUserId = user?.id || user?._id;
@@ -49,10 +51,10 @@ const SharedChat = () => {
     const getLatestTimestamp = (chat) => {
         // Check for a local temporary timestamp first (set by moveToTop)
         if (chat.tempUpdatedAt) return new Date(chat.tempUpdatedAt).getTime();
-        
+
         // For groups, use updatedAt
         if (chat.isGroup) return new Date(chat.updatedAt || chat.createdAt || 0).getTime();
-        
+
         // For 1-on-1, try to find the last message time if your API sends it
         // If your API doesn't send lastMessage time, it will fallback to 0 (bottom of list)
         return new Date(chat.lastMessageAt || chat.updatedAt || chat.createdAt || 0).getTime();
@@ -63,18 +65,18 @@ const SharedChat = () => {
             const index = prev.findIndex(c => String(c._id || c.id) === String(userId));
             if (index === -1) return prev;
             if (index === 0) {
-                 // Even if it's already at the top, update its timestamp so it stays there
-                 const updated = [...prev];
-                 updated[0].tempUpdatedAt = new Date().toISOString();
-                 return updated;
+                // Even if it's already at the top, update its timestamp so it stays there
+                const updated = [...prev];
+                updated[0].tempUpdatedAt = new Date().toISOString();
+                return updated;
             }
-            
+
             const updated = [...prev];
             const [chat] = updated.splice(index, 1);
-            
+
             // Set a temporary timestamp so it survives a simple re-render
-            chat.tempUpdatedAt = new Date().toISOString(); 
-            
+            chat.tempUpdatedAt = new Date().toISOString();
+
             updated.unshift(chat);
             return updated;
         });
@@ -121,7 +123,7 @@ const SharedChat = () => {
 
                 if (!document.hidden && !isDeepInAnotherChat) {
                     playAudio('notification');
-                    toast.success(data.isGroup ? `New message in ${data.groupName || 'Group'}` : `New message received`, { icon: '💬', id: `chat-msg-${data.senderId}` });
+                    toast.success(data.isGroup ? t('toast.new_msg_group', { name: data.groupName || 'Group' }) : t('toast.new_msg'), { icon: '💬', id: `chat-msg-${data.senderId}` });
                 }
                 setUnreadMap(prev => ({ ...prev, [incomingChatId]: (prev[incomingChatId] || 0) + 1 }));
 
@@ -143,7 +145,7 @@ const SharedChat = () => {
                 if (prev.some(c => String(c._id) === String(groupData._id))) return prev;
                 return [groupData, ...prev];
             });
-            toast.success(`You were added to group: ${groupData.name}`, { icon: '👥' });
+            toast.success(t('toast.added_to_group', { name: groupData.name }), { icon: '👥' });
             playAudio('notification');
             socket.emit('join_group_room', groupData._id);
         };
@@ -156,7 +158,7 @@ const SharedChat = () => {
                 const amIMember = updatedGroup.members.some(m => String(m.user._id || m.user) === String(currentUserId));
                 if (!amIMember) {
                     setActiveChat(null);
-                    toast.error(`You are no longer a participant of ${updatedGroup.name}`);
+                    toast.error(t('toast.removed_from_group', { name: updatedGroup.name }));
                 } else {
                     setActiveChat(updatedGroup);
                 }
@@ -202,7 +204,7 @@ const SharedChat = () => {
             socket.off("messages_status_update", handleMessagesStatusUpdate);
             socket.off("messages_deleted_everyone", handleMessagesDeletedEveryone);
         };
-    }, [currentUserId, activeChat, moveToTop]);
+    }, [currentUserId, activeChat, moveToTop, t]);
 
     const fetchConversations = async () => {
         try {
@@ -242,13 +244,13 @@ const SharedChat = () => {
             allChats.sort((a, b) => {
                 const timeA = getLatestTimestamp(a);
                 const timeB = getLatestTimestamp(b);
-                return timeB - timeA; 
+                return timeB - timeA;
             });
 
             setConversations(allChats);
             setUnreadMap(initialUnread);
 
-        } catch (error) { toast.error("Could not load contact list."); }
+        } catch (error) { toast.error(t('toast.load_contacts_failed')); }
         finally { setIsLoadingChats(false); }
     };
 
@@ -290,21 +292,21 @@ const SharedChat = () => {
     };
 
     const handleCreateGroup = async () => {
-        if (!createGroupName.trim()) return toast.error("Group name is required");
-        if (createGroupSelectedUsers.length === 0) return toast.error("Select at least 1 member");
-        const tid = toast.loading("Creating group...");
+        if (!createGroupName.trim()) return toast.error(t('toast.group_name_req'));
+        if (createGroupSelectedUsers.length === 0) return toast.error(t('toast.select_member_req'));
+        const tid = toast.loading(t('toast.creating_group'));
         try {
             const res = await api.post('/group/create', { name: createGroupName, creatorId: currentUserId, memberIds: createGroupSelectedUsers });
             if (res.data.success) {
                 const newGroup = { ...res.data.data, isGroup: true, tempUpdatedAt: new Date().toISOString() };
-                
+
                 // Add new group to the top naturally
                 setConversations(prev => [newGroup, ...prev]);
                 setShowCreateGroupModal(false); setCreateGroupName(""); setCreateGroupSelectedUsers([]); setActiveChat(newGroup);
-                toast.success("Group created successfully!", { id: tid });
+                toast.success(t('toast.group_created'), { id: tid });
                 socket.emit('join_group_room', newGroup._id);
             }
-        } catch (error) { toast.error("Failed to create group", { id: tid }); }
+        } catch (error) { toast.error(t('toast.group_create_failed'), { id: tid }); }
     };
 
     return (
@@ -314,24 +316,24 @@ const SharedChat = () => {
                 <div className="fixed inset-0 z-1000000 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
                     <div className="w-full max-w-sm md:max-w-md bg-card border border-border shadow-2xl rounded-3xl overflow-hidden flex flex-col max-h-[85vh] md:max-h-[75vh]">
                         <div className="p-4 md:p-5 border-b border-border/50 bg-muted/20">
-                            <h3 className="text-lg font-bold text-foreground mb-4">Create New Group</h3>
+                            <h3 className="text-lg font-bold text-foreground mb-4">{t('shared_chat.modal.title')}</h3>
                             <div className="flex flex-col gap-3">
                                 <input
                                     type="text"
-                                    placeholder="Group Name"
+                                    placeholder={t('shared_chat.modal.name_placeholder')}
                                     value={createGroupName}
                                     onChange={(e) => setCreateGroupName(e.target.value)}
                                     className="w-full bg-background border border-border/60 rounded-xl px-4 py-2.5 text-[15px] font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm"
                                 />
                                 <div className="relative">
                                     <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                                    <input type="text" placeholder="Search contacts..." value={createGroupSearchQuery} onChange={(e) => setCreateGroupSearchQuery(e.target.value)} className="w-full bg-background border border-border/60 rounded-xl pl-10 pr-4 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" />
+                                    <input type="text" placeholder={t('shared_chat.modal.search_placeholder')} value={createGroupSearchQuery} onChange={(e) => setCreateGroupSearchQuery(e.target.value)} className="w-full bg-background border border-border/60 rounded-xl pl-10 pr-4 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" />
                                 </div>
                             </div>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
-                            <div className="px-3 pt-2 pb-1 text-xs font-bold text-muted-foreground uppercase tracking-wider">Select Members</div>
+                            <div className="px-3 pt-2 pb-1 text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('shared_chat.modal.select_members')}</div>
                             {conversations.filter(c => !c.isGroup && !c.members && c.name.toLowerCase().includes(createGroupSearchQuery.toLowerCase())).map(user => {
                                 const isSelected = createGroupSelectedUsers.includes(user._id || user.id);
                                 return (
@@ -349,11 +351,11 @@ const SharedChat = () => {
                         </div>
 
                         <div className="p-4 md:p-5 border-t border-border/50 flex items-center justify-between bg-muted/20">
-                            <span className="text-sm font-medium text-muted-foreground">{createGroupSelectedUsers.length} selected</span>
+                            <span className="text-sm font-medium text-muted-foreground">{t('shared_chat.modal.selected_count', { count: createGroupSelectedUsers.length })}</span>
                             <div className="flex items-center gap-2">
-                                <button onClick={() => { setShowCreateGroupModal(false); setCreateGroupSelectedUsers([]); setCreateGroupName(""); setCreateGroupSearchQuery(""); }} className="px-4 py-2.5 text-[14px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors">Cancel</button>
+                                <button onClick={() => { setShowCreateGroupModal(false); setCreateGroupSelectedUsers([]); setCreateGroupName(""); setCreateGroupSearchQuery(""); }} className="px-4 py-2.5 text-[14px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors">{t('shared_chat.modal.cancel')}</button>
                                 <button onClick={handleCreateGroup} className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-transform active:scale-95 shadow-md flex items-center gap-2">
-                                    Create <ArrowLeft className="w-4 h-4 rotate-180" />
+                                    {t('shared_chat.modal.create')} <ArrowLeft className="w-4 h-4 rotate-180" />
                                 </button>
                             </div>
                         </div>

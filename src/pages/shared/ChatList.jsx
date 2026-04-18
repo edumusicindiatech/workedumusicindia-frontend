@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Search, MoreVertical, Users } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const ChatList = ({
     conversations,
@@ -10,6 +11,7 @@ const ChatList = ({
     onSelectChat,
     onNewGroup
 }) => {
+    const { t } = useTranslation();
     const [searchQuery, setSearchQuery] = useState("");
     const [showSidebarMenu, setShowSidebarMenu] = useState(false);
     const [sidebarWidth, setSidebarWidth] = useState(380);
@@ -70,12 +72,16 @@ const ChatList = ({
 
             <div className="p-4 sm:p-5 shrink-0 space-y-4 bg-card dark:bg-[#11131A]">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-black tracking-tight text-foreground">Messages</h2>
+                    <h2 className="text-2xl font-black tracking-tight text-foreground">{t('chat.messages')}</h2>
                     <div className="relative" ref={sidebarMenuRef}>
-                        <button onClick={() => setShowSidebarMenu(!showSidebarMenu)} className="p-2 rounded-full text-muted-foreground hover:bg-muted"><MoreVertical className="w-5 h-5" /></button>
+                        <button onClick={() => setShowSidebarMenu(!showSidebarMenu)} className="p-2 rounded-full text-muted-foreground hover:bg-muted">
+                            <MoreVertical className="w-5 h-5" />
+                        </button>
                         {showSidebarMenu && (
                             <div className="absolute top-10 right-0 w-48 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-30">
-                                <button onClick={() => { setShowSidebarMenu(false); onNewGroup(); }} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><Users className="w-4 h-4" /> New group</button>
+                                <button onClick={() => { setShowSidebarMenu(false); onNewGroup(); }} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium">
+                                    <Users className="w-4 h-4" /> {t('chat.new_group')}
+                                </button>
                             </div>
                         )}
                     </div>
@@ -83,7 +89,13 @@ const ChatList = ({
 
                 <div className="relative group">
                     <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search chats..." className="w-full bg-muted/40 dark:bg-[#1A1D24] border-none text-sm rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-primary/50" />
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder={t('chat.search_placeholder')}
+                        className="w-full bg-muted/40 dark:bg-[#1A1D24] border-none text-sm rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    />
                 </div>
             </div>
 
@@ -101,7 +113,7 @@ const ChatList = ({
                         ))}
                     </div>
                 ) : filteredConversations.length === 0 ? (
-                    <div className="flex justify-center p-8 text-center text-sm font-medium text-muted-foreground">No chats found.</div>
+                    <div className="flex justify-center p-8 text-center text-sm font-medium text-muted-foreground">{t('chat.no_chats')}</div>
                 ) : (
                     filteredConversations.map((chatUser) => {
                         const userId = String(chatUser._id || chatUser.id);
@@ -127,9 +139,16 @@ const ChatList = ({
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <p className={`text-[13px] truncate font-medium ${unreadCount > 0 ? 'text-foreground/80' : 'text-muted-foreground'}`}>
-                                            {isGroup ? `${chatUser.members?.length || 0} members` : (chatUser.role || 'Employee')}
+                                            {isGroup
+                                                ? t('chat.members_count', { count: chatUser.members?.length || 0 })
+                                                : (chatUser.role || t('chat.default_role'))
+                                            }
                                         </p>
-                                        {unreadCount > 0 && <span className="w-5 h-5 rounded-full bg-[#25D366] text-white text-[10px] font-bold flex items-center justify-center shrink-0 ml-2 animate-in zoom-in duration-200 shadow-sm">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+                                        {unreadCount > 0 && (
+                                            <span className="w-5 h-5 rounded-full bg-[#25D366] text-white text-[10px] font-bold flex items-center justify-center shrink-0 ml-2 animate-in zoom-in duration-200 shadow-sm">
+                                                {unreadCount > 9 ? t('chat.unread_overflow') : unreadCount}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
