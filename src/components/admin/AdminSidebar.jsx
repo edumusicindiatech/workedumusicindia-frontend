@@ -655,53 +655,64 @@ const AdminSidebar = () => {
             {globalIncomingCall && !activeCall && (
                 <div
                     style={{ zIndex: 9999999, position: 'fixed', inset: 0 }}
-                    className="bg-[#0B0D12] flex flex-col items-center justify-between py-20 px-6 animate-in fade-in duration-500"
+                    className="bg-[#0B0D12] flex flex-col items-center justify-between py-24 px-6 animate-in fade-in duration-500"
                 >
                     {console.log("💎 [UI TRACE] Rendering Immersive Full-Screen Call UI")}
 
                     {/* TOP SECTION: Caller Info */}
-                    <div className="flex flex-col items-center mt-10">
+                    <div className="flex flex-col items-center mt-12">
                         <div className="relative">
-                            {/* Ripple Effect Rings */}
-                            <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping scale-150 opacity-20"></div>
+                            {/* Ripple Effect Rings (Requires CSS below) */}
+                            <div className="absolute inset-0 rounded-full bg-primary/20 animate-ripple"></div>
+                            <div className="absolute inset-0 rounded-full bg-primary/10 animate-ripple-delayed"></div>
 
-                            <div className="w-32 h-32 sm:w-40 sm:h-40 bg-primary/10 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(var(--primary),0.3)] overflow-hidden border-4 border-white/10 relative z-10">
+                            <div className="w-36 h-36 sm:w-44 sm:h-44 bg-primary/10 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(var(--primary),0.3)] overflow-hidden border-4 border-white/10 relative z-10">
                                 {globalIncomingCall.profilePicture ? (
                                     <img src={globalIncomingCall.profilePicture} alt="Caller" className="w-full h-full object-cover" />
                                 ) : (
-                                    <User className="w-16 h-16 text-primary" />
+                                    <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-primary/20 to-primary/5">
+                                        <User className="w-20 h-20 text-primary/60" />
+                                    </div>
                                 )}
                             </div>
                         </div>
 
-                        <h2 className="text-3xl font-black text-white mt-8 tracking-tight">
+                        <h2 className="text-3xl font-black text-white mt-10 tracking-tight text-center px-4">
                             {globalIncomingCall.callerName}
                         </h2>
-                        <p className="text-primary font-bold text-sm uppercase tracking-[0.2em] mt-3 animate-pulse">
-                            {globalIncomingCall.callType === 'video' ? t('navbar.incoming_video') : t('navbar.incoming_voice')}
-                        </p>
+                        <div className="flex items-center gap-2 mt-4">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                            </span>
+                            <p className="text-primary font-bold text-xs uppercase tracking-[0.3em]">
+                                {globalIncomingCall.callType === 'video' ? t('navbar.incoming_video') : t('navbar.incoming_voice')}
+                            </p>
+                        </div>
                     </div>
 
                     {/* BOTTOM SECTION: Actions */}
-                    <div className="w-full max-w-sm flex items-center justify-around pb-10">
-                        <div className="flex flex-col items-center gap-3">
+                    <div className="w-full max-w-sm flex items-center justify-around pb-12 animate-in slide-in-from-bottom-10 duration-700">
+                        {/* Decline Action */}
+                        <div className="flex flex-col items-center gap-4">
                             <button
                                 onClick={() => { socket.emit('end_call', { to: globalIncomingCall.from }); setGlobalIncomingCall(null); pauseAudio('incoming'); }}
-                                className="w-20 h-20 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center shadow-[0_10px_25px_-5px_rgba(244,63,94,0.5)] transition-transform active:scale-90 text-white"
+                                className="w-20 h-20 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center shadow-[0_10px_40px_-10px_rgba(244,63,94,0.7)] transition-all active:scale-90 text-white group"
                             >
-                                <PhoneOff className="w-8 h-8" />
+                                <PhoneOff className="w-8 h-8 group-active:rotate-12 transition-transform" />
                             </button>
-                            <span className="text-white/60 text-xs font-bold uppercase tracking-widest">{t('call.decline')}</span>
+                            <span className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em]">{t('call.decline')}</span>
                         </div>
 
-                        <div className="flex flex-col items-center gap-3">
+                        {/* Answer Action */}
+                        <div className="flex flex-col items-center gap-4">
                             <button
                                 onClick={() => answerIncomingCall(globalIncomingCall)}
-                                className="w-20 h-20 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-[0_10px_25px_-5px_rgba(16,185,129,0.5)] transition-transform active:scale-90 text-white"
+                                className="w-20 h-20 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-[0_10px_40px_-10px_rgba(16,185,129,0.7)] transition-all active:scale-90 text-white animate-bounce-subtle"
                             >
                                 {globalIncomingCall.callType === 'video' ? <Video className="w-8 h-8 fill-current" /> : <Phone className="w-8 h-8 fill-current" />}
                             </button>
-                            <span className="text-white/60 text-xs font-bold uppercase tracking-widest">{t('call.accept')}</span>
+                            <span className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em]">{t('call.accept')}</span>
                         </div>
                     </div>
                 </div>

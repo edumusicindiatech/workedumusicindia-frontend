@@ -59,7 +59,6 @@
     --glass-border: rgba(255, 255, 255, 0.2);
   }
 
-  /* --- DARK MODE VARIABLES --- */
   .dark {
     --background: 215 28% 10%;
     --foreground: 210 40% 98%;
@@ -95,7 +94,6 @@
     --input: 215 28% 20%;
     --ring: 239 84% 67%;
 
-    /* Dark Mode Sidebar tweaks to blend with the dark background */
     --sidebar-background: 215 28% 12%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 239 84% 67%;
@@ -145,30 +143,53 @@
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
   }
+
+  /* --- CALLING SYSTEM ANIMATIONS --- */
+  @keyframes ripple {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(2); opacity: 0; }
+  }
+
+  .animate-ripple {
+    animation: ripple 2s infinite ease-out;
+  }
+
+  .animate-ripple-delayed {
+    animation: ripple 2s infinite ease-out;
+    animation-delay: 1s;
+  }
+
+  @keyframes bounce-subtle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .animate-bounce-subtle {
+    animation: bounce-subtle 2s infinite ease-in-out;
+  }
 }
 
 /* Custom Scrollbar Styles */
 @layer utilities {
   .custom-scrollbar::-webkit-scrollbar {
-    width: 6px; /* Slimmer width */
+    width: 6px;
     height: 6px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent; /* Hides the ugly white track */
-    margin: 4px; /* Gives a little breathing room at the top and bottom */
+    background: transparent;
+    margin: 4px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--border) / 0.8); /* Uses your Tailwind border color */
-    border-radius: 10px; /* Fully rounded edges */
+    background-color: hsl(var(--border) / 0.8);
+    border-radius: 10px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground) / 0.5); /* Slightly lighter on hover */
+    background-color: hsl(var(--muted-foreground) / 0.5);
   }
 
-  /* Firefox Support */
   .custom-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--border)) transparent;
