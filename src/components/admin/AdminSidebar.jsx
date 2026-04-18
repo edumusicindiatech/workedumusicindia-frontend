@@ -401,10 +401,15 @@ const AdminSidebar = () => {
     // --- SOCKET LISTENERS ---
     useEffect(() => {
         if (!user || !token) return;
+
+        // 1. Initialize the communication channel for this tab
+        const ringChannel = new BroadcastChannel('workedu_call_channel');
+
         const currentUserId = user.id || user._id;
         const joinUserRoom = () => { socket.emit("join_room", currentUserId); socket.emit("join_admin_room"); };
         if (socket.connected) joinUserRoom();
         socket.on("connect", joinUserRoom);
+
         const handleIncomingChat = (data) => {
             if (!pathnameRef.current.includes('/chat')) {
                 setUnreadChatCount(prev => prev + 1);
@@ -412,6 +417,8 @@ const AdminSidebar = () => {
                 toast.success(t('toast.new_chat'), { icon: '💬', id: 'admin-new-chat' });
             }
         };
+
+        // 2. Updated Exclusive Ringer handleIncomingCall
         const handleIncomingCall = (data) => {
             if (activeCall) {
                 socket.emit('renegotiate', { to: data.from, signal: { type: 'CUSTOM_EVENT', event: 'call_waiting' } });
@@ -419,10 +426,41 @@ const AdminSidebar = () => {
                 playAudio('notification');
             } else {
                 setGlobalIncomingCall(data);
-                if (globalAudio.incoming) globalAudio.incoming.loop = true;
-                playAudio('incoming');
+
+                // --- EXCLUSIVE RINGER LOGIC START ---
+                if (document.hasFocus()) {
+                    if (globalAudio.incoming) globalAudio.incoming.loop = true;
+                    playAudio('incoming');
+                    ringChannel.postMessage({ type: 'SILENCE_RING', callId: data.from });
+                } else {
+                    let isClaimed = false;
+                    const silenceListener = (event) => {
+                        if (event.data.type === 'SILENCE_RING' && event.data.callId === data.from) {
+                            isClaimed = true;
+                        }
+                    };
+
+                    ringChannel.addEventListener('message', silenceListener);
+
+                    setTimeout(() => {
+                        ringChannel.removeEventListener('message', silenceListener);
+
+                        if (!isClaimed) {
+                            const lockKey = `ring_lock_${data.from}`;
+                            if (!localStorage.getItem(lockKey)) {
+                                localStorage.setItem(lockKey, 'true');
+                                if (globalAudio.incoming) globalAudio.incoming.loop = true;
+                                playAudio('incoming');
+
+                                setTimeout(() => localStorage.removeItem(lockKey), 10000);
+                            }
+                        }
+                    }, 50);
+                }
+                // --- EXCLUSIVE RINGER LOGIC END ---
             }
         };
+
         const handleCallAccepted = async (signal) => {
             setIsCallAccepted(true);
             setRemoteCallStatus('active');
@@ -547,6 +585,9 @@ const AdminSidebar = () => {
         socket.on("online_users_updated", setOnlineUsers);
 
         return () => {
+            // 3. Close the channel when the component unmounts
+            ringChannel.close();
+
             socket.off("connect", joinUserRoom);
             socket.off("receive_message", handleIncomingChat);
             socket.off("incoming_call", handleIncomingCall);
