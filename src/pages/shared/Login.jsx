@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
-import { setCredentials } from "../../store/slices/authSlice";
+import { logout, setCredentials } from "../../store/slices/authSlice";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
