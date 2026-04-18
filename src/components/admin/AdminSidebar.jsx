@@ -9,7 +9,7 @@ import {
     CalendarDays, Film, Trophy, BookOpen, X, MessageCircle, PhoneIncoming, PhoneOff, Phone, Video, ChevronDown
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { Haptics } from '@capacitor/haptics'; // --- ADDED ---
+import { Haptics } from '@capacitor/haptics'; // --- NEW: Native Haptics ---
 
 import api from "../../api/axios";
 import { logout } from "../../store/slices/authSlice";
@@ -332,7 +332,6 @@ const AdminSidebar = () => {
 
     useEffect(() => {
         const handleInitiateCall = async (e) => {
-            // --- NUMBERED TRACE LOGS ---
             console.log("🟢 1. Call Button Clicked! Target User:", e.detail);
             const peerToCall = e.detail;
             const requestedType = peerToCall.callType || 'voice';
@@ -419,7 +418,7 @@ const AdminSidebar = () => {
         setVideoUpgradeStatus('idle');
     };
 
-    // --- SOCKET LISTENERS ---
+    // --- SOCKET & FCM LISTENERS ---
     useEffect(() => {
         if (!user || !token) return;
 
@@ -444,7 +443,6 @@ const AdminSidebar = () => {
         };
 
         const handleIncomingCall = async (data) => {
-            // --- TRACE LOGS ---
             console.warn("🚨🚨🚨 [PHASE 1 TRACE] INCOMING CALL SIGNAL RECEIVED! 🚨🚨🚨", data);
             toast.success(`🚨 SIGNAL ARRIVED: Call from ${data.callerName || 'Unknown'}`, {
                 duration: 8000,
@@ -498,7 +496,17 @@ const AdminSidebar = () => {
             }
         };
 
-        const handleCallAccepted = async (signal) => {
+        // --- NEW: FCM EVENT LISTENER ---
+        const handleFcmCall = (e) => {
+            const data = e.detail;
+            handleIncomingCall(data);
+        };
+
+        window.addEventListener('fcm_incoming_call', handleFcmCall);
+
+        socket.on("receive_message", handleIncomingChat);
+        socket.on("incoming_call", handleIncomingCall);
+        socket.on("call_accepted", async (signal) => {
             setIsCallAccepted(true);
             setRemoteCallStatus('active');
             if (pcRef.current) {
@@ -506,8 +514,8 @@ const AdminSidebar = () => {
                 await processIceQueue(pcRef.current);
                 toast.success(t('toast.call_connected'), { icon: '📞' });
             }
-        };
-        const handleIceCandidate = async (data) => {
+        });
+        socket.on("ice_candidate", async (data) => {
             if (pcRef.current && data.candidate) {
                 const pc = pcRef.current;
                 if (pc.remoteDescription && pc.remoteDescription.type) {
@@ -517,35 +525,19 @@ const AdminSidebar = () => {
                     pc.iceQueue.push(data.candidate);
                 }
             }
-        };
-        const handleRenegotiate = async ({ signal }) => {
+        });
+        socket.on("renegotiate", async ({ signal }) => {
             if (signal && signal.type === 'CUSTOM_EVENT') {
-                if (signal.event === 'call_waiting') {
-                    setRemoteCallStatus('busy');
-                } else if (signal.event === 'call_held') {
-                    setRemoteCallStatus('held');
-                } else if (signal.event === 'call_resumed') {
-                    setRemoteCallStatus('active');
-                } else if (signal.event === 'call_rejected_busy') {
-                    toast.error(t('toast.user_busy'));
-                    cleanupCall();
-                } else if (signal.event === 'explicit_end') {
+                if (signal.event === 'call_waiting') setRemoteCallStatus('busy');
+                else if (signal.event === 'call_held') setRemoteCallStatus('held');
+                else if (signal.event === 'call_resumed') setRemoteCallStatus('active');
+                else if (signal.event === 'call_rejected_busy') { toast.error(t('toast.user_busy')); cleanupCall(); }
+                else if (signal.event === 'explicit_end') {
                     const senderId = signal.from;
                     const activeId = currentPeerRef.current?._id || currentPeerRef.current?.id;
-                    const heldId = heldCallRef.current?.peer?._id || heldCallRef.current?.peer?.id;
                     if (String(senderId) === String(activeId)) {
-                        if (heldCallRef.current) {
-                            toast(t('toast.call_ended_restoring'));
-                            endCurrentCall(true);
-                        } else {
-                            cleanupCall();
-                            pauseAudio('incoming');
-                            playAudio('hangup');
-                        }
-                    } else if (String(senderId) === String(heldId)) {
-                        toast(t('toast.ended_held_call', { name: heldCallRef.current.peer.name }));
-                        if (heldCallRef.current.pc) heldCallRef.current.pc.close();
-                        heldCallRef.current = null;
+                        if (heldCallRef.current) { toast(t('toast.call_ended_restoring')); endCurrentCall(true); }
+                        else { cleanupCall(); pauseAudio('incoming'); playAudio('hangup'); }
                     }
                 }
                 return;
@@ -565,80 +557,29 @@ const AdminSidebar = () => {
                     }
                 } catch (e) { }
             }
-        };
-        const handleNewNotification = (notif) => {
-            playAudio('notification');
-            if (!pathnameRef.current.includes('/notifications')) {
-                setUnreadCount(prev => prev + 1);
-                toast(t('sidebar.new_alert_toast'), { icon: '🛡️' });
-            }
-            if (notif?.type === 'Media' || (notif?.title && notif.title.toLowerCase().includes('media'))) {
-                setPendingMediaCount(prev => prev + 1);
-            }
-        };
-        const handleIncomingSOS = (data) => {
-            const { senderName, lat, lng } = data;
-            playAudio('sos');
-            if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 1000]);
-            if (!pathnameRef.current.includes('/notifications')) setUnreadCount(prev => prev + 1);
-            toast.custom(
-                (toastObj) => (
-                    <div className={`${toastObj.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-red-600 shadow-2xl rounded-xl pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
-                        <div className="flex-1 w-0 p-4">
-                            <div className="flex items-start">
-                                <div className="ml-1 flex-1">
-                                    <p className="text-lg font-black text-white drop-shadow-md">{t('sos_alert.title')}</p>
-                                    <p className="mt-1 text-sm text-white/90 font-medium"><strong>{senderName}</strong> {t('sos_alert.description')}</p>
-                                    <Button size="sm" className="mt-3 bg-white text-red-600 hover:bg-gray-100 font-bold shadow-sm w-full" onClick={() => window.open(`https://maps.google.com/?q=${lat},${lng}`, '_blank')}>
-                                        {t('sos_alert.btn_view_location')}
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex border-l border-red-700/50">
-                            <button onClick={() => toast.dismiss(toastObj.id)} className="w-full border border-transparent rounded-none rounded-r-xl p-4 flex items-center justify-center text-white/80 hover:text-white hover:bg-red-700 transition-colors"><X className="w-5 h-5" /></button>
-                        </div>
-                    </div>
-                ), { duration: 30000, id: `admin-sos-alert-${senderName}`, position: "top-right" }
-            );
-        };
-        const handleCallEnded = () => { if (!heldCallRef.current) { cleanupCall(); pauseAudio('incoming'); playAudio('hangup'); } };
-        const handleVideoUpgradeRequest = () => { setVideoUpgradeStatus('receiving_request'); playAudio('notification'); };
-        const handleVideoUpgradeRejected = () => { setVideoUpgradeStatus('idle'); toast.error(t('toast.video_rejected')); };
-        const handleVideoUpgradeAccepted = async () => { setVideoUpgradeStatus('idle'); toast.success(t('toast.video_accepted')); await performVideoUpgrade(); };
-
-        socket.on("receive_message", handleIncomingChat);
-        socket.on("incoming_call", handleIncomingCall);
-        socket.on("call_accepted", handleCallAccepted);
-        socket.on("ice_candidate", handleIceCandidate);
-        socket.on("renegotiate", handleRenegotiate);
-        socket.on("call_ended", handleCallEnded);
-        socket.on("video_upgrade_request", handleVideoUpgradeRequest);
-        socket.on("video_upgrade_rejected", handleVideoUpgradeRejected);
-        socket.on("video_upgrade_accepted", handleVideoUpgradeAccepted);
-        socket.on("new_notification", handleNewNotification);
-        socket.on("admin_leaderboard_refresh", handleNewNotification);
-        socket.on("sos_alert_received", handleIncomingSOS);
+        });
+        socket.on("call_ended", () => { if (!heldCallRef.current) { cleanupCall(); pauseAudio('incoming'); playAudio('hangup'); } });
+        socket.on("video_upgrade_request", () => { setVideoUpgradeStatus('receiving_request'); playAudio('notification'); });
+        socket.on("video_upgrade_rejected", () => { setVideoUpgradeStatus('idle'); toast.error(t('toast.video_rejected')); });
+        socket.on("video_upgrade_accepted", async () => { setVideoUpgradeStatus('idle'); toast.success(t('toast.video_accepted')); await performVideoUpgrade(); });
         socket.on("online_users_updated", setOnlineUsers);
 
         return () => {
             ringChannel.close();
+            window.removeEventListener('fcm_incoming_call', handleFcmCall);
             socket.off("connect", joinUserRoom);
             socket.off("receive_message", handleIncomingChat);
             socket.off("incoming_call", handleIncomingCall);
-            socket.off("call_accepted", handleCallAccepted);
-            socket.off("ice_candidate", handleIceCandidate);
-            socket.off("renegotiate", handleRenegotiate);
-            socket.off("call_ended", handleCallEnded);
-            socket.off("video_upgrade_request", handleVideoUpgradeRequest);
-            socket.off("video_upgrade_rejected", handleVideoUpgradeRejected);
-            socket.off("video_upgrade_accepted", handleVideoUpgradeAccepted);
-            socket.off("new_notification", handleNewNotification);
-            socket.off("admin_leaderboard_refresh", handleNewNotification);
-            socket.off("sos_alert_received", handleIncomingSOS);
+            socket.off("call_accepted");
+            socket.off("ice_candidate");
+            socket.off("renegotiate");
+            socket.off("call_ended");
+            socket.off("video_upgrade_request");
+            socket.off("video_upgrade_rejected");
+            socket.off("video_upgrade_accepted");
             socket.off("online_users_updated", setOnlineUsers);
         };
-    }, [user, t, activeCall, token]);
+    }, [user, token, activeCall, t]);
 
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
@@ -657,12 +598,9 @@ const AdminSidebar = () => {
                     style={{ zIndex: 9999999, position: 'fixed', inset: 0 }}
                     className="bg-[#0B0D12] flex flex-col items-center justify-between py-24 px-6 animate-in fade-in duration-500"
                 >
-                    {console.log("💎 [UI TRACE] Rendering Immersive Full-Screen Call UI")}
-
-                    {/* TOP SECTION: Caller Info */}
+                    {console.log("💎 [UI TRACE] Admin Call Modal attempting to render!")}
                     <div className="flex flex-col items-center mt-12">
                         <div className="relative">
-                            {/* Ripple Effect Rings (Requires CSS below) */}
                             <div className="absolute inset-0 rounded-full bg-primary/20 animate-ripple"></div>
                             <div className="absolute inset-0 rounded-full bg-primary/10 animate-ripple-delayed"></div>
 
@@ -691,9 +629,7 @@ const AdminSidebar = () => {
                         </div>
                     </div>
 
-                    {/* BOTTOM SECTION: Actions */}
                     <div className="w-full max-w-sm flex items-center justify-around pb-12 animate-in slide-in-from-bottom-10 duration-700">
-                        {/* Decline Action */}
                         <div className="flex flex-col items-center gap-4">
                             <button
                                 onClick={() => { socket.emit('end_call', { to: globalIncomingCall.from }); setGlobalIncomingCall(null); pauseAudio('incoming'); }}
@@ -704,7 +640,6 @@ const AdminSidebar = () => {
                             <span className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em]">{t('call.decline')}</span>
                         </div>
 
-                        {/* Answer Action */}
                         <div className="flex flex-col items-center gap-4">
                             <button
                                 onClick={() => answerIncomingCall(globalIncomingCall)}
@@ -742,7 +677,7 @@ const AdminSidebar = () => {
                 />
             )}
 
-            <nav className="hidden 2xl:flex fixed top-0 w-full h-16 bg-card border-b border-border z-50 items-center justify-between px-6 shadow-sm">
+            <header className="fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-50 flex items-center justify-between px-6 shadow-sm">
                 <div className="flex items-center gap-3 shrink-0 mr-2">
                     <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
                         <span className="text-primary-foreground font-bold text-base">
@@ -797,7 +732,7 @@ const AdminSidebar = () => {
                     <button onClick={() => setIsSettingsModalOpen(true)} className="p-2 text-muted-foreground md:cursor-pointer hover:text-foreground hover:bg-muted rounded-full transition-colors" title={t('sidebar.settings')}><Settings className="w-5 h-5" /></button>
                     <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-destructive md:cursor-pointer hover:bg-destructive/10 rounded-full transition-colors" title={t('sidebar.logout')}><LogOut className="w-5 h-5" /></button>
                 </div>
-            </nav>
+            </header>
 
             <header className="2xl:hidden fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4 shadow-sm">
                 <div className="flex items-center gap-2">

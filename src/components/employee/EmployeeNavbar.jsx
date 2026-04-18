@@ -8,7 +8,7 @@ import { setAxiosToken } from "../../api/axios";
 import { io } from "socket.io-client";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { Haptics } from '@capacitor/haptics'; // --- ADDED ---
+import { Haptics } from '@capacitor/haptics'; // --- NEW: Native Haptics ---
 
 import {
     Home, User, CalendarCheck, Bell, BarChartBig,
@@ -409,7 +409,7 @@ const EmployeeNavbar = () => {
         setVideoUpgradeStatus('idle');
     };
 
-    // --- SOCKET LISTENERS ---
+    // --- SOCKET & FCM LISTENERS ---
     useEffect(() => {
         if (!user || !token) return;
 
@@ -434,7 +434,6 @@ const EmployeeNavbar = () => {
         };
 
         const handleIncomingCall = async (data) => {
-            // --- TRACE LOGS ---
             console.warn("🚨🚨🚨 [PHASE 1 TRACE] INCOMING CALL SIGNAL RECEIVED! 🚨🚨🚨", data);
             toast.success(`🚨 SIGNAL ARRIVED: Call from ${data.callerName || 'Unknown'}`, {
                 duration: 8000,
@@ -453,6 +452,7 @@ const EmployeeNavbar = () => {
                 setWaitingIncomingCall(data);
                 playAudio('notification');
             } else {
+                // Force state update to trigger overlay correctly
                 setGlobalIncomingCall(null);
                 setTimeout(() => setGlobalIncomingCall(data), 20);
 
@@ -488,7 +488,17 @@ const EmployeeNavbar = () => {
             }
         };
 
-        const handleCallAccepted = async (signal) => {
+        // --- NEW: FCM EVENT LISTENER ---
+        const handleFcmCall = (e) => {
+            const data = e.detail;
+            handleIncomingCall(data);
+        };
+
+        window.addEventListener('fcm_incoming_call', handleFcmCall);
+
+        socket.on("receive_message", handleIncomingChat);
+        socket.on("incoming_call", handleIncomingCall);
+        socket.on("call_accepted", async (signal) => {
             setIsCallAccepted(true);
             setRemoteCallStatus('active');
             if (pcRef.current) {
@@ -496,8 +506,8 @@ const EmployeeNavbar = () => {
                 await processIceQueue(pcRef.current);
                 toast.success(t('toast.call_connected'), { icon: '📞' });
             }
-        };
-        const handleIceCandidate = async (data) => {
+        });
+        socket.on("ice_candidate", async (data) => {
             if (pcRef.current && data.candidate) {
                 const pc = pcRef.current;
                 if (pc.remoteDescription && pc.remoteDescription.type) {
@@ -507,35 +517,19 @@ const EmployeeNavbar = () => {
                     pc.iceQueue.push(data.candidate);
                 }
             }
-        };
-        const handleRenegotiate = async ({ signal }) => {
+        });
+        socket.on("renegotiate", async ({ signal }) => {
             if (signal && signal.type === 'CUSTOM_EVENT') {
-                if (signal.event === 'call_waiting') {
-                    setRemoteCallStatus('busy');
-                } else if (signal.event === 'call_held') {
-                    setRemoteCallStatus('held');
-                } else if (signal.event === 'call_resumed') {
-                    setRemoteCallStatus('active');
-                } else if (signal.event === 'call_rejected_busy') {
-                    toast.error(t('toast.user_busy'));
-                    cleanupCall();
-                } else if (signal.event === 'explicit_end') {
+                if (signal.event === 'call_waiting') setRemoteCallStatus('busy');
+                else if (signal.event === 'call_held') setRemoteCallStatus('held');
+                else if (signal.event === 'call_resumed') setRemoteCallStatus('active');
+                else if (signal.event === 'call_rejected_busy') { toast.error(t('toast.user_busy')); cleanupCall(); }
+                else if (signal.event === 'explicit_end') {
                     const senderId = signal.from;
                     const activeId = currentPeerRef.current?._id || currentPeerRef.current?.id;
-                    const heldId = heldCallRef.current?.peer?._id || heldCallRef.current?.peer?.id;
                     if (String(senderId) === String(activeId)) {
-                        if (heldCallRef.current) {
-                            toast(t('toast.call_ended_restoring'));
-                            endCurrentCall(true);
-                        } else {
-                            cleanupCall();
-                            pauseAudio('incoming');
-                            playAudio('hangup');
-                        }
-                    } else if (String(senderId) === String(heldId)) {
-                        toast(t('toast.ended_held_call', { name: heldCallRef.current.peer.name }));
-                        if (heldCallRef.current.pc) heldCallRef.current.pc.close();
-                        heldCallRef.current = null;
+                        if (heldCallRef.current) { toast(t('toast.call_ended_restoring')); endCurrentCall(true); }
+                        else { cleanupCall(); pauseAudio('incoming'); playAudio('hangup'); }
                     }
                 }
                 return;
@@ -555,35 +549,26 @@ const EmployeeNavbar = () => {
                     }
                 } catch (e) { }
             }
-        };
-        const handleCallEnded = () => { if (!heldCallRef.current) { cleanupCall(); pauseAudio('incoming'); playAudio('hangup'); } };
-        const handleVideoUpgradeRequest = () => { setVideoUpgradeStatus('receiving_request'); playAudio('notification'); };
-        const handleVideoUpgradeRejected = () => { setVideoUpgradeStatus('idle'); toast.error(t('toast.video_rejected')); };
-        const handleVideoUpgradeAccepted = async () => { setVideoUpgradeStatus('idle'); toast.success(t('toast.video_accepted')); await performVideoUpgrade(); };
-
-        socket.on("receive_message", handleIncomingChat);
-        socket.on("incoming_call", handleIncomingCall);
-        socket.on("call_accepted", handleCallAccepted);
-        socket.on("ice_candidate", handleIceCandidate);
-        socket.on("renegotiate", handleRenegotiate);
-        socket.on("call_ended", handleCallEnded);
-        socket.on("video_upgrade_request", handleVideoUpgradeRequest);
-        socket.on("video_upgrade_rejected", handleVideoUpgradeRejected);
-        socket.on("video_upgrade_accepted", handleVideoUpgradeAccepted);
+        });
+        socket.on("call_ended", () => { if (!heldCallRef.current) { cleanupCall(); pauseAudio('incoming'); playAudio('hangup'); } });
+        socket.on("video_upgrade_request", () => { setVideoUpgradeStatus('receiving_request'); playAudio('notification'); });
+        socket.on("video_upgrade_rejected", () => { setVideoUpgradeStatus('idle'); toast.error(t('toast.video_rejected')); });
+        socket.on("video_upgrade_accepted", async () => { setVideoUpgradeStatus('idle'); toast.success(t('toast.video_accepted')); await performVideoUpgrade(); });
         socket.on("online_users_updated", setOnlineUsers);
 
         return () => {
             ringChannel.close();
+            window.removeEventListener('fcm_incoming_call', handleFcmCall);
             socket.off("connect", joinUserRoom);
             socket.off("receive_message", handleIncomingChat);
             socket.off("incoming_call", handleIncomingCall);
-            socket.off("call_accepted", handleCallAccepted);
-            socket.off("ice_candidate", handleIceCandidate);
-            socket.off("renegotiate", handleRenegotiate);
-            socket.off("call_ended", handleCallEnded);
-            socket.off("video_upgrade_request", handleVideoUpgradeRequest);
-            socket.off("video_upgrade_rejected", handleVideoUpgradeRejected);
-            socket.off("video_upgrade_accepted", handleVideoUpgradeAccepted);
+            socket.off("call_accepted");
+            socket.off("ice_candidate");
+            socket.off("renegotiate");
+            socket.off("call_ended");
+            socket.off("video_upgrade_request");
+            socket.off("video_upgrade_rejected");
+            socket.off("video_upgrade_accepted");
             socket.off("online_users_updated", setOnlineUsers);
         };
     }, [user, token, activeCall, t]);
@@ -619,12 +604,8 @@ const EmployeeNavbar = () => {
                     style={{ zIndex: 9999999, position: 'fixed', inset: 0 }}
                     className="bg-[#0B0D12] flex flex-col items-center justify-between py-24 px-6 animate-in fade-in duration-500"
                 >
-                    {console.log("💎 [UI TRACE] Rendering Immersive Full-Screen Call UI")}
-
-                    {/* TOP SECTION: Caller Info */}
                     <div className="flex flex-col items-center mt-12">
                         <div className="relative">
-                            {/* Ripple Effect Rings (Requires CSS below) */}
                             <div className="absolute inset-0 rounded-full bg-primary/20 animate-ripple"></div>
                             <div className="absolute inset-0 rounded-full bg-primary/10 animate-ripple-delayed"></div>
 
@@ -653,9 +634,7 @@ const EmployeeNavbar = () => {
                         </div>
                     </div>
 
-                    {/* BOTTOM SECTION: Actions */}
                     <div className="w-full max-w-sm flex items-center justify-around pb-12 animate-in slide-in-from-bottom-10 duration-700">
-                        {/* Decline Action */}
                         <div className="flex flex-col items-center gap-4">
                             <button
                                 onClick={() => { socket.emit('end_call', { to: globalIncomingCall.from }); setGlobalIncomingCall(null); pauseAudio('incoming'); }}
@@ -666,7 +645,6 @@ const EmployeeNavbar = () => {
                             <span className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em]">{t('call.decline')}</span>
                         </div>
 
-                        {/* Answer Action */}
                         <div className="flex flex-col items-center gap-4">
                             <button
                                 onClick={() => answerIncomingCall(globalIncomingCall)}
@@ -732,7 +710,6 @@ const EmployeeNavbar = () => {
                                 {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-7 h-7 rounded-full object-cover border border-border" /> : <UserCircle className="w-7 h-7 text-muted-foreground" />}
                             </button>
 
-                            {/* Smooth Transition wrapper for Mobile Menu */}
                             <div className={`absolute top-12 right-0 w-56 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50 origin-top-right transition-all duration-200 ease-out ${isMobileMenuOpen ? "opacity-100 scale-100 translate-y-0 pointer-events-auto" : "opacity-0 scale-95 -translate-y-2 pointer-events-none"}`}>
                                 <div className="px-3 py-2.5 mb-1 border-b border-border flex items-center gap-3">
                                     {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-9 h-9 rounded-full object-cover shrink-0 border border-border" /> : <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><User className="w-4 h-4 text-primary" /></div>}

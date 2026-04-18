@@ -1,4 +1,4 @@
-import { useEffect, Suspense, lazy } from "react";
+import { useState, useEffect, Suspense, lazy } from "react"; // Added useState
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { setCredentials, logout, setHydrationComplete } from "./store/slices/authSlice";
@@ -9,6 +9,8 @@ import { Toaster } from "react-hot-toast";
 // --- NEW CAPACITOR & FIREBASE IMPORTS ---
 import { Capacitor } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
+import { PushNotifications } from '@capacitor/push-notifications'; // --- ADDED ---
+import { Haptics } from '@capacitor/haptics'; // --- ADDED ---
 
 // --- NEW IMPORT FOR PWA UPDATE HOOK ---
 import { useRegisterSW } from 'virtual:pwa-register/react';
@@ -118,7 +120,6 @@ function App() {
     updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r) {
-      // ONLY run the update interval if NOT on native platform
       if (r && !isNative) {
         setInterval(() => {
           r.update();
@@ -191,7 +192,6 @@ function App() {
   // --- FIREBASE FCM INITIALIZATION ---
   useEffect(() => {
     const setupFirebase = async () => {
-      // Only request token if user is logged in AND on a native device
       if (token && isNative) {
         try {
           const result = await FirebaseMessaging.requestPermissions();
@@ -200,8 +200,8 @@ function App() {
             const { token: fcmToken } = await FirebaseMessaging.getToken();
             console.log("🔥 FCM Token generated:", fcmToken);
 
-            // TODO: Uncomment and update the endpoint below to save this token to your Render backend
-            // await api.post('/employee/save-fcm-token', { fcmToken });
+            // Save token to database
+            await api.post('/auth/update-fcm-token', { fcmToken, userId: user?.id || user?._id });
 
           } else {
             console.warn("User denied push notification permissions");
@@ -213,7 +213,44 @@ function App() {
     };
 
     setupFirebase();
-  }, [token, isNative]);
+  }, [token, isNative, user]);
+
+  // --- NEW: BACKGROUND PUSH LISTENER FOR INCOMING CALLS ---
+  useEffect(() => {
+    if (isNative) {
+      // 1. Request Push Permissions
+      PushNotifications.requestPermissions().then(result => {
+        if (result.receive === 'granted') {
+          PushNotifications.register();
+        }
+      });
+
+      // 2. Listen for the actual FCM message (Data Message)
+      PushNotifications.addListener('pushNotificationReceived', async (notification) => {
+        const data = notification.data;
+
+        if (data.type === 'incoming_call') {
+          console.log("☎️ Background Call Received via FCM:", data);
+
+          // Vibrate the hardware natively
+          Haptics.vibrate({ duration: 1500 });
+
+          // Dispatch a global event that your Navbar/Sidebar can hear
+          // We convert the data back into the format the Navbar expects
+          const event = new CustomEvent('fcm_incoming_call', {
+            detail: {
+              from: data.callerId,
+              callerName: data.callerName,
+              callType: data.callType,
+              profilePicture: data.profilePicture,
+              signal: JSON.parse(data.signal) // Parse the stringified signal from backend
+            }
+          });
+          window.dispatchEvent(event);
+        }
+      });
+    }
+  }, [isNative]);
 
   // --- OFFLINE SYNC ---
   useEffect(() => {
