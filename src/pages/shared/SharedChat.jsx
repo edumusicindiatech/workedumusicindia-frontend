@@ -15,14 +15,32 @@ if (!window.__GLOBAL_SOCKET__) {
 }
 const socket = window.__GLOBAL_SOCKET__;
 
-if (!window.__GLOBAL_AUDIO__) {
-    window.__GLOBAL_AUDIO__ = {
-        notification: new Audio('/sounds/notification-ting.mp3'),
-        sent: new Audio('/sounds/sent.mp3'),
-        message: new Audio('/sounds/message.mp3'),
-    };
-}
-const playAudio = (type) => { try { const snd = window.__GLOBAL_AUDIO__[type]; if (snd) { snd.currentTime = 0; snd.play().catch(e => { }); } } catch (e) { } };
+// FIX: Merge audio objects to prevent race conditions causing missing sounds
+window.__GLOBAL_AUDIO__ = window.__GLOBAL_AUDIO__ || {};
+if (!window.__GLOBAL_AUDIO__.notification) window.__GLOBAL_AUDIO__.notification = new Audio('/sounds/notification-ting.mp3');
+if (!window.__GLOBAL_AUDIO__.sent) window.__GLOBAL_AUDIO__.sent = new Audio('/sounds/sent.mp3');
+if (!window.__GLOBAL_AUDIO__.message) window.__GLOBAL_AUDIO__.message = new Audio('/sounds/message.mp3');
+if (!window.__GLOBAL_AUDIO__.sos) window.__GLOBAL_AUDIO__.sos = new Audio('/sounds/beep.mp3');
+if (!window.__GLOBAL_AUDIO__.incoming) window.__GLOBAL_AUDIO__.incoming = new Audio('/sounds/incoming.mp3');
+if (!window.__GLOBAL_AUDIO__.hangup) window.__GLOBAL_AUDIO__.hangup = new Audio('/sounds/hangup.mp3');
+if (!window.__GLOBAL_AUDIO__.calling) window.__GLOBAL_AUDIO__.calling = new Audio('/sounds/calling.mp3');
+if (!window.__GLOBAL_AUDIO__.ringing) window.__GLOBAL_AUDIO__.ringing = new Audio('/sounds/ringing.mp3');
+
+const playAudio = (type) => {
+    try {
+        // Use window.__GLOBAL_AUDIO__ for SharedChat, or globalAudio for the Navbars
+        const audioStore = typeof globalAudio !== 'undefined' ? globalAudio : window.__GLOBAL_AUDIO__;
+        const snd = audioStore?.[type];
+
+        if (snd) {
+            // Only play and reset if the audio is currently paused
+            if (snd.paused) {
+                snd.currentTime = 0;
+                snd.play().catch(e => console.warn(`Audio blocked:`, e));
+            }
+        }
+    } catch (e) { }
+};
 
 const SharedChat = () => {
     const { t } = useTranslation();

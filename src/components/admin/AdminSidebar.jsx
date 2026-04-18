@@ -37,7 +37,22 @@ if (!window.__GLOBAL_AUDIO__) {
     };
 }
 const globalAudio = window.__GLOBAL_AUDIO__;
-const playAudio = (type) => { try { const snd = globalAudio[type]; if (snd) { snd.currentTime = 0; snd.play().catch(e => console.warn(`Audio blocked:`, e)); } } catch (e) { } };
+
+// FIX: Play audio without constantly resetting if already playing
+const playAudio = (type) => {
+    try {
+        const audioStore = typeof globalAudio !== 'undefined' ? globalAudio : window.__GLOBAL_AUDIO__;
+        const snd = audioStore?.[type];
+
+        if (snd) {
+            if (snd.paused) {
+                snd.currentTime = 0;
+                snd.play().catch(e => console.warn(`Audio blocked:`, e));
+            }
+        }
+    } catch (e) { }
+};
+
 const pauseAudio = (type) => { try { const snd = globalAudio[type]; if (snd) { snd.pause(); snd.currentTime = 0; } } catch (e) { } };
 
 const iceServers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
@@ -101,7 +116,7 @@ const AdminSidebar = () => {
         return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
     }, []);
 
-    // NEW: Handle clicks outside the mobile menu to close it smoothly
+    // Handle clicks outside the mobile menu to close it smoothly
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
@@ -672,7 +687,7 @@ const AdminSidebar = () => {
                         <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leaderboard'); }}><Trophy className="w-4 h-4 text-primary" /> {t('sidebar.leaderboard')}</button>
                         <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/reports'); }}><ClipboardCheck className="w-4 h-4 text-primary" /> {t('sidebar.reports')}</button>
                         <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/media'); }}>
-                            <div className="flex items-center gap-3"><Film className="w-4 h-4 text-primary" /> {t('sidebar.media')}</div>
+                            <div className="flex items-center gap-3"><Film className="w-4 h-4 text-primary" /> {t('sidebar.media_gallery')}</div>
                             {pendingMediaCount > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm animate-pulse" />}
                         </button>
                         <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leave-requests'); }}><CalendarDays className="w-4 h-4 text-primary" /> {t('sidebar.leave')}</button>

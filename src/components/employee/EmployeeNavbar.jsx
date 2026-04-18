@@ -40,7 +40,22 @@ if (!window.__GLOBAL_AUDIO__) {
     };
 }
 const globalAudio = window.__GLOBAL_AUDIO__;
-const playAudio = (type) => { try { const snd = globalAudio[type]; if (snd) { snd.currentTime = 0; snd.play().catch(e => console.warn(`Audio blocked:`, e)); } } catch (e) { } };
+
+// FIX: Play audio without constantly resetting if already playing
+const playAudio = (type) => {
+    try {
+        const audioStore = typeof globalAudio !== 'undefined' ? globalAudio : window.__GLOBAL_AUDIO__;
+        const snd = audioStore?.[type];
+
+        if (snd) {
+            if (snd.paused) {
+                snd.currentTime = 0;
+                snd.play().catch(e => console.warn(`Audio blocked:`, e));
+            }
+        }
+    } catch (e) { }
+};
+
 const pauseAudio = (type) => { try { const snd = globalAudio[type]; if (snd) { snd.pause(); snd.currentTime = 0; } } catch (e) { } };
 
 const iceServers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
@@ -94,6 +109,30 @@ const EmployeeNavbar = () => {
         if (location.pathname.includes('/chat')) setUnreadChatCount(0);
     }, [location.pathname]);
 
+    // --- BUG FIX: ADDED MISSING OUTBOUND AUDIO LOGIC HERE ---
+    useEffect(() => {
+        if (activeCall && !isCallAccepted && callPeer && remoteCallStatus === 'active') {
+            const isPeerOnline = onlineUsers.includes(String(callPeer._id || callPeer.id));
+            if (isPeerOnline) { 
+                pauseAudio('calling'); 
+                if (globalAudio.ringing) globalAudio.ringing.loop = true; 
+                playAudio('ringing'); 
+            } else { 
+                pauseAudio('ringing'); 
+                if (globalAudio.calling) globalAudio.calling.loop = true; 
+                playAudio('calling'); 
+            }
+        } else { 
+            pauseAudio('calling'); 
+            pauseAudio('ringing'); 
+        }
+        return () => { 
+            pauseAudio('calling'); 
+            pauseAudio('ringing'); 
+        };
+    }, [activeCall, isCallAccepted, callPeer, onlineUsers, remoteCallStatus]);
+    // --------------------------------------------------------
+
     useEffect(() => {
         if (globalIncomingCall && !activeCall) {
             const timer = setTimeout(() => {
@@ -106,7 +145,7 @@ const EmployeeNavbar = () => {
         }
     }, [globalIncomingCall, activeCall, t]);
 
-    // NEW: Handle clicks outside the mobile menu to close it smoothly
+    // Handle clicks outside the mobile menu to close it smoothly
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
