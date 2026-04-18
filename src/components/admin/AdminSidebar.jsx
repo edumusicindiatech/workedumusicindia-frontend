@@ -331,27 +331,50 @@ const AdminSidebar = () => {
 
     useEffect(() => {
         const handleInitiateCall = async (e) => {
+            // --- NUMBERED TRACE LOGS ---
+            console.log("🟢 1. Call Button Clicked! Target User:", e.detail);
             const peerToCall = e.detail;
             const requestedType = peerToCall.callType || 'voice';
-            const mediaResult = await setupMedia(requestedType);
-            if (!mediaResult || !mediaResult.stream) return;
-            const { stream, actualType } = mediaResult;
-            setCurrentCallType(actualType);
-            setIsCallAccepted(false);
-            setRemoteCallStatus('active');
-            setCallPeer(peerToCall);
-            setActiveCall(true);
-            const pc = new RTCPeerConnection(iceServers);
-            pcRef.current = pc;
-            stream.getTracks().forEach(track => pc.addTrack(track, stream));
-            attachPCListeners(pc);
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            socket.emit('call_user', {
-                userToCall: peerToCall._id || peerToCall.id, from: user.id || user._id,
-                callerName: user.name, profilePicture: user.profilePicture,
-                signalData: offer, callType: actualType
-            });
+
+            try {
+                const mediaResult = await setupMedia(requestedType);
+                if (!mediaResult || !mediaResult.stream) {
+                    console.error("🔴 2. Camera/Mic Access Failed!");
+                    return;
+                }
+                console.log("🟢 3. Camera/Mic Success! Setting up WebRTC...");
+
+                const { stream, actualType } = mediaResult;
+                setCurrentCallType(actualType);
+                setIsCallAccepted(false);
+                setRemoteCallStatus('active');
+                setCallPeer(peerToCall);
+                setActiveCall(true);
+
+                const pc = new RTCPeerConnection(iceServers);
+                pcRef.current = pc;
+                stream.getTracks().forEach(track => pc.addTrack(track, stream));
+                attachPCListeners(pc);
+
+                console.log("🟢 4. Creating WebRTC Offer...");
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                const callPayload = {
+                    userToCall: peerToCall._id || peerToCall.id,
+                    from: user.id || user._id,
+                    callerName: user.name,
+                    profilePicture: user.profilePicture,
+                    signalData: offer,
+                    callType: actualType
+                };
+
+                console.log("🟢 5. FIRING SIGNAL TO BACKEND! Payload:", callPayload);
+                socket.emit('call_user', callPayload);
+
+            } catch (error) {
+                console.error("❌ CRITICAL WEBRTC ERROR:", error);
+            }
         };
         window.addEventListener('initiate_global_call', handleInitiateCall);
         return () => window.removeEventListener('initiate_global_call', handleInitiateCall);
@@ -403,8 +426,9 @@ const AdminSidebar = () => {
 
         const currentUserId = user.id || user._id;
         const joinUserRoom = () => { 
+            // --- TRACE LOGS ---
             console.log("🟢 [PHASE 1 TRACE] SOCKET CONNECTED! ID:", socket.id);
-            console.log("🚪 [PHASE 1 TRACE] Joining room for user:", currentUserId); 
+            console.log("🚪 [PHASE 1 TRACE] Joining room for user:", currentUserId);
             socket.emit("join_room", currentUserId); 
             socket.emit("join_admin_room"); 
         };
