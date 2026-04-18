@@ -426,11 +426,11 @@ const AdminSidebar = () => {
         const ringChannel = new BroadcastChannel('workedu_call_channel');
 
         const currentUserId = user.id || user._id;
-        const joinUserRoom = () => { 
+        const joinUserRoom = () => {
             console.log("🟢 [PHASE 1 TRACE] SOCKET CONNECTED! ID:", socket.id);
             console.log("🚪 [PHASE 1 TRACE] Joining room for user:", currentUserId);
-            socket.emit("join_room", currentUserId); 
-            socket.emit("join_admin_room"); 
+            socket.emit("join_room", currentUserId);
+            socket.emit("join_admin_room");
         };
         if (socket.connected) joinUserRoom();
         socket.on("connect", joinUserRoom);
@@ -444,7 +444,7 @@ const AdminSidebar = () => {
         };
 
         const handleIncomingCall = async (data) => {
-            // --- PHASE 1 TRACE LOGS ---
+            // --- TRACE LOGS ---
             console.warn("🚨🚨🚨 [PHASE 1 TRACE] INCOMING CALL SIGNAL RECEIVED! 🚨🚨🚨", data);
             toast.success(`🚨 SIGNAL ARRIVED: Call from ${data.callerName || 'Unknown'}`, {
                 duration: 8000,
@@ -453,7 +453,7 @@ const AdminSidebar = () => {
             });
 
             // --- NATIVE VIBRATION ---
-            try { 
+            try {
                 await Haptics.vibrate({ duration: 1000 });
                 setTimeout(async () => { await Haptics.vibrate({ duration: 1000 }); }, 1500);
             } catch (e) { console.error("Haptics failed", e); }
@@ -651,36 +651,57 @@ const AdminSidebar = () => {
 
     return (
         <>
-            {/* --- CALL MODAL AT THE VERY TOP --- */}
+            {/* --- FULL-SCREEN IMMERSIVE CALL OVERLAY --- */}
             {globalIncomingCall && !activeCall && (
-                <div 
-                    style={{ zIndex: 9999999, position: 'fixed', inset: 0 }} 
-                    className="bg-black/85 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-300"
+                <div
+                    style={{ zIndex: 9999999, position: 'fixed', inset: 0 }}
+                    className="bg-[#0B0D12] flex flex-col items-center justify-between py-20 px-6 animate-in fade-in duration-500"
                 >
-                    {console.log("💎 [UI TRACE] Admin Call Modal attempting to render!")}
-                    <div className="bg-card dark:bg-[#13151A] p-8 rounded-[2.5rem] shadow-2xl flex flex-col items-center gap-6 w-80 text-center border border-white/10 animate-in zoom-in-95">
-                        <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_30px_rgba(var(--primary),0.4)] overflow-hidden border-2 border-primary/50">
-                            {globalIncomingCall.profilePicture ? (
-                                <img src={globalIncomingCall.profilePicture} alt="Caller" className="w-full h-full object-cover" />
-                            ) : (
-                                <PhoneIncoming className="w-12 h-12 text-primary" />
-                            )}
+                    {console.log("💎 [UI TRACE] Rendering Immersive Full-Screen Call UI")}
+
+                    {/* TOP SECTION: Caller Info */}
+                    <div className="flex flex-col items-center mt-10">
+                        <div className="relative">
+                            {/* Ripple Effect Rings */}
+                            <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping scale-150 opacity-20"></div>
+
+                            <div className="w-32 h-32 sm:w-40 sm:h-40 bg-primary/10 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(var(--primary),0.3)] overflow-hidden border-4 border-white/10 relative z-10">
+                                {globalIncomingCall.profilePicture ? (
+                                    <img src={globalIncomingCall.profilePicture} alt="Caller" className="w-full h-full object-cover" />
+                                ) : (
+                                    <User className="w-16 h-16 text-primary" />
+                                )}
+                            </div>
                         </div>
-                        <div>
-                            <h2 className="text-2xl font-bold text-foreground">
-                                {globalIncomingCall.callerName}
-                            </h2>
-                            <p className="text-sm text-muted-foreground mt-1 capitalize tracking-wide">
-                                {t('sidebar.incoming_call', { type: globalIncomingCall.callType || 'voice' })}
-                            </p>
+
+                        <h2 className="text-3xl font-black text-white mt-8 tracking-tight">
+                            {globalIncomingCall.callerName}
+                        </h2>
+                        <p className="text-primary font-bold text-sm uppercase tracking-[0.2em] mt-3 animate-pulse">
+                            {globalIncomingCall.callType === 'video' ? t('navbar.incoming_video') : t('navbar.incoming_voice')}
+                        </p>
+                    </div>
+
+                    {/* BOTTOM SECTION: Actions */}
+                    <div className="w-full max-w-sm flex items-center justify-around pb-10">
+                        <div className="flex flex-col items-center gap-3">
+                            <button
+                                onClick={() => { socket.emit('end_call', { to: globalIncomingCall.from }); setGlobalIncomingCall(null); pauseAudio('incoming'); }}
+                                className="w-20 h-20 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center shadow-[0_10px_25px_-5px_rgba(244,63,94,0.5)] transition-transform active:scale-90 text-white"
+                            >
+                                <PhoneOff className="w-8 h-8" />
+                            </button>
+                            <span className="text-white/60 text-xs font-bold uppercase tracking-widest">{t('call.decline')}</span>
                         </div>
-                        <div className="flex items-center gap-8 w-full justify-center mt-2">
-                            <button onClick={() => { socket.emit('end_call', { to: globalIncomingCall.from }); setGlobalIncomingCall(null); pauseAudio('incoming'); }} className="w-16 h-16 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 text-white">
-                                <PhoneOff className="w-7 h-7" />
+
+                        <div className="flex flex-col items-center gap-3">
+                            <button
+                                onClick={() => answerIncomingCall(globalIncomingCall)}
+                                className="w-20 h-20 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-[0_10px_25px_-5px_rgba(16,185,129,0.5)] transition-transform active:scale-90 text-white"
+                            >
+                                {globalIncomingCall.callType === 'video' ? <Video className="w-8 h-8 fill-current" /> : <Phone className="w-8 h-8 fill-current" />}
                             </button>
-                            <button onClick={() => answerIncomingCall(globalIncomingCall)} className="w-16 h-16 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 text-white">
-                                {globalIncomingCall.callType === 'video' ? <Video className="w-7 h-7 fill-current" /> : <Phone className="w-7 h-7 fill-current" />}
-                            </button>
+                            <span className="text-white/60 text-xs font-bold uppercase tracking-widest">{t('call.accept')}</span>
                         </div>
                     </div>
                 </div>
@@ -712,7 +733,6 @@ const AdminSidebar = () => {
 
             <nav className="hidden 2xl:flex fixed top-0 w-full h-16 bg-card border-b border-border z-50 items-center justify-between px-6 shadow-sm">
                 <div className="flex items-center gap-3 shrink-0 mr-2">
-                    {/* Updated Icon Box */}
                     <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
                         <span className="text-primary-foreground font-bold text-base">
                             {t('sidebar.brand').charAt(0)}
@@ -770,7 +790,6 @@ const AdminSidebar = () => {
 
             <header className="2xl:hidden fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4 shadow-sm">
                 <div className="flex items-center gap-2">
-                    {/* Updated Icon Box */}
                     <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
                         <span className="text-primary-foreground font-bold text-sm">
                             {t('sidebar.brand').charAt(0)}
@@ -786,7 +805,6 @@ const AdminSidebar = () => {
                         {user?.profilePicture ? <img src={user.profilePicture} alt="Admin" className="w-full h-full object-cover rounded-full" /> : <UserCircle className="w-7 h-7 text-muted-foreground" />}
                     </button>
 
-                    {/* Smooth Transition wrapper for Mobile Menu */}
                     <div className={`absolute top-12 right-0 w-56 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50 origin-top-right transition-all duration-200 ease-out ${isMobileMenuOpen ? "opacity-100 scale-100 translate-y-0 pointer-events-auto" : "opacity-0 scale-95 -translate-y-2 pointer-events-none"}`}>
                         <div className="px-3 py-2 mb-1 border-b border-border">
                             <p className="text-sm font-bold text-foreground truncate">{adminName}</p>
