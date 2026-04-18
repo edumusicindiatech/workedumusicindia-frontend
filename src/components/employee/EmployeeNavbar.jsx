@@ -98,10 +98,7 @@ const EmployeeNavbar = () => {
         if (globalIncomingCall && !activeCall) {
             const timer = setTimeout(() => {
                 socket.emit('end_call', { to: globalIncomingCall.from });
-                
-                // Translated Toast
                 toast.error(t('toast.missed_call', { name: globalIncomingCall.callerName }));
-                
                 setGlobalIncomingCall(null);
                 pauseAudio('incoming');
             }, 60000);
@@ -109,13 +106,23 @@ const EmployeeNavbar = () => {
         }
     }, [globalIncomingCall, activeCall, t]);
 
+    // NEW: Handle clicks outside the mobile menu to close it smoothly
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+                setIsMobileMenuOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     const { user, token } = useSelector((state) => state.auth);
     const themeMode = useSelector((state) => state.theme.mode);
 
     // --- WEBRTC LOGIC ---
     const setupMedia = async (requestedType, specificFacingMode = 'user') => {
         if (localStreamRef.current) return { stream: localStreamRef.current, actualType: requestedType };
-
         try {
             if (!navigator.mediaDevices) throw new Error("Media devices not supported.");
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -150,21 +157,15 @@ const EmployeeNavbar = () => {
         try {
             const newMode = facingMode === 'user' ? 'environment' : 'user';
             localStreamRef.current.getVideoTracks().forEach(t => t.stop());
-
             const videoConstraints = { facingMode: { exact: newMode }, ...HQ_VIDEO_CONSTRAINTS };
             const fallbackConstraints = { facingMode: newMode, ...HQ_VIDEO_CONSTRAINTS };
-
             const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints })
                 .catch(() => navigator.mediaDevices.getUserMedia({ video: fallbackConstraints }));
-
             const newVideoTrack = stream.getVideoTracks()[0];
-
             const sender = pcRef.current?.getSenders().find(s => s.track && s.track.kind === 'video');
             if (sender) await sender.replaceTrack(newVideoTrack);
-
             const audioTracks = localStreamRef.current.getAudioTracks();
             const newLocalStream = new MediaStream([...audioTracks, newVideoTrack]);
-
             localStreamRef.current = newLocalStream;
             setLocalStreamState(newLocalStream);
             setFacingMode(newMode);
@@ -223,27 +224,21 @@ const EmployeeNavbar = () => {
     const answerIncomingCall = async (callData) => {
         const isVideoOffer = callData.callType === 'video' || (callData.signal && callData.signal.sdp && callData.signal.sdp.includes('m=video'));
         const requestedType = isVideoOffer ? 'video' : 'voice';
-
         const mediaResult = await setupMedia(requestedType);
         if (!mediaResult || !mediaResult.stream) return;
         setCurrentCallType(requestedType);
         const { stream } = mediaResult;
         setActiveCall(true);
-
         setCallPeer({ name: callData.callerName, _id: callData.from, profilePicture: callData.profilePicture });
         const pc = new RTCPeerConnection(iceServers);
         pcRef.current = pc;
         stream.getTracks().forEach(track => pc.addTrack(track, stream));
         attachPCListeners(pc);
-
         await pc.setRemoteDescription(new RTCSessionDescription(callData.signal));
         await processIceQueue(pc);
-
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-
         socket.emit('answer_call', { to: callData.from, signal: answer });
-
         setGlobalIncomingCall(null);
         setWaitingIncomingCall(null);
         pauseAudio('incoming');
@@ -254,14 +249,11 @@ const EmployeeNavbar = () => {
         if (!waitingIncomingCall || !pcRef.current) return;
         const currentActiveId = currentPeerRef.current?._id || currentPeerRef.current?.id;
         socket.emit('renegotiate', { to: currentActiveId, signal: { type: 'CUSTOM_EVENT', event: 'call_held' } });
-
         heldCallRef.current = { pc: pcRef.current, peer: currentPeerRef.current, callType: currentCallType, isCallAccepted: isCallAccepted, remoteStream: remoteStream };
-
         pcRef.current = null;
         setRemoteStream(null);
         setIsCallAccepted(false);
         setRemoteCallStatus('active');
-
         await answerIncomingCall(waitingIncomingCall);
     };
 
@@ -274,17 +266,14 @@ const EmployeeNavbar = () => {
     const endCurrentCall = (skipEmit = false) => {
         const activePeer = currentPeerRef.current;
         const recipient = activePeer?._id || activePeer?.id;
-
         if (recipient && !skipEmit) {
             socket.emit('end_call', { to: recipient });
             socket.emit('renegotiate', { to: recipient, signal: { type: 'CUSTOM_EVENT', event: 'explicit_end', from: user.id || user._id } });
         }
-
         if (pcRef.current) pcRef.current.close();
         pcRef.current = null;
         setRemoteStream(null);
         playAudio('hangup');
-
         if (heldCallRef.current) {
             const held = heldCallRef.current;
             pcRef.current = held.pc;
@@ -293,7 +282,6 @@ const EmployeeNavbar = () => {
             setIsCallAccepted(held.isCallAccepted);
             setRemoteStream(held.remoteStream);
             setRemoteCallStatus('active');
-
             socket.emit('renegotiate', { to: held.peer._id || held.peer.id, signal: { type: 'CUSTOM_EVENT', event: 'call_resumed' } });
             heldCallRef.current = null;
             toast.success(t('toast.resumed_call', { name: held.peer.name }));
@@ -306,32 +294,26 @@ const EmployeeNavbar = () => {
         const handleInitiateCall = async (e) => {
             const peerToCall = e.detail;
             const requestedType = peerToCall.callType || 'voice';
-
             const mediaResult = await setupMedia(requestedType);
             if (!mediaResult || !mediaResult.stream) return;
             const { stream, actualType } = mediaResult;
-
             setCurrentCallType(actualType);
             setIsCallAccepted(false);
             setRemoteCallStatus('active');
-
             setCallPeer(peerToCall);
             setActiveCall(true);
             const pc = new RTCPeerConnection(iceServers);
             pcRef.current = pc;
             stream.getTracks().forEach(track => pc.addTrack(track, stream));
             attachPCListeners(pc);
-
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
-
             socket.emit('call_user', {
                 userToCall: peerToCall._id || peerToCall.id, from: user.id || user._id,
                 callerName: user.name, profilePicture: user.profilePicture,
                 signalData: offer, callType: actualType
             });
         };
-
         window.addEventListener('initiate_global_call', handleInitiateCall);
         return () => window.removeEventListener('initiate_global_call', handleInitiateCall);
     }, [user]);
@@ -347,11 +329,9 @@ const EmployeeNavbar = () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', ...HQ_VIDEO_CONSTRAINTS } });
             const videoTrack = stream.getVideoTracks()[0];
-
             localStreamRef.current.addTrack(videoTrack);
             setLocalStreamState(new MediaStream(localStreamRef.current.getTracks()));
             setFacingMode('user');
-
             if (pcRef.current) {
                 pcRef.current.addTrack(videoTrack, localStreamRef.current);
                 const offer = await pcRef.current.createOffer();
@@ -379,13 +359,10 @@ const EmployeeNavbar = () => {
     // --- SOCKET LISTENERS ---
     useEffect(() => {
         if (!user || !token) return;
-
         const currentUserId = user.id || user._id;
         const joinUserRoom = () => { socket.emit("join_room", currentUserId); socket.emit("join_admin_room"); };
-
         if (socket.connected) joinUserRoom();
         socket.on("connect", joinUserRoom);
-
         const handleIncomingChat = (data) => {
             if (!pathnameRef.current.includes('/chat')) {
                 setUnreadChatCount(prev => prev + 1);
@@ -393,7 +370,6 @@ const EmployeeNavbar = () => {
                 toast.success(t('toast.new_chat'), { icon: '💬', id: 'new-chat-toast' });
             }
         };
-
         const handleIncomingCall = (data) => {
             if (activeCall) {
                 socket.emit('renegotiate', { to: data.from, signal: { type: 'CUSTOM_EVENT', event: 'call_waiting' } });
@@ -405,7 +381,6 @@ const EmployeeNavbar = () => {
                 playAudio('incoming');
             }
         };
-
         const handleCallAccepted = async (signal) => {
             setIsCallAccepted(true);
             setRemoteCallStatus('active');
@@ -415,7 +390,6 @@ const EmployeeNavbar = () => {
                 toast.success(t('toast.call_connected'), { icon: '📞' });
             }
         };
-
         const handleIceCandidate = async (data) => {
             if (pcRef.current && data.candidate) {
                 const pc = pcRef.current;
@@ -427,7 +401,6 @@ const EmployeeNavbar = () => {
                 }
             }
         };
-
         const handleRenegotiate = async ({ signal }) => {
             if (signal && signal.type === 'CUSTOM_EVENT') {
                 if (signal.event === 'call_waiting') {
@@ -443,7 +416,6 @@ const EmployeeNavbar = () => {
                     const senderId = signal.from;
                     const activeId = currentPeerRef.current?._id || currentPeerRef.current?.id;
                     const heldId = heldCallRef.current?.peer?._id || heldCallRef.current?.peer?.id;
-
                     if (String(senderId) === String(activeId)) {
                         if (heldCallRef.current) {
                             toast(t('toast.call_ended_restoring'));
@@ -461,7 +433,6 @@ const EmployeeNavbar = () => {
                 }
                 return;
             }
-
             if (pcRef.current) {
                 try {
                     if (signal.type === 'offer') {
@@ -478,15 +449,7 @@ const EmployeeNavbar = () => {
                 } catch (e) { }
             }
         };
-
-        const handleCallEnded = () => {
-            if (!heldCallRef.current) {
-                cleanupCall();
-                pauseAudio('incoming');
-                playAudio('hangup');
-            }
-        };
-
+        const handleCallEnded = () => { if (!heldCallRef.current) { cleanupCall(); pauseAudio('incoming'); playAudio('hangup'); } };
         const handleVideoUpgradeRequest = () => { setVideoUpgradeStatus('receiving_request'); playAudio('notification'); };
         const handleVideoUpgradeRejected = () => { setVideoUpgradeStatus('idle'); toast.error(t('toast.video_rejected')); };
         const handleVideoUpgradeAccepted = async () => { setVideoUpgradeStatus('idle'); toast.success(t('toast.video_accepted')); await performVideoUpgrade(); };
@@ -569,8 +532,10 @@ const EmployeeNavbar = () => {
             <header className="fixed top-0 left-0 w-full z-50 bg-card/90 backdrop-blur-md border-b border-border shadow-sm h-16">
                 <div className="max-w-400 mx-auto px-4 lg:px-6 h-full flex items-center justify-between">
                     <div className="flex items-center gap-3 shrink-0">
-                        <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm"><span className="text-primary-foreground font-bold text-base">{t('navbar.brand')}</span></div>
-                        <h1 className="font-display font-bold text-lg text-foreground tracking-tight hidden sm:block">{t('navbar.brand')}</h1>
+                        <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm"><span className="text-primary-foreground font-bold text-base">{t('navbar.brand').charAt(0)}</span></div>
+                        <h1 className="font-display font-bold text-base sm:text-lg text-foreground tracking-tight">
+                            {t('navbar.brand')}
+                        </h1>
                     </div>
                     <nav className="hidden xl:flex items-center gap-1.5 flex-1 justify-start overflow-x-auto px-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                         {navItems.map((item) => (
@@ -591,26 +556,26 @@ const EmployeeNavbar = () => {
                             <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="relative p-1 rounded-full hover:bg-muted transition-colors">
                                 {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-7 h-7 rounded-full object-cover border border-border" /> : <UserCircle className="w-7 h-7 text-muted-foreground" />}
                             </button>
-                            {isMobileMenuOpen && (
-                                <div className="absolute top-12 right-0 w-56 bg-card border border-border rounded-2xl shadow-2xl p-2 animate-in slide-in-from-top-2 fade-in duration-200 z-50">
-                                    <div className="px-3 py-2.5 mb-1 border-b border-border flex items-center gap-3">
-                                        {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-9 h-9 rounded-full object-cover shrink-0 border border-border" /> : <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><User className="w-4 h-4 text-primary" /></div>}
-                                        <div className="overflow-hidden">
-                                            <p className="text-sm font-bold text-foreground truncate">{user?.name || t('navbar.employee')}</p>
-                                            <p className="text-[11px] text-muted-foreground truncate">{user?.email || ""}</p>
-                                        </div>
+
+                            {/* Smooth Transition wrapper for Mobile Menu */}
+                            <div className={`absolute top-12 right-0 w-56 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50 origin-top-right transition-all duration-200 ease-out ${isMobileMenuOpen ? "opacity-100 scale-100 translate-y-0 pointer-events-auto" : "opacity-0 scale-95 -translate-y-2 pointer-events-none"}`}>
+                                <div className="px-3 py-2.5 mb-1 border-b border-border flex items-center gap-3">
+                                    {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-9 h-9 rounded-full object-cover shrink-0 border border-border" /> : <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><User className="w-4 h-4 text-primary" /></div>}
+                                    <div className="overflow-hidden">
+                                        <p className="text-sm font-bold text-foreground truncate">{user?.name || t('navbar.employee')}</p>
+                                        <p className="text-[11px] text-muted-foreground truncate">{user?.email || ""}</p>
                                     </div>
-                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/learning-hub'); }}><BookOpen className="w-4 h-4 text-primary" /> {t('navbar.training_vault')}</button>
-                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/report'); }}><BarChartBig className="w-4 h-4 text-primary" /> {t('navbar.report')}</button>
-                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/leaderboard'); }}><Trophy className="w-4 h-4 text-primary" /> {t('navbar.leaderboard')}</button>
-                                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/help'); }}><HelpCircle className="w-4 h-4 text-primary" /> {t('navbar.help')}</button>
-                                    <NavLink to="/employee/profile" onClick={() => setIsMobileMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"><User className="w-4 h-4" /> {t('navbar.profile')}</NavLink>
-                                    <div className="my-1 border-t border-border" />
-                                    <button onClick={() => { dispatch(toggleTheme()); setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"><div className="flex items-center gap-3">{themeMode === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}<span>{themeMode === 'dark' ? t('navbar.dark_mode') : t('navbar.light_mode')}</span></div></button>
-                                    <button onClick={() => { setIsMobileMenuOpen(false); setIsSettingsModalOpen(true); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"><Settings className="w-4 h-4" /> {t('navbar.settings')}</button>
-                                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors mt-1"><LogOut className="w-4 h-4" /> {t('navbar.logout')}</button>
                                 </div>
-                            )}
+                                <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/learning-hub'); }}><BookOpen className="w-4 h-4 text-primary" /> {t('navbar.training_vault')}</button>
+                                <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/report'); }}><BarChartBig className="w-4 h-4 text-primary" /> {t('navbar.report')}</button>
+                                <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/leaderboard'); }}><Trophy className="w-4 h-4 text-primary" /> {t('navbar.leaderboard')}</button>
+                                <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/help'); }}><HelpCircle className="w-4 h-4 text-primary" /> {t('navbar.help')}</button>
+                                <NavLink to="/employee/profile" onClick={() => setIsMobileMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"><User className="w-4 h-4" /> {t('navbar.profile')}</NavLink>
+                                <div className="my-1 border-t border-border" />
+                                <button onClick={() => { dispatch(toggleTheme()); setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"><div className="flex items-center gap-3">{themeMode === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}<span>{themeMode === 'dark' ? t('navbar.dark_mode') : t('navbar.light_mode')}</span></div></button>
+                                <button onClick={() => { setIsMobileMenuOpen(false); setIsSettingsModalOpen(true); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"><Settings className="w-4 h-4" /> {t('navbar.settings')}</button>
+                                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors mt-1"><LogOut className="w-4 h-4" /> {t('navbar.logout')}</button>
+                            </div>
                         </div>
                     </div>
                 </div>

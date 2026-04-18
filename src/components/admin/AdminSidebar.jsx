@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import {
     LayoutDashboard, Users, Radio, Shield, Megaphone,
     Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle, ClipboardCheck,
-    CalendarDays, Film, Trophy, BookOpen, X, MessageCircle, PhoneIncoming, PhoneOff, Phone, Video
+    CalendarDays, Film, Trophy, BookOpen, X, MessageCircle, PhoneIncoming, PhoneOff, Phone, Video, ChevronDown
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -85,9 +85,6 @@ const AdminSidebar = () => {
     const mobileMenuRef = useRef(null);
     const currentPeerRef = useRef(null);
 
-    const [isMuted, setIsMuted] = useState(false);
-    const [isVideoMuted, setIsVideoMuted] = useState(false);
-
     const pathnameRef = useRef(location.pathname);
     useEffect(() => { pathnameRef.current = location.pathname; }, [location.pathname]);
     useEffect(() => { currentPeerRef.current = callPeer; }, [callPeer]);
@@ -104,13 +101,22 @@ const AdminSidebar = () => {
         return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
     }, []);
 
+    // NEW: Handle clicks outside the mobile menu to close it smoothly
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+                setIsMobileMenuOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     useEffect(() => {
         if (globalIncomingCall && !activeCall) {
             const timer = setTimeout(() => {
                 socket.emit('end_call', { to: globalIncomingCall.from });
-
                 toast.error(t('toast.missed_call', { name: globalIncomingCall.callerName }));
-
                 setGlobalIncomingCall(null);
                 pauseAudio('incoming');
             }, 60000);
@@ -178,21 +184,15 @@ const AdminSidebar = () => {
         try {
             const newMode = facingMode === 'user' ? 'environment' : 'user';
             localStreamRef.current.getVideoTracks().forEach(t => t.stop());
-
             const videoConstraints = { facingMode: { exact: newMode }, ...HQ_VIDEO_CONSTRAINTS };
             const fallbackConstraints = { facingMode: newMode, ...HQ_VIDEO_CONSTRAINTS };
-
             const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints })
                 .catch(() => navigator.mediaDevices.getUserMedia({ video: fallbackConstraints }));
-
             const newVideoTrack = stream.getVideoTracks()[0];
-
             const sender = pcRef.current?.getSenders().find(s => s.track && s.track.kind === 'video');
             if (sender) await sender.replaceTrack(newVideoTrack);
-
             const audioTracks = localStreamRef.current.getAudioTracks();
             const newLocalStream = new MediaStream([...audioTracks, newVideoTrack]);
-
             localStreamRef.current = newLocalStream;
             setLocalStreamState(newLocalStream);
             setFacingMode(newMode);
@@ -256,21 +256,16 @@ const AdminSidebar = () => {
         setCurrentCallType(requestedType);
         const { stream } = mediaResult;
         setActiveCall(true);
-
         setCallPeer({ name: callData.callerName, _id: callData.from, profilePicture: callData.profilePicture });
         const pc = new RTCPeerConnection(iceServers);
         pcRef.current = pc;
         stream.getTracks().forEach(track => pc.addTrack(track, stream));
         attachPCListeners(pc);
-
         await pc.setRemoteDescription(new RTCSessionDescription(callData.signal));
         await processIceQueue(pc);
-
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-
         socket.emit('answer_call', { to: callData.from, signal: answer });
-
         setGlobalIncomingCall(null);
         setWaitingIncomingCall(null);
         pauseAudio('incoming');
@@ -298,17 +293,14 @@ const AdminSidebar = () => {
     const endCurrentCall = (skipEmit = false) => {
         const activePeer = currentPeerRef.current;
         const recipient = activePeer?._id || activePeer?.id;
-
         if (recipient && !skipEmit) {
             socket.emit('end_call', { to: recipient });
             socket.emit('renegotiate', { to: recipient, signal: { type: 'CUSTOM_EVENT', event: 'explicit_end', from: user.id || user._id } });
         }
-
         if (pcRef.current) pcRef.current.close();
         pcRef.current = null;
         setRemoteStream(null);
         playAudio('hangup');
-
         if (heldCallRef.current) {
             const held = heldCallRef.current;
             pcRef.current = held.pc;
@@ -332,28 +324,23 @@ const AdminSidebar = () => {
             const mediaResult = await setupMedia(requestedType);
             if (!mediaResult || !mediaResult.stream) return;
             const { stream, actualType } = mediaResult;
-
             setCurrentCallType(actualType);
             setIsCallAccepted(false);
             setRemoteCallStatus('active');
-
             setCallPeer(peerToCall);
             setActiveCall(true);
             const pc = new RTCPeerConnection(iceServers);
             pcRef.current = pc;
             stream.getTracks().forEach(track => pc.addTrack(track, stream));
             attachPCListeners(pc);
-
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
-
             socket.emit('call_user', {
                 userToCall: peerToCall._id || peerToCall.id, from: user.id || user._id,
                 callerName: user.name, profilePicture: user.profilePicture,
                 signalData: offer, callType: actualType
             });
         };
-
         window.addEventListener('initiate_global_call', handleInitiateCall);
         return () => window.removeEventListener('initiate_global_call', handleInitiateCall);
     }, [user]);
@@ -372,7 +359,6 @@ const AdminSidebar = () => {
             localStreamRef.current.addTrack(videoTrack);
             setLocalStreamState(new MediaStream(localStreamRef.current.getTracks()));
             setFacingMode('user');
-
             if (pcRef.current) {
                 pcRef.current.addTrack(videoTrack, localStreamRef.current);
                 const offer = await pcRef.current.createOffer();
@@ -400,13 +386,10 @@ const AdminSidebar = () => {
     // --- SOCKET LISTENERS ---
     useEffect(() => {
         if (!user || !token) return;
-
         const currentUserId = user.id || user._id;
         const joinUserRoom = () => { socket.emit("join_room", currentUserId); socket.emit("join_admin_room"); };
-
         if (socket.connected) joinUserRoom();
         socket.on("connect", joinUserRoom);
-
         const handleIncomingChat = (data) => {
             if (!pathnameRef.current.includes('/chat')) {
                 setUnreadChatCount(prev => prev + 1);
@@ -414,7 +397,6 @@ const AdminSidebar = () => {
                 toast.success(t('toast.new_chat'), { icon: '💬', id: 'admin-new-chat' });
             }
         };
-
         const handleIncomingCall = (data) => {
             if (activeCall) {
                 socket.emit('renegotiate', { to: data.from, signal: { type: 'CUSTOM_EVENT', event: 'call_waiting' } });
@@ -426,7 +408,6 @@ const AdminSidebar = () => {
                 playAudio('incoming');
             }
         };
-
         const handleCallAccepted = async (signal) => {
             setIsCallAccepted(true);
             setRemoteCallStatus('active');
@@ -436,7 +417,6 @@ const AdminSidebar = () => {
                 toast.success(t('toast.call_connected'), { icon: '📞' });
             }
         };
-
         const handleIceCandidate = async (data) => {
             if (pcRef.current && data.candidate) {
                 const pc = pcRef.current;
@@ -448,7 +428,6 @@ const AdminSidebar = () => {
                 }
             }
         };
-
         const handleRenegotiate = async ({ signal }) => {
             if (signal && signal.type === 'CUSTOM_EVENT') {
                 if (signal.event === 'call_waiting') {
@@ -464,7 +443,6 @@ const AdminSidebar = () => {
                     const senderId = signal.from;
                     const activeId = currentPeerRef.current?._id || currentPeerRef.current?.id;
                     const heldId = heldCallRef.current?.peer?._id || heldCallRef.current?.peer?.id;
-
                     if (String(senderId) === String(activeId)) {
                         if (heldCallRef.current) {
                             toast(t('toast.call_ended_restoring'));
@@ -482,7 +460,6 @@ const AdminSidebar = () => {
                 }
                 return;
             }
-
             if (pcRef.current) {
                 try {
                     if (signal.type === 'offer') {
@@ -499,7 +476,6 @@ const AdminSidebar = () => {
                 } catch (e) { }
             }
         };
-
         const handleNewNotification = (notif) => {
             playAudio('notification');
             if (!pathnameRef.current.includes('/notifications')) {
@@ -510,13 +486,11 @@ const AdminSidebar = () => {
                 setPendingMediaCount(prev => prev + 1);
             }
         };
-
         const handleIncomingSOS = (data) => {
             const { senderName, lat, lng } = data;
             playAudio('sos');
             if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 1000]);
             if (!pathnameRef.current.includes('/notifications')) setUnreadCount(prev => prev + 1);
-
             toast.custom(
                 (toastObj) => (
                     <div className={`${toastObj.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-red-600 shadow-2xl rounded-xl pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
@@ -538,15 +512,7 @@ const AdminSidebar = () => {
                 ), { duration: 30000, id: `admin-sos-alert-${senderName}`, position: "top-right" }
             );
         };
-
-        const handleCallEnded = () => {
-            if (!heldCallRef.current) {
-                cleanupCall();
-                pauseAudio('incoming');
-                playAudio('hangup');
-            }
-        };
-
+        const handleCallEnded = () => { if (!heldCallRef.current) { cleanupCall(); pauseAudio('incoming'); playAudio('hangup'); } };
         const handleVideoUpgradeRequest = () => { setVideoUpgradeStatus('receiving_request'); playAudio('notification'); };
         const handleVideoUpgradeRejected = () => { setVideoUpgradeStatus('idle'); toast.error(t('toast.video_rejected')); };
         const handleVideoUpgradeAccepted = async () => { setVideoUpgradeStatus('idle'); toast.success(t('toast.video_accepted')); await performVideoUpgrade(); };
@@ -566,7 +532,6 @@ const AdminSidebar = () => {
         socket.on("online_users_updated", setOnlineUsers);
 
         return () => {
-            // PROPER CLEANUP
             socket.off("connect", joinUserRoom);
             socket.off("receive_message", handleIncomingChat);
             socket.off("incoming_call", handleIncomingCall);
@@ -582,7 +547,7 @@ const AdminSidebar = () => {
             socket.off("sos_alert_received", handleIncomingSOS);
             socket.off("online_users_updated", setOnlineUsers);
         };
-    }, [user, t, activeCall]);
+    }, [user, t, activeCall, token]);
 
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
@@ -622,11 +587,16 @@ const AdminSidebar = () => {
             {/* --- DESKTOP TOP NAVBAR --- */}
             <nav className="hidden 2xl:flex fixed top-0 w-full h-16 bg-card border-b border-border z-50 items-center justify-between px-6 shadow-sm">
                 <div className="flex items-center gap-3 shrink-0 mr-2">
+                    {/* Updated Icon Box */}
                     <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
-                        <Shield className="w-5 h-5 text-primary-foreground" />
+                        <span className="text-primary-foreground font-bold text-base">
+                            {t('sidebar.brand').charAt(0)}
+                        </span>
                     </div>
                     <div>
-                        <h1 className="font-bold text-lg text-foreground tracking-tight leading-none">{t('sidebar.brand')}</h1>
+                        <h1 className="font-bold text-lg text-foreground tracking-tight leading-none">
+                            {t('sidebar.brand')}
+                        </h1>
                     </div>
                 </div>
 
@@ -638,7 +608,7 @@ const AdminSidebar = () => {
                     <NavLink to="/admin/progress" className={desktopNavClasses} title={t('sidebar.progress')}><TrendingUp className="w-4.5 h-4.5" /> {t('sidebar.progress')}</NavLink>
                     <NavLink to="/admin/leaderboard" className={desktopNavClasses} title={t('sidebar.leaderboard')}><Trophy className="w-4.5 h-4.5" /> {t('sidebar.leaderboard')}</NavLink>
                     <NavLink to="/admin/reports" className={desktopNavClasses} title={t('sidebar.reports')}><ClipboardCheck className="w-4.5 h-4.5" /> {t('sidebar.reports')}</NavLink>
-                    <NavLink to="/admin/media" className={desktopNavClasses} title={t('sidebar.media_gallery')}>
+                    <NavLink to="/admin/media" className={desktopNavClasses} title={t('sidebar.media')}>
                         <div className="relative flex items-center justify-center">
                             <Film className="w-4.5 h-4.5" />
                             {pendingMediaCount > 0 && <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-amber-500 shadow-sm animate-pulse border-2 border-card" />}
@@ -676,8 +646,15 @@ const AdminSidebar = () => {
             {/* --- MOBILE TOP NAVBAR --- */}
             <header className="2xl:hidden fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4 shadow-sm">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm"><Shield className="w-4 h-4 text-primary-foreground" /></div>
-                    <h1 className="font-bold text-lg text-foreground tracking-tight">{t('sidebar.brand')}</h1>
+                    {/* Updated Icon Box */}
+                    <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
+                        <span className="text-primary-foreground font-bold text-sm">
+                            {t('sidebar.brand').charAt(0)}
+                        </span>
+                    </div>
+                    <h1 className="font-bold text-lg text-foreground tracking-tight">
+                        {t('sidebar.brand')}
+                    </h1>
                 </div>
 
                 <div className="relative" ref={mobileMenuRef}>
@@ -685,32 +662,31 @@ const AdminSidebar = () => {
                         {user?.profilePicture ? <img src={user.profilePicture} alt="Admin" className="w-full h-full object-cover rounded-full" /> : <UserCircle className="w-7 h-7 text-muted-foreground" />}
                     </button>
 
-                    {isMobileMenuOpen && (
-                        <div className="absolute top-12 right-0 w-56 bg-card border border-border rounded-2xl shadow-2xl p-2 animate-in slide-in-from-top-2 fade-in duration-200 z-50">
-                            <div className="px-3 py-2 mb-1 border-b border-border">
-                                <p className="text-sm font-bold text-foreground truncate">{adminName}</p>
-                                <p className="text-[11px] text-muted-foreground truncate">{adminEmail}</p>
-                            </div>
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/learning-hub'); }}><BookOpen className="w-4 h-4 text-primary" /> {t('sidebar.learning_hub')}</button>
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leaderboard'); }}><Trophy className="w-4 h-4 text-primary" /> {t('sidebar.leaderboard')}</button>
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/reports'); }}><ClipboardCheck className="w-4 h-4 text-primary" /> {t('sidebar.reports')}</button>
-                            <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/media'); }}>
-                                <div className="flex items-center gap-3"><Film className="w-4 h-4 text-primary" /> {t('sidebar.media_gallery')}</div>
-                                {pendingMediaCount > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm animate-pulse" />}
-                            </button>
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leave-requests'); }}><CalendarDays className="w-4 h-4 text-primary" /> {t('sidebar.leave')}</button>
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/communication'); }}><Megaphone className="w-4 h-4 text-primary" /> {t('sidebar.broadcast')}</button>
-                            <button onClick={() => { dispatch(toggleTheme()); setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                                <div className="flex items-center gap-3">{theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}<span>{theme === 'dark' ? t('sidebar.light_mode') : t('sidebar.dark_mode')}</span></div>
-                            </button>
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/profile'); }}>
-                                {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-4 h-4 rounded-full object-cover" /> : <UserCircle className="w-4 h-4 text-primary" />}{t('sidebar.profile')}
-                            </button>
-                            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); setIsSettingsModalOpen(true); }}><Settings className="w-4 h-4 text-primary" /> {t('sidebar.settings')}</button>
-                            <div className="my-1 border-t border-border" />
-                            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"><LogOut className="w-4 h-4" /> {t('sidebar.logout')}</button>
+                    {/* Smooth Transition wrapper for Mobile Menu */}
+                    <div className={`absolute top-12 right-0 w-56 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50 origin-top-right transition-all duration-200 ease-out ${isMobileMenuOpen ? "opacity-100 scale-100 translate-y-0 pointer-events-auto" : "opacity-0 scale-95 -translate-y-2 pointer-events-none"}`}>
+                        <div className="px-3 py-2 mb-1 border-b border-border">
+                            <p className="text-sm font-bold text-foreground truncate">{adminName}</p>
+                            <p className="text-[11px] text-muted-foreground truncate">{adminEmail}</p>
                         </div>
-                    )}
+                        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/learning-hub'); }}><BookOpen className="w-4 h-4 text-primary" /> {t('sidebar.learning_hub')}</button>
+                        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leaderboard'); }}><Trophy className="w-4 h-4 text-primary" /> {t('sidebar.leaderboard')}</button>
+                        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/reports'); }}><ClipboardCheck className="w-4 h-4 text-primary" /> {t('sidebar.reports')}</button>
+                        <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/media'); }}>
+                            <div className="flex items-center gap-3"><Film className="w-4 h-4 text-primary" /> {t('sidebar.media')}</div>
+                            {pendingMediaCount > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm animate-pulse" />}
+                        </button>
+                        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leave-requests'); }}><CalendarDays className="w-4 h-4 text-primary" /> {t('sidebar.leave')}</button>
+                        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/communication'); }}><Megaphone className="w-4 h-4 text-primary" /> {t('sidebar.broadcast')}</button>
+                        <button onClick={() => { dispatch(toggleTheme()); setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                            <div className="flex items-center gap-3">{theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}<span>{theme === 'dark' ? t('sidebar.light_mode') : t('sidebar.dark_mode')}</span></div>
+                        </button>
+                        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/profile'); }}>
+                            {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-4 h-4 rounded-full object-cover" /> : <UserCircle className="w-4 h-4 text-primary" />}{t('sidebar.profile')}
+                        </button>
+                        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); setIsSettingsModalOpen(true); }}><Settings className="w-4 h-4 text-primary" /> {t('sidebar.settings')}</button>
+                        <div className="my-1 border-t border-border" />
+                        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"><LogOut className="w-4 h-4" /> {t('sidebar.logout')}</button>
+                    </div>
                 </div>
             </header>
 

@@ -8,7 +8,7 @@
         "error": "Something went wrong"
     },
     "sidebar": {
-        "brand": "W Admin",
+        "brand": "WorkEduMusic Admin",
         "dashboard": "Dashboard",
         "roster": "Employees",
         "attendance": "Attendance",
@@ -33,7 +33,7 @@
         "new_alert_toast": "New alert received"
     },
     "navbar": {
-        "brand": "W",
+        "brand": "WorkEduMusic",
         "dashboard": "Dashboard",
         "assignments": "Assignments",
         "tasks": "Tasks",
