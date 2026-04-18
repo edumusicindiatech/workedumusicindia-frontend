@@ -34,6 +34,14 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <service
+            android:name=".CallBackgroundService"
+            android:exported="true">
+            <intent-filter android:priority="999">
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />

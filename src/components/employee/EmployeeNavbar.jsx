@@ -8,7 +8,7 @@ import { setAxiosToken } from "../../api/axios";
 import { io } from "socket.io-client";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { Haptics } from '@capacitor/haptics'; // --- NEW: Native Haptics ---
+import { Haptics } from '@capacitor/haptics';
 
 import {
     Home, User, CalendarCheck, Bell, BarChartBig,
@@ -20,7 +20,6 @@ import { Button } from "@/components/ui/button";
 import EmployeeSettingsModal from "../../modals/employee/EmployeeSettingsModal";
 import CallOverlay from "../../pages/shared/CallOverlay";
 
-// --- GLOBAL SOCKET SINGLETON ---
 if (!window.__GLOBAL_SOCKET__) {
     window.__GLOBAL_SOCKET__ = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000", {
         autoConnect: true,
@@ -72,7 +71,6 @@ const EmployeeNavbar = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
-    // --- GLOBAL WEBRTC CALL STATE ---
     const [globalIncomingCall, setGlobalIncomingCall] = useState(null);
     const [activeCall, setActiveCall] = useState(false);
     const [callPeer, setCallPeer] = useState(null);
@@ -80,7 +78,6 @@ const EmployeeNavbar = () => {
     const [isCallAccepted, setIsCallAccepted] = useState(false);
     const [onlineUsers, setOnlineUsers] = useState([]);
 
-    // --- 1-on-1 CALL WAITING & HOLD STATE ---
     const [remoteCallStatus, setRemoteCallStatus] = useState('active');
     const [waitingIncomingCall, setWaitingIncomingCall] = useState(null);
     const heldCallRef = useRef(null);
@@ -409,7 +406,6 @@ const EmployeeNavbar = () => {
         setVideoUpgradeStatus('idle');
     };
 
-    // --- SOCKET & FCM LISTENERS ---
     useEffect(() => {
         if (!user || !token) return;
 
@@ -441,7 +437,6 @@ const EmployeeNavbar = () => {
                 style: { background: '#000', color: '#0f0', border: '2px solid #0f0' }
             });
 
-            // --- NATIVE VIBRATION ---
             try {
                 await Haptics.vibrate({ duration: 1000 });
                 setTimeout(async () => { await Haptics.vibrate({ duration: 1000 }); }, 1500);
@@ -452,7 +447,6 @@ const EmployeeNavbar = () => {
                 setWaitingIncomingCall(data);
                 playAudio('notification');
             } else {
-                // Force state update to trigger overlay correctly
                 setGlobalIncomingCall(null);
                 setTimeout(() => setGlobalIncomingCall(data), 20);
 
@@ -488,7 +482,6 @@ const EmployeeNavbar = () => {
             }
         };
 
-        // --- NEW: FCM EVENT LISTENER ---
         const handleFcmCall = (e) => {
             const data = e.detail;
             handleIncomingCall(data);

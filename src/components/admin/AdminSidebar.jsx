@@ -9,7 +9,7 @@ import {
     CalendarDays, Film, Trophy, BookOpen, X, MessageCircle, PhoneIncoming, PhoneOff, Phone, Video, ChevronDown
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { Haptics } from '@capacitor/haptics'; // --- NEW: Native Haptics ---
+import { Haptics } from '@capacitor/haptics'; 
 
 import api from "../../api/axios";
 import { logout } from "../../store/slices/authSlice";

@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy } from "react"; // Added useState
+import { useState, useEffect, Suspense, lazy } from "react"; 
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { setCredentials, logout, setHydrationComplete } from "./store/slices/authSlice";
@@ -6,34 +6,25 @@ import api, { setAxiosToken } from "./api/axios";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "react-hot-toast";
 
-// --- NEW CAPACITOR & FIREBASE IMPORTS ---
 import { Capacitor } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
-import { PushNotifications } from '@capacitor/push-notifications'; // --- ADDED ---
-import { Haptics } from '@capacitor/haptics'; // --- ADDED ---
+import { PushNotifications } from '@capacitor/push-notifications'; 
+import { Haptics } from '@capacitor/haptics'; 
 
-// --- NEW IMPORT FOR PWA UPDATE HOOK ---
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { DownloadCloud } from "lucide-react";
 
-// ==========================================
-// 1. SYNCHRONOUS IMPORTS
-// ==========================================
 import ProtectedRoute from "./components/routing/ProtectedRoute";
 import PublicRoute from "./components/routing/PublicRoute";
 import AdminLayout from "./components/admin/AdminLayout";
 import EmployeeLayout from "./components/employee/EmployeeLayout";
 import FloatingUploadManager from "./modals/employee/FloatingUploadManager";
 
-// ==========================================
-// 2. ASYNCHRONOUS IMPORTS
-// ==========================================
 const Login = lazy(() => import("./pages/shared/Login"));
 const NotFound = lazy(() => import("./pages/shared/Notfound"));
 const AdminContact = lazy(() => import("./pages/admin/AdminContact"));
 const LearningHub = lazy(() => import("./pages/shared/LearningHub"));
 
-// Admin Pages
 const Dashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const EmployeeRoster = lazy(() => import("./pages/admin/EmployeeRoster"));
 const EmployeeProfile = lazy(() => import("./pages/admin/EmployeeProfile"));
@@ -48,7 +39,6 @@ const AdminMediaGallery = lazy(() => import("./pages/admin/AdminMediaGallery"));
 const AdminLeaderboard = lazy(() => import("./pages/admin/AdminLeaderBoard"));
 const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 
-// Employee Pages
 const EmployeeDashboard = lazy(() => import("./pages/employee/EmployeeDashboard"));
 const MyProfile = lazy(() => import("./pages/employee/MyProfile"));
 const AssignedSchools = lazy(() => import("./pages/employee/AssignedSchools"));
@@ -59,22 +49,15 @@ const EmployeeNotifications = lazy(() => import("./pages/employee/EmployeeNotifi
 const EmployeeResetPassword = lazy(() => import("./pages/employee/EmployeeResetPassword"));
 const EmployeeLeaderBoard = lazy(() => import("./pages/employee/EmployeeLeaderBoard"));
 
-// Shared Pages
 const HelpFAQ = lazy(() => import("./pages/employee/HelpFAQ"));
 const SharedChat = lazy(() => import("./pages/shared/SharedChat"));
 
-// ==========================================
-// 3. FALLBACK LOADER
-// ==========================================
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-[#f8f9fa] dark:bg-[#12161f]">
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
   </div>
 );
 
-// ==========================================
-// 4. GLOBAL TOASTER (WITH CONDITIONAL LOGIC)
-// ==========================================
 const GlobalToaster = () => {
   const location = useLocation();
   if (location.pathname === '/employee/reset-password') {
@@ -111,10 +94,8 @@ function App() {
   const { i18n } = useTranslation();
   const currentTheme = useSelector((state) => state.theme?.mode || 'light');
 
-  // --- PLATFORM CHECK ---
   const isNative = Capacitor.isNativePlatform();
 
-  // --- STRICT PWA UPDATE LOGIC ---
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
@@ -123,7 +104,7 @@ function App() {
       if (r && !isNative) {
         setInterval(() => {
           r.update();
-        }, 60 * 60 * 1000); // 1 hour
+        }, 60 * 60 * 1000); 
       }
     },
     onRegisterError(error) {
@@ -140,7 +121,6 @@ function App() {
     }
   }, [currentTheme]);
 
-  // --- SEAMLESS BACKGROUND SYNC ---
   useEffect(() => {
     const initializeApp = async () => {
       if (token) {
@@ -189,7 +169,6 @@ function App() {
     initializeApp();
   }, []);
 
-  // --- FIREBASE FCM INITIALIZATION ---
   useEffect(() => {
     const setupFirebase = async () => {
       if (token && isNative) {
@@ -199,10 +178,7 @@ function App() {
           if (result.receive === 'granted') {
             const { token: fcmToken } = await FirebaseMessaging.getToken();
             console.log("🔥 FCM Token generated:", fcmToken);
-
-            // Save token to database
             await api.post('/auth/update-fcm-token', { fcmToken, userId: user?.id || user?._id });
-
           } else {
             console.warn("User denied push notification permissions");
           }
@@ -215,44 +191,57 @@ function App() {
     setupFirebase();
   }, [token, isNative, user]);
 
-  // --- NEW: BACKGROUND PUSH LISTENER FOR INCOMING CALLS ---
   useEffect(() => {
     if (isNative) {
-      // 1. Request Push Permissions
       PushNotifications.requestPermissions().then(result => {
         if (result.receive === 'granted') {
           PushNotifications.register();
         }
       });
 
-      // 2. Listen for the actual FCM message (Data Message)
+      // 1. Foreground/Background Data Message Handler
       PushNotifications.addListener('pushNotificationReceived', async (notification) => {
         const data = notification.data;
 
         if (data.type === 'incoming_call') {
           console.log("☎️ Background Call Received via FCM:", data);
-
-          // Vibrate the hardware natively
           Haptics.vibrate({ duration: 1500 });
-
-          // Dispatch a global event that your Navbar/Sidebar can hear
-          // We convert the data back into the format the Navbar expects
           const event = new CustomEvent('fcm_incoming_call', {
             detail: {
               from: data.callerId,
               callerName: data.callerName,
               callType: data.callType,
               profilePicture: data.profilePicture,
-              signal: JSON.parse(data.signal) // Parse the stringified signal from backend
+              signal: JSON.parse(data.signal) 
             }
           });
           window.dispatchEvent(event);
         }
       });
+
+      // 2. KILLED/LOCKED STATE HANDOFF: Intercepts the intent from our Custom Native Service
+      PushNotifications.addListener('pushNotificationActionPerformed', async (notificationAction) => {
+        const data = notificationAction.notification.data;
+
+        if (data.type === 'incoming_call') {
+          console.log("🔥 App woke up from killed state due to incoming call!", data);
+          Haptics.vibrate({ duration: 1500 });
+          const event = new CustomEvent('fcm_incoming_call', {
+            detail: {
+              from: data.callerId,
+              callerName: data.callerName,
+              callType: data.callType,
+              profilePicture: data.profilePicture,
+              signal: JSON.parse(data.signal)
+            }
+          });
+          // 1200ms delay guarantees the router and navbars are mounted before dispatching
+          setTimeout(() => window.dispatchEvent(event), 1200);
+        }
+      });
     }
   }, [isNative]);
 
-  // --- OFFLINE SYNC ---
   useEffect(() => {
     const handleOnline = async () => {
       const offlineQueue = JSON.parse(localStorage.getItem('offlineEmailQueue') || '[]');
@@ -275,7 +264,6 @@ function App() {
     return () => window.removeEventListener('online', handleOnline);
   }, []);
 
-  // --- LANGUAGE SYNC ---
   useEffect(() => {
     if (user?.preferences?.systemLanguage) {
       const langCode = user.preferences.systemLanguage === "हिन्दी (Hindi)" ? "hi" : "en";
@@ -285,7 +273,6 @@ function App() {
     }
   }, [user?.preferences?.systemLanguage, i18n]);
 
-  // --- ZERO JERK RENDERING LOGIC ---
   const showBlankScreen = isHydrating && !token;
 
   if (showBlankScreen) {
@@ -294,7 +281,6 @@ function App() {
 
   return (
     <>
-      {/* STRICT PWA UPDATE BLOCKER MODAL */}
       {needRefresh && !isNative && (
         <div className="fixed inset-0 z-999999999 flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-card border border-border rounded-3xl p-8 max-w-sm w-[90%] flex flex-col items-center text-center shadow-2xl animate-in zoom-in-95 duration-500">
