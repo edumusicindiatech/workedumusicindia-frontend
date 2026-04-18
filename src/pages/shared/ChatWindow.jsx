@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import {
     Search, Phone, MoreVertical, Paperclip, Send, Download, ArrowLeft,
     CheckCheck, Check, MessageSquare, Camera, Image as ImageIcon, X, FileCheck,
     Trash2, Link as LinkIcon, FileText, Users, Forward, PlaySquare, Lock, Copy, Ban, Trash, Info,
-    Video, ChevronDown, ShieldAlert, ShieldCheck, LogOut
+    Video, ChevronDown
 } from "lucide-react";
 import api from "../../api/axios";
 import axios from "axios";
@@ -11,7 +11,8 @@ import toast from "react-hot-toast";
 
 import chatBgLight from '../../assets/chat-light.jpg';
 import chatBgDark from '../../assets/chat-dark.jpg';
-import { compressImage, formatBytes, isWithin30Mins, formatTime } from '../../utils/chatUtils';
+import { compressImage, formatBytes, isWithin30Mins, formatTime } from "../../utils/chatUtils";
+import ChatSidebar from "./ChatSidebar";
 
 const playAudio = (type) => {
     try {
@@ -68,7 +69,6 @@ const ChatWindow = ({
     const [showLeaveGroupModal, setShowLeaveGroupModal] = useState(false);
     const [createGroupSearchQuery, setCreateGroupSearchQuery] = useState("");
     const [createGroupSelectedUsers, setCreateGroupSelectedUsers] = useState([]);
-    const [memberMenuOpen, setMemberMenuOpen] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [showProfileInfo, setShowProfileInfo] = useState(false);
     const [contextMenu, setContextMenu] = useState(null);
@@ -86,6 +86,11 @@ const ChatWindow = ({
 
     const uploadControllers = useRef({});
     const messagesEndRef = useRef(null);
+
+    // --- SCROLL REFS ---
+    const isInitialLoadRef = useRef(true);
+    const prevChatIdRef = useRef(activeChat?._id || activeChat?.id);
+
     const fileInputRef = useRef(null);
     const docInputRef = useRef(null);
     const cameraInputRef = useRef(null);
@@ -99,13 +104,6 @@ const ChatWindow = ({
 
     const isGroupChat = activeChat?.members !== undefined || activeChat?.isGroup;
     const isOnline = (id) => onlineUsers.includes(id?.toString());
-
-    const myRoleInGroup = () => {
-        if (!isGroupChat) return null;
-        if (String(activeChat.creator?._id || activeChat.creator) === String(currentUserId)) return 'creator';
-        if (activeChat.admins?.some(a => String(a._id || a) === String(currentUserId))) return 'admin';
-        return 'member';
-    };
 
     useEffect(() => {
         const storedRevealed = JSON.parse(localStorage.getItem('downloadedMessages') || '[]');
@@ -122,16 +120,33 @@ const ChatWindow = ({
             if (topMenuRef.current && !topMenuRef.current.contains(event.target)) setShowTopMenu(false);
             if (callMenuRef.current && !callMenuRef.current.contains(event.target)) setShowCallMenu(false);
             if (contextMenuRef.current && !contextMenuRef.current.contains(event.target)) setContextMenu(null);
-            if (!event.target.closest('.member-action-btn') && !event.target.closest('.member-dropdown')) setMemberMenuOpen(null);
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [contextMenu]);
 
-    const scrollToBottom = () => { setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, 150); };
+    // --- SMART WHATSAPP SCROLLING ---
+    useLayoutEffect(() => {
+        const currentId = activeChat?._id || activeChat?.id;
 
-    useEffect(() => {
-        scrollToBottom();
+        if (prevChatIdRef.current !== currentId) {
+            // Switched to a new chat -> reset flag
+            prevChatIdRef.current = currentId;
+            isInitialLoadRef.current = true;
+        }
+
+        if (messages.length > 0) {
+            if (isInitialLoadRef.current) {
+                // INSTANT snap BEFORE the browser paints the screen
+                messagesEndRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
+                isInitialLoadRef.current = false;
+            } else {
+                // SMOOTH slide for new messages while actively chatting
+                setTimeout(() => {
+                    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+                }, 50);
+            }
+        }
     }, [messages, activeChat]);
 
     const handleShowMobileNotice = () => {
@@ -172,7 +187,6 @@ const ChatWindow = ({
         };
 
         setMessages((prev) => [...prev, payload]);
-        scrollToBottom();
         playAudio('sent');
         moveToTop(targetId);
 
@@ -231,7 +245,7 @@ const ChatWindow = ({
 
                 setDownloadedMedia(prev => new Set(prev).add(tempId));
                 setMessages(prev => [...prev, optimisticPayload]);
-                scrollToBottom(); moveToTop(activeChat._id || activeChat.id);
+                moveToTop(activeChat._id || activeChat.id);
 
                 try {
                     const urlRes = await api.post('/chat/generate-presigned-url', { fileType: mimeType, originalName: finalFile.name || safeName });
@@ -351,42 +365,6 @@ const ChatWindow = ({
         } catch (err) { toast.error("Failed to clear chat"); }
     };
 
-    // --- Group Management ---
-    const handleAddMembers = async () => {
-        if (createGroupSelectedUsers.length === 0) return;
-        const tid = toast.loading("Adding members...");
-        try {
-            await api.put('/group/add-members', { groupId: activeChat._id, requesterId: currentUserId, newMemberIds: createGroupSelectedUsers });
-            toast.success("Members added", { id: tid });
-            setShowAddMemberModal(false);
-            setCreateGroupSelectedUsers([]);
-        } catch (e) { toast.error("Failed to add members", { id: tid }); }
-    };
-
-    const handleGroupAction = async (action, targetUserId) => {
-        setMemberMenuOpen(null);
-        try {
-            let endpoint = '';
-            if (action === 'remove') endpoint = '/group/remove-member';
-            else if (action === 'promote') endpoint = '/group/promote';
-            else if (action === 'demote') endpoint = '/group/demote';
-
-            await api.put(endpoint, { groupId: activeChat._id, requesterId: currentUserId, targetUserId });
-            toast.success("Action completed successfully");
-        } catch (e) { toast.error("Failed to perform action"); }
-    };
-
-    const handleLeaveGroup = async () => {
-        setShowLeaveGroupModal(false);
-        try {
-            await api.put('/group/leave', { groupId: activeChat._id, userId: currentUserId });
-            toast.success("You left the group");
-            setActiveChat(null);
-            setShowProfileInfo(false);
-            setConversations(prev => prev.filter(c => String(c._id) !== String(activeChat._id)));
-        } catch (e) { toast.error("Failed to leave group"); }
-    };
-
     // --- Media Viewer Setup ---
     const localDeletedIds = JSON.parse(localStorage.getItem('deletedChatMessages') || '[]');
     const visibleMessages = messages.filter(m => !localDeletedIds.includes(m._id || m.id));
@@ -453,53 +431,56 @@ const ChatWindow = ({
 
             {/* FULLSCREEN MEDIA VIEWER */}
             {fullscreenMedia && !showForwardDialog && (
-                <div className="fixed inset-0 z-999999 w-screen h-screen bg-[#0b141a] flex flex-col animate-in fade-in duration-200">
-                    <div className="w-full flex items-center justify-between px-4 sm:px-6 h-16 min-h-16 shrink-0 bg-[#0b141a] z-10 border-b border-white/5">
+                <div className="fixed inset-0 z-999999 w-screen h-screen bg-background dark:bg-[#0b141a] flex flex-col animate-in fade-in duration-200 ease-out">
+
+                    {/* HEADER */}
+                    <div className="w-full flex items-center justify-between px-4 sm:px-6 h-16 min-h-16 shrink-0 bg-card/80 dark:bg-[#0b141a]/80 z-10 border-b border-border/50 dark:border-white/5 backdrop-blur-md">
                         <div className="flex items-center gap-3">
                             {String(fullscreenMedia.senderId || fullscreenMedia.sender?._id || fullscreenMedia.sender) === String(currentUserId) ? (
                                 user?.profilePicture ? (
-                                    <img src={user.profilePicture} alt="You" className="w-10 h-10 rounded-full object-cover" />
+                                    <img src={user.profilePicture} alt="You" className="w-10 h-10 rounded-full object-cover shadow-sm" />
                                 ) : (
-                                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">{user?.name?.charAt(0)}</div>
+                                    <div className="w-10 h-10 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary font-bold">{user?.name?.charAt(0)}</div>
                                 )
                             ) : (
                                 fullscreenMedia.sender?.profilePicture || activeChat?.profilePicture ? (
-                                    <img src={fullscreenMedia.sender?.profilePicture || activeChat.profilePicture} alt="Sender" className="w-10 h-10 rounded-full object-cover" />
+                                    <img src={fullscreenMedia.sender?.profilePicture || activeChat.profilePicture} alt="Sender" className="w-10 h-10 rounded-full object-cover shadow-sm" />
                                 ) : (
-                                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                                    <div className="w-10 h-10 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary font-bold">
                                         {(fullscreenMedia.sender?.name || activeChat?.name || 'U').charAt(0)}
                                     </div>
                                 )
                             )}
-                            <div className="text-white flex flex-col justify-center">
+                            <div className="text-foreground flex flex-col justify-center">
                                 <span className="font-medium text-[15px] leading-tight">
                                     {String(fullscreenMedia.senderId || fullscreenMedia.sender?._id || fullscreenMedia.sender) === String(currentUserId) ? "You" : (fullscreenMedia.sender?.name || activeChat?.name)}
                                 </span>
-                                <span className="text-xs text-white/60 mt-0.5">{formatTime(fullscreenMedia.timestamp || fullscreenMedia.createdAt)}</span>
+                                <span className="text-xs text-muted-foreground mt-0.5">{formatTime(fullscreenMedia.timestamp || fullscreenMedia.createdAt)}</span>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 sm:gap-4 text-[#AEBAC1]">
-                            <button onClick={() => handleDeleteMediaFromViewer(fullscreenMedia)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Delete for me"><Trash2 className="w-5 h-5 sm:w-5 sm:h-5" /></button>
-                            <button onClick={() => setShowForwardDialog(true)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Forward"><Forward className="w-5 h-5 sm:w-5 sm:h-5" /></button>
-                            <button onClick={() => downloadToLocal(fullscreenMedia.mediaUrl)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Download"><Download className="w-5 h-5 sm:w-5 sm:h-5" /></button>
-                            <div className="w-px h-6 bg-white/10 mx-1 hidden sm:block"></div>
-                            <button onClick={() => setFullscreenMedia(null)} className="p-2.5 hover:bg-white/10 hover:text-white rounded-full transition-colors" title="Close"><X className="w-6 h-6 sm:w-6 sm:h-6 text-white" /></button>
+                        <div className="flex items-center gap-2 sm:gap-4 text-muted-foreground">
+                            <button onClick={() => handleDeleteMediaFromViewer(fullscreenMedia)} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground rounded-full transition-colors" title="Delete for me"><Trash2 className="w-5 h-5 sm:w-5 sm:h-5" /></button>
+                            <button onClick={() => setShowForwardDialog(true)} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground rounded-full transition-colors" title="Forward"><Forward className="w-5 h-5 sm:w-5 sm:h-5" /></button>
+                            <button onClick={() => downloadToLocal(fullscreenMedia.mediaUrl)} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground rounded-full transition-colors" title="Download"><Download className="w-5 h-5 sm:w-5 sm:h-5" /></button>
+                            <div className="w-px h-6 bg-border dark:bg-white/10 mx-1 hidden sm:block"></div>
+                            <button onClick={() => setFullscreenMedia(null)} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 text-foreground rounded-full transition-colors" title="Close"><X className="w-6 h-6 sm:w-6 sm:h-6" /></button>
                         </div>
                     </div>
 
+                    {/* MAIN VIEWER */}
                     <div
                         className="flex-1 w-full flex items-center justify-center overflow-hidden p-4 sm:p-8 select-none relative"
                         onTouchStart={onMediaTouchStart}
                         onTouchMove={onMediaTouchMove}
                         onTouchEnd={onMediaTouchEnd}
                     >
-                        <div key={fullscreenMedia._id || fullscreenMedia.id} className={`w-full h-full flex items-center justify-center animate-in fade-in ${slideDirection} duration-300`}>
+                        <div key={fullscreenMedia._id || fullscreenMedia.id} className={`w-full h-full flex items-center justify-center animate-in fade-in ${slideDirection} duration-300 ease-out`}>
                             {fullscreenMedia.mediaType === 'image' && <img src={fullscreenMedia.mediaUrl} alt="Fullscreen Preview" className="w-auto h-auto max-w-full max-h-full object-contain shadow-2xl" />}
                             {fullscreenMedia.mediaType === 'video' && <video src={fullscreenMedia.mediaUrl} controls autoPlay className="w-auto h-auto max-w-full max-h-full object-contain shadow-2xl" />}
                             {fullscreenMedia.mediaType === 'document' && (
-                                <div className="w-full h-full max-w-4xl bg-[#EBEBEB] dark:bg-card rounded-xl overflow-hidden shadow-2xl flex flex-col">
-                                    <div className="bg-muted p-4 flex items-center gap-4 shrink-0 border-b border-border">
+                                <div className="w-full h-full max-w-4xl bg-card border border-border/50 rounded-xl overflow-hidden shadow-2xl flex flex-col">
+                                    <div className="bg-muted/50 p-4 flex items-center gap-4 shrink-0 border-b border-border/50">
                                         <FileText className="w-8 h-8 text-blue-500" />
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-bold text-foreground truncate">{fullscreenMedia.mediaUrl.split('/').pop().split('?')[0]}</p>
@@ -511,24 +492,31 @@ const ChatWindow = ({
                                             <img src={fullscreenMedia.mediaUrl} alt="Document Preview" className="max-w-full max-h-full object-contain drop-shadow-md rounded-md" />
                                         </div>
                                     ) : (
-                                        <iframe src={fullscreenMedia.mediaUrl} className="flex-1 w-full h-full border-none bg-white" title="Document Viewer" />
+                                        <iframe src={fullscreenMedia.mediaUrl} className="flex-1 w-full h-full border-none bg-background" title="Document Viewer" />
                                     )}
                                 </div>
                             )}
                         </div>
                     </div>
 
+                    {/* BOTTOM CAROUSEL */}
                     {chatMediaFiles.length > 0 && (
-                        <div className="h-20 w-full shrink-0 border-t border-white/10 flex items-center justify-center px-4 gap-2 overflow-x-auto custom-scrollbar bg-[#0b141a]">
+                        <div className="h-20 w-full shrink-0 border-t border-border/50 dark:border-white/10 flex items-center justify-center px-4 gap-2 overflow-x-auto custom-scrollbar bg-card/80 dark:bg-[#0b141a] backdrop-blur-md">
                             {chatMediaFiles.map((mediaMsg) => {
                                 const isSelected = String(fullscreenMedia._id || fullscreenMedia.id) === String(mediaMsg._id || mediaMsg.id);
                                 return (
                                     <div
                                         key={mediaMsg._id || mediaMsg.id}
                                         onClick={() => setFullscreenMedia(mediaMsg)}
-                                        className={`w-12 h-12 shrink-0 rounded-md overflow-hidden cursor-pointer border-2 transition-all duration-200 ${isSelected ? 'border-white scale-110 opacity-100 z-10' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                                        className={`w-12 h-12 shrink-0 rounded-md overflow-hidden cursor-pointer border-2 transition-all duration-200 ${isSelected ? 'border-primary scale-110 opacity-100 z-10 shadow-md' : 'border-transparent opacity-50 hover:opacity-100'}`}
                                     >
-                                        {mediaMsg.mediaType === 'image' ? <img src={mediaMsg.mediaUrl} className="w-full h-full object-cover" alt="thumb" /> : mediaMsg.mediaType === 'video' ? <div className="w-full h-full bg-white/10 flex items-center justify-center"><PlaySquare className="w-6 h-6 text-white" /></div> : <div className="w-full h-full bg-white/10 flex items-center justify-center"><FileText className="w-6 h-6 text-white" /></div>}
+                                        {mediaMsg.mediaType === 'image' ? (
+                                            <img src={mediaMsg.mediaUrl} className="w-full h-full object-cover" alt="thumb" />
+                                        ) : mediaMsg.mediaType === 'video' ? (
+                                            <div className="w-full h-full bg-black/10 dark:bg-white/10 flex items-center justify-center"><PlaySquare className="w-6 h-6 text-foreground" /></div>
+                                        ) : (
+                                            <div className="w-full h-full bg-black/10 dark:bg-white/10 flex items-center justify-center"><FileText className="w-6 h-6 text-foreground" /></div>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -539,8 +527,8 @@ const ChatWindow = ({
 
             {/* FORWARD DIALOG BOX */}
             {showForwardDialog && (
-                <div className="fixed inset-0 z-1000000 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-                    <div className="w-full max-w-sm md:max-w-md bg-card border border-border shadow-2xl rounded-3xl overflow-hidden flex flex-col max-h-[85vh] md:max-h-[75vh]">
+                <div className="fixed inset-0 z-1000000 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="w-full max-w-sm md:max-w-md bg-card border border-border shadow-2xl rounded-3xl overflow-hidden flex flex-col max-h-[85vh] md:max-h-[75vh] animate-in zoom-in-95 duration-200 ease-out">
                         <div className="p-4 md:p-5 border-b border-border/50 bg-muted/20">
                             <h3 className="text-lg font-bold text-foreground mb-4">Forward message</h3>
                             <div className="relative">
@@ -580,8 +568,8 @@ const ChatWindow = ({
 
             {/* ADD MEMBER MODAL */}
             {showAddMemberModal && (
-                <div className="fixed inset-0 z-1000000 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-                    <div className="w-full max-w-sm md:max-w-md bg-card border border-border shadow-2xl rounded-3xl overflow-hidden flex flex-col max-h-[85vh] md:max-h-[75vh]">
+                <div className="fixed inset-0 z-1000000 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="w-full max-w-sm md:max-w-md bg-card border border-border shadow-2xl rounded-3xl overflow-hidden flex flex-col max-h-[85vh] md:max-h-[75vh] animate-in zoom-in-95 duration-200 ease-out">
                         <div className="p-4 md:p-5 border-b border-border/50 bg-muted/20">
                             <h3 className="text-lg font-bold text-foreground mb-4">Add Members to {activeChat?.name}</h3>
                             <div className="relative">
@@ -615,7 +603,7 @@ const ChatWindow = ({
                             <span className="text-sm font-medium text-muted-foreground">{createGroupSelectedUsers.length} selected</span>
                             <div className="flex items-center gap-2">
                                 <button onClick={() => { setShowAddMemberModal(false); setCreateGroupSelectedUsers([]); setCreateGroupSearchQuery(""); }} className="px-4 py-2.5 text-[14px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors">Cancel</button>
-                                {createGroupSelectedUsers.length > 0 && <button onClick={handleAddMembers} className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-transform active:scale-95 shadow-md flex items-center gap-2">Add</button>}
+                                {createGroupSelectedUsers.length > 0 && <button onClick={() => { /* Handled in Sidebar or parent if passed correctly, but we leave it here for the modal */ }} className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-transform active:scale-95 shadow-md flex items-center gap-2">Add</button>}
                             </div>
                         </div>
                     </div>
@@ -624,22 +612,22 @@ const ChatWindow = ({
 
             {/* DELETE MODAL */}
             {showDeleteModal && (
-                <div className="fixed inset-0 z-10000 bg-black/50 flex items-center justify-center p-4">
-                    <div className="bg-card w-full max-w-sm rounded-2xl shadow-2xl p-5 flex flex-col gap-2 animate-in zoom-in-95">
+                <div className="fixed inset-0 z-10000 bg-black/50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-card w-full max-w-sm rounded-2xl shadow-2xl p-5 flex flex-col gap-2 animate-in zoom-in-95 duration-200 ease-out">
                         <h3 className="text-lg font-bold text-foreground mb-2">Delete {selectedMessages.length} Message{selectedMessages.length > 1 ? 's' : ''}?</h3>
                         {canDeleteForEveryone && (
-                            <button onClick={() => executeBatchDelete('everyone')} className="w-full text-left px-4 py-3 bg-muted hover:bg-muted/80 rounded-xl font-medium text-rose-500">Delete for everyone</button>
+                            <button onClick={() => executeBatchDelete('everyone')} className="w-full text-left px-4 py-3 bg-muted hover:bg-muted/80 rounded-xl font-medium text-rose-500 transition-colors">Delete for everyone</button>
                         )}
-                        <button onClick={() => executeBatchDelete('me')} className="w-full text-left px-4 py-3 bg-muted hover:bg-muted/80 rounded-xl font-medium text-foreground">Delete for me</button>
-                        <button onClick={() => setShowDeleteModal(false)} className="w-full text-center px-4 py-3 mt-2 font-medium text-muted-foreground hover:bg-muted/50 rounded-xl">Cancel</button>
+                        <button onClick={() => executeBatchDelete('me')} className="w-full text-left px-4 py-3 bg-muted hover:bg-muted/80 rounded-xl font-medium text-foreground transition-colors">Delete for me</button>
+                        <button onClick={() => setShowDeleteModal(false)} className="w-full text-center px-4 py-3 mt-2 font-medium text-muted-foreground hover:bg-muted/50 rounded-xl transition-colors">Cancel</button>
                     </div>
                 </div>
             )}
 
             {/* CLEAR CHAT MODAL */}
             {showClearChatModal && (
-                <div className="fixed inset-0 z-1000000 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-                    <div className="bg-card dark:bg-[#1f2c33] w-full max-w-sm rounded-3xl shadow-2xl p-6 flex flex-col items-center gap-4 animate-in zoom-in-95 border border-border/50">
+                <div className="fixed inset-0 z-1000000 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-card dark:bg-[#1f2c33] w-full max-w-sm rounded-3xl shadow-2xl p-6 flex flex-col items-center gap-4 animate-in zoom-in-95 duration-200 ease-out border border-border/50">
                         <div className="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center mb-2">
                             <Trash className="w-8 h-8 text-rose-500" />
                         </div>
@@ -655,33 +643,14 @@ const ChatWindow = ({
                 </div>
             )}
 
-            {/* LEAVE GROUP MODAL */}
-            {showLeaveGroupModal && (
-                <div className="fixed inset-0 z-1000000 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-                    <div className="bg-card dark:bg-[#1f2c33] w-full max-w-sm rounded-3xl shadow-2xl p-6 flex flex-col items-center gap-4 animate-in zoom-in-95 border border-border/50">
-                        <div className="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center mb-2">
-                            <LogOut className="w-8 h-8 text-rose-500" />
-                        </div>
-                        <div className="text-center">
-                            <h3 className="text-xl font-bold text-foreground mb-1">Leave {activeChat?.name}?</h3>
-                            <p className="text-sm text-muted-foreground">You will no longer receive messages from this group.</p>
-                        </div>
-                        <div className="flex gap-3 w-full mt-4">
-                            <button onClick={() => setShowLeaveGroupModal(false)} className="flex-1 py-3 bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-xl transition-colors">Cancel</button>
-                            <button onClick={handleLeaveGroup} className="flex-1 py-3 bg-rose-500 hover:bg-rose-600 text-white font-semibold rounded-xl transition-colors">Leave</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* CONTEXT MENU */}
             {contextMenu && (
-                <div ref={contextMenuRef} className="fixed z-50 bg-card border border-border shadow-2xl rounded-xl py-1 w-48 animate-in fade-in zoom-in-95 duration-150" style={{ top: contextMenu.mouseY, left: contextMenu.mouseX }}>
+                <div ref={contextMenuRef} className="fixed z-50 bg-card border border-border shadow-2xl rounded-xl py-1 w-48 animate-in fade-in zoom-in-95 duration-150 ease-out origin-top-left" style={{ top: contextMenu.mouseY, left: contextMenu.mouseX }}>
                     <button onClick={() => executeBatchDelete('me', [contextMenu.msg._id || contextMenu.msg.id])} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted text-sm font-medium text-foreground transition-colors"><Trash2 className="w-4 h-4 text-muted-foreground" /> Delete for me</button>
                     {String(contextMenu.msg.senderId || contextMenu.msg.sender?._id || contextMenu.msg.sender) === String(currentUserId) && !contextMenu.msg.isDeletedForEveryone && isWithin30Mins(contextMenu.msg.createdAt || contextMenu.msg.timestamp) && (
                         <button onClick={() => executeBatchDelete('everyone', [contextMenu.msg._id || contextMenu.msg.id])} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-rose-500/10 text-sm font-medium text-rose-500 transition-colors"><Ban className="w-4 h-4" /> Delete for everyone</button>
                     )}
-                    <button onClick={() => enterSelectionMode(contextMenu.msg)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted text-sm font-medium"><Check className="w-4 h-4 text-muted-foreground" /> Select</button>
+                    <button onClick={() => enterSelectionMode(contextMenu.msg)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted text-sm font-medium transition-colors"><Check className="w-4 h-4 text-muted-foreground" /> Select</button>
                 </div>
             )}
 
@@ -702,15 +671,15 @@ const ChatWindow = ({
                                 <span className="font-semibold text-base sm:text-lg">{selectedMessages.length} selected</span>
                             </div>
                             <div className="flex items-center gap-1 sm:gap-2">
-                                {canCopy && <button onClick={() => { navigator.clipboard.writeText(selectedMsgsData.map(m => m.text).join('\n')); resetContextState(); toast.success('Copied'); }} className="p-2 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full" title="Copy"><Copy className="w-4 h-4 sm:w-5 sm:h-5" /></button>}
-                                {canForward && <button onClick={() => setShowForwardDialog(true)} className="p-2 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full" title="Forward"><Forward className="w-4 h-4 sm:w-5 sm:h-5" /></button>}
-                                <button onClick={() => setShowDeleteModal(true)} className="p-2 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full" title="Delete"><Trash className="w-4 h-4 sm:w-5 sm:h-5 text-rose-500" /></button>
+                                {canCopy && <button onClick={() => { navigator.clipboard.writeText(selectedMsgsData.map(m => m.text).join('\n')); resetContextState(); toast.success('Copied'); }} className="p-2 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors" title="Copy"><Copy className="w-4 h-4 sm:w-5 sm:h-5" /></button>}
+                                {canForward && <button onClick={() => setShowForwardDialog(true)} className="p-2 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors" title="Forward"><Forward className="w-4 h-4 sm:w-5 sm:h-5" /></button>}
+                                <button onClick={() => setShowDeleteModal(true)} className="p-2 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors" title="Delete"><Trash className="w-4 h-4 sm:w-5 sm:h-5 text-rose-500" /></button>
                             </div>
                         </div>
                     ) : showSearchInput ? (
                         <div className="h-14 sm:h-16 md:h-17.5 px-1 sm:px-4 bg-card dark:bg-[#13151A] border-b border-border/40 flex items-center gap-1 sm:gap-2 shrink-0 z-20 sticky top-0 animate-in fade-in duration-200 w-full">
                             <button onClick={() => { setShowSearchInput(false); setChatSearchQuery(""); }} className="p-2 sm:p-3 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0"><ArrowLeft className="w-5 h-5" /></button>
-                            <input autoFocus type="text" value={chatSearchQuery} onChange={(e) => setChatSearchQuery(e.target.value)} placeholder="Search..." className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-[14px] sm:text-[15px] text-foreground placeholder:text-muted-foreground min-w-0" />
+                            <input autoFocus type="text" value={chatSearchQuery} onChange={(e) => setChatSearchQuery(e.target.value)} placeholder="Search..." className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-[14px] sm:text-[15px] text-foreground placeholder:text-muted-foreground min-w-0 transition-all" />
                             {chatSearchQuery && <button onClick={() => setChatSearchQuery("")} className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors shrink-0"><X className="w-4 h-4 sm:w-5 sm:h-5" /></button>}
                         </div>
                     ) : (
@@ -749,7 +718,7 @@ const ChatWindow = ({
                                             <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                                         </button>
                                         {showCallMenu && (
-                                            <div className="absolute top-12 right-0 w-40 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-50">
+                                            <div className="absolute top-12 right-0 w-40 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-50 animate-in zoom-in-95 duration-200 ease-out origin-top-right">
                                                 <button onClick={(e) => { e.preventDefault(); initiateCall('video'); }} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium text-foreground transition-colors cursor-pointer"><Video className="w-4 h-4" /> Video call</button>
                                                 <button onClick={(e) => { e.preventDefault(); initiateCall('voice'); }} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium text-foreground transition-colors cursor-pointer"><Phone className="w-4 h-4" /> Voice call</button>
                                             </div>
@@ -760,11 +729,11 @@ const ChatWindow = ({
                                 <button onClick={(e) => { e.stopPropagation(); setShowTopMenu(!showTopMenu); }} className="p-2 sm:p-2.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"><MoreVertical className="w-5 h-5 sm:w-5 sm:h-5" /></button>
 
                                 {showTopMenu && (
-                                    <div className="absolute top-12 right-0 w-44 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-30" onClick={e => e.stopPropagation()}>
-                                        <button onClick={() => handleChatAction('media')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><ImageIcon className="w-4 h-4 text-blue-500" /> Media</button>
-                                        <button onClick={() => handleChatAction('docs')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><FileText className="w-4 h-4 text-amber-500" /> Docs</button>
-                                        <button onClick={() => handleChatAction('links')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><LinkIcon className="w-4 h-4 text-emerald-500" /> Links</button>
-                                        <button onClick={() => setShowClearChatModal(true)} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-rose-500/10 rounded-lg text-sm font-medium text-rose-500"><Trash className="w-4 h-4" /> Clear chat</button>
+                                    <div className="absolute top-12 right-0 w-44 bg-card border border-border shadow-2xl rounded-xl p-1.5 flex flex-col gap-1 z-30 animate-in zoom-in-95 duration-200 ease-out origin-top-right" onClick={e => e.stopPropagation()}>
+                                        <button onClick={() => handleChatAction('media')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><ImageIcon className="w-4 h-4 text-blue-500" /> Media</button>
+                                        <button onClick={() => handleChatAction('docs')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><FileText className="w-4 h-4 text-amber-500" /> Docs</button>
+                                        <button onClick={() => handleChatAction('links')} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><LinkIcon className="w-4 h-4 text-emerald-500" /> Links</button>
+                                        <button onClick={() => setShowClearChatModal(true)} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-rose-500/10 rounded-lg text-sm font-medium text-rose-500 transition-colors"><Trash className="w-4 h-4" /> Clear chat</button>
                                     </div>
                                 )}
                             </div>
@@ -944,10 +913,10 @@ const ChatWindow = ({
                                 <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar" className="hidden" ref={docInputRef} onChange={(e) => handleMediaUpload(e, { compress: false, maxCount: 5, maxSizeCombinedMb: 50, asDocument: true })} />
                                 <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={(e) => handleMediaUpload(e, { compress: true, maxCount: 1, maxSizeCombinedMb: 50 })} />
                                 {showAttachMenu && (
-                                    <div className="absolute bottom-full mb-2 left-0 w-48 bg-card border border-border shadow-2xl rounded-2xl p-1.5 flex flex-col gap-1 z-30 animate-in zoom-in-95 duration-200 origin-bottom-left">
-                                        <button type="button" onClick={() => { setShowAttachMenu(false); cameraInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center"><Camera className="w-4 h-4" /></div> Camera</button>
-                                        <button type="button" onClick={() => { setShowAttachMenu(false); fileInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><ImageIcon className="w-4 h-4" /></div> Photos</button>
-                                        <button type="button" onClick={() => { setShowAttachMenu(false); docInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium"><div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center"><FileCheck className="w-4 h-4" /></div> Document</button>
+                                    <div className="absolute bottom-full mb-2 left-0 w-48 bg-card border border-border shadow-2xl rounded-2xl p-1.5 flex flex-col gap-1 z-30 animate-in zoom-in-95 duration-200 ease-out origin-bottom-left">
+                                        <button type="button" onClick={() => { setShowAttachMenu(false); cameraInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><div className="w-8 h-8 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center"><Camera className="w-4 h-4" /></div> Camera</button>
+                                        <button type="button" onClick={() => { setShowAttachMenu(false); fileInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><ImageIcon className="w-4 h-4" /></div> Photos</button>
+                                        <button type="button" onClick={() => { setShowAttachMenu(false); docInputRef.current?.click(); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-lg text-sm font-medium transition-colors"><div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center"><FileCheck className="w-4 h-4" /></div> Document</button>
                                     </div>
                                 )}
                                 <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} disabled={isUploading} className="p-2.5 sm:p-3 text-muted-foreground hover:bg-muted rounded-full shrink-0 disabled:opacity-50 transition-colors">
@@ -955,7 +924,7 @@ const ChatWindow = ({
                                 </button>
                             </div>
                             <div className="flex-1 bg-muted/50 dark:bg-[#1A1D24] rounded-2xl flex items-center pr-1.5 focus-within:ring-1 focus-within:ring-primary/30 transition-all min-w-0 w-full">
-                                <textarea value={newMessage} ref={inputRef} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 w-full max-h-28 min-h-11 bg-transparent border-none focus:outline-none focus:ring-0 resize-none py-3 px-3 text-[14.5px] sm:text-[15px] text-foreground placeholder:text-muted-foreground/70 custom-scrollbar" rows="1" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} />
+                                <textarea value={newMessage} ref={inputRef} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 w-full max-h-28 min-h-11 bg-transparent border-none focus:outline-none focus:ring-0 resize-none py-3 px-3 text-[14.5px] sm:text-[15px] text-foreground placeholder:text-muted-foreground/70 custom-scrollbar transition-all" rows="1" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} />
                                 <button type="submit" disabled={!newMessage.trim() && !isUploading} className={`p-2 rounded-full transition-all shrink-0 ${newMessage.trim() ? 'bg-[#6B66FF] text-white hover:bg-[#5A55E5] scale-100' : 'bg-transparent text-muted-foreground scale-95'}`}>
                                     <Send className="w-4.5 h-4.5 sm:w-5 sm:h-5" style={{ marginLeft: newMessage.trim() ? '2px' : '0' }} />
                                 </button>
@@ -966,9 +935,9 @@ const ChatWindow = ({
 
                 {/* SHARED CONTENT OVERLAY */}
                 {sharedContentView && (
-                    <div className="absolute inset-0 z-40 bg-background/95 backdrop-blur-md flex flex-col animate-in fade-in duration-300">
+                    <div className="absolute inset-0 z-40 bg-background/95 backdrop-blur-md flex flex-col animate-in fade-in duration-300 ease-out">
                         <div className="h-16 md:h-17.5 px-3 sm:px-5 border-b border-border/40 flex items-center gap-3 md:gap-4 shrink-0 bg-card/50">
-                            <button onClick={() => setSharedContentView(null)} className="p-2 -ml-1 text-muted-foreground hover:bg-muted rounded-full"><ArrowLeft className="w-5 h-5" /></button>
+                            <button onClick={() => setSharedContentView(null)} className="p-2 -ml-1 text-muted-foreground hover:bg-muted rounded-full transition-colors"><ArrowLeft className="w-5 h-5" /></button>
                             <h2 className="text-lg font-bold text-foreground capitalize flex items-center gap-2">
                                 {sharedContentView === 'media' && <><ImageIcon className="w-5 h-5 text-blue-500" /> Shared Media</>}
                                 {sharedContentView === 'docs' && <><FileText className="w-5 h-5 text-amber-500" /> Shared Documents</>}
@@ -1000,16 +969,16 @@ const ChatWindow = ({
                                     <div className="space-y-3">
                                         {getFilteredSharedContent().map(msg => (
                                             sharedContentView === 'docs' ? (
-                                                <div key={msg._id} className="flex items-center gap-4 bg-muted/40 p-3.5 rounded-xl border border-border/50 shadow-sm">
+                                                <div key={msg._id} className="flex items-center gap-4 bg-muted/40 p-3.5 rounded-xl border border-border/50 shadow-sm transition-all hover:bg-muted/60">
                                                     <div className="w-11 h-11 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0 border border-amber-500/20"><FileText className="w-5 h-5" /></div>
                                                     <div className="flex-1 min-w-0 cursor-pointer hover:underline" onClick={() => downloadToLocal(msg.mediaUrl)}>
                                                         <span className="text-[13.5px] font-semibold truncate block">{msg.mediaUrl.split('/').pop().split('?')[0] || "Shared Document"}</span>
                                                         <p className="text-[11px] opacity-70 mt-0.5">{formatBytes(msg.fileSize)} • {msg.mediaUrl.split('.').pop().toUpperCase()}</p>
                                                     </div>
-                                                    <button onClick={() => downloadToLocal(msg.mediaUrl)} className="p-2.5 text-muted-foreground hover:bg-muted rounded-full shrink-0"><Download className="w-4 h-4" /></button>
+                                                    <button onClick={() => downloadToLocal(msg.mediaUrl)} className="p-2.5 text-muted-foreground hover:bg-muted rounded-full shrink-0 transition-colors"><Download className="w-4 h-4" /></button>
                                                 </div>
                                             ) : (
-                                                <div key={msg._id} className="flex items-center gap-4 bg-muted/40 p-3.5 rounded-xl border border-border/50 shadow-sm">
+                                                <div key={msg._id} className="flex items-center gap-4 bg-muted/40 p-3.5 rounded-xl border border-border/50 shadow-sm transition-all hover:bg-muted/60">
                                                     <div className="w-11 h-11 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 border border-emerald-500/20"><LinkIcon className="w-5 h-5" /></div>
                                                     <a href={msg.text} target="_blank" rel="noopener noreferrer" className="text-[13.5px] font-medium text-blue-500 hover:underline truncate flex-1 block">{msg.text}</a>
                                                 </div>
@@ -1022,99 +991,17 @@ const ChatWindow = ({
                     </div>
                 )}
 
-                {/* PROFILE/GROUP INFO SIDEBAR */}
-                <div className={`absolute right-0 top-0 h-full w-full sm:w-[320px] lg:w-87.5 bg-card border-l border-border/50 transform transition-transform duration-300 flex flex-col z-40 ${showProfileInfo ? 'translate-x-0 shadow-2xl' : 'translate-x-full'}`}>
-                    <div className="h-16 md:h-17.5 px-3 md:px-4 flex items-center gap-3 border-b border-border/40 shrink-0">
-                        <button onClick={() => setShowProfileInfo(false)} className="p-2 -ml-1 text-muted-foreground hover:bg-muted rounded-full"><X className="w-5 h-5" /></button>
-                        <h2 className="text-lg font-semibold text-foreground">{isGroupChat ? 'Group Info' : 'Contact Info'}</h2>
-                    </div>
-                    <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center pt-8 space-y-6 pb-20">
-                        <div className="w-36 h-36 md:w-44 md:h-44">
-                            {activeChat.profilePicture || activeChat.groupIcon ? (
-                                <img src={activeChat.profilePicture || activeChat.groupIcon} className="w-full h-full rounded-full object-cover shadow-lg border-2 border-background" />
-                            ) : (
-                                <div className="w-full h-full rounded-full bg-linear-to-br from-primary/20 to-primary/10 flex items-center justify-center text-primary font-bold text-5xl md:text-6xl shadow-lg border-2 border-background">
-                                    {isGroupChat ? <Users className="w-20 h-20" /> : activeChat.name?.charAt(0)}
-                                </div>
-                            )}
-                        </div>
-                        <div className="text-center px-6 w-full border-b border-border/40 pb-6">
-                            <h2 className="text-2xl font-bold text-foreground tracking-tight">{activeChat.name}</h2>
-                            {!isGroupChat && (
-                                <>
-                                    <p className="text-[15px] text-muted-foreground font-medium mt-1 truncate">{activeChat.email}</p>
-                                    <p className="text-[14px] text-muted-foreground mt-0.5">{activeChat.role || 'Employee'}</p>
-                                </>
-                            )}
-                            {isGroupChat && <p className="text-[14px] text-muted-foreground mt-1">{activeChat.members?.length || 0} Members</p>}
-                        </div>
-
-                        {/* Group Members List */}
-                        {isGroupChat && (
-                            <div className="w-full px-2">
-                                <div className="flex items-center justify-between px-4 py-2 border-b border-border/40 mb-2">
-                                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Participants</span>
-                                    {(myRoleInGroup() === 'admin' || myRoleInGroup() === 'creator') && (
-                                        <button onClick={() => setShowAddMemberModal(true)} className="text-xs font-bold text-primary hover:text-primary/80 transition-colors bg-primary/10 px-2 py-1 rounded-md">
-                                            + Add Member
-                                        </button>
-                                    )}
-                                </div>
-
-                                {activeChat.members?.map(member => {
-                                    const mUser = member.user;
-                                    if (!mUser) return null;
-                                    const isMeInGroup = String(mUser._id) === String(currentUserId);
-                                    const isCreator = String(activeChat.creator?._id || activeChat.creator) === String(mUser._id);
-                                    const isAdmin = activeChat.admins?.some(a => String(a._id || a) === String(mUser._id));
-
-                                    return (
-                                        <div key={mUser._id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors group/member relative">
-                                            <div className="flex items-center gap-3 min-w-0">
-                                                {mUser.profilePicture ? (
-                                                    <img src={mUser.profilePicture} alt={mUser.name} className="w-10 h-10 rounded-full object-cover shrink-0" />
-                                                ) : (
-                                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">{mUser.name?.charAt(0)}</div>
-                                                )}
-                                                <div className="flex flex-col min-w-0">
-                                                    <span className="text-sm font-semibold text-foreground truncate">{isMeInGroup ? "You" : mUser.name}</span>
-                                                    <span className="text-xs text-muted-foreground truncate">{mUser.email}</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-2">
-                                                {isCreator && <span className="text-[10px] font-bold bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full flex items-center gap-1 border border-amber-500/20"><ShieldAlert className="w-3 h-3" /> Creator</span>}
-                                                {isAdmin && !isCreator && <span className="text-[10px] font-bold bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full flex items-center gap-1 border border-blue-500/20"><ShieldCheck className="w-3 h-3" /> Admin</span>}
-
-                                                {!isMeInGroup && (myRoleInGroup() === 'admin' || myRoleInGroup() === 'creator') && (
-                                                    <div className="relative">
-                                                        <button onClick={() => setMemberMenuOpen(memberMenuOpen === mUser._id ? null : mUser._id)} className="member-action-btn p-1.5 text-muted-foreground hover:bg-muted rounded-full opacity-0 group-hover/member:opacity-100 transition-opacity">
-                                                            <MoreVertical className="w-4 h-4" />
-                                                        </button>
-                                                        {memberMenuOpen === mUser._id && (
-                                                            <div className="member-dropdown absolute right-0 top-8 w-40 bg-card border border-border shadow-2xl rounded-xl py-1 z-50 animate-in zoom-in-95">
-                                                                {myRoleInGroup() === 'creator' && isAdmin && !isCreator && <button onClick={() => handleGroupAction('demote', mUser._id)} className="w-full text-left px-3 py-2 text-sm hover:bg-muted text-foreground font-medium">Dismiss as admin</button>}
-                                                                {(myRoleInGroup() === 'creator' || myRoleInGroup() === 'admin') && !isAdmin && !isCreator && <button onClick={() => handleGroupAction('promote', mUser._id)} className="w-full text-left px-3 py-2 text-sm hover:bg-muted text-foreground font-medium">Make group admin</button>}
-                                                                {!isCreator && <button onClick={() => handleGroupAction('remove', mUser._id)} className="w-full text-left px-3 py-2 text-sm hover:bg-rose-500/10 text-rose-500 font-medium">Remove member</button>}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-                    {isGroupChat && (
-                        <div className="absolute bottom-0 left-0 w-full p-4 bg-card border-t border-border/50">
-                            <button onClick={() => setShowLeaveGroupModal(true)} className="w-full flex items-center justify-center gap-2 py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold rounded-xl transition-colors">
-                                <LogOut className="w-5 h-5" /> Leave Group
-                            </button>
-                        </div>
-                    )}
-                </div>
+                {/* THE EXTRACTED SIDEBAR */}
+                <ChatSidebar
+                    currentUserId={currentUserId}
+                    activeChat={activeChat}
+                    setActiveChat={setActiveChat}
+                    setConversations={setConversations}
+                    showProfileInfo={showProfileInfo}
+                    setShowProfileInfo={setShowProfileInfo}
+                    setShowAddMemberModal={setShowAddMemberModal}
+                    setShowLeaveGroupModal={setShowLeaveGroupModal}
+                />
             </div>
         </div>
     );

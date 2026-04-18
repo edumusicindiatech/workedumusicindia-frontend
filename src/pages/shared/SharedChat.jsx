@@ -45,13 +45,36 @@ const SharedChat = () => {
     const [isLoadingChats, setIsLoadingChats] = useState(true);
     const [isFetchingMessages, setIsFetchingMessages] = useState(false);
 
+    // Helper to get the most recent timestamp for a chat
+    const getLatestTimestamp = (chat) => {
+        // Check for a local temporary timestamp first (set by moveToTop)
+        if (chat.tempUpdatedAt) return new Date(chat.tempUpdatedAt).getTime();
+        
+        // For groups, use updatedAt
+        if (chat.isGroup) return new Date(chat.updatedAt || chat.createdAt || 0).getTime();
+        
+        // For 1-on-1, try to find the last message time if your API sends it
+        // If your API doesn't send lastMessage time, it will fallback to 0 (bottom of list)
+        return new Date(chat.lastMessageAt || chat.updatedAt || chat.createdAt || 0).getTime();
+    };
+
     const moveToTop = useCallback((userId) => {
         setConversations(prev => {
             const index = prev.findIndex(c => String(c._id || c.id) === String(userId));
             if (index === -1) return prev;
-            if (index === 0) return [...prev];
+            if (index === 0) {
+                 // Even if it's already at the top, update its timestamp so it stays there
+                 const updated = [...prev];
+                 updated[0].tempUpdatedAt = new Date().toISOString();
+                 return updated;
+            }
+            
             const updated = [...prev];
             const [chat] = updated.splice(index, 1);
+            
+            // Set a temporary timestamp so it survives a simple re-render
+            chat.tempUpdatedAt = new Date().toISOString(); 
+            
             updated.unshift(chat);
             return updated;
         });
@@ -115,6 +138,7 @@ const SharedChat = () => {
 
         const handleAddedToGroup = (groupData) => {
             groupData.isGroup = true;
+            groupData.tempUpdatedAt = new Date().toISOString(); // Force to top
             setConversations(prev => {
                 if (prev.some(c => String(c._id) === String(groupData._id))) return prev;
                 return [groupData, ...prev];
@@ -213,7 +237,14 @@ const SharedChat = () => {
                 if (p.unreadCount > 0) initialUnread[uid] = p.unreadCount;
             });
 
-            allChats.sort((a, b) => (b.unreadCount || 0) - (a.unreadCount || 0));
+            // --- WHATSAPP-LIKE SORTING ---
+            // Sort by the most recent timestamp available for each chat
+            allChats.sort((a, b) => {
+                const timeA = getLatestTimestamp(a);
+                const timeB = getLatestTimestamp(b);
+                return timeB - timeA; 
+            });
+
             setConversations(allChats);
             setUnreadMap(initialUnread);
 
@@ -265,7 +296,9 @@ const SharedChat = () => {
         try {
             const res = await api.post('/group/create', { name: createGroupName, creatorId: currentUserId, memberIds: createGroupSelectedUsers });
             if (res.data.success) {
-                const newGroup = { ...res.data.data, isGroup: true };
+                const newGroup = { ...res.data.data, isGroup: true, tempUpdatedAt: new Date().toISOString() };
+                
+                // Add new group to the top naturally
                 setConversations(prev => [newGroup, ...prev]);
                 setShowCreateGroupModal(false); setCreateGroupName(""); setCreateGroupSelectedUsers([]); setActiveChat(newGroup);
                 toast.success("Group created successfully!", { id: tid });
