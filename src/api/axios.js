@@ -29,7 +29,11 @@ const processQueue = (error, token = null) => {
 // 2. Request Interceptor: Use the in-memory token
 api.interceptors.request.use(
     (config) => {
-        if (currentAccessToken) {
+        // --- STEP 2 FIX: BYPASS LOGIN ROUTE ---
+        // Do not attach any ghost tokens if the user is trying to log in
+        const isLoginRoute = config.url && config.url.includes('/auth/login');
+        
+        if (currentAccessToken && !isLoginRoute) {
             config.headers['Authorization'] = `Bearer ${currentAccessToken}`;
         }
         return config;
