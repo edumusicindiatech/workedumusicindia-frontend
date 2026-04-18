@@ -16,21 +16,26 @@ public class CallBackgroundService extends FirebaseMessagingService {
     public void onMessageReceived(RemoteMessage remoteMessage) {
         super.onMessageReceived(remoteMessage);
 
-        // 1. Check if this is our custom background VoIP call payload
         if (remoteMessage.getData().size() > 0) {
             String type = remoteMessage.getData().get("type");
             
             if ("incoming_call".equals(type)) {
-                wakeUpDeviceAndLaunchApp();
+                // Extract WebRTC data from Firebase
+                String callerId = remoteMessage.getData().get("callerId");
+                String callerName = remoteMessage.getData().get("callerName");
+                String callType = remoteMessage.getData().get("callType");
+                String profilePicture = remoteMessage.getData().get("profilePicture");
+                String signal = remoteMessage.getData().get("signal");
+
+                wakeUpDeviceAndLaunchApp(callerId, callerName, callType, profilePicture, signal);
             }
         }
     }
 
-    private void wakeUpDeviceAndLaunchApp() {
+    private void wakeUpDeviceAndLaunchApp(String callerId, String callerName, String callType, String profilePicture, String signal) {
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         String channelId = "voip_incoming_calls";
 
-        // 2. Create a High-Importance VoIP Channel (Required for Android 8+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     channelId,
@@ -41,30 +46,34 @@ public class CallBackgroundService extends FirebaseMessagingService {
             notificationManager.createNotificationChannel(channel);
         }
 
-        // 3. Create the Intent that launches your React App (MainActivity)
         Intent fullScreenIntent = new Intent(this, MainActivity.class);
         fullScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        
+        // 🟢 PACK THE DATA INTO THE NATIVE INTENT SO REACT CAN READ IT 🟢
+        fullScreenIntent.putExtra("isIncomingCall", true);
+        fullScreenIntent.putExtra("callerId", callerId);
+        fullScreenIntent.putExtra("callerName", callerName);
+        fullScreenIntent.putExtra("callType", callType);
+        fullScreenIntent.putExtra("profilePicture", profilePicture);
+        fullScreenIntent.putExtra("signal", signal);
 
         PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(
                 this, 
-                0,
+                (int) System.currentTimeMillis(), // Ensures a fresh intent every time
                 fullScreenIntent, 
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        // 4. Build the Full-Screen Intent Notification
-        // The OS sees this and says "The screen is off, I must wake it up and launch this intent immediately!"
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
-                .setSmallIcon(android.R.drawable.ic_menu_call) // Replace with your app's icon resource later (e.g., R.mipmap.ic_launcher)
-                .setContentTitle("Incoming Call")
-                .setContentText("Tap to answer")
+                .setSmallIcon(android.R.drawable.ic_menu_call) // You can change to your app icon later
+                .setContentTitle(callerName != null ? callerName : "Incoming Call")
+                .setContentText(callType != null && callType.equals("video") ? "Incoming Video Call" : "Incoming Voice Call")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_CALL)
-                .setFullScreenIntent(fullScreenPendingIntent, true) // TRUE is the magic boolean that wakes the screen
+                .setFullScreenIntent(fullScreenPendingIntent, true) 
                 .setAutoCancel(true)
                 .setOngoing(true);
 
-        // 5. Fire it
         notificationManager.notify(1001, builder.build());
     }
 }

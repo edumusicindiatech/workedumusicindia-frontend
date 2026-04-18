@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy } from "react"; 
+import { useState, useEffect, Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { setCredentials, logout, setHydrationComplete } from "./store/slices/authSlice";
@@ -8,8 +8,8 @@ import { Toaster } from "react-hot-toast";
 
 import { Capacitor } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
-import { PushNotifications } from '@capacitor/push-notifications'; 
-import { Haptics } from '@capacitor/haptics'; 
+import { PushNotifications } from '@capacitor/push-notifications';
+import { Haptics } from '@capacitor/haptics';
 
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { DownloadCloud } from "lucide-react";
@@ -104,7 +104,7 @@ function App() {
       if (r && !isNative) {
         setInterval(() => {
           r.update();
-        }, 60 * 60 * 1000); 
+        }, 60 * 60 * 1000);
       }
     },
     onRegisterError(error) {
@@ -212,32 +212,31 @@ function App() {
               callerName: data.callerName,
               callType: data.callType,
               profilePicture: data.profilePicture,
-              signal: JSON.parse(data.signal) 
+              signal: JSON.parse(data.signal)
             }
           });
           window.dispatchEvent(event);
         }
       });
 
-      // 2. KILLED/LOCKED STATE HANDOFF: Intercepts the intent from our Custom Native Service
-      PushNotifications.addListener('pushNotificationActionPerformed', async (notificationAction) => {
-        const data = notificationAction.notification.data;
+      // 2. 🟢 THE NEW DIRECT NATIVE BRIDGE HANDOFF 🟢
+      // This listener catches the data that MainActivity.java forces into the React window
+      window.addEventListener('native_call_trigger', (e) => {
+        console.log("🔥 App woke up from Custom Native Intent!", e.detail);
+        Haptics.vibrate({ duration: 1500 });
 
-        if (data.type === 'incoming_call') {
-          console.log("🔥 App woke up from killed state due to incoming call!", data);
-          Haptics.vibrate({ duration: 1500 });
-          const event = new CustomEvent('fcm_incoming_call', {
-            detail: {
-              from: data.callerId,
-              callerName: data.callerName,
-              callType: data.callType,
-              profilePicture: data.profilePicture,
-              signal: JSON.parse(data.signal)
-            }
-          });
-          // 1200ms delay guarantees the router and navbars are mounted before dispatching
-          setTimeout(() => window.dispatchEvent(event), 1200);
-        }
+        // Dispatch it to your Navbar component exactly how it expects it
+        const event = new CustomEvent('fcm_incoming_call', {
+          detail: {
+            from: e.detail.from,
+            callerName: e.detail.callerName,
+            callType: e.detail.callType,
+            profilePicture: e.detail.profilePicture,
+            // Note: The Java code already parsed the signal JSON, so no JSON.parse needed here
+            signal: e.detail.signal
+          }
+        });
+        window.dispatchEvent(event);
       });
     }
   }, [isNative]);
