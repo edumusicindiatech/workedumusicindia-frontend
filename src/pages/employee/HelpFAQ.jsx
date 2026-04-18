@@ -9,7 +9,8 @@ import {
     ClipboardList, BookOpen, PlayCircle, Download,
     Trophy, Target, Palette, LineChart, Zap, Crown,
     FileText, MessageSquare, Send, CheckSquare, BellRing, Mail,
-    User, Camera, Lock, Globe, Moon, Search, LayoutGrid, Clock, AlertTriangle, RefreshCw, Cpu, Settings
+    User, Camera, Lock, Globe, Moon, Search, LayoutGrid, Clock, AlertTriangle, RefreshCw, Cpu, Settings,
+    Video, Users, Paperclip, Forward, ShieldCheck, Phone
 } from "lucide-react";
 
 // --- CUSTOM ICON ---
@@ -33,6 +34,7 @@ const rawCategories = [
     { id: "reports", icon: <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />, items: [40, 41, 42, 43] },
     { id: "notifications", icon: <BellRing className="w-3.5 h-3.5 sm:w-4 sm:h-4" />, items: [44, 45, 46, 47] },
     { id: "profile", icon: <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />, items: [48, 49, 50, 51, 52, 53, 54] },
+    { id: "chat", icon: <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />, items: [62, 63, 64, 65, 66] },
     { id: "system", icon: <Cpu className="w-3.5 h-3.5 sm:w-4 sm:h-4" />, items: [57, 58, 59, 60, 61] }
 ];
 
@@ -98,7 +100,12 @@ const iconMap = {
     58: <UserX className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />,
     59: <LogOut className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />,
     60: <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />,
-    61: <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+    61: <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />,
+    62: <Video className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />,
+    63: <Users className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />,
+    64: <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />,
+    65: <Paperclip className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />,
+    66: <Forward className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
 };
 
 // --- VISUAL UI EXAMPLES MAP ---
@@ -161,12 +168,31 @@ const visualMap = {
                 <div className="flex justify-between items-center text-xs sm:text-sm font-extrabold border-t border-primary/10 pt-2 sm:pt-3 text-destructive gap-2"><span className="truncate">Warnings</span> <span className="shrink-0 bg-destructive/10 px-1.5 py-0.5 sm:px-2 rounded-md border border-destructive/20 text-[10px] sm:text-xs">-10 pts each</span></div>
             </div>
         </div>
+    ),
+    62: (
+        <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-background border border-border rounded-xl flex gap-2 sm:gap-3 w-full sm:w-fit shadow-sm items-center">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#6B66FF] text-white rounded-lg text-xs font-bold shadow-sm">
+                <Video className="w-3.5 h-3.5 fill-current" /> <ChevronDown className="w-3 h-3" />
+            </div>
+            <span className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider">Call Menu Icon</span>
+        </div>
+    ),
+    64: (
+        <div className="mt-3 sm:mt-4 p-4 sm:p-5 bg-blue-500/5 border border-blue-500/20 rounded-3xl flex items-start gap-4 w-full max-w-sm shadow-sm">
+            <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/20 text-blue-500">
+                <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+                <p className="text-[11px] sm:text-xs font-black text-blue-500 uppercase tracking-widest">Admin Oversight</p>
+                <p className="text-muted-foreground text-[10px] sm:text-xs font-bold leading-relaxed">Administrators can view sent messages for safety and project compliance.</p>
+            </div>
+        </div>
     )
 };
 
 const HelpFAQ = () => {
     const { t, i18n } = useTranslation();
-    
+
     const [openIndex, setOpenIndex] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [activeCategory, setActiveCategory] = useState("all");
@@ -187,7 +213,8 @@ const HelpFAQ = () => {
 
     const fullFaqList = useMemo(() => {
         const list = [];
-        for (let i = 1; i <= 61; i++) {
+        // Updated loop to 66 to include new Chat FAQs
+        for (let i = 1; i <= 66; i++) {
             list.push({
                 id: i,
                 question: t(`help_faq.faqs.${i}.q`),
@@ -277,9 +304,9 @@ const HelpFAQ = () => {
                     {/* Desktop Category Pills */}
                     <div className="hidden md:flex flex-wrap items-center gap-3 mb-10 pb-2">
                         {rawCategories.map(cat => (
-                            <button 
-                                key={cat.id} 
-                                onClick={() => { setActiveCategory(cat.id); setOpenIndex(null); }} 
+                            <button
+                                key={cat.id}
+                                onClick={() => { setActiveCategory(cat.id); setOpenIndex(null); }}
                                 className={`flex items-center gap-2.5 px-4 py-2 sm:px-5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-[11px] uppercase tracking-widest transition-all shrink-0 
                                     ${activeCategory === cat.id ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-muted/20 text-muted-foreground border border-border/60 hover:bg-muted hover:text-foreground'}`}
                             >
@@ -298,8 +325,8 @@ const HelpFAQ = () => {
                         {t('help_faq.no_results', 'No Results')} "{searchQuery}"
                     </h3>
                     <p className="text-[10px] sm:text-xs md:text-sm font-bold text-muted-foreground uppercase tracking-widest mb-4 sm:mb-6">Try a different search term</p>
-                    <button 
-                        onClick={() => { setSearchQuery(""); setActiveCategory("all"); }} 
+                    <button
+                        onClick={() => { setSearchQuery(""); setActiveCategory("all"); }}
                         className="h-10 sm:h-12 px-6 sm:px-8 bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-black uppercase tracking-widest rounded-lg sm:rounded-xl text-[10px] sm:text-xs"
                     >
                         {t('help_faq.clear_search', 'Clear Search')}
@@ -309,7 +336,7 @@ const HelpFAQ = () => {
                 <div className="space-y-3 sm:space-y-4">
                     {filteredFaqs.map((faq) => (
                         <div key={faq.id} className={`bg-card rounded-2xl sm:rounded-3xl transition-all duration-300 shadow-sm overflow-hidden ${openIndex === faq.id ? 'border-2 border-primary/40 ring-2 sm:ring-4 ring-primary/10' : 'border border-border/60 hover:border-primary/30 hover:shadow-md'}`}>
-                            
+
                             <button onClick={() => toggleFAQ(faq.id)} className={`w-full flex items-center justify-between p-3 sm:p-4 md:p-6 text-left focus:outline-none transition-colors ${openIndex === faq.id ? 'bg-primary/5' : 'bg-transparent'}`}>
                                 <div className="flex items-center gap-3 sm:gap-4 md:gap-5 pr-3 sm:pr-4 overflow-hidden">
                                     <div className={`shrink-0 w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center border shadow-sm transition-colors ${openIndex === faq.id ? 'bg-background border-primary/20' : 'bg-muted/30 border-border/50'}`}>
@@ -327,7 +354,7 @@ const HelpFAQ = () => {
                             <div className={`grid transition-all duration-300 ease-in-out ${openIndex === faq.id ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                                 <div className="overflow-hidden">
                                     <div className={`p-3 sm:p-4 md:p-6 pt-0 text-xs sm:text-sm md:text-base text-muted-foreground font-medium leading-relaxed whitespace-pre-line border-t border-border/50 ml-3 sm:ml-16 md:ml-18 mr-3 sm:mr-4 md:mr-6 mb-3 sm:mb-4 md:mb-6 mt-3 sm:mt-4 ${openIndex === faq.id ? '' : 'hidden'}`}>
-                                        {faq.answer} 
+                                        {faq.answer}
                                         {faq.visual && (
                                             <div className="animate-in fade-in zoom-in-95 duration-500 delay-150 w-full overflow-hidden mt-3 sm:mt-4">
                                                 {faq.visual}

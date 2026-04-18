@@ -1706,7 +1706,8 @@
             "reports": "Daily Reports",
             "notifications": "Alerts & Notifications",
             "profile": "Profile & Settings",
-            "system": "System & Troubleshooting"
+            "system": "System & Troubleshooting",
+            "chat": "Chat & Messaging"
         },
         "faqs": {
             "1": {
@@ -1952,6 +1953,26 @@
             "61": {
                 "q": "How is my Weekly Score calculated?",
                 "a": "Every Saturday at 9:00 PM, the system calculates your performance:\n• 50% Attendance (Punctuality)\n• 50% Media Score (Video Quality)\n• Penalty: -10 points for every Warning received."
+            },
+            "62": {
+                "q": "How do I start a voice or video call?",
+                "a": "To start a call, open a 1-on-1 chat with the desired contact. Click the video icon in the top-right corner of the chat window and select either 'Video call' or 'Voice call'. Please note that calling features are currently available for individual chats only."
+            },
+            "63": {
+                "q": "How do I create and manage a group chat?",
+                "a": "Click the three vertical dots (⋮) at the top of your chat list and select 'New group'. Enter a name and select members to add. If you are the creator or an admin, you can manage the group by clicking on the group name or profile icon to open the Sidebar, where you can add/remove members or promote users to admin."
+            },
+            "64": {
+                "q": "Are my messages private and secure?",
+                "a": "While all messages are end-to-end encrypted to protect them from external threats, please be aware that administrators have access to view messages within the platform for oversight and compliance. Furthermore, to maintain data hygiene, all messages are automatically deleted from the server after 7 days."
+            },
+            "65": {
+                "q": "Can I share files, photos, or videos?",
+                "a": "Yes! In any active chat, click the paperclip icon in the message input bar. You can choose to upload photos, videos, or documents directly from your device, or use your camera to take a photo on the go."
+            },
+            "66": {
+                "q": "Can I delete or forward a message after sending it?",
+                "a": "Yes. Right-click or long-press on a message to open the context menu and select 'Select'. You can then choose to 'Forward' the message to another chat or 'Delete' it. Messages sent within the last 30 minutes can be deleted for everyone, otherwise, they can be deleted for you only."
             }
         }
     },
