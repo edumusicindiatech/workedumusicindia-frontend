@@ -5,11 +5,16 @@ import { setCredentials, logout, setHydrationComplete } from "./store/slices/aut
 import api, { setAxiosToken } from "./api/axios";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast"; // Added direct toast for the update logic
 
 import { Capacitor } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Haptics } from '@capacitor/haptics';
+
+// --- NATIVE UPDATE IMPORTS ---
+import { App as CapApp } from '@capacitor/app';
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
 
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { DownloadCloud } from "lucide-react";
@@ -91,10 +96,13 @@ const GlobalToaster = () => {
 function App() {
   const dispatch = useDispatch();
   const { user, isHydrating, token } = useSelector((state) => state.auth);
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const currentTheme = useSelector((state) => state.theme?.mode || 'light');
 
   const isNative = Capacitor.isNativePlatform();
+
+  // --- NATIVE UPDATE STATE ---
+  const [mandatoryNativeUpdate, setMandatoryNativeUpdate] = useState(null);
 
   const {
     needRefresh: [needRefresh],
@@ -169,6 +177,75 @@ function App() {
     initializeApp();
   }, []);
 
+  // --- NATIVE HYBRID UPDATE LOGIC ---
+  useEffect(() => {
+    const checkAppUpdates = async () => {
+      if (!isNative) return;
+
+      try {
+        // Notify Capgo the app is ready (Prevents rollbacks)
+        await CapacitorUpdater.notifyAppReady();
+
+        const appInfo = await CapApp.getInfo();
+        const otaInfo = await CapacitorUpdater.current();
+
+        const platform = Capacitor.getPlatform();
+        const current_native_version = appInfo.version;
+        const current_ota_version = otaInfo.bundle?.version || current_native_version;
+
+        const response = await api.get('/app/check-update', {
+          params: { platform, current_native_version, current_ota_version }
+        });
+
+        const data = response.data;
+
+        if (data.action === 'NONE') return;
+
+        // Handle Major APK Update
+        if (data.action === 'APK') {
+          if (data.is_mandatory) {
+            setMandatoryNativeUpdate(data);
+          } else {
+            toast.success("A major app update is available! Check settings to download.", { duration: 5000 });
+          }
+          return;
+        }
+
+        // Handle Minor OTA Update
+        if (data.action === 'OTA') {
+          const bundle = await CapacitorUpdater.download({
+            url: data.download_url,
+            version: Date.now().toString()
+          });
+
+          if (data.is_mandatory) {
+            await CapacitorUpdater.set({ id: bundle.id });
+          } else {
+            toast((toastInstance) => (
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-bold">New Patch Available</span>
+                <span className="text-xs">A small update was downloaded. Restart to apply?</span>
+                <button
+                  onClick={() => {
+                    CapacitorUpdater.set({ id: bundle.id });
+                    toast.dismiss(toastInstance.id);
+                  }}
+                  className="bg-primary text-white text-xs py-2 rounded-lg font-bold"
+                >
+                  Restart Now
+                </button>
+              </div>
+            ), { duration: 15000 });
+          }
+        }
+      } catch (error) {
+        console.error("Hybrid Update Error:", error);
+      }
+    };
+
+    checkAppUpdates();
+  }, [isNative]);
+
   useEffect(() => {
     const setupFirebase = async () => {
       if (token && isNative) {
@@ -199,7 +276,6 @@ function App() {
         }
       });
 
-      // 1. Foreground/Background Data Message Handler
       PushNotifications.addListener('pushNotificationReceived', async (notification) => {
         const data = notification.data;
 
@@ -219,20 +295,16 @@ function App() {
         }
       });
 
-      // 2. 🟢 THE NEW DIRECT NATIVE BRIDGE HANDOFF 🟢
-      // This listener catches the data that MainActivity.java forces into the React window
       window.addEventListener('native_call_trigger', (e) => {
         console.log("🔥 App woke up from Custom Native Intent!", e.detail);
         Haptics.vibrate({ duration: 1500 });
 
-        // Dispatch it to your Navbar component exactly how it expects it
         const event = new CustomEvent('fcm_incoming_call', {
           detail: {
             from: e.detail.from,
             callerName: e.detail.callerName,
             callType: e.detail.callType,
             profilePicture: e.detail.profilePicture,
-            // Note: The Java code already parsed the signal JSON, so no JSON.parse needed here
             signal: e.detail.signal
           }
         });
@@ -280,6 +352,7 @@ function App() {
 
   return (
     <>
+      {/* PWA UPDATE BLOCKER */}
       {needRefresh && !isNative && (
         <div className="fixed inset-0 z-999999999 flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-card border border-border rounded-3xl p-8 max-w-sm w-[90%] flex flex-col items-center text-center shadow-2xl animate-in zoom-in-95 duration-500">
@@ -303,6 +376,27 @@ function App() {
               className="w-full py-3.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-bold text-base transition-transform active:scale-95 shadow-lg"
             >
               Update App Now
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* NATIVE APK UPDATE BLOCKER */}
+      {mandatoryNativeUpdate && isNative && (
+        <div className="fixed inset-0 z-999999999 flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-card border border-border rounded-3xl p-8 max-w-sm w-[90%] flex flex-col items-center text-center shadow-2xl animate-in zoom-in-95 duration-500">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+              <DownloadCloud className="w-8 h-8 text-primary animate-bounce" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-3">Major Update Required</h2>
+            <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
+              {mandatoryNativeUpdate.release_notes || "A new mandatory version of the app is available. Please download the latest APK to continue."}
+            </p>
+            <button
+              onClick={() => { window.location.href = mandatoryNativeUpdate.download_url; }}
+              className="w-full py-3.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-bold text-base transition-transform active:scale-95 shadow-lg"
+            >
+              Download APK Now
             </button>
           </div>
         </div>
