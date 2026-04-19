@@ -215,7 +215,7 @@ function App() {
         if (data.action === 'OTA') {
           const bundle = await CapacitorUpdater.download({
             url: data.download_url,
-            version: Date.now().toString()
+            version: data.release_version // <--- THE FIX
           });
 
           if (data.is_mandatory) {

@@ -51,7 +51,9 @@
         "logout": "लॉग आउट",
         "employee": "कर्मचारी",
         "training_vault": "ट्रेनिंग वॉल्ट",
-        "incoming_call": "इनकमिंग {{type}} कॉल..."
+        "incoming_call": "इनकमिंग {{type}} कॉल...",
+        "incoming_voice": "इनकमिंग वॉयस कॉल...",
+        "incoming_video": "इनकमिंग वीडियो कॉल..."
     },
     "toast": {
         "missed_call": "{{name}} से मिस्ड कॉल",

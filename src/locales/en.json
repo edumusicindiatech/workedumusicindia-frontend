@@ -39,7 +39,7 @@
         "tasks": "Tasks",
         "media": "Media",
         "learning_hub": "Learning Hub",
-        "leaderboard": "Leader",
+        "leaderboard": "Leaderboard",
         "report": "Daily Report",
         "help": "Help & FAQs",
         "notifications": "Notifications",
@@ -51,7 +51,9 @@
         "logout": "Logout",
         "employee": "Employee",
         "training_vault": "Training Vault",
-        "incoming_call": "Incoming {{type}} call..."
+        "incoming_call": "Incoming {{type}} call...",
+        "incoming_video": "Video Call",
+        "incoming_voice": "Voice Call"
     },
     "toast": {
         "missed_call": "Missed call from {{name}}",
