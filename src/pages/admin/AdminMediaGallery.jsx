@@ -69,7 +69,11 @@ const AdminMediaGallery = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     const currentYear = new Date().getFullYear();
-    const availableYears = [currentYear, currentYear - 1, currentYear - 2];
+    const availableYears = [
+        { label: String(currentYear), value: currentYear },
+        { label: String(currentYear - 1), value: currentYear - 1 },
+        { label: String(currentYear - 2), value: currentYear - 2 }
+    ];
     const [selectedYear, setSelectedYear] = useState(currentYear);
     const [expandedMonth, setExpandedMonth] = useState(null);
     const [expandedCards, setExpandedCards] = useState({});
