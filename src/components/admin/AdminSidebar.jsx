@@ -6,10 +6,10 @@ import { useTranslation } from "react-i18next";
 import {
     LayoutDashboard, Users, Radio, Shield, Megaphone,
     Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle, ClipboardCheck,
-    CalendarDays, Film, Trophy, BookOpen, X, MessageCircle, PhoneIncoming, PhoneOff, Phone, Video, ChevronDown
+    CalendarDays, Film, Trophy, BookOpen, X, MessageCircle, PhoneIncoming, PhoneOff, Phone, Video, ChevronDown, User
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { Haptics } from '@capacitor/haptics'; 
+import { Haptics } from '@capacitor/haptics';
 
 import api from "../../api/axios";
 import { logout } from "../../store/slices/authSlice";
@@ -592,7 +592,7 @@ const AdminSidebar = () => {
 
     return (
         <>
-            {/* --- FULL-SCREEN IMMERSIVE CALL OVERLAY --- */}
+            {/* --- FULL-SCREEN IMMERSIVE CALL OVERLAY (Kept Exactly As Buggy Branch) --- */}
             {globalIncomingCall && !activeCall && (
                 <div
                     style={{ zIndex: 9999999, position: 'fixed', inset: 0 }}
@@ -653,6 +653,7 @@ const AdminSidebar = () => {
                 </div>
             )}
 
+            {/* --- CALL OVERLAY (Kept Exactly As Buggy Branch) --- */}
             {activeCall && (
                 <CallOverlay
                     peer={callPeer}
@@ -677,7 +678,8 @@ const AdminSidebar = () => {
                 />
             )}
 
-            <header className="fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-50 flex items-center justify-between px-6 shadow-sm">
+            {/* --- DESKTOP TOP NAVBAR (Replaced with Main Branch code) --- */}
+            <nav className="hidden 2xl:flex fixed top-0 w-full h-16 bg-card border-b border-border z-50 items-center justify-between px-6 shadow-sm">
                 <div className="flex items-center gap-3 shrink-0 mr-2">
                     <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
                         <span className="text-primary-foreground font-bold text-base">
@@ -732,8 +734,9 @@ const AdminSidebar = () => {
                     <button onClick={() => setIsSettingsModalOpen(true)} className="p-2 text-muted-foreground md:cursor-pointer hover:text-foreground hover:bg-muted rounded-full transition-colors" title={t('sidebar.settings')}><Settings className="w-5 h-5" /></button>
                     <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-destructive md:cursor-pointer hover:bg-destructive/10 rounded-full transition-colors" title={t('sidebar.logout')}><LogOut className="w-5 h-5" /></button>
                 </div>
-            </header>
+            </nav>
 
+            {/* --- MOBILE TOP NAVBAR (Replaced with Main Branch code) --- */}
             <header className="2xl:hidden fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4 shadow-sm">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
@@ -778,6 +781,7 @@ const AdminSidebar = () => {
                 </div>
             </header>
 
+            {/* --- MOBILE BOTTOM NAVBAR (Replaced with Main Branch code) --- */}
             <nav className="2xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] overflow-x-auto overflow-y-hidden">
                 <NavLink to="/admin/dashboard" className={mobileNavClasses}><LayoutDashboard className="w-6 h-6" /></NavLink>
                 <NavLink to="/admin/employees" className={mobileNavClasses}><Users className="w-6 h-6" /></NavLink>
