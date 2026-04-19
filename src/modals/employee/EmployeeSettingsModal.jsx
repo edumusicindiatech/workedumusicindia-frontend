@@ -10,6 +10,11 @@ import api from "../../api/axios";
 import { useTranslation } from "react-i18next";
 import { updateUserPreferences } from "../../store/slices/authSlice";
 
+// --- CAPACITOR IMPORTS FOR VERSIONING ---
+import { App as CapApp } from '@capacitor/app';
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
+import { Capacitor } from '@capacitor/core';
+
 const EmployeeSettingsModal = ({ isOpen, onClose }) => {
     const { user } = useSelector((state) => state.auth);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,6 +25,10 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
         language: "English",
         emailNotifications: true,
     });
+
+    // --- VERSION STATES ---
+    const [nativeVersion, setNativeVersion] = useState("...");
+    const [otaVersion, setOtaVersion] = useState("...");
 
     // Swipe & Animation states
     const [isDragging, setIsDragging] = useState(false);
@@ -37,6 +46,31 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
             setDragOffset(0);
         }
     }, [isOpen, user]);
+
+    // --- FETCH VERSIONS ON OPEN ---
+    useEffect(() => {
+        const fetchVersions = async () => {
+            if (!Capacitor.isNativePlatform()) {
+                setNativeVersion("Web");
+                setOtaVersion("Web");
+                return;
+            }
+            try {
+                const appInfo = await CapApp.getInfo();
+                setNativeVersion(appInfo.version);
+                const otaInfo = await CapacitorUpdater.current();
+                setOtaVersion(otaInfo.bundle?.version || otaInfo.bundle?.id || appInfo.version);
+            } catch (error) {
+                console.error("Failed to fetch app versions", error);
+                setNativeVersion("Unknown");
+                setOtaVersion("Unknown");
+            }
+        };
+
+        if (isOpen) {
+            fetchVersions();
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -100,7 +134,7 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
 
     return (
         <div className={`fixed inset-0 z-200 flex items-end md:items-center justify-center bg-black/60 transition-all duration-300 md:p-4 ${isClosing ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md animate-in fade-in'}`} onClick={handleClose}>
-            <div 
+            <div
                 className={`bg-card w-full max-w-md rounded-t-[2.5rem] md:rounded-3xl shadow-2xl border-t md:border border-border/50 flex flex-col relative max-h-[90vh] md:max-h-[85vh] overflow-hidden ${isDragging ? '' : 'transition-transform duration-300 ease-out'} ${!isClosing && !isDragging ? 'animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 zoom-in-95' : ''}`}
                 style={{ transform: `translateY(${dragOffset}px)` }}
                 onClick={e => e.stopPropagation()}
@@ -137,7 +171,7 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
 
                 {/* BODY */}
                 <div className="p-5 sm:p-6 md:p-8 space-y-6 sm:space-y-8 overflow-y-auto flex-1 custom-scrollbar">
-                    
+
                     {/* Language Preference */}
                     <div className="space-y-3 sm:space-y-4">
                         <Label className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-primary/70 ml-1 flex items-center gap-2">
@@ -186,14 +220,25 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
                             />
                         </div>
                     </div>
+
+                    {/* VERSION DISPLAY */}
+                    <div className="mt-8 pt-4 flex flex-col items-center justify-center text-muted-foreground opacity-60">
+                        <span className="text-[10px] font-bold tracking-widest uppercase">WorkEdu Mobile v2</span>
+                        <div className="flex gap-2 text-[10px] font-medium mt-1">
+                            <span>Native: v{nativeVersion}</span>
+                            <span>•</span>
+                            <span>OTA: v{otaVersion}</span>
+                        </div>
+                    </div>
+
                 </div>
 
                 {/* FOOTER */}
                 <div className="p-4 sm:p-6 border-t border-border/50 bg-muted/10 flex flex-col sm:flex-row gap-3 rounded-b-3xl pb-safe">
-                    <Button 
-                        variant="ghost" 
-                        onClick={handleClose} 
-                        disabled={isSubmitting} 
+                    <Button
+                        variant="ghost"
+                        onClick={handleClose}
+                        disabled={isSubmitting}
                         className="w-full sm:flex-1 h-12 sm:h-14 rounded-xl sm:rounded-2xl font-bold text-muted-foreground hover:bg-muted transition-colors"
                     >
                         {t('employee_settings.cancel', 'Cancel')}
@@ -211,7 +256,7 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
                         {isSubmitting ? t('employee_settings.saving_toast', 'Saving...') : t('employee_settings.save_changes', 'Save Changes')}
                     </Button>
                 </div>
-                
+
             </div>
         </div>
     );

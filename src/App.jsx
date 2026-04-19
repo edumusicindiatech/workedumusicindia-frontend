@@ -5,7 +5,7 @@ import { setCredentials, logout, setHydrationComplete } from "./store/slices/aut
 import api, { setAxiosToken } from "./api/axios";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "react-hot-toast";
-import toast from "react-hot-toast"; // Added direct toast for the update logic
+import toast from "react-hot-toast";
 
 import { Capacitor } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
@@ -177,21 +177,19 @@ function App() {
     initializeApp();
   }, []);
 
+
   // --- NATIVE HYBRID UPDATE LOGIC ---
   useEffect(() => {
     const checkAppUpdates = async () => {
       if (!isNative) return;
 
       try {
-        // Notify Capgo the app is ready (Prevents rollbacks)
-        await CapacitorUpdater.notifyAppReady();
-
         const appInfo = await CapApp.getInfo();
         const otaInfo = await CapacitorUpdater.current();
 
         const platform = Capacitor.getPlatform();
         const current_native_version = appInfo.version;
-        const current_ota_version = otaInfo.bundle?.version || current_native_version;
+        const current_ota_version = otaInfo.bundle?.version || otaInfo.bundle?.id || current_native_version;
 
         const response = await api.get('/app/check-update', {
           params: { platform, current_native_version, current_ota_version }
@@ -213,9 +211,14 @@ function App() {
 
         // Handle Minor OTA Update
         if (data.action === 'OTA') {
+          if (String(data.release_version) === String(current_ota_version)) {
+            console.log("Already on latest OTA version. Ignoring server request.");
+            return;
+          }
+
           const bundle = await CapacitorUpdater.download({
             url: data.download_url,
-            version: data.release_version // <--- THE FIX
+            version: data.release_version
           });
 
           if (data.is_mandatory) {

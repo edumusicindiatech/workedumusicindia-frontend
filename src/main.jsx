@@ -7,6 +7,18 @@ import store, { persistor } from './store/store.js';
 import { PersistGate } from 'redux-persist/integration/react';
 import i18n from './i18n.js';
 
+// --- CAPGO ANTI-ROLLBACK SHIELD ---
+import { Capacitor } from '@capacitor/core';
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
+
+if (Capacitor.isNativePlatform()) {
+  // Fire this instantly before React even begins to mount
+  CapacitorUpdater.notifyAppReady()
+    .then(() => console.log("🚀 Capgo Anchored at Boot!"))
+    .catch(err => console.error("Capgo anchor failed:", err));
+}
+// ----------------------------------
+
 // ---> ADD THESE TWO LINES <---
 import { setAxiosToken } from './api/axios.js';
 
