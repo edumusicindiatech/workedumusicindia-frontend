@@ -224,7 +224,7 @@ const EmployeeNavbar = () => {
     const processIceQueue = async (pc) => {
         if (pc && pc.iceQueue && pc.iceQueue.length > 0) {
             for (const candidate of pc.iceQueue) {
-                try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { console.warn(e); }
+                try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { }
             }
             pc.iceQueue = [];
         }
@@ -320,17 +320,12 @@ const EmployeeNavbar = () => {
 
     useEffect(() => {
         const handleInitiateCall = async (e) => {
-            console.log("🟢 1. Call Button Clicked! Target User:", e.detail);
             const peerToCall = e.detail;
             const requestedType = peerToCall.callType || 'voice';
 
             try {
                 const mediaResult = await setupMedia(requestedType);
-                if (!mediaResult || !mediaResult.stream) {
-                    console.error("🔴 2. Camera/Mic Access Failed!");
-                    return;
-                }
-                console.log("🟢 3. Camera/Mic Success! Setting up WebRTC...");
+                if (!mediaResult || !mediaResult.stream) return;
 
                 const { stream, actualType } = mediaResult;
                 setCurrentCallType(actualType);
@@ -344,7 +339,6 @@ const EmployeeNavbar = () => {
                 stream.getTracks().forEach(track => pc.addTrack(track, stream));
                 attachPCListeners(pc);
 
-                console.log("🟢 4. Creating WebRTC Offer...");
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
 
@@ -357,11 +351,10 @@ const EmployeeNavbar = () => {
                     callType: actualType
                 };
 
-                console.log("🟢 5. FIRING SIGNAL TO BACKEND! Payload:", callPayload);
                 socket.emit('call_user', callPayload);
 
             } catch (error) {
-                console.error("❌ CRITICAL WEBRTC ERROR:", error);
+                console.error("WebRTC Initiation Error:", error);
             }
         };
         window.addEventListener('initiate_global_call', handleInitiateCall);
@@ -413,8 +406,6 @@ const EmployeeNavbar = () => {
 
         const currentUserId = user.id || user._id;
         const joinUserRoom = () => {
-            console.log("🟢 [PHASE 1 TRACE] SOCKET CONNECTED! ID:", socket.id);
-            console.log("🚪 [PHASE 1 TRACE] Joining room for user:", currentUserId);
             socket.emit("join_room", currentUserId);
             socket.emit("join_admin_room");
         };
@@ -430,17 +421,10 @@ const EmployeeNavbar = () => {
         };
 
         const handleIncomingCall = async (data) => {
-            console.warn("🚨🚨🚨 [PHASE 1 TRACE] INCOMING CALL SIGNAL RECEIVED! 🚨🚨🚨", data);
-            toast.success(`🚨 SIGNAL ARRIVED: Call from ${data.callerName || 'Unknown'}`, {
-                duration: 8000,
-                position: 'top-center',
-                style: { background: '#000', color: '#0f0', border: '2px solid #0f0' }
-            });
-
             try {
                 await Haptics.vibrate({ duration: 1000 });
                 setTimeout(async () => { await Haptics.vibrate({ duration: 1000 }); }, 1500);
-            } catch (e) { console.error("Haptics failed", e); }
+            } catch (e) { }
 
             if (activeCall) {
                 socket.emit('renegotiate', { to: data.from, signal: { type: 'CUSTOM_EVENT', event: 'call_waiting' } });
@@ -483,8 +467,7 @@ const EmployeeNavbar = () => {
         };
 
         const handleFcmCall = (e) => {
-            const data = e.detail;
-            handleIncomingCall(data);
+            handleIncomingCall(e.detail);
         };
 
         window.addEventListener('fcm_incoming_call', handleFcmCall);

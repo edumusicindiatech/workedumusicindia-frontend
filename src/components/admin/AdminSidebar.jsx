@@ -236,7 +236,7 @@ const AdminSidebar = () => {
     const processIceQueue = async (pc) => {
         if (pc && pc.iceQueue && pc.iceQueue.length > 0) {
             for (const candidate of pc.iceQueue) {
-                try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { console.warn(e); }
+                try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { }
             }
             pc.iceQueue = [];
         }
@@ -332,17 +332,12 @@ const AdminSidebar = () => {
 
     useEffect(() => {
         const handleInitiateCall = async (e) => {
-            console.log("🟢 1. Call Button Clicked! Target User:", e.detail);
             const peerToCall = e.detail;
             const requestedType = peerToCall.callType || 'voice';
 
             try {
                 const mediaResult = await setupMedia(requestedType);
-                if (!mediaResult || !mediaResult.stream) {
-                    console.error("🔴 2. Camera/Mic Access Failed!");
-                    return;
-                }
-                console.log("🟢 3. Camera/Mic Success! Setting up WebRTC...");
+                if (!mediaResult || !mediaResult.stream) return;
 
                 const { stream, actualType } = mediaResult;
                 setCurrentCallType(actualType);
@@ -356,7 +351,6 @@ const AdminSidebar = () => {
                 stream.getTracks().forEach(track => pc.addTrack(track, stream));
                 attachPCListeners(pc);
 
-                console.log("🟢 4. Creating WebRTC Offer...");
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
 
@@ -369,11 +363,10 @@ const AdminSidebar = () => {
                     callType: actualType
                 };
 
-                console.log("🟢 5. FIRING SIGNAL TO BACKEND! Payload:", callPayload);
                 socket.emit('call_user', callPayload);
 
             } catch (error) {
-                console.error("❌ CRITICAL WEBRTC ERROR:", error);
+                console.error("WebRTC Initiation Error:", error);
             }
         };
         window.addEventListener('initiate_global_call', handleInitiateCall);
@@ -418,7 +411,6 @@ const AdminSidebar = () => {
         setVideoUpgradeStatus('idle');
     };
 
-    // --- SOCKET & FCM LISTENERS ---
     useEffect(() => {
         if (!user || !token) return;
 
@@ -426,8 +418,6 @@ const AdminSidebar = () => {
 
         const currentUserId = user.id || user._id;
         const joinUserRoom = () => {
-            console.log("🟢 [PHASE 1 TRACE] SOCKET CONNECTED! ID:", socket.id);
-            console.log("🚪 [PHASE 1 TRACE] Joining room for user:", currentUserId);
             socket.emit("join_room", currentUserId);
             socket.emit("join_admin_room");
         };
@@ -443,18 +433,10 @@ const AdminSidebar = () => {
         };
 
         const handleIncomingCall = async (data) => {
-            console.warn("🚨🚨🚨 [PHASE 1 TRACE] INCOMING CALL SIGNAL RECEIVED! 🚨🚨🚨", data);
-            toast.success(`🚨 SIGNAL ARRIVED: Call from ${data.callerName || 'Unknown'}`, {
-                duration: 8000,
-                position: 'top-center',
-                style: { background: '#000', color: '#0f0', border: '2px solid #0f0' }
-            });
-
-            // --- NATIVE VIBRATION ---
             try {
                 await Haptics.vibrate({ duration: 1000 });
                 setTimeout(async () => { await Haptics.vibrate({ duration: 1000 }); }, 1500);
-            } catch (e) { console.error("Haptics failed", e); }
+            } catch (e) { }
 
             if (activeCall) {
                 socket.emit('renegotiate', { to: data.from, signal: { type: 'CUSTOM_EVENT', event: 'call_waiting' } });
@@ -496,10 +478,8 @@ const AdminSidebar = () => {
             }
         };
 
-        // --- NEW: FCM EVENT LISTENER ---
         const handleFcmCall = (e) => {
-            const data = e.detail;
-            handleIncomingCall(data);
+            handleIncomingCall(e.detail);
         };
 
         window.addEventListener('fcm_incoming_call', handleFcmCall);
@@ -592,13 +572,12 @@ const AdminSidebar = () => {
 
     return (
         <>
-            {/* --- FULL-SCREEN IMMERSIVE CALL OVERLAY (Kept Exactly As Buggy Branch) --- */}
+            {/* --- FULL-SCREEN IMMERSIVE CALL OVERLAY --- */}
             {globalIncomingCall && !activeCall && (
                 <div
                     style={{ zIndex: 9999999, position: 'fixed', inset: 0 }}
                     className="bg-[#0B0D12] flex flex-col items-center justify-between py-24 px-6 animate-in fade-in duration-500"
                 >
-                    {console.log("💎 [UI TRACE] Admin Call Modal attempting to render!")}
                     <div className="flex flex-col items-center mt-12">
                         <div className="relative">
                             <div className="absolute inset-0 rounded-full bg-primary/20 animate-ripple"></div>
@@ -653,7 +632,6 @@ const AdminSidebar = () => {
                 </div>
             )}
 
-            {/* --- CALL OVERLAY (Kept Exactly As Buggy Branch) --- */}
             {activeCall && (
                 <CallOverlay
                     peer={callPeer}
@@ -678,7 +656,6 @@ const AdminSidebar = () => {
                 />
             )}
 
-            {/* --- DESKTOP TOP NAVBAR (Replaced with Main Branch code) --- */}
             <nav className="hidden 2xl:flex fixed top-0 w-full h-16 bg-card border-b border-border z-50 items-center justify-between px-6 shadow-sm">
                 <div className="flex items-center gap-3 shrink-0 mr-2">
                     <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
@@ -736,7 +713,6 @@ const AdminSidebar = () => {
                 </div>
             </nav>
 
-            {/* --- MOBILE TOP NAVBAR (Replaced with Main Branch code) --- */}
             <header className="2xl:hidden fixed top-0 left-0 w-full h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4 shadow-sm">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
@@ -781,7 +757,6 @@ const AdminSidebar = () => {
                 </div>
             </header>
 
-            {/* --- MOBILE BOTTOM NAVBAR (Replaced with Main Branch code) --- */}
             <nav className="2xl:hidden fixed bottom-0 left-0 w-full h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] overflow-x-auto overflow-y-hidden">
                 <NavLink to="/admin/dashboard" className={mobileNavClasses}><LayoutDashboard className="w-6 h-6" /></NavLink>
                 <NavLink to="/admin/employees" className={mobileNavClasses}><Users className="w-6 h-6" /></NavLink>
