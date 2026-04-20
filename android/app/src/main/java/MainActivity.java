@@ -6,21 +6,45 @@ import android.content.Intent;
 import android.view.WindowManager;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
+import android.content.Context;
+import android.app.KeyguardManager; // <-- NEW IMPORT
 import com.getcapacitor.BridgeActivity;
 import org.json.JSONObject;
 
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        // 🚀 THIS IS THE MISSING LINE WE JUST ADDED:
         registerPlugin(NativeSettingsPlugin.class);
         
+        // 🚀 THE FIX: Must be called BEFORE super.onCreate in Capacitor
+        wakeUpScreen(); 
+        
         super.onCreate(savedInstanceState);
+    }
 
-        // --- NATIVE WAKE LOCK & LOCK SCREEN BYPASS ---
+    // 🚀 NEW: Consolidated, hyper-aggressive screen wake method
+    private void wakeUpScreen() {
+        // 1. Hardware Wake Lock (Forces screen to illuminate)
+        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (pm != null) {
+            PowerManager.WakeLock screenWakeLock = pm.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                "WorkEduMusic:ScreenWakeLock"
+            );
+            screenWakeLock.acquire(30000); // Hold for 30 seconds
+        }
+
+        // 2. OS Window Flags (Bypass lock screen)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true);
             setTurnScreenOn(true);
+            
+            // Ask Keyguard to get out of the way
+            KeyguardManager keyguardManager = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+            if (keyguardManager != null) {
+                keyguardManager.requestDismissKeyguard(this, null);
+            }
         } else {
             getWindow().addFlags(
                 WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
@@ -31,32 +55,26 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
-    // Runs when the app is restored from the background
     @Override
     public void onResume() {
         super.onResume();
         checkAndFireCallIntent(getIntent());
     }
 
-    // Runs when the app gets a new intent while already running
     @Override
     public void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        wakeUpScreen(); // 🚀 Fire the wake up command again on warm starts
         checkAndFireCallIntent(intent);
     }
 
-    // THE MAGIC BRIDGE: Pulls data from Android and fires it into React
     private void checkAndFireCallIntent(Intent intent) {
-        android.util.Log.e("VOIP_DEBUG", "GATE 3: checkAndFireCallIntent triggered.");
-
         if (intent != null && intent.hasExtra("isIncomingCall")) {
             boolean isIncoming = intent.getBooleanExtra("isIncomingCall", false);
-            android.util.Log.e("VOIP_DEBUG", "GATE 3: Intent HAS the isIncomingCall extra! Value: " + isIncoming);
             
             if (isIncoming) {
                 try {
-                    // Securely build the JSON payload
                     JSONObject json = new JSONObject();
                     json.put("from", intent.getStringExtra("callerId"));
                     json.put("callerName", intent.getStringExtra("callerName"));
@@ -64,33 +82,37 @@ public class MainActivity extends BridgeActivity {
                     json.put("profilePicture", intent.getStringExtra("profilePicture"));
                     
                     String signalStr = intent.getStringExtra("signal");
-                    JSONObject signalJson = new JSONObject(signalStr != null ? signalStr : "{}");
-                    json.put("signal", signalJson);
-                    
-                    android.util.Log.e("VOIP_DEBUG", "GATE 3: JSON payload built successfully. Waiting 1.5s to inject into React...");
+                    json.put("signal", signalStr != null ? signalStr : "{}");
 
-                    // Create the JavaScript command
                     String jsCode = "window.dispatchEvent(new CustomEvent('native_call_trigger', { detail: " + json.toString() + " }));";
                     
-                    // Delay injection by 1.5 seconds to guarantee React has loaded the DOM
-                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                        if (bridge != null && bridge.getWebView() != null) {
-                            android.util.Log.e("VOIP_DEBUG", "GATE 3: INJECTING JAVASCRIPT NOW!");
-                            bridge.getWebView().evaluateJavascript(jsCode, null);
-                        } else {
-                            android.util.Log.e("VOIP_DEBUG", "GATE 3 FAILED: WebView is null!");
-                        }
-                    }, 1500);
+                    injectWhenReady(jsCode, 20);
 
                 } catch (Exception e) {
-                    android.util.Log.e("VOIP_DEBUG", "GATE 3 FAILED: JSON Exception - " + e.getMessage());
+                    android.util.Log.e("VOIP_DEBUG", "GATE 3 FAILED: " + e.getMessage());
                 }
 
-                // Remove the extra so it doesn't trigger again if the user rotates the screen
                 intent.removeExtra("isIncomingCall");
             }
-        } else {
-            android.util.Log.e("VOIP_DEBUG", "GATE 3: No VoIP data found in this intent.");
         }
+    }
+
+    private void injectWhenReady(String jsCode, int attemptsLeft) {
+        if (bridge == null || bridge.getWebView() == null || attemptsLeft <= 0) return;
+
+        bridge.getWebView().evaluateJavascript(
+            "(typeof window.__voipReady !== 'undefined' && window.__voipReady === true).toString()",
+            result -> {
+                if ("true".equals(result) || "\"true\"".equals(result)) {
+                    android.util.Log.e("VOIP_DEBUG", "REACT IS READY! Injecting call data.");
+                    bridge.getWebView().evaluateJavascript(jsCode, null);
+                } else {
+                    android.util.Log.e("VOIP_DEBUG", "React not ready. Waiting 300ms... Attempts left: " + attemptsLeft);
+                    new Handler(Looper.getMainLooper()).postDelayed(
+                        () -> injectWhenReady(jsCode, attemptsLeft - 1), 300
+                    );
+                }
+            }
+        );
     }
 }

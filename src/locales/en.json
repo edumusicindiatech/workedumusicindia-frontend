@@ -56,6 +56,7 @@
         "incoming_voice": "Voice Call"
     },
     "toast": {
+        "call_ended": "Call ended",
         "missed_call": "Missed call from {{name}}",
         "camera_access_failed": "Camera access failed. Switching to voice call.",
         "mic_denied": "Microphone access denied.",

@@ -58,6 +58,9 @@ const EmployeeLeaderBoard = lazy(() => import("./pages/employee/EmployeeLeaderBo
 const HelpFAQ = lazy(() => import("./pages/employee/HelpFAQ"));
 const SharedChat = lazy(() => import("./pages/shared/SharedChat"));
 
+// 🚀 PREPARATION FOR NEXT STEP: You will create this component
+const GlobalCallWrapper = lazy(() => import("./components/calling/GlobalCallWrapper"));
+
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-[#f8f9fa] dark:bg-[#12161f]">
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -115,6 +118,9 @@ function App() {
   // --- NATIVE UPDATE STATE ---
   const [mandatoryNativeUpdate, setMandatoryNativeUpdate] = useState(null);
 
+  // 🚀 GLOBAL CALL FIX: State to intercept and hold background call data instantly
+  const [backgroundCallData, setBackgroundCallData] = useState(null);
+
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
@@ -164,7 +170,6 @@ function App() {
             }));
           }
         } catch (error) {
-          // ✅ SURGICAL FIX: Only logout if the token is explicitly invalid (401)
           if (error.response && error.response.status === 401) {
             dispatch(logout());
           }
@@ -308,15 +313,25 @@ function App() {
         if (data.type === 'incoming_call') {
           console.log("☎️ Background Call Received via FCM:", data);
           Haptics.vibrate({ duration: 1500 });
-          const event = new CustomEvent('fcm_incoming_call', {
-            detail: {
-              from: data.callerId,
-              callerName: data.callerName,
-              callType: data.callType,
-              profilePicture: data.profilePicture,
-              signal: JSON.parse(data.signal)
+
+          const payload = {
+            from: data.callerId,
+            callerName: data.callerName,
+            callType: data.callType,
+            profilePicture: data.profilePicture,
+            signal: JSON.parse(data.signal)
+          };
+
+          // 🛡️ THE FIX: Protect the perfect Socket data from the truncated FCM data!
+          setBackgroundCallData(currentData => {
+            if (currentData && currentData.from === payload.from) {
+                console.log("🛡️ Keeping full Socket SDP. Ignoring truncated FCM payload.");
+                return currentData;
             }
+            return payload;
           });
+
+          const event = new CustomEvent('fcm_incoming_call', { detail: payload });
           window.dispatchEvent(event);
         }
       });
@@ -325,17 +340,38 @@ function App() {
         console.log("🔥 App woke up from Custom Native Intent!", e.detail);
         Haptics.vibrate({ duration: 1500 });
 
-        const event = new CustomEvent('fcm_incoming_call', {
-          detail: {
-            from: e.detail.from,
-            callerName: e.detail.callerName,
-            callType: e.detail.callType,
-            profilePicture: e.detail.profilePicture,
-            signal: e.detail.signal
+        let parsedSignal = e.detail.signal;
+        if (typeof parsedSignal === 'string') {
+          try {
+            parsedSignal = JSON.parse(parsedSignal);
+          } catch (err) {
+            console.error("Failed to parse native intent signal:", err);
           }
+        }
+
+        const payload = {
+          from: e.detail.from,
+          callerName: e.detail.callerName,
+          callType: e.detail.callType,
+          profilePicture: e.detail.profilePicture,
+          signal: parsedSignal 
+        };
+
+        // 🛡️ THE FIX: Protect the perfect Socket data from the truncated FCM Intent!
+        setBackgroundCallData(currentData => {
+            if (currentData && currentData.from === payload.from) {
+                console.log("🛡️ Keeping full Socket SDP. Ignoring truncated FCM Intent SDP.");
+                return currentData;
+            }
+            return payload;
         });
+
+        const event = new CustomEvent('fcm_incoming_call', { detail: payload });
         window.dispatchEvent(event);
       });
+
+      // 🚀 Tell Java that React is mounted and listening!
+      window.__voipReady = true;
     }
   }, [isNative]);
 
@@ -370,17 +406,66 @@ function App() {
     }
   }, [user?.preferences?.systemLanguage, i18n]);
 
+  useEffect(() => {
+    const handleInitiateCall = (e) => {
+      const peerToCall = e.detail;
+      console.log("🚀 Outgoing call triggered to:", peerToCall.name);
+
+      // Set the state so App.jsx mounts the GlobalCallWrapper
+      setBackgroundCallData({
+        isOutgoing: true,
+        peer: peerToCall,
+        callType: peerToCall.callType
+      });
+    };
+
+    window.addEventListener('initiate_global_call', handleInitiateCall);
+    return () => window.removeEventListener('initiate_global_call', handleInitiateCall);
+  }, []);
+
   const showBlankScreen = isHydrating && !token;
 
   if (showBlankScreen) {
     return <div className="min-h-screen w-full bg-[#f8f9fa] dark:bg-[#12161f]"></div>;
   }
 
+  if (!window.__GLOBAL_SOCKET__) {
+    window.__GLOBAL_SOCKET__ = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000", {
+      autoConnect: true,
+    });
+  }
+  const socket = window.__GLOBAL_SOCKET__;
+
+  // 🚀 FOREGROUND CALL FIX: Catch incoming calls when the app is already open
+  useEffect(() => {
+    const handleForegroundCall = (data) => {
+      console.log("☎️ Foreground Call Received via Socket:", data);
+      Haptics.vibrate({ duration: 1500 });
+
+      const payload = {
+        from: data.from || data.callerId,
+        callerName: data.callerName,
+        callType: data.callType,
+        profilePicture: data.profilePicture,
+        // Socket payloads usually send signalData instead of signal
+        signal: typeof data.signalData === 'string' ? JSON.parse(data.signalData) : (data.signalData || data.signal)
+      };
+
+      setBackgroundCallData(payload);
+    };
+
+    socket.on("incoming_call", handleForegroundCall);
+
+    return () => {
+      socket.off("incoming_call", handleForegroundCall);
+    };
+  }, []);
+
   return (
     <>
       {/* PWA UPDATE BLOCKER */}
       {needRefresh && !isNative && (
-        <div className="fixed inset-0 z-[999999999] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-999999999 flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-card border border-border rounded-3xl p-8 max-w-sm w-[90%] flex flex-col items-center text-center shadow-2xl animate-in zoom-in-95 duration-500">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
               <DownloadCloud className="w-8 h-8 text-primary animate-bounce" />
@@ -409,7 +494,7 @@ function App() {
 
       {/* NATIVE APK UPDATE BLOCKER */}
       {mandatoryNativeUpdate && isNative && (
-        <div className="fixed inset-0 z-[999999999] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-999999999 flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-card border border-border rounded-3xl p-8 max-w-sm w-[90%] flex flex-col items-center text-center shadow-2xl animate-in zoom-in-95 duration-500">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
               <DownloadCloud className="w-8 h-8 text-primary animate-bounce" />
@@ -431,6 +516,19 @@ function App() {
       <Router>
         <GlobalToaster />
         <FloatingUploadManager />
+
+        {/* 🚀 GLOBAL CALL FIX: Render your Call UI absolutely on top of everything! */}
+        <Suspense fallback={null}>
+          {backgroundCallData && (
+            <div className="fixed inset-0 z-1000000 pointer-events-auto">
+              <GlobalCallWrapper
+                incomingPayload={backgroundCallData}
+                clearCall={() => setBackgroundCallData(null)}
+              />
+            </div>
+          )}
+        </Suspense>
+
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />

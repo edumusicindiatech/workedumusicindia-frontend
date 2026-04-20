@@ -1,15 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
-import { useOutletContext } from "react-router-dom"; // <-- Captures GPS from Layout
+import { useOutletContext } from "react-router-dom";
 import api from "../../api/axios";
 import {
     MapPin, Navigation, Clock, UserX,
     CalendarX, School, PartyPopper, Sparkles, CheckCircle2,
-    CalendarPlus, Palmtree, Sun, Waves
+    CalendarPlus, Palmtree, Sun, Waves, AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+
+// --- NATIVE PLUGIN IMPORTS ---
+import { Capacitor, registerPlugin } from '@capacitor/core';
 
 import CheckInModal from "../../modals/employee/CheckInModal";
 import CheckOutModal from "../../modals/employee/CheckOutModal";
@@ -19,6 +22,9 @@ import LeaveRequestModal from "../../modals/employee/LeaveRequestModal";
 
 import { io } from "socket.io-client";
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000");
+
+// --- Initialize Native Settings Plugin ---
+const NativeSettings = registerPlugin('NativeSettings');
 
 // --- Haversine Distance Calculator ---
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -278,6 +284,7 @@ const EmployeeDashboard = () => {
 
     return (
         <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 pb-24 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-700 relative mt-2 md:mt-0">
+
 
             {/* --- HEADER --- */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6 pb-6 sm:pb-8 border-b border-border/50 relative z-20">

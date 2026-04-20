@@ -12,6 +12,9 @@
     },
     "CapacitorCookies": {
       "enabled": true
+    },
+    "CapacitorUpdater": {
+      "autoUpdate": false
     }
   }
 }

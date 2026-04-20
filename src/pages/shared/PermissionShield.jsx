@@ -4,7 +4,6 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { Geolocation } from '@capacitor/geolocation';
 import toast from 'react-hot-toast';
 
-// This links React to the custom Java code we will write next
 const NativeSettingsPlugin = registerPlugin('NativeSettingsPlugin');
 
 const PermissionShield = ({ onAllCleared }) => {
@@ -13,17 +12,34 @@ const PermissionShield = ({ onAllCleared }) => {
         location: false,
         overlay: false,
         battery: false,
+        fullscreen: false,
     });
 
     const [isChecking, setIsChecking] = useState(true);
 
     useEffect(() => {
-        checkAllPermissions();
+        // 🚀 FIX 1: The Bridge Delay
+        // Give the Capacitor bridge 500ms to reconnect after an OTA injection or hot-reload
+        const bridgeTimer = setTimeout(() => {
+            checkAllPermissions();
+        }, 500);
+
+        return () => clearTimeout(bridgeTimer);
     }, []);
 
+    // 🚀 FIX 2: The Anti-Hang Timeout
+    // Forces a promise to reject if it takes longer than exactly 3 seconds
+    const withTimeout = (promise, ms = 3000) => {
+        return Promise.race([
+            promise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Plugin connection timed out")), ms))
+        ]);
+    };
+
     const checkAllPermissions = async () => {
-        // If running in browser/web, bypass the shield entirely
+        // 🚀 FIX 3: The Web Bypass Trap
         if (!Capacitor.isNativePlatform()) {
+            setIsChecking(false); // explicitly turn off the spinner
             onAllCleared();
             return;
         }
@@ -31,32 +47,34 @@ const PermissionShield = ({ onAllCleared }) => {
         setIsChecking(true);
 
         try {
-            // 1. Check Push Notifications
-            const pushStatus = await PushNotifications.checkPermissions();
-
-            // 2. Check Location
-            const locStatus = await Geolocation.checkPermissions();
-
-            // 3. Check Special Android Permissions via Custom Plugin
-            const nativeStatus = await NativeSettingsPlugin.checkSpecialPermissions();
+            // Wrap all native calls in our timeout function so they CANNOT hang forever
+            const pushStatus = await withTimeout(PushNotifications.checkPermissions());
+            const locStatus = await withTimeout(Geolocation.checkPermissions());
+            const nativeStatus = await withTimeout(NativeSettingsPlugin.checkSpecialPermissions());
 
             const currentStatus = {
                 notifications: pushStatus.receive === 'granted',
                 location: locStatus.location === 'granted',
                 overlay: nativeStatus.hasOverlayPermission,
                 battery: nativeStatus.hasBatteryBypass,
+                fullscreen: nativeStatus.hasFullScreenIntent,
             };
 
             setPermissions(currentStatus);
             setIsChecking(false);
 
-            // If all required permissions are true, let them into the app!
             if (Object.values(currentStatus).every((status) => status === true)) {
                 onAllCleared();
             }
         } catch (error) {
-            console.error("Error checking permissions:", error);
+            console.error("Bridge Error: Native plugins failed to respond.", error);
+            // If the bridge drops, STOP spinning and show the UI
             setIsChecking(false);
+
+            // Optional: Tell the user why it failed
+            if (error.message === "Plugin connection timed out") {
+                toast.error("Device sync delayed. Please try clicking 'Re-Check'.");
+            }
         }
     };
 
@@ -86,11 +104,9 @@ const PermissionShield = ({ onAllCleared }) => {
 
     const openSystemSettings = async (settingType) => {
         try {
-            // 🚀 2. Show a quick loading toast so the user knows something is happening
             toast.loading("Opening Android Settings...", { duration: 1500 });
             await NativeSettingsPlugin.openSettings({ type: settingType });
         } catch (error) {
-            // 🚀 3. Graceful error handling if the Java side fails
             toast.error("Device Setup Error: " + error.message, { duration: 4000 });
         }
     };
@@ -105,7 +121,7 @@ const PermissionShield = ({ onAllCleared }) => {
     }
 
     return (
-        <div className="fixed inset-0 bg-[#f8f9fa] dark:bg-[#12161f] z-9999 flex flex-col justify-center items-center p-6">
+        <div className="fixed inset-0 bg-[#f8f9fa] dark:bg-[#12161f] z-[9999] flex flex-col justify-center items-center p-6">
             <div className="bg-white dark:bg-[#1e2330] rounded-xl shadow-2xl p-8 max-w-md w-full border border-gray-200 dark:border-gray-700">
                 <h2 className="text-2xl font-bold mb-2 text-gray-800 dark:text-white">Device Setup Required</h2>
                 <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
@@ -113,7 +129,6 @@ const PermissionShield = ({ onAllCleared }) => {
                 </p>
 
                 <div className="space-y-4">
-
                     {/* Notifications */}
                     <div className="flex justify-between items-center border-b dark:border-gray-700 pb-3">
                         <div>
@@ -160,7 +175,7 @@ const PermissionShield = ({ onAllCleared }) => {
                     </div>
 
                     {/* Battery Optimization */}
-                    <div className="flex justify-between items-center pb-3">
+                    <div className="flex justify-between items-center border-b dark:border-gray-700 pb-3">
                         <div>
                             <p className="font-semibold text-gray-700 dark:text-gray-200">Background Activity</p>
                             <p className="text-xs text-gray-500">Unrestricted battery for location</p>
@@ -174,6 +189,20 @@ const PermissionShield = ({ onAllCleared }) => {
                         )}
                     </div>
 
+                    {/* Full-Screen Intent */}
+                    <div className="flex justify-between items-center pb-3">
+                        <div>
+                            <p className="font-semibold text-gray-700 dark:text-gray-200">Incoming Call Screen</p>
+                            <p className="text-xs text-gray-500">Wake screen for VoIP calls</p>
+                        </div>
+                        {permissions.fullscreen ? (
+                            <span className="text-green-500 font-bold">Granted ✓</span>
+                        ) : (
+                            <button onClick={() => openSystemSettings('fullscreen')} className="bg-orange-500 text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-orange-600">
+                                Setup
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <button
