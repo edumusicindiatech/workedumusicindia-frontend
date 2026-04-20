@@ -6,13 +6,11 @@ import { PhoneOff, Phone, Video, User } from "lucide-react";
 import CallOverlay from "../../pages/shared/CallOverlay";
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
-// Safe lazy getter - only registers once, handles hot-reloads safely
 const getNativeSettings = () => {
     if (!window.__NativeSettings) {
         try {
             window.__NativeSettings = registerPlugin('NativeSettingsPlugin');
         } catch (e) {
-            // Already registered - get the existing instance
             window.__NativeSettings = Capacitor.Plugins?.NativeSettingsPlugin;
         }
     }
@@ -22,7 +20,6 @@ const getNativeSettings = () => {
 const getValidSignal = (signal) => {
     let parsed = signal;
 
-    // 1. Unpack stringified JSON
     while (typeof parsed === 'string') {
         try {
             parsed = JSON.parse(parsed);
@@ -31,7 +28,6 @@ const getValidSignal = (signal) => {
         }
     }
 
-    // 2. If it's STILL a broken string, try regex fallback extraction
     if (typeof parsed === 'string') {
         const typeMatch = parsed.match(/"type"\s*:\s*"([^"]+)"/);
         const sdpMatch = parsed.match(/"sdp"\s*:\s*"([^]*?)"/);
@@ -40,19 +36,13 @@ const getValidSignal = (signal) => {
         }
     }
 
-    // 3. The Ultimate SDP Sanitizer
     if (parsed && typeof parsed === 'object' && parsed.sdp) {
-        // Step A: Convert double-escaped literal strings (\\r\\n) back into actual newline characters
         let cleanSdp = parsed.sdp
-            .replace(/\\r\\n/g, '\n') // Handle escaped \r\n
-            .replace(/\\n/g, '\n')    // Handle escaped \n
-            .replace(/\\r/g, '\n');   // Handle escaped \r
+            .replace(/\\r\\n/g, '\n')
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '\n');
 
-        // Step B: WebRTC strictly requires \r\n (CRLF) for every line. 
-        // We strip all existing \r to standardize on \n, then replace all \n with \r\n
         parsed.sdp = cleanSdp.replace(/\r/g, '').replace(/\n/g, '\r\n');
-
-        // Step C: Ensure the SDP ends with exactly one newline, as per the WebRTC spec
         parsed.sdp = parsed.sdp.trim() + '\r\n';
     }
 
@@ -73,10 +63,10 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
     const { user } = useSelector((state) => state.auth);
     const socket = window.__GLOBAL_SOCKET__;
 
+    // --- STATE ---
     const [isCallAccepted, setIsCallAccepted] = useState(false);
     const [callPeer, setCallPeer] = useState(null);
     const [currentCallType, setCurrentCallType] = useState('voice');
-
     const [localStreamState, setLocalStreamState] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
     const [remoteCallStatus, setRemoteCallStatus] = useState('active');
@@ -84,47 +74,27 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
     const [facingMode, setFacingMode] = useState('user');
     const [isMinimized, setIsMinimized] = useState(false);
 
+    // --- REFS ---
     const pcRef = useRef(null);
     const localStreamRef = useRef(null);
-
-    // 🚀 THE FIX: Define the missing Refs here
     const incomingPayloadRef = useRef(incomingPayload);
     const iceCandidateQueue = useRef([]);
+    const videoUpgradeInitiatedByMe = useRef(false);
+    const performVideoUpgradeRef = useRef(null);
+    const getTargetIdRef = useRef(null);
 
-    // Keep the Ref in sync with the prop to avoid stale closures
+    // Keep incomingPayloadRef in sync
     useEffect(() => {
         incomingPayloadRef.current = incomingPayload;
     }, [incomingPayload]);
 
-    // Helper to always get the correct target ID regardless of who called who
-    const getTargetId = () => incomingPayload?.isOutgoing ? (incomingPayload.peer._id || incomingPayload.peer.id) : incomingPayload?.from;
+    // --- HELPER: Always gets the correct target ID ---
+    const getTargetId = () =>
+        incomingPayload?.isOutgoing
+            ? (incomingPayload.peer._id || incomingPayload.peer.id)
+            : incomingPayload?.from;
 
-    useEffect(() => {
-        if (!incomingPayload) return;
-
-        if (incomingPayload.isOutgoing) {
-            setCallPeer({
-                _id: incomingPayload.peer._id || incomingPayload.peer.id,
-                name: incomingPayload.peer.name,
-                profilePicture: incomingPayload.peer.profilePicture || incomingPayload.peer.groupIcon
-            });
-            setCurrentCallType(incomingPayload.callType || 'voice');
-            initiateOutgoingCall(incomingPayload.peer, incomingPayload.callType);
-        }
-        else {
-            setCallPeer({
-                _id: incomingPayload.from,
-                name: incomingPayload.callerName,
-                profilePicture: incomingPayload.profilePicture
-            });
-            setCurrentCallType(incomingPayload.callType === 'video' || (incomingPayload.signal && incomingPayload.signal.sdp && incomingPayload.signal.sdp.includes('m=video')) ? 'video' : 'voice');
-
-            if (window.__GLOBAL_AUDIO__?.incoming) {
-                window.__GLOBAL_AUDIO__.incoming.loop = true;
-                window.__GLOBAL_AUDIO__.incoming.play().catch(() => { });
-            }
-        }
-    }, [incomingPayload]);
+    // --- FUNCTIONS ---
 
     const initiateOutgoingCall = async (peer, requestedType) => {
         try {
@@ -147,11 +117,15 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
             pc.onicecandidate = (e) => {
-                if (e.candidate) socket.emit('ice_candidate', { to: peer._id || peer.id, candidate: e.candidate, from: user.id || user._id });
+                if (e.candidate) socket.emit('ice_candidate', {
+                    to: peer._id || peer.id,
+                    candidate: e.candidate,
+                    from: user.id || user._id
+                });
             };
 
             pc.ontrack = (e) => {
-                if (e.streams && e.streams[0]) setRemoteStream(e.streams[0]);
+                if (e.streams && e.streams[0]) setRemoteStream(new MediaStream(e.streams[0].getTracks()));
             };
 
             const offer = await pc.createOffer();
@@ -174,17 +148,15 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
 
     const answerIncomingCall = async () => {
         try {
-            // 🛡️ THE DUMMY CHECK: If user clicks accept before the socket delivers the real SDP, make them wait!
             const checkSignal = getValidSignal(incomingPayloadRef.current?.signal);
             if (!checkSignal || Object.keys(checkSignal).length === 0) {
                 toast.loading(t('toast.connecting') || "Securing connection, please wait...", { id: 'securing' });
-                return; // Stop execution. They can click accept again when the socket arrives.
+                return;
             }
             toast.dismiss('securing');
 
             if (window.__GLOBAL_AUDIO__?.incoming) window.__GLOBAL_AUDIO__.incoming.pause();
 
-            // 🛡️ SMART POLLING: Wait for the Activity/WebView to fully grant hardware access
             let attempts = 0;
             while (!navigator.mediaDevices?.getUserMedia && attempts < 25) {
                 await new Promise(r => setTimeout(r, 200));
@@ -195,7 +167,6 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             }
 
             let stream;
-            // 🛡️ AUDIO FALLBACK: The Inner Try/Catch
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
                     audio: true,
@@ -203,7 +174,6 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
                 });
             } catch (mediaError) {
                 console.error(`🚨 MEDIA BLOCK: ${mediaError.name} - ${mediaError.message}`);
-
                 if (currentCallType === 'video') {
                     toast("Camera blocked by lockscreen. Connecting voice only.", { icon: '🔒' });
                     stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -223,19 +193,21 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
 
             stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-            // Use incomingPayloadRef to prevent stale closures
             pc.onicecandidate = (e) => {
-                if (e.candidate) socket.emit('ice_candidate', { to: incomingPayloadRef.current?.from, candidate: e.candidate, from: user?.id || user?._id });
+                if (e.candidate) socket.emit('ice_candidate', {
+                    to: incomingPayloadRef.current?.from,
+                    candidate: e.candidate,
+                    from: user?.id || user?._id
+                });
             };
 
             pc.ontrack = (e) => {
-                if (e.streams && e.streams[0]) setRemoteStream(e.streams[0]);
+                if (e.streams && e.streams[0]) setRemoteStream(new MediaStream(e.streams[0].getTracks()));
             };
 
             const validSignal = getValidSignal(incomingPayloadRef.current?.signal);
             await pc.setRemoteDescription(new RTCSessionDescription(validSignal));
 
-            // 🛡️ ICE QUEUE: Drain ICE candidates that arrived while we were polling/waiting
             for (const candidate of iceCandidateQueue.current) {
                 try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { }
             }
@@ -277,37 +249,56 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         clearCall();
     };
 
-    // --- MID-CALL VIDEO UPGRADE LOGIC ---
+    // --- VIDEO UPGRADE ---
+
     const handleRequestVideo = () => {
+        videoUpgradeInitiatedByMe.current = true;
         socket.emit('video_upgrade_request', { to: getTargetId() });
         setVideoUpgradeStatus('requesting');
         toast(t('toast.requesting_video') || "Requesting video...", { icon: '⏳' });
     };
 
-    const performVideoUpgrade = async () => {
+    const performVideoUpgrade = async (isInitiator = false) => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', ...HQ_VIDEO_CONSTRAINTS } });
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', ...HQ_VIDEO_CONSTRAINTS }
+            });
             const videoTrack = stream.getVideoTracks()[0];
-            localStreamRef.current.addTrack(videoTrack);
-            setLocalStreamState(new MediaStream(localStreamRef.current.getTracks()));
+
+            if (localStreamRef.current) {
+                localStreamRef.current.addTrack(videoTrack);
+                setLocalStreamState(new MediaStream(localStreamRef.current.getTracks()));
+            }
             setFacingMode('user');
 
             if (pcRef.current) {
                 pcRef.current.addTrack(videoTrack, localStreamRef.current);
-                const offer = await pcRef.current.createOffer();
-                await pcRef.current.setLocalDescription(offer);
-                socket.emit('renegotiate', { to: getTargetId(), signal: offer });
+
+                if (isInitiator) {
+                    const offer = await pcRef.current.createOffer();
+                    await pcRef.current.setLocalDescription(offer);
+                    const targetId = getTargetIdRef.current();
+                    if (targetId) {
+                        console.log("📡 Sending Video Upgrade Offer to:", targetId);
+                        socket.emit('renegotiate', { to: targetId, signal: offer });
+                    }
+                } else {
+                    console.log("🎥 Camera on. Waiting for remote offer to sync UI...");
+                }
             }
             setCurrentCallType('video');
         } catch (error) {
+            console.error("Video Upgrade Hardware Error:", error);
             toast.error(t('toast.camera_access_error') || "Camera access denied");
         }
     };
 
     const handleAcceptVideo = async () => {
-        socket.emit('video_upgrade_accepted', { to: getTargetId() });
+        const targetId = getTargetId();
+        if (targetId) socket.emit('video_upgrade_accepted', { to: targetId });
         setVideoUpgradeStatus('idle');
-        await performVideoUpgrade();
+        // Acceptor is always the Follower — waits for Initiator's offer
+        await performVideoUpgrade(false);
     };
 
     const handleRejectVideo = () => {
@@ -320,8 +311,12 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         try {
             const newMode = facingMode === 'user' ? 'environment' : 'user';
             localStreamRef.current.getVideoTracks().forEach(t => t.stop());
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: newMode }, ...HQ_VIDEO_CONSTRAINTS } })
-                .catch(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: newMode, ...HQ_VIDEO_CONSTRAINTS } }));
+
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { exact: newMode }, ...HQ_VIDEO_CONSTRAINTS }
+            }).catch(() => navigator.mediaDevices.getUserMedia({
+                video: { facingMode: newMode, ...HQ_VIDEO_CONSTRAINTS }
+            }));
 
             const newVideoTrack = stream.getVideoTracks()[0];
             const sender = pcRef.current?.getSenders().find(s => s.track && s.track.kind === 'video');
@@ -338,6 +333,41 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         }
     };
 
+    // ✅ Assign refs AFTER all functions are defined
+    getTargetIdRef.current = getTargetId;
+    performVideoUpgradeRef.current = performVideoUpgrade;
+
+    // --- INITIAL CALL SETUP ---
+    useEffect(() => {
+        if (!incomingPayload) return;
+
+        if (incomingPayload.isOutgoing) {
+            setCallPeer({
+                _id: incomingPayload.peer._id || incomingPayload.peer.id,
+                name: incomingPayload.peer.name,
+                profilePicture: incomingPayload.peer.profilePicture || incomingPayload.peer.groupIcon
+            });
+            setCurrentCallType(incomingPayload.callType || 'voice');
+            initiateOutgoingCall(incomingPayload.peer, incomingPayload.callType);
+        } else {
+            setCallPeer({
+                _id: incomingPayload.from,
+                name: incomingPayload.callerName,
+                profilePicture: incomingPayload.profilePicture
+            });
+            setCurrentCallType(
+                incomingPayload.callType === 'video' ||
+                    (incomingPayload.signal?.sdp?.includes('m=video'))
+                    ? 'video' : 'voice'
+            );
+
+            if (window.__GLOBAL_AUDIO__?.incoming) {
+                window.__GLOBAL_AUDIO__.incoming.loop = true;
+                window.__GLOBAL_AUDIO__.incoming.play().catch(() => { });
+            }
+        }
+    }, [incomingPayload]);
+
     // --- SOCKET EVENT LISTENERS ---
     useEffect(() => {
         if (!socket) return;
@@ -352,7 +382,6 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
                     await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                     toast.success(t('toast.call_connected') || "Call Connected", { icon: '📞' });
 
-                    // Drain ICE queue for outgoing calls too!
                     for (const candidate of iceCandidateQueue.current) {
                         try { await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { }
                     }
@@ -365,13 +394,11 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
 
         const handleIceCandidate = async (data) => {
             if (data.candidate) {
-                // Use .type to ensure it's a real initialized description
                 if (pcRef.current && pcRef.current.remoteDescription?.type) {
                     try {
                         await pcRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
                     } catch (e) { }
                 } else {
-                    // If WebRTC is still booting up (polling), queue the candidate!
                     iceCandidateQueue.current.push(data.candidate);
                 }
             }
@@ -383,7 +410,7 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         };
 
         const handleRenegotiate = async ({ signal }) => {
-            if (signal && signal.type === 'CUSTOM_EVENT') {
+            if (signal?.type === 'CUSTOM_EVENT') {
                 if (signal.event === 'call_rejected_busy') {
                     toast.error(t('toast.user_busy') || "User is busy");
                     handleHangup();
@@ -391,14 +418,24 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             } else if (pcRef.current) {
                 try {
                     if (signal.type === 'offer') {
+                        // If the incoming offer has video, switch UI to video mode
+                        const hasVideo = signal.sdp && signal.sdp.includes('m=video');
+                        if (hasVideo) setCurrentCallType('video');
+
                         await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                         const answer = await pcRef.current.createAnswer();
                         await pcRef.current.setLocalDescription(answer);
-                        socket.emit('renegotiate', { to: getTargetId(), signal: answer });
+
+                        // ✅ Use ref to avoid stale closure
+                        const targetId = getTargetIdRef.current();
+                        if (targetId) socket.emit('renegotiate', { to: targetId, signal: answer });
+
                     } else if (signal.type === 'answer') {
                         await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
                     }
-                } catch (e) { console.error(e); }
+                } catch (e) {
+                    console.error("Renegotiation Error:", e);
+                }
             }
         };
 
@@ -407,19 +444,21 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         socket.on("call_ended", handleCallEnded);
         socket.on("renegotiate", handleRenegotiate);
 
-        // VIDEO UPGRADE LISTENERS
         socket.on("video_upgrade_request", () => {
             setVideoUpgradeStatus('receiving_request');
             if (window.__GLOBAL_AUDIO__?.notification) window.__GLOBAL_AUDIO__.notification.play();
         });
+
         socket.on("video_upgrade_rejected", () => {
             setVideoUpgradeStatus('idle');
             toast.error(t('toast.video_rejected') || "Video request declined");
         });
+
+        // ✅ Requester receives this → they are the Initiator → send the offer
         socket.on("video_upgrade_accepted", async () => {
             setVideoUpgradeStatus('idle');
             toast.success(t('toast.video_accepted') || "Video request accepted");
-            await performVideoUpgrade();
+            await performVideoUpgradeRef.current(true); // ✅ Always fresh via ref
         });
 
         return () => {
@@ -459,7 +498,9 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                         </span>
                         <p className="text-primary font-bold text-xs uppercase tracking-[0.3em]">
-                            {currentCallType === 'video' ? (t('navbar.incoming_video') || "Incoming Video Call") : (t('navbar.incoming_voice') || "Incoming Voice Call")}
+                            {currentCallType === 'video'
+                                ? (t('navbar.incoming_video') || "Incoming Video Call")
+                                : (t('navbar.incoming_voice') || "Incoming Voice Call")}
                         </p>
                     </div>
                 </div>
@@ -493,7 +534,6 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             isCallAccepted={isCallAccepted}
             isOnline={true}
             callType={currentCallType}
-
             onRequestVideo={handleRequestVideo}
             onAcceptVideo={handleAcceptVideo}
             onRejectVideo={handleRejectVideo}

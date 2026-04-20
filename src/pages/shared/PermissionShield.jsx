@@ -121,7 +121,7 @@ const PermissionShield = ({ onAllCleared }) => {
     }
 
     return (
-        <div className="fixed inset-0 bg-[#f8f9fa] dark:bg-[#12161f] z-[9999] flex flex-col justify-center items-center p-6">
+        <div className="fixed inset-0 bg-[#f8f9fa] dark:bg-[#12161f] z-9999 flex flex-col justify-center items-center p-6">
             <div className="bg-white dark:bg-[#1e2330] rounded-xl shadow-2xl p-8 max-w-md w-full border border-gray-200 dark:border-gray-700">
                 <h2 className="text-2xl font-bold mb-2 text-gray-800 dark:text-white">Device Setup Required</h2>
                 <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
