@@ -60,27 +60,19 @@ const Login = () => {
     }, [t]);
 
     useEffect(() => {
-        // --- STEP 1 FIX: THE NUKE ---
-        // Aggressively clear out ghost credentials on mount.
-
-        // 1. Preserve necessary temporary flags
         const tempDeviceId = sessionStorage.getItem('tempDeviceId');
         const justLoggedOut = sessionStorage.getItem('justLoggedOut');
 
-        // 2. Wipe storage completely
-        localStorage.clear();
-        sessionStorage.clear();
-
-        // 3. Restore the flags
         if (tempDeviceId) sessionStorage.setItem('tempDeviceId', tempDeviceId);
         if (justLoggedOut) sessionStorage.setItem('justLoggedOut', justLoggedOut);
 
-        // 4. Wipe Axios memory
         setAxiosToken(null);
 
-        // (Optional) If you are using Redux Persist, you might want to dispatch(logout()) here as well
-        dispatch(logout());
-    }, [dispatch]);
+        // CLAUDE'S FIX: Removed unconditional dispatch(logout())
+        // Routing and 401 Interceptors should handle logging the user out,
+        // not the mounting of the Login component itself.
+
+    }, []);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -99,6 +91,9 @@ const Login = () => {
             const data = response.data;
 
             if (data.access_token) {
+                localStorage.setItem('deviceId', deviceId);
+                sessionStorage.removeItem('tempDeviceId');
+
                 setAxiosToken(data.access_token);
 
                 const completeUser = data.user

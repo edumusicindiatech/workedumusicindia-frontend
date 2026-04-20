@@ -12,6 +12,9 @@ import org.json.JSONObject;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // 🚀 THIS IS THE MISSING LINE WE JUST ADDED:
+        registerPlugin(NativeSettingsPlugin.class);
+        
         super.onCreate(savedInstanceState);
 
         // --- NATIVE WAKE LOCK & LOCK SCREEN BYPASS ---

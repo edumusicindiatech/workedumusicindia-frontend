@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux"; // Added
+import { setCredentials } from "../../store/slices/authSlice"; // Added
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +14,9 @@ import { useTranslation } from "react-i18next";
 const EmployeeResetPassword = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const dispatch = useDispatch(); // Added
+    const token = useSelector((state) => state.auth.token); // Added: Grab current token
+
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
@@ -22,16 +28,23 @@ const EmployeeResetPassword = () => {
         setErrorMsg("");
 
         try {
+            // 1. Update the password
             const response = await api.post('/auth/reset-initial-password', { newPassword });
 
-            // --- SECURE THE DEVICE ID UPON SUCCESS ---
-            const tempId = sessionStorage.getItem('tempDeviceId');
-            if (tempId) {
-                localStorage.setItem('deviceId', tempId);
-                sessionStorage.removeItem('tempDeviceId'); 
+            // 2. Fetch the fresh user profile now that they are fully authenticated
+            const profileRes = await api.get('/employee/me/profile');
+
+            // 3. Hydrate Redux with the user data before navigating
+            if (profileRes.data.success) {
+                dispatch(setCredentials({
+                    user: profileRes.data.user,
+                    access_token: token
+                }));
             }
 
             toast.success(response.data?.message || t('employee_reset_password.toast_success', 'Password updated successfully!'));
+
+            // 4. Navigate to dashboard safely (Redux is now populated!)
             navigate('/employee/dashboard');
 
         } catch (error) {
@@ -48,16 +61,14 @@ const EmployeeResetPassword = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-background">
-            
-            {/* Background Decorations */}
+
             <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
             <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
 
             <Toaster position="top-center" richColors />
 
             <div className="bg-card w-full max-w-88 sm:max-w-105 rounded-4xl sm:rounded-[2.5rem] shadow-2xl shadow-primary/5 border border-border/60 animate-in zoom-in-95 fade-in duration-500 relative overflow-hidden flex flex-col">
-                
-                {/* Top Accent Line */}
+
                 <div className="absolute top-0 left-0 w-full h-1 sm:h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40" />
 
                 <div className="p-6 sm:p-8 md:p-10 flex flex-col items-center text-center pb-5 sm:pb-6">
@@ -65,7 +76,7 @@ const EmployeeResetPassword = () => {
                         <div className="absolute inset-0 bg-primary/10 rounded-2xl sm:rounded-3xl animate-ping opacity-40" />
                         <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10 text-primary relative z-10" />
                     </div>
-                    
+
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-foreground tracking-tight mb-1.5 sm:mb-2 uppercase">
                         {t('employee_reset_password.title', 'Secure Account')}
                     </h1>
@@ -75,7 +86,7 @@ const EmployeeResetPassword = () => {
                 </div>
 
                 <div className="p-6 sm:p-8 md:p-10 pt-0 flex-1">
-                    
+
                     {errorMsg && (
                         <div className="mb-4 sm:mb-6 bg-destructive/10 border border-destructive/20 text-destructive px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl flex items-start gap-2.5 sm:gap-3 animate-in fade-in slide-in-from-top-2 shadow-sm">
                             <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5" />
@@ -88,7 +99,7 @@ const EmployeeResetPassword = () => {
                             <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">
                                 {t('employee_reset_password.label_new_password', 'New Password')}
                             </Label>
-                            
+
                             <div className="relative group">
                                 <LockKeyhole className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-4.5 sm:h-4.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                 <Input
@@ -100,9 +111,9 @@ const EmployeeResetPassword = () => {
                                     required
                                     disabled={isLoading}
                                 />
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowPassword(!showPassword)} 
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
                                     disabled={isLoading}
                                     className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
                                 >
@@ -110,29 +121,28 @@ const EmployeeResetPassword = () => {
                                 </button>
                             </div>
 
-                            {/* Password Requirements */}
                             <div className="bg-muted/30 border border-border/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 mt-3 sm:mt-4 shadow-sm">
                                 <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2 sm:mb-2.5 ml-1">Password Requirements</p>
                                 <ul className="text-[10px] sm:text-[11px] font-bold text-foreground/80 space-y-1.5 sm:space-y-2">
                                     <li className="flex items-center gap-2 sm:gap-2.5">
-                                        <CheckCircle2 className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${newPassword.length >= 8 ? 'text-emerald-500' : 'text-muted-foreground/40'}`} /> 
+                                        <CheckCircle2 className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${newPassword.length >= 8 ? 'text-emerald-500' : 'text-muted-foreground/40'}`} />
                                         {t('employee_reset_password.req_min_chars', 'At least 8 characters')}
                                     </li>
                                     <li className="flex items-center gap-2 sm:gap-2.5">
-                                        <CheckCircle2 className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword) ? 'text-emerald-500' : 'text-muted-foreground/40'}`} /> 
+                                        <CheckCircle2 className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword) ? 'text-emerald-500' : 'text-muted-foreground/40'}`} />
                                         {t('employee_reset_password.req_case', 'Uppercase & lowercase letters')}
                                     </li>
                                     <li className="flex items-center gap-2 sm:gap-2.5">
-                                        <CheckCircle2 className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${/[\W_]/.test(newPassword) ? 'text-emerald-500' : 'text-muted-foreground/40'}`} /> 
+                                        <CheckCircle2 className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${/[\W_]/.test(newPassword) ? 'text-emerald-500' : 'text-muted-foreground/40'}`} />
                                         {t('employee_reset_password.req_symbol', 'At least one special symbol')}
                                     </li>
                                 </ul>
                             </div>
                         </div>
 
-                        <Button 
-                            type="submit" 
-                            disabled={isLoading || newPassword.length < 8} 
+                        <Button
+                            type="submit"
+                            disabled={isLoading || newPassword.length < 8}
                             className="w-full h-12 sm:h-14 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs md:text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:shadow-primary/30 flex items-center justify-center gap-1.5 sm:gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
                         >
                             {isLoading ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : null}

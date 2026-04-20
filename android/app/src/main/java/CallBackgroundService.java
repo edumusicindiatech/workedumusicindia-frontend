@@ -12,7 +12,7 @@ import com.google.firebase.messaging.RemoteMessage;
 
 public class CallBackgroundService extends FirebaseMessagingService {
 
-   @Override
+    @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
         super.onMessageReceived(remoteMessage);
         
@@ -51,7 +51,9 @@ public class CallBackgroundService extends FirebaseMessagingService {
         }
 
         Intent fullScreenIntent = new Intent(this, MainActivity.class);
-        fullScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        
+        // 🚀 Added SINGLE_TOP to prevent duplicate app instances
+        fullScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         
         // 🟢 PACK THE DATA INTO THE NATIVE INTENT SO REACT CAN READ IT 🟢
         fullScreenIntent.putExtra("isIncomingCall", true);
@@ -74,10 +76,16 @@ public class CallBackgroundService extends FirebaseMessagingService {
                 .setContentText(callType != null && callType.equals("video") ? "Incoming Video Call" : "Incoming Voice Call")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_CALL)
-                .setFullScreenIntent(fullScreenPendingIntent, true) 
+                .setFullScreenIntent(fullScreenPendingIntent, true) // 🚀 THIS WAKES THE SCREEN
                 .setAutoCancel(true)
                 .setOngoing(true);
 
         notificationManager.notify(1001, builder.build());
+    }
+
+    @Override
+    public void onNewToken(String token) {
+        super.onNewToken(token);
+        android.util.Log.e("VOIP_DEBUG", "New FCM Token Generated: " + token);
     }
 }

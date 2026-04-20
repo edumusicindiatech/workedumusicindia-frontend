@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy } from "react";
+import { useState, useEffect, useLayoutEffect, Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { setCredentials, logout, setHydrationComplete } from "./store/slices/authSlice";
@@ -24,6 +24,7 @@ import PublicRoute from "./components/routing/PublicRoute";
 import AdminLayout from "./components/admin/AdminLayout";
 import EmployeeLayout from "./components/employee/EmployeeLayout";
 import FloatingUploadManager from "./modals/employee/FloatingUploadManager";
+import PermissionShield from "./pages/shared/PermissionShield";
 
 const Login = lazy(() => import("./pages/shared/Login"));
 const NotFound = lazy(() => import("./pages/shared/Notfound"));
@@ -92,6 +93,16 @@ const GlobalToaster = () => {
   );
 };
 
+// Wrapper to handle the permission state globally for authenticated routes
+const PermissionGate = ({ children }) => {
+  const [permissionsCleared, setPermissionsCleared] = useState(false);
+
+  if (!permissionsCleared) {
+    return <PermissionShield onAllCleared={() => setPermissionsCleared(true)} />;
+  }
+
+  return children;
+};
 
 function App() {
   const dispatch = useDispatch();
@@ -120,6 +131,15 @@ function App() {
     }
   });
 
+  // --- CAPGO STABILITY FIX (CRITICAL: useLayoutEffect + No Dynamic Import) ---
+  useLayoutEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      CapacitorUpdater.notifyAppReady()
+        .then(() => console.log("✅ Capgo notified immediately: App is stable, do not rollback!"))
+        .catch(err => console.error("Capgo Notification Failed:", err));
+    }
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('themeMode', currentTheme);
     if (currentTheme === 'dark') {
@@ -144,6 +164,10 @@ function App() {
             }));
           }
         } catch (error) {
+          // ✅ SURGICAL FIX: Only logout if the token is explicitly invalid (401)
+          if (error.response && error.response.status === 401) {
+            dispatch(logout());
+          }
           console.warn("Background profile sync failed (offline or expired). Using cache.");
         }
         return;
@@ -176,7 +200,6 @@ function App() {
 
     initializeApp();
   }, []);
-
 
   // --- NATIVE HYBRID UPDATE LOGIC ---
   useEffect(() => {
@@ -357,7 +380,7 @@ function App() {
     <>
       {/* PWA UPDATE BLOCKER */}
       {needRefresh && !isNative && (
-        <div className="fixed inset-0 z-999999999 flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[999999999] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-card border border-border rounded-3xl p-8 max-w-sm w-[90%] flex flex-col items-center text-center shadow-2xl animate-in zoom-in-95 duration-500">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
               <DownloadCloud className="w-8 h-8 text-primary animate-bounce" />
@@ -386,7 +409,7 @@ function App() {
 
       {/* NATIVE APK UPDATE BLOCKER */}
       {mandatoryNativeUpdate && isNative && (
-        <div className="fixed inset-0 z-999999999 flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[999999999] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-card border border-border rounded-3xl p-8 max-w-sm w-[90%] flex flex-col items-center text-center shadow-2xl animate-in zoom-in-95 duration-500">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
               <DownloadCloud className="w-8 h-8 text-primary animate-bounce" />
@@ -422,7 +445,7 @@ function App() {
               element={<ProtectedRoute requireAdmin={false}><EmployeeResetPassword /></ProtectedRoute>}
             />
 
-            <Route path="/employee" element={<ProtectedRoute requireAdmin={false}><EmployeeLayout /></ProtectedRoute>}>
+            <Route path="/employee" element={<ProtectedRoute requireAdmin={false}><PermissionGate><EmployeeLayout /></PermissionGate></ProtectedRoute>}>
               <Route index element={<Navigate to="/employee/dashboard" replace />} />
               <Route path="dashboard" element={<EmployeeDashboard />} />
               <Route path="profile" element={<MyProfile />} />
@@ -437,7 +460,7 @@ function App() {
               <Route path="chat" element={<SharedChat />} />
             </Route>
 
-            <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminLayout /></ProtectedRoute>}>
+            <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><PermissionGate><AdminLayout /></PermissionGate></ProtectedRoute>}>
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="profile" element={<AdminProfile />} />
