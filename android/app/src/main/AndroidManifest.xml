@@ -18,6 +18,7 @@
             android:exported="true"
             android:showWhenLocked="true"
             android:turnScreenOn="true"
+            android:supportsPictureInPicture="true"
             android:showOnLockScreen="true">
 
             <intent-filter>
