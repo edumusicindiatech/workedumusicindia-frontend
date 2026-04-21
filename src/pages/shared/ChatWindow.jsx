@@ -89,7 +89,6 @@ const ChatWindow = ({
     const uploadControllers = useRef({});
     const messagesEndRef = useRef(null);
 
-    // --- SCROLL REFS ---
     const isInitialLoadRef = useRef(true);
     const prevChatIdRef = useRef(activeChat?._id || activeChat?.id);
 
@@ -106,6 +105,45 @@ const ChatWindow = ({
 
     const isGroupChat = activeChat?.members !== undefined || activeChat?.isGroup;
     const isOnline = (id) => onlineUsers.includes(id?.toString());
+
+    // 🚀 NEW: Update incoming ticks natively (Delivered -> Seen)
+    useEffect(() => {
+        if (!socket) return;
+        const handleStatusUpdate = (data) => {
+            // If the person reading matches the chat we're in, turn grey ticks to blue
+            if (String(data.viewerId) === String(activeChat?._id || activeChat?.id)) {
+                setMessages(prev => prev.map(m => {
+                    if (String(m.senderId || m.sender?._id || m.sender) === String(currentUserId) && m.status !== 'seen') {
+                        if (data.status === 'seen') return { ...m, status: 'seen' };
+                        if (data.status === 'delivered' && m.status !== 'seen') return { ...m, status: 'delivered' };
+                    }
+                    return m;
+                }));
+            }
+        };
+        socket.on("messages_status_update", handleStatusUpdate);
+        return () => socket.off("messages_status_update", handleStatusUpdate);
+    }, [socket, activeChat, setMessages, currentUserId]);
+
+    // 🚀 NEW: Auto-mark messages as SEEN when user has chat open
+    useEffect(() => {
+        if (!activeChat || !socket) return;
+        const unreadMessages = messages.filter(m =>
+            String(m.senderId || m.sender?._id || m.sender) !== String(currentUserId) && m.status !== 'seen'
+        );
+
+        if (unreadMessages.length > 0) {
+            setMessages(prev => prev.map(m =>
+                (String(m.senderId || m.sender?._id || m.sender) !== String(currentUserId) && m.status !== 'seen')
+                    ? { ...m, status: 'seen' } : m
+            ));
+            socket.emit("mark_chat_seen", {
+                senderId: activeChat._id || activeChat.id,
+                recipientId: currentUserId
+            });
+        }
+    }, [messages, activeChat, socket, currentUserId, setMessages]);
+
 
     useEffect(() => {
         const storedRevealed = JSON.parse(localStorage.getItem('downloadedMessages') || '[]');
@@ -127,10 +165,8 @@ const ChatWindow = ({
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [contextMenu]);
 
-    // --- SMART WHATSAPP SCROLLING ---
     useLayoutEffect(() => {
         const currentId = activeChat?._id || activeChat?.id;
-
         if (prevChatIdRef.current !== currentId) {
             prevChatIdRef.current = currentId;
             isInitialLoadRef.current = true;
@@ -158,7 +194,6 @@ const ChatWindow = ({
 
     const resetContextState = () => { setContextMenu(null); setIsSelectionMode(false); setSelectedMessages([]); setNewMessage(""); setShowTopMenu(false); setShowAttachMenu(false); setShowCallMenu(false); };
 
-    // --- Message Sending & Uploading ---
     const handleSendMessage = async (e) => {
         if (e) { e.preventDefault(); e.stopPropagation(); }
         if (!newMessage.trim() || isUploading) return;
@@ -285,7 +320,6 @@ const ChatWindow = ({
     const cancelUpload = (tempId) => { if (uploadControllers.current[tempId]) uploadControllers.current[tempId].abort(); setMessages(prev => prev.filter(m => m._id !== tempId && m.id !== tempId)); };
     const handleRevealMedia = (msgId) => setDownloadedMedia(prev => new Set(prev).add(msgId));
 
-    // --- FIX: Using the Correct Backend Chat Download Route ---
     const downloadToLocal = async (url) => {
         const tid = toast.loading(t('toast.downloading') || "Downloading...");
         try {
@@ -299,7 +333,7 @@ const ChatWindow = ({
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
-                
+
                 toast.success(t('toast.download_success') || "Download started!", { id: tid });
             } else {
                 throw new Error("Failed to get download URL");
@@ -307,7 +341,6 @@ const ChatWindow = ({
         } catch (error) {
             console.error("Download Error:", error);
             toast.error(t('toast.download_fail') || "Download failed.", { id: tid });
-            // Fallback: Just open the link directly
             window.open(url, '_blank');
         }
     };
@@ -320,7 +353,6 @@ const ChatWindow = ({
         setMessages(prev => prev.filter(m => (m._id || m.id) !== targetId)); toast.success(t('toast.msg_deleted') || "Message deleted"); setFullscreenMedia(null);
     };
 
-    // --- Message Management ---
     const toggleSelection = (msg) => { const id = msg._id || msg.id; setSelectedMessages(prev => prev.includes(id) ? prev.filter(mId => mId !== id) : [...prev, id]); };
     const enterSelectionMode = (msg) => { setIsSelectionMode(true); setSelectedMessages([msg._id || msg.id]); setContextMenu(null); };
 
@@ -381,7 +413,6 @@ const ChatWindow = ({
         } catch (err) { toast.error(t('toast.clear_fail') || "Failed to clear"); }
     };
 
-    // --- Media Viewer Setup ---
     const localDeletedIds = JSON.parse(localStorage.getItem('deletedChatMessages') || '[]');
     const visibleMessages = messages.filter(m => !localDeletedIds.includes(m._id || m.id));
     const displayedMessages = chatSearchQuery.trim() === "" ? visibleMessages : visibleMessages.filter(m => m.text && m.text.toLowerCase().includes(chatSearchQuery.toLowerCase()));
@@ -452,11 +483,9 @@ const ChatWindow = ({
     return (
         <div className={`flex-1 flex flex-col h-full w-full max-w-full relative overflow-hidden transition-all duration-300 animate-in slide-in-from-right-4 md:animate-none`}>
 
-            {/* FULLSCREEN MEDIA VIEWER - BOUNDED TO CHAT WINDOW ONLY */}
             {fullscreenMedia && !showForwardDialog && (
                 <div className="absolute inset-0 z-100 w-full h-full bg-[#0b141a] flex flex-col animate-in fade-in duration-200 ease-out overflow-hidden">
 
-                    {/* HEADER */}
                     <div className="w-full flex items-center justify-between px-4 sm:px-6 h-16 min-h-16 shrink-0 bg-[#0b141a]/80 z-10 border-b border-white/10 backdrop-blur-md">
                         <div className="flex items-center gap-3">
                             {String(fullscreenMedia.senderId || fullscreenMedia.sender?._id || fullscreenMedia.sender) === String(currentUserId) ? (
@@ -491,7 +520,6 @@ const ChatWindow = ({
                         </div>
                     </div>
 
-                    {/* MAIN VIEWER */}
                     <div
                         className="flex-1 w-full flex items-center justify-center overflow-hidden p-4 sm:p-8 select-none relative"
                         onTouchStart={onMediaTouchStart}
@@ -522,7 +550,6 @@ const ChatWindow = ({
                         </div>
                     </div>
 
-                    {/* BOTTOM CAROUSEL */}
                     {chatMediaFiles.length > 0 && (
                         <div className="h-20 w-full shrink-0 border-t border-white/10 flex items-center justify-center px-4 gap-2 overflow-x-auto custom-scrollbar bg-[#0b141a]/80 backdrop-blur-md">
                             {chatMediaFiles.map((mediaMsg) => {
@@ -548,7 +575,6 @@ const ChatWindow = ({
                 </div>
             )}
 
-            {/* FORWARD DIALOG BOX - BOUNDED TO CHAT WINDOW ONLY */}
             {showForwardDialog && (
                 <div className="absolute inset-0 z-100 w-full h-full bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 overflow-hidden">
                     <div className="w-full max-w-sm md:max-w-md bg-card border border-border shadow-2xl rounded-3xl overflow-hidden flex flex-col max-h-[85%] animate-in zoom-in-95 duration-200 ease-out">
@@ -589,7 +615,6 @@ const ChatWindow = ({
                 </div>
             )}
 
-            {/* ADD MEMBER MODAL - BOUNDED TO CHAT WINDOW ONLY */}
             {showAddMemberModal && (
                 <div className="absolute inset-0 z-100 w-full h-full bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 overflow-hidden">
                     <div className="w-full max-w-sm md:max-w-md bg-card border border-border shadow-2xl rounded-3xl overflow-hidden flex flex-col max-h-[85%] animate-in zoom-in-95 duration-200 ease-out">
@@ -626,14 +651,13 @@ const ChatWindow = ({
                             <span className="text-sm font-medium text-muted-foreground">{t('chat_window.top_bar.selected_count', { count: createGroupSelectedUsers.length }) || `${createGroupSelectedUsers.length} selected`}</span>
                             <div className="flex items-center gap-2">
                                 <button onClick={() => { setShowAddMemberModal(false); setCreateGroupSelectedUsers([]); setCreateGroupSearchQuery(""); }} className="px-4 py-2.5 text-[14px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors">{t('modal.common.cancel') || "Cancel"}</button>
-                                {createGroupSelectedUsers.length > 0 && <button onClick={() => { /* Handled in Sidebar or parent if passed correctly, but we leave it here for the modal */ }} className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-transform active:scale-95 shadow-md flex items-center gap-2">{t('modal.add_member.add') || "Add"}</button>}
+                                {createGroupSelectedUsers.length > 0 && <button className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-transform active:scale-95 shadow-md flex items-center gap-2">{t('modal.add_member.add') || "Add"}</button>}
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* DELETE MODAL - BOUNDED TO CHAT WINDOW ONLY */}
             {showDeleteModal && (
                 <div className="absolute inset-0 z-100 w-full h-full bg-black/50 flex items-center justify-center p-4 animate-in fade-in duration-200 overflow-hidden">
                     <div className="bg-card w-full max-w-sm rounded-2xl shadow-2xl p-5 flex flex-col gap-2 animate-in zoom-in-95 duration-200 ease-out">
@@ -647,7 +671,6 @@ const ChatWindow = ({
                 </div>
             )}
 
-            {/* CLEAR CHAT MODAL - BOUNDED TO CHAT WINDOW ONLY */}
             {showClearChatModal && (
                 <div className="absolute inset-0 z-100 w-full h-full bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 overflow-hidden">
                     <div className="bg-card dark:bg-[#1f2c33] w-full max-w-sm rounded-3xl shadow-2xl p-6 flex flex-col items-center gap-4 animate-in zoom-in-95 duration-200 ease-out border border-border/50">
@@ -666,7 +689,6 @@ const ChatWindow = ({
                 </div>
             )}
 
-            {/* CONTEXT MENU (Leaving this as 'fixed' so it anchors directly to your mouse coordinates correctly) */}
             {contextMenu && (
                 <div ref={contextMenuRef} className="fixed z-100 bg-card border border-border shadow-2xl rounded-xl py-1 w-48 animate-in fade-in zoom-in-95 duration-150 ease-out origin-top-left" style={{ top: contextMenu.mouseY, left: contextMenu.mouseX }}>
                     <button onClick={() => executeBatchDelete('me', [contextMenu.msg._id || contextMenu.msg.id])} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted text-sm font-medium text-foreground transition-colors"><Trash2 className="w-4 h-4 text-muted-foreground" /> {t('chat_window.context_menu.delete_me') || "Delete for me"}</button>
@@ -678,7 +700,6 @@ const ChatWindow = ({
             )}
 
             <div className="flex-1 flex w-full max-w-full h-full relative bg-[#EBEBEB] dark:bg-[#0B0D12] overflow-hidden">
-                {/* Background */}
                 <div className="absolute inset-0 z-0 pointer-events-none opacity-50 dark:opacity-30">
                     <img src={chatBgLight} alt="" className="w-full h-full object-cover dark:hidden" />
                     <img src={chatBgDark} alt="" className="w-full h-full object-cover hidden dark:block" />
@@ -686,7 +707,6 @@ const ChatWindow = ({
 
                 <div className="flex-1 flex flex-col w-full h-full relative z-10 transition-all duration-300 overflow-hidden">
 
-                    {/* TOP BAR */}
                     {isSelectionMode ? (
                         <div className="h-14 sm:h-16 md:h-17.5 px-2 sm:px-4 bg-primary/10 flex items-center justify-between shrink-0 z-20 border-b border-border/40 animate-in fade-in slide-in-from-top-2 backdrop-blur-sm w-full">
                             <div className="flex items-center gap-2 sm:gap-4 text-foreground">
@@ -763,7 +783,6 @@ const ChatWindow = ({
                         </div>
                     )}
 
-                    {/* PRIVACY BANNER */}
                     <div className={`w-full flex items-center justify-center text-amber-600 dark:text-amber-500 shrink-0 relative z-10 transition-all duration-300 md:bg-amber-500/10 md:dark:bg-amber-500/5 md:border-b md:border-amber-500/20 md:backdrop-blur-md md:shadow-sm ${showMobileNotice ? 'bg-amber-500/10 dark:bg-amber-500/5 border-b border-amber-500/20 backdrop-blur-md shadow-sm py-1.5' : 'bg-transparent py-1'}`}>
                         <div className="hidden md:flex items-center gap-2.5 py-1 px-4">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
@@ -784,7 +803,6 @@ const ChatWindow = ({
                         </div>
                     </div>
 
-                    {/* MESSAGE FEED */}
                     <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-6 custom-scrollbar relative w-full">
                         <div className="relative z-10 flex flex-col space-y-4 pb-2">
                             {isFetchingMessages ? (
@@ -928,7 +946,6 @@ const ChatWindow = ({
                         </div>
                     </div>
 
-                    {/* INPUT FIELD */}
                     <div className="p-2 sm:p-3 bg-card dark:bg-[#13151A] border-t border-border/40 shrink-0 z-20 sticky bottom-0 w-full max-w-full">
                         <form onSubmit={handleSendMessage} className="flex items-end gap-2 relative w-full">
                             <div className="relative shrink-0" ref={attachMenuRef}>
@@ -956,7 +973,6 @@ const ChatWindow = ({
                     </div>
                 </div>
 
-                {/* SHARED CONTENT OVERLAY - BOUNDED TO CHAT WINDOW ONLY */}
                 {sharedContentView && (
                     <div className="absolute inset-0 z-100 bg-background/95 backdrop-blur-md flex flex-col animate-in fade-in duration-300 ease-out overflow-hidden">
                         <div className="h-16 md:h-17.5 px-3 sm:px-5 border-b border-border/40 flex items-center gap-3 md:gap-4 shrink-0 bg-card/50">
@@ -1014,7 +1030,6 @@ const ChatWindow = ({
                     </div>
                 )}
 
-                {/* THE EXTRACTED SIDEBAR */}
                 <ChatSidebar
                     currentUserId={currentUserId}
                     activeChat={activeChat}

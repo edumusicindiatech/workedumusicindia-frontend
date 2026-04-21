@@ -11,6 +11,7 @@ import { Capacitor } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Haptics } from '@capacitor/haptics';
+import { io } from "socket.io-client";
 
 // --- NATIVE UPDATE IMPORTS ---
 import { App as CapApp } from '@capacitor/app';
@@ -58,7 +59,6 @@ const EmployeeLeaderBoard = lazy(() => import("./pages/employee/EmployeeLeaderBo
 const HelpFAQ = lazy(() => import("./pages/employee/HelpFAQ"));
 const SharedChat = lazy(() => import("./pages/shared/SharedChat"));
 
-// 🚀 PREPARATION FOR NEXT STEP: You will create this component
 const GlobalCallWrapper = lazy(() => import("./components/calling/GlobalCallWrapper"));
 
 const PageLoader = () => (
@@ -325,8 +325,8 @@ function App() {
           // 🛡️ THE FIX: Protect the perfect Socket data from the truncated FCM data!
           setBackgroundCallData(currentData => {
             if (currentData && currentData.from === payload.from) {
-                console.log("🛡️ Keeping full Socket SDP. Ignoring truncated FCM payload.");
-                return currentData;
+              console.log("🛡️ Keeping full Socket SDP. Ignoring truncated FCM payload.");
+              return currentData;
             }
             return payload;
           });
@@ -354,16 +354,16 @@ function App() {
           callerName: e.detail.callerName,
           callType: e.detail.callType,
           profilePicture: e.detail.profilePicture,
-          signal: parsedSignal 
+          signal: parsedSignal
         };
 
         // 🛡️ THE FIX: Protect the perfect Socket data from the truncated FCM Intent!
         setBackgroundCallData(currentData => {
-            if (currentData && currentData.from === payload.from) {
-                console.log("🛡️ Keeping full Socket SDP. Ignoring truncated FCM Intent SDP.");
-                return currentData;
-            }
-            return payload;
+          if (currentData && currentData.from === payload.from) {
+            console.log("🛡️ Keeping full Socket SDP. Ignoring truncated FCM Intent SDP.");
+            return currentData;
+          }
+          return payload;
         });
 
         const event = new CustomEvent('fcm_incoming_call', { detail: payload });
@@ -375,26 +375,44 @@ function App() {
     }
   }, [isNative]);
 
+  // 🚀 NEW: Sync User ID to Android SharedPreferences for Killed-App support
   useEffect(() => {
-    const handleOnline = async () => {
-      const offlineQueue = JSON.parse(localStorage.getItem('offlineEmailQueue') || '[]');
-      if (offlineQueue.length > 0) {
-        for (const payload of offlineQueue) {
-          try {
-            await api.post('/employee/media/send-failure-email', payload);
-          } catch (err) {
-            console.error("Failed to send queued email", err);
-            return;
-          }
-        }
-        localStorage.removeItem('offlineEmailQueue');
-      }
+    if (user && Capacitor.isNativePlatform()) {
+      const syncId = async () => {
+        try {
+          const { registerPlugin } = await import('@capacitor/core');
+          const NativeSettings = registerPlugin('NativeSettingsPlugin');
+          await NativeSettings.setNativeUser({ userId: user.id || user._id });
+          console.log("💾 [DEBUG] User ID synced to Native Storage.");
+        } catch (e) { console.error("Sync Failed", e); }
+      };
+      syncId();
+    }
+  }, [user]);
+
+  // 🚀 EXTREME NETWORK TRACKING TEST
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log("=========================================");
+      console.log("🟢 [NETWORK TEST] INTERNET CONNECTION RESTORED!");
+      console.log("=========================================");
+      if (window.__GLOBAL_SOCKET__) window.__GLOBAL_SOCKET__.connect();
+    };
+
+    const handleOffline = () => {
+      console.log("=========================================");
+      console.log("🔴 [NETWORK TEST] INTERNET CONNECTION LOST!");
+      console.log("=========================================");
     };
 
     window.addEventListener('online', handleOnline);
-    if (navigator.onLine) handleOnline();
+    window.addEventListener('offline', handleOffline);
+    console.log(`⚡ [NETWORK TEST] Initial State: ${navigator.onLine ? 'ONLINE' : 'OFFLINE'}`);
 
-    return () => window.removeEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   useEffect(() => {
@@ -423,12 +441,7 @@ function App() {
     return () => window.removeEventListener('initiate_global_call', handleInitiateCall);
   }, []);
 
-  const showBlankScreen = isHydrating && !token;
-
-  if (showBlankScreen) {
-    return <div className="min-h-screen w-full bg-[#f8f9fa] dark:bg-[#12161f]"></div>;
-  }
-
+  // 🚀 FIX: Initialize Socket explicitly ABOVE early returns
   if (!window.__GLOBAL_SOCKET__) {
     window.__GLOBAL_SOCKET__ = io(import.meta.env.VITE_BASE_URL || "http://localhost:5000", {
       autoConnect: true,
@@ -436,7 +449,7 @@ function App() {
   }
   const socket = window.__GLOBAL_SOCKET__;
 
-  // 🚀 FOREGROUND CALL FIX: Catch incoming calls when the app is already open
+  // 🚀 FIX: Move `useEffect` hooks ABOVE early returns to satisfy React rules
   useEffect(() => {
     const handleForegroundCall = (data) => {
       console.log("☎️ Foreground Call Received via Socket:", data);
@@ -459,7 +472,13 @@ function App() {
     return () => {
       socket.off("incoming_call", handleForegroundCall);
     };
-  }, []);
+  }, []); // Safe dependency array
+
+  const showBlankScreen = isHydrating && !token;
+
+  if (showBlankScreen) {
+    return <div className="min-h-screen w-full bg-[#f8f9fa] dark:bg-[#12161f]"></div>;
+  }
 
   return (
     <>

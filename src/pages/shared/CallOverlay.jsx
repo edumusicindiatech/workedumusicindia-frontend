@@ -9,7 +9,7 @@ const CallOverlay = ({
     peer, onHangup, isMinimized, setIsMinimized, localStream, remoteStream,
     isCallAccepted, isOnline, callType, onRequestVideo, onAcceptVideo,
     onRejectVideo, videoUpgradeStatus, onFlipCamera, facingMode,
-    remoteCallStatus, waitingCall, onAcceptWaitingCall, onRejectWaitingCall
+    remoteCallStatus, outgoingCallStatus, waitingCall, onAcceptWaitingCall, onRejectWaitingCall
 }) => {
     const { t } = useTranslation();
     const [isMuted, setIsMuted] = useState(false);
@@ -82,7 +82,16 @@ const CallOverlay = ({
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    let statusText = isCallAccepted ? "" : (isOnline ? t('call.ringing') : t('call.calling'));
+    // 🚀 UPDATED: WhatsApp style Calling vs Ringing logic
+    let statusText = "";
+    if (!isCallAccepted) {
+        if (outgoingCallStatus === 'ringing') {
+            statusText = t('call.ringing') || "Ringing...";
+        } else {
+            statusText = t('call.calling') || "Calling...";
+        }
+    }
+
     if (remoteCallStatus === 'busy') statusText = t('call.busy');
 
     // --- GENERIC DRAG HANDLER FOR PIP AND MINIMIZED WIDGET ---

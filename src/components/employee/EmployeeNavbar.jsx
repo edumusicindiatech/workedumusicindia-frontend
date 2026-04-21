@@ -28,6 +28,16 @@ if (!window.__GLOBAL_AUDIO__) {
     window.__GLOBAL_AUDIO__ = {
         notification: new Audio('/sounds/notification-ting.mp3'),
         message: new Audio('/sounds/message.mp3'),
+
+        // 🚀 ADDED FIX FOR BUG 3: All Call Sounds
+        sent: new Audio('/sounds/sent.mp3'),
+        calling: new Audio('/sounds/calling.mp3'),
+        ringing: new Audio('/sounds/ringing.mp3'),
+        incoming: new Audio('/sounds/incoming.mp3'),
+        incoming2: new Audio('/sounds/incoming2.mp3'),
+        hangup: new Audio('/sounds/hangup.mp3'),
+        busy: new Audio('/sounds/busy.mp3'),
+        hold: new Audio('/sounds/hold.mp3')
     };
 }
 const globalAudio = window.__GLOBAL_AUDIO__;
@@ -90,6 +100,14 @@ const EmployeeNavbar = () => {
         socket.on("connect", joinUserRoom);
 
         const handleIncomingChat = (data) => {
+            // 🚀 NEW: Tell sender it was delivered (Double Grey Tick) globally, even if we are on the Dashboard!
+            if (!data.isGroup) {
+                socket.emit("message_delivered", {
+                    senderId: data.senderId,
+                    recipientId: currentUserId
+                });
+            }
+
             if (!pathnameRef.current.includes('/chat')) {
                 setUnreadChatCount(prev => prev + 1);
                 playAudio('notification');

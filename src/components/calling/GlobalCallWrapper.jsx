@@ -65,7 +65,16 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
 
     // --- STATE ---
     const [isCallAccepted, setIsCallAccepted] = useState(false);
-    const [callPeer, setCallPeer] = useState(null);
+
+    // Multi-Call State Management
+    const [activePeer, setActivePeer] = useState(null);
+    const [heldPeer, setHeldPeer] = useState(null);
+    const [waitingCall, setWaitingCall] = useState(null);
+    const [isMeOnHold, setIsMeOnHold] = useState(false);
+
+    // 🚀 NEW: WhatsApp-style Call Status State ('calling' vs 'ringing')
+    const [outgoingCallStatus, setOutgoingCallStatus] = useState('calling');
+
     const [currentCallType, setCurrentCallType] = useState('voice');
     const [localStreamState, setLocalStreamState] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
@@ -75,33 +84,48 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
     const [isMinimized, setIsMinimized] = useState(false);
 
     // --- REFS ---
-    const pcRef = useRef(null);
+    const pcsRef = useRef({});
     const localStreamRef = useRef(null);
     const incomingPayloadRef = useRef(incomingPayload);
-    const iceCandidateQueue = useRef([]);
+    const activePeerRef = useRef(null);
+    const iceCandidateQueue = useRef({});
     const videoUpgradeInitiatedByMe = useRef(false);
     const performVideoUpgradeRef = useRef(null);
     const getTargetIdRef = useRef(null);
 
-    // Keep incomingPayloadRef in sync
+    // Keep refs in sync
     useEffect(() => {
         incomingPayloadRef.current = incomingPayload;
     }, [incomingPayload]);
 
-    // --- HELPER: Always gets the correct target ID ---
-    const getTargetId = () =>
-        incomingPayload?.isOutgoing
-            ? (incomingPayload.peer._id || incomingPayload.peer.id)
-            : incomingPayload?.from;
+    useEffect(() => {
+        activePeerRef.current = activePeer;
+    }, [activePeer]);
+
+    const getTargetId = () => activePeer?._id || activePeer?.id;
+
+    // --- AUDIO HELPERS ---
+    const playAudio = (type, loop = false) => {
+        if (window.__GLOBAL_AUDIO__?.[type]) {
+            window.__GLOBAL_AUDIO__[type].loop = loop;
+            window.__GLOBAL_AUDIO__[type].play().catch(() => { });
+        }
+    };
+
+    const stopAudio = (type) => {
+        if (window.__GLOBAL_AUDIO__?.[type]) {
+            window.__GLOBAL_AUDIO__[type].pause();
+            window.__GLOBAL_AUDIO__[type].currentTime = 0;
+        }
+    };
 
     // --- FUNCTIONS ---
 
     const initiateOutgoingCall = async (peer, requestedType) => {
         try {
-            if (window.__GLOBAL_AUDIO__?.ringing) {
-                window.__GLOBAL_AUDIO__.ringing.loop = true;
-                window.__GLOBAL_AUDIO__.ringing.play().catch(() => { });
-            }
+            // 🚀 Start with 'calling.mp3' by default until Server acknowledges 'ringing'
+            setOutgoingCallStatus('calling');
+            playAudio('calling', true);
 
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: true,
@@ -111,14 +135,16 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             localStreamRef.current = stream;
             setLocalStreamState(stream);
 
+            const peerId = peer._id || peer.id;
             const pc = new RTCPeerConnection(iceServers);
-            pcRef.current = pc;
+            pcsRef.current[peerId] = pc;
+            iceCandidateQueue.current[peerId] = [];
 
             stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
             pc.onicecandidate = (e) => {
                 if (e.candidate) socket.emit('ice_candidate', {
-                    to: peer._id || peer.id,
+                    to: peerId,
                     candidate: e.candidate,
                     from: user.id || user._id
                 });
@@ -132,7 +158,7 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             await pc.setLocalDescription(offer);
 
             socket.emit('call_user', {
-                userToCall: peer._id || peer.id,
+                userToCall: peerId,
                 from: user.id || user._id,
                 callerName: user.name,
                 profilePicture: user.profilePicture,
@@ -146,16 +172,17 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         }
     };
 
-    const answerIncomingCall = async () => {
+    const answerIncomingCall = async (peerToAnswer = activePeer, signalData = incomingPayloadRef.current?.signal) => {
         try {
-            const checkSignal = getValidSignal(incomingPayloadRef.current?.signal);
+            const checkSignal = getValidSignal(signalData);
             if (!checkSignal || Object.keys(checkSignal).length === 0) {
                 toast.loading(t('toast.connecting') || "Securing connection, please wait...", { id: 'securing' });
                 return;
             }
             toast.dismiss('securing');
 
-            if (window.__GLOBAL_AUDIO__?.incoming) window.__GLOBAL_AUDIO__.incoming.pause();
+            stopAudio('incoming');
+            stopAudio('incoming2');
 
             let attempts = 0;
             while (!navigator.mediaDevices?.getUserMedia && attempts < 25) {
@@ -168,14 +195,18 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
 
             let stream;
             try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    audio: true,
-                    video: currentCallType === 'video' ? { facingMode: 'user', ...HQ_VIDEO_CONSTRAINTS } : false
-                });
+                if (!localStreamRef.current) {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        audio: true,
+                        video: currentCallType === 'video' ? { facingMode: 'user', ...HQ_VIDEO_CONSTRAINTS } : false
+                    });
+                } else {
+                    stream = localStreamRef.current;
+                }
             } catch (mediaError) {
                 console.error(`🚨 MEDIA BLOCK: ${mediaError.name} - ${mediaError.message}`);
                 if (currentCallType === 'video') {
-                    toast("Camera blocked by lockscreen. Connecting voice only.", { icon: '🔒' });
+                    toast("Camera blocked. Connecting voice only.", { icon: '🔒' });
                     stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                     setCurrentCallType('voice');
                 } else {
@@ -188,14 +219,16 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             setIsCallAccepted(true);
             clearCallNotification();
 
+            const peerId = peerToAnswer._id || peerToAnswer.id;
             const pc = new RTCPeerConnection(iceServers);
-            pcRef.current = pc;
+            pcsRef.current[peerId] = pc;
+            if (!iceCandidateQueue.current[peerId]) iceCandidateQueue.current[peerId] = [];
 
             stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
             pc.onicecandidate = (e) => {
                 if (e.candidate) socket.emit('ice_candidate', {
-                    to: incomingPayloadRef.current?.from,
+                    to: peerId,
                     candidate: e.candidate,
                     from: user?.id || user?._id
                 });
@@ -205,51 +238,87 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
                 if (e.streams && e.streams[0]) setRemoteStream(new MediaStream(e.streams[0].getTracks()));
             };
 
-            const validSignal = getValidSignal(incomingPayloadRef.current?.signal);
+            const validSignal = getValidSignal(signalData);
             await pc.setRemoteDescription(new RTCSessionDescription(validSignal));
 
-            for (const candidate of iceCandidateQueue.current) {
+            for (const candidate of iceCandidateQueue.current[peerId] || []) {
                 try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { }
             }
-            iceCandidateQueue.current = [];
+            iceCandidateQueue.current[peerId] = [];
 
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
 
-            socket.emit('answer_call', { to: incomingPayloadRef.current?.from, signal: answer });
+            socket.emit('answer_call', { to: peerId, signal: answer });
 
         } catch (error) {
             console.error("🚨 CRITICAL CALL ACCEPT ERROR:", error);
-            if (error.name === 'NotAllowedError') {
-                toast.error(t('toast.unlock_to_answer') || "Please unlock your phone to answer.");
-            } else {
-                toast.error(t('toast.camera_access_failed') || "Camera/Mic access failed or connection dropped.");
-            }
+            toast.error(t('toast.camera_access_failed') || "Camera/Mic access failed.");
             handleHangup();
         }
     };
 
-    const handleHangup = () => {
-        if (window.__GLOBAL_AUDIO__?.incoming) window.__GLOBAL_AUDIO__.incoming.pause();
-        if (window.__GLOBAL_AUDIO__?.calling) window.__GLOBAL_AUDIO__.calling.pause();
-        if (window.__GLOBAL_AUDIO__?.ringing) window.__GLOBAL_AUDIO__.ringing.pause();
+    const handleAcceptWaitingCall = async () => {
+        if (!waitingCall || !activePeer) return;
 
-        if (window.__GLOBAL_AUDIO__?.hangup) {
-            window.__GLOBAL_AUDIO__.hangup.currentTime = 0;
-            window.__GLOBAL_AUDIO__.hangup.play().catch(() => { });
+        if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(track => track.enabled = false);
         }
 
-        const targetId = getTargetId();
-        if (targetId) socket.emit('end_call', { to: targetId });
+        socket.emit('hold_call', { to: activePeer._id || activePeer.id, from: user.id || user._id });
+        setHeldPeer(activePeer);
 
-        if (localStreamRef.current) localStreamRef.current.getTracks().forEach(track => track.stop());
-        if (pcRef.current) pcRef.current.close();
+        setActivePeer(waitingCall);
+        setWaitingCall(null);
+        stopAudio('incoming2');
 
-        clearCallNotification();
-        clearCall();
+        await answerIncomingCall(waitingCall, waitingCall.signal);
     };
 
-    // --- VIDEO UPGRADE ---
+    const handleRejectWaitingCall = () => {
+        if (!waitingCall) return;
+        stopAudio('incoming2');
+        socket.emit('notify_busy', { to: waitingCall._id || waitingCall.id });
+        setWaitingCall(null);
+    };
+
+    const handleHangup = () => {
+        stopAudio('incoming');
+        stopAudio('calling');
+        stopAudio('ringing');
+        stopAudio('incoming2');
+        playAudio('hangup');
+
+        const currentPeerId = activePeer?._id || activePeer?.id;
+
+        if (currentPeerId) {
+            socket.emit('end_call', { to: currentPeerId });
+            if (pcsRef.current[currentPeerId]) {
+                pcsRef.current[currentPeerId].close();
+                delete pcsRef.current[currentPeerId];
+            }
+        }
+
+        // AUTO RESUME LOGIC
+        if (heldPeer) {
+            setActivePeer(heldPeer);
+            setHeldPeer(null);
+
+            if (localStreamRef.current) {
+                localStreamRef.current.getTracks().forEach(track => track.enabled = true);
+            }
+
+            socket.emit('resume_call', { to: heldPeer._id || heldPeer.id });
+            toast(`Resumed call with ${heldPeer.name}`, { icon: '▶️' });
+        } else {
+            // Full teardown
+            if (localStreamRef.current) localStreamRef.current.getTracks().forEach(track => track.stop());
+            clearCallNotification();
+            clearCall();
+        }
+    };
+
+    // --- VIDEO UPGRADE & CAMERA LOGIC ---
 
     const handleRequestVideo = () => {
         videoUpgradeInitiatedByMe.current = true;
@@ -271,24 +340,22 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             }
             setFacingMode('user');
 
-            if (pcRef.current) {
-                pcRef.current.addTrack(videoTrack, localStreamRef.current);
+            const currentPeerId = getTargetIdRef.current();
+            const pc = pcsRef.current[currentPeerId];
+
+            if (pc) {
+                pc.addTrack(videoTrack, localStreamRef.current);
 
                 if (isInitiator) {
-                    const offer = await pcRef.current.createOffer();
-                    await pcRef.current.setLocalDescription(offer);
-                    const targetId = getTargetIdRef.current();
-                    if (targetId) {
-                        console.log("📡 Sending Video Upgrade Offer to:", targetId);
-                        socket.emit('renegotiate', { to: targetId, signal: offer });
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    if (currentPeerId) {
+                        socket.emit('renegotiate', { to: currentPeerId, signal: offer });
                     }
-                } else {
-                    console.log("🎥 Camera on. Waiting for remote offer to sync UI...");
                 }
             }
             setCurrentCallType('video');
         } catch (error) {
-            console.error("Video Upgrade Hardware Error:", error);
             toast.error(t('toast.camera_access_error') || "Camera access denied");
         }
     };
@@ -297,7 +364,6 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         const targetId = getTargetId();
         if (targetId) socket.emit('video_upgrade_accepted', { to: targetId });
         setVideoUpgradeStatus('idle');
-        // Acceptor is always the Follower — waits for Initiator's offer
         await performVideoUpgrade(false);
     };
 
@@ -319,8 +385,12 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             }));
 
             const newVideoTrack = stream.getVideoTracks()[0];
-            const sender = pcRef.current?.getSenders().find(s => s.track && s.track.kind === 'video');
-            if (sender) await sender.replaceTrack(newVideoTrack);
+            const pc = pcsRef.current[getTargetId()];
+
+            if (pc) {
+                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                if (sender) await sender.replaceTrack(newVideoTrack);
+            }
 
             const audioTracks = localStreamRef.current.getAudioTracks();
             const newLocalStream = new MediaStream([...audioTracks, newVideoTrack]);
@@ -333,7 +403,6 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         }
     };
 
-    // ✅ Assign refs AFTER all functions are defined
     getTargetIdRef.current = getTargetId;
     performVideoUpgradeRef.current = performVideoUpgrade;
 
@@ -341,30 +410,41 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
     useEffect(() => {
         if (!incomingPayload) return;
 
+        const peerId = incomingPayload.isOutgoing
+            ? (incomingPayload.peer._id || incomingPayload.peer.id)
+            : incomingPayload.from;
+
         if (incomingPayload.isOutgoing) {
-            setCallPeer({
-                _id: incomingPayload.peer._id || incomingPayload.peer.id,
+            setActivePeer({
+                _id: peerId,
                 name: incomingPayload.peer.name,
                 profilePicture: incomingPayload.peer.profilePicture || incomingPayload.peer.groupIcon
             });
             setCurrentCallType(incomingPayload.callType || 'voice');
             initiateOutgoingCall(incomingPayload.peer, incomingPayload.callType);
         } else {
-            setCallPeer({
-                _id: incomingPayload.from,
+            const newCaller = {
+                _id: peerId,
                 name: incomingPayload.callerName,
-                profilePicture: incomingPayload.profilePicture
-            });
+                profilePicture: incomingPayload.profilePicture,
+                signal: incomingPayload.signal
+            };
+
+            if (activePeer && (activePeer._id || activePeer.id) !== peerId) {
+                setWaitingCall(newCaller);
+                playAudio('incoming2', true);
+                return;
+            }
+
+            setActivePeer(newCaller);
             setCurrentCallType(
-                incomingPayload.callType === 'video' ||
-                    (incomingPayload.signal?.sdp?.includes('m=video'))
+                incomingPayload.callType === 'video' || (incomingPayload.signal?.sdp?.includes('m=video'))
                     ? 'video' : 'voice'
             );
 
-            if (window.__GLOBAL_AUDIO__?.incoming) {
-                window.__GLOBAL_AUDIO__.incoming.loop = true;
-                window.__GLOBAL_AUDIO__.incoming.play().catch(() => { });
-            }
+            // 🚀 NEW: Tell caller we received the payload so they can switch from "Calling" to "Ringing"
+            socket.emit('call_delivered', { to: peerId });
+            playAudio('incoming', true);
         }
     }, [incomingPayload]);
 
@@ -373,19 +453,22 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         if (!socket) return;
 
         const handleCallAccepted = async (signal) => {
-            if (window.__GLOBAL_AUDIO__?.ringing) window.__GLOBAL_AUDIO__.ringing.pause();
-            if (window.__GLOBAL_AUDIO__?.calling) window.__GLOBAL_AUDIO__.calling.pause();
+            stopAudio('ringing');
+            stopAudio('calling');
 
             setIsCallAccepted(true);
-            if (pcRef.current) {
+            const currentPeerId = activePeerRef.current?._id || activePeerRef.current?.id;
+            const pc = pcsRef.current[currentPeerId];
+
+            if (pc) {
                 try {
-                    await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
+                    await pc.setRemoteDescription(new RTCSessionDescription(signal));
                     toast.success(t('toast.call_connected') || "Call Connected", { icon: '📞' });
 
-                    for (const candidate of iceCandidateQueue.current) {
-                        try { await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { }
+                    for (const candidate of iceCandidateQueue.current[currentPeerId] || []) {
+                        try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { }
                     }
-                    iceCandidateQueue.current = [];
+                    iceCandidateQueue.current[currentPeerId] = [];
                 } catch (e) {
                     console.error("Failed to set remote description", e);
                 }
@@ -393,13 +476,13 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         };
 
         const handleIceCandidate = async (data) => {
-            if (data.candidate) {
-                if (pcRef.current && pcRef.current.remoteDescription?.type) {
-                    try {
-                        await pcRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
-                    } catch (e) { }
+            if (data.candidate && data.from) {
+                const pc = pcsRef.current[data.from];
+                if (pc && pc.remoteDescription?.type) {
+                    try { await pc.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch (e) { }
                 } else {
-                    iceCandidateQueue.current.push(data.candidate);
+                    if (!iceCandidateQueue.current[data.from]) iceCandidateQueue.current[data.from] = [];
+                    iceCandidateQueue.current[data.from].push(data.candidate);
                 }
             }
         };
@@ -410,28 +493,22 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         };
 
         const handleRenegotiate = async ({ signal }) => {
-            if (signal?.type === 'CUSTOM_EVENT') {
-                if (signal.event === 'call_rejected_busy') {
-                    toast.error(t('toast.user_busy') || "User is busy");
-                    handleHangup();
-                }
-            } else if (pcRef.current) {
+            const currentPeerId = activePeerRef.current?._id || activePeerRef.current?.id;
+            const pc = pcsRef.current[currentPeerId];
+
+            if (pc) {
                 try {
                     if (signal.type === 'offer') {
-                        // If the incoming offer has video, switch UI to video mode
                         const hasVideo = signal.sdp && signal.sdp.includes('m=video');
                         if (hasVideo) setCurrentCallType('video');
 
-                        await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
-                        const answer = await pcRef.current.createAnswer();
-                        await pcRef.current.setLocalDescription(answer);
+                        await pc.setRemoteDescription(new RTCSessionDescription(signal));
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
 
-                        // ✅ Use ref to avoid stale closure
-                        const targetId = getTargetIdRef.current();
-                        if (targetId) socket.emit('renegotiate', { to: targetId, signal: answer });
-
+                        socket.emit('renegotiate', { to: currentPeerId, signal: answer });
                     } else if (signal.type === 'answer') {
-                        await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
+                        await pc.setRemoteDescription(new RTCSessionDescription(signal));
                     }
                 } catch (e) {
                     console.error("Renegotiation Error:", e);
@@ -439,14 +516,55 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             }
         };
 
+        // Multi-Call Events
+        const handlePeerBusy = () => {
+            playAudio('busy');
+            toast.error(t('toast.user_busy') || "Person is on another call");
+            setTimeout(() => handleHangup(), 3000);
+        };
+
+        const handleCallOnHold = () => {
+            setIsMeOnHold(true);
+            playAudio('hold', true);
+            toast('Person put your call on hold', { icon: '⏸️' });
+        };
+
+        const handleCallResumed = () => {
+            setIsMeOnHold(false);
+            stopAudio('hold');
+            toast('Call resumed', { icon: '▶️' });
+        };
+
+        // 🚀 NEW: Switch between Calling.mp3 and Ringing.mp3
+        const handleCallStatus = ({ status }) => {
+            console.log(`[DEBUG - USER A] Received call_status from server: ${status}`);
+            if (status === 'ringing') {
+                setOutgoingCallStatus('ringing');
+                stopAudio('calling');
+                playAudio('ringing', true);
+            }
+        };
+
+        const handleCallDelivered = () => {
+            setOutgoingCallStatus('ringing');
+            stopAudio('calling');
+            playAudio('ringing', true);
+        };
+
         socket.on("call_accepted", handleCallAccepted);
         socket.on("ice_candidate", handleIceCandidate);
         socket.on("call_ended", handleCallEnded);
         socket.on("renegotiate", handleRenegotiate);
+        socket.on("peer_is_busy", handlePeerBusy);
+        socket.on("call_on_hold", handleCallOnHold);
+        socket.on("call_resumed", handleCallResumed);
+
+        socket.on("call_status", handleCallStatus);
+        socket.on("call_delivered", handleCallDelivered);
 
         socket.on("video_upgrade_request", () => {
             setVideoUpgradeStatus('receiving_request');
-            if (window.__GLOBAL_AUDIO__?.notification) window.__GLOBAL_AUDIO__.notification.play();
+            playAudio('notification');
         });
 
         socket.on("video_upgrade_rejected", () => {
@@ -454,11 +572,10 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             toast.error(t('toast.video_rejected') || "Video request declined");
         });
 
-        // ✅ Requester receives this → they are the Initiator → send the offer
         socket.on("video_upgrade_accepted", async () => {
             setVideoUpgradeStatus('idle');
             toast.success(t('toast.video_accepted') || "Video request accepted");
-            await performVideoUpgradeRef.current(true); // ✅ Always fresh via ref
+            await performVideoUpgradeRef.current(true);
         });
 
         return () => {
@@ -466,15 +583,20 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             socket.off("ice_candidate", handleIceCandidate);
             socket.off("call_ended", handleCallEnded);
             socket.off("renegotiate", handleRenegotiate);
+            socket.off("peer_is_busy", handlePeerBusy);
+            socket.off("call_on_hold", handleCallOnHold);
+            socket.off("call_resumed", handleCallResumed);
+            socket.off("call_status", handleCallStatus);
+            socket.off("call_delivered", handleCallDelivered);
             socket.off("video_upgrade_request");
             socket.off("video_upgrade_rejected");
             socket.off("video_upgrade_accepted");
         };
     }, [socket, t]);
 
-    if (!callPeer) return null;
+    if (!activePeer) return null;
 
-    if (!incomingPayload.isOutgoing && !isCallAccepted) {
+    if (!incomingPayload.isOutgoing && !isCallAccepted && !heldPeer) {
         return (
             <div style={{ zIndex: 9999999, position: 'fixed', inset: 0 }} className="bg-[#0B0D12] flex flex-col items-center justify-between py-24 px-6 animate-in fade-in duration-500">
                 <div className="flex flex-col items-center mt-12">
@@ -482,8 +604,8 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
                         <div className="absolute inset-0 rounded-full bg-primary/20 animate-ripple"></div>
                         <div className="absolute inset-0 rounded-full bg-primary/10 animate-ripple-delayed"></div>
                         <div className="w-36 h-36 sm:w-44 sm:h-44 bg-primary/10 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(var(--primary),0.3)] overflow-hidden border-4 border-white/10 relative z-10">
-                            {callPeer.profilePicture ? (
-                                <img src={callPeer.profilePicture} alt="Caller" className="w-full h-full object-cover" />
+                            {activePeer.profilePicture ? (
+                                <img src={activePeer.profilePicture} alt="Caller" className="w-full h-full object-cover" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-primary/20 to-primary/5">
                                     <User className="w-20 h-20 text-primary/60" />
@@ -491,7 +613,7 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
                             )}
                         </div>
                     </div>
-                    <h2 className="text-3xl font-black text-white mt-10 tracking-tight text-center px-4">{callPeer.name}</h2>
+                    <h2 className="text-3xl font-black text-white mt-10 tracking-tight text-center px-4">{activePeer.name}</h2>
                     <div className="flex items-center gap-2 mt-4">
                         <span className="relative flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
@@ -513,7 +635,7 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
                         <span className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em]">{t('call.decline') || "Decline"}</span>
                     </div>
                     <div className="flex flex-col items-center gap-4">
-                        <button onClick={answerIncomingCall} className="w-20 h-20 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-[0_10px_40px_-10px_rgba(16,185,129,0.7)] transition-all active:scale-90 text-white animate-bounce-subtle">
+                        <button onClick={() => answerIncomingCall(activePeer)} className="w-20 h-20 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-[0_10px_40px_-10px_rgba(16,185,129,0.7)] transition-all active:scale-90 text-white animate-bounce-subtle">
                             {currentCallType === 'video' ? <Video className="w-8 h-8 fill-current" /> : <Phone className="w-8 h-8 fill-current" />}
                         </button>
                         <span className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em]">{t('call.accept') || "Accept"}</span>
@@ -525,7 +647,7 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
 
     return (
         <CallOverlay
-            peer={callPeer}
+            peer={activePeer}
             onHangup={handleHangup}
             isMinimized={isMinimized}
             setIsMinimized={setIsMinimized}
@@ -534,16 +656,23 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             isCallAccepted={isCallAccepted}
             isOnline={true}
             callType={currentCallType}
+
+            // 🚀 Pass dynamic status out to UI
+            remoteCallStatus={isCallAccepted ? 'active' : outgoingCallStatus}
+            outgoingCallStatus={outgoingCallStatus}
+
             onRequestVideo={handleRequestVideo}
             onAcceptVideo={handleAcceptVideo}
             onRejectVideo={handleRejectVideo}
             videoUpgradeStatus={videoUpgradeStatus}
             onFlipCamera={handleFlipCamera}
             facingMode={facingMode}
-            remoteCallStatus={remoteCallStatus}
-            waitingCall={null}
-            onAcceptWaitingCall={() => { }}
-            onRejectWaitingCall={() => { }}
+
+            waitingCall={waitingCall}
+            onAcceptWaitingCall={handleAcceptWaitingCall}
+            onRejectWaitingCall={handleRejectWaitingCall}
+            isMeOnHold={isMeOnHold}
+            heldPeer={heldPeer}
         />
     );
 };

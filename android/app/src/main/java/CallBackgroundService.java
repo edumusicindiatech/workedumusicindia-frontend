@@ -12,42 +12,73 @@ import androidx.core.app.NotificationCompat;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+
 public class CallBackgroundService extends FirebaseMessagingService {
 
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
         super.onMessageReceived(remoteMessage);
         
-        // 🚨 GRAB WAKE LOCK IMMEDIATELY TO DEFEAT DOZE MODE CPU SLEEP
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         PowerManager.WakeLock wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "WorkEduMusic:VoIPWakeLock");
-        wakeLock.acquire(60000); // Hold for max 60 seconds
+        wakeLock.acquire(60000); 
 
         try {
-            android.util.Log.e("VOIP_DEBUG", "GATE 1: FCM Message Received! WakeLock acquired.");
-
             if (remoteMessage.getData().size() > 0) {
                 String type = remoteMessage.getData().get("type");
-                android.util.Log.e("VOIP_DEBUG", "GATE 1: Message Type is: " + type);
-                
-                if ("incoming_call".equals(type)) {
-                    String callerId = remoteMessage.getData().get("callerId");
-                    String callerName = remoteMessage.getData().get("callerName");
-                    String callType = remoteMessage.getData().get("callType");
-                    String profilePicture = remoteMessage.getData().get("profilePicture");
-                    String signal = remoteMessage.getData().get("signal");
+                String callerId = remoteMessage.getData().get("callerId");
+                // Note: Make sure your FCM payload from server sends 'senderId' for chats!
+                String senderId = remoteMessage.getData().get("senderId"); 
 
-                    android.util.Log.e("VOIP_DEBUG", "GATE 2: Attempting to wake screen for: " + callerName);
-                    wakeUpDeviceAndLaunchApp(callerId, callerName, callType, profilePicture, signal);
+                // 🚀 BUG FIX: Immediately tell the server we received the FCM
+                // This turns Single Tick -> Double Tick OR Calling -> Ringing
+                if ("incoming_call".equals(type)) {
+                    sendAckToServer(callerId, "incoming_call");
+                    wakeUpDeviceAndLaunchApp(callerId, 
+                        remoteMessage.getData().get("callerName"), 
+                        remoteMessage.getData().get("callType"), 
+                        remoteMessage.getData().get("profilePicture"), 
+                        remoteMessage.getData().get("signal"));
+                } else if ("chat_message".equals(type)) {
+                    sendAckToServer(senderId, "chat_message");
                 }
             }
         } finally {
-            // Ensure we release the CPU lock so we don't drain the user's battery!
-            if (wakeLock.isHeld()) {
-                wakeLock.release();
-                android.util.Log.e("VOIP_DEBUG", "WakeLock released.");
-            }
+            if (wakeLock.isHeld()) wakeLock.release();
         }
+    }
+
+    // 🚀 NEW: The Native HTTP Bridge
+    private void sendAckToServer(String senderId, String type) {
+        new Thread(() -> {
+            try {
+                // REPLACE WITH YOUR ACTUAL BACKEND URL
+                URL url = new URL("https://workedumusicindia-backend-1.onrender.com/api/voip/acknowledge");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                conn.setDoOutput(true);
+
+                // Get My User ID from SharedPreferences (you should save it there during Login)
+                String myUserId = getSharedPreferences("CapacitorStorage", MODE_PRIVATE).getString("userId", "");
+
+                String jsonInputString = "{\"senderId\": \"" + senderId + "\", \"recipientId\": \"" + myUserId + "\", \"type\": \"" + type + "\"}";
+
+                try(OutputStream os = conn.getOutputStream()) {
+                    byte[] input = jsonInputString.getBytes(StandardCharsets.UTF_8);
+                    os.write(input, 0, input.length);
+                }
+
+                int code = conn.getResponseCode();
+                android.util.Log.e("VOIP_DEBUG", "ACK Sent! Response Code: " + code);
+            } catch (Exception e) {
+                android.util.Log.e("VOIP_DEBUG", "ACK Failed: " + e.getMessage());
+            }
+        }).start();
     }
 
     private void wakeUpDeviceAndLaunchApp(String callerId, String callerName, String callType, String profilePicture, String signal) {
