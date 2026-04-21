@@ -142,6 +142,34 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const handleNotificationTap = (e) => {
+      // Check event detail OR localStorage (if app just woke up)
+      const target = e?.detail || localStorage.getItem('pending_route');
+      if (!target) return;
+
+      console.log("📲 Notification Tapped! Routing to:", target);
+      localStorage.removeItem('pending_route'); // Clean up
+
+      const basePath = user?.role === 'Admin' || user?.role === 'SuperAdmin' ? '/admin' : '/employee';
+
+      // Force navigation to the correct page
+      if (target === 'chat') {
+        window.location.href = `${basePath}/chat`;
+      } else if (target === 'notifications') {
+        window.location.href = `${basePath}/notifications`;
+      }
+    };
+
+    // Check immediately on mount in case the app was completely killed
+    if (user && localStorage.getItem('pending_route')) {
+      handleNotificationTap({});
+    }
+
+    window.addEventListener('notification_tap', handleNotificationTap);
+    return () => window.removeEventListener('notification_tap', handleNotificationTap);
+  }, [user]);
+
+  useEffect(() => {
     localStorage.setItem('themeMode', currentTheme);
     if (currentTheme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -461,11 +489,17 @@ function App() {
         callerName: data.callerName,
         callType: data.callType,
         profilePicture: data.profilePicture,
-        // Socket payloads usually send signalData instead of signal
         signal: typeof data.signalData === 'string' ? JSON.parse(data.signalData) : (data.signalData || data.signal)
       };
 
-      setBackgroundCallData(payload);
+      // 🛡️ DEDUPLICATION: Check if we are already showing this exact call!
+      setBackgroundCallData(currentData => {
+        if (currentData && currentData.from === payload.from) {
+          console.log("🛡️ Deduplicating call. Ignoring duplicate socket trigger.");
+          return currentData;
+        }
+        return payload;
+      });
     };
 
     socket.on("incoming_call", handleForegroundCall);

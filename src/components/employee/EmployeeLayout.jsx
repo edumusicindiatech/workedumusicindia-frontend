@@ -38,7 +38,7 @@ const EmployeeLayout = () => {
     // --- SOS STATE TRACKING ---
     const [sosCountdown, setSosCountdown] = useState(null);
     const sosIntervalRef = useRef(null);
-    const beepAudioRef = useRef(new Audio('/sounds/beep.mp3'));
+    const beepAudioRef = useRef(new Audio('/sounds/sos.mp3'));
 
     // --- INITIALIZE PWA DETECTION ---
     useEffect(() => {

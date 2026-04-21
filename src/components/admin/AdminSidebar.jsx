@@ -26,8 +26,7 @@ if (!window.__GLOBAL_AUDIO__) {
     window.__GLOBAL_AUDIO__ = {
         notification: new Audio('/sounds/notification-ting.mp3'),
         message: new Audio('/sounds/message.mp3'),
-
-        // 🚀 ADDED FIX FOR BUG 3: All Call Sounds
+        sos: new Audio('/sounds/sos.mp3'),
         sent: new Audio('/sounds/sent.mp3'),
         calling: new Audio('/sounds/calling.mp3'),
         ringing: new Audio('/sounds/ringing.mp3'),
@@ -77,6 +76,7 @@ const AdminSidebar = () => {
     useEffect(() => { pathnameRef.current = location.pathname; }, [location.pathname]);
     useEffect(() => { if (user?.preferences) setUserPreferences(user.preferences); }, [user?.preferences]);
 
+    // Reset badges when visiting the specific route
     useEffect(() => {
         if (location.pathname.includes('/notifications')) setUnreadCount(0);
         if (location.pathname.includes('/chat')) setUnreadChatCount(0);
@@ -96,6 +96,54 @@ const AdminSidebar = () => {
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // 🚀 NEW: FETCH INITIAL UNREAD NOTIFICATIONS COUNT ON LOAD
+    useEffect(() => {
+        if (!user) return;
+        const fetchUnreadCount = async () => {
+            try {
+                const res = await api.get('/admin/notifications');
+                if (res.data.success) {
+                    const unread = res.data.data.filter(n => !n.isRead).length;
+                    setUnreadCount(unread);
+                }
+            } catch (error) {
+                console.error("Failed to fetch initial notifications");
+            }
+        };
+        fetchUnreadCount();
+    }, [user]);
+
+    // 🚀 NEW: REAL-TIME SOCKET LISTENER FOR SYSTEM ALERTS & SOS
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleNewAlert = (data) => {
+            if (data && data.type === "Silent_Refresh") return;
+
+            if (!pathnameRef.current.includes('/notifications')) {
+                setUnreadCount(prev => prev + 1); // or setNotifCount
+
+                // 🚀 SMART SOUND LOGIC
+                const isSOS = data.title?.includes("SOS") || data.title?.includes("EMERGENCY");
+                if (isSOS) {
+                    playAudio('beep'); // Plays the siren
+                    toast.error(data.title, { icon: '🚨', duration: 6000 });
+                } else {
+                    playAudio('notification'); // Plays the ting
+                    toast(data.title || "New System Alert", { icon: '🔔' });
+                }
+            }
+        };
+
+        socket.on('new_notification', handleNewAlert);
+        socket.on('sos_alert_received', handleNewAlert); // SOS event
+
+        return () => {
+            socket.off('new_notification', handleNewAlert);
+            socket.off('sos_alert_received', handleNewAlert);
+        };
     }, []);
 
     useEffect(() => {
@@ -125,7 +173,6 @@ const AdminSidebar = () => {
         socket.on("connect", joinUserRoom);
 
         const handleIncomingChat = (data) => {
-            // 🚀 NEW: Tell sender it was delivered (Double Grey Tick) globally, even if we are on the Dashboard!
             if (!data.isGroup) {
                 socket.emit("message_delivered", {
                     senderId: data.senderId,
@@ -135,7 +182,7 @@ const AdminSidebar = () => {
 
             if (!pathnameRef.current.includes('/chat')) {
                 setUnreadChatCount(prev => prev + 1);
-                playAudio('notification');
+                playAudio('message'); // 🚀 Plays message.mp3 for chats!
                 toast.success(t('toast.new_chat'), { icon: '💬', id: 'new-chat-toast' });
             }
         };

@@ -28,8 +28,6 @@ if (!window.__GLOBAL_AUDIO__) {
     window.__GLOBAL_AUDIO__ = {
         notification: new Audio('/sounds/notification-ting.mp3'),
         message: new Audio('/sounds/message.mp3'),
-
-        // 🚀 ADDED FIX FOR BUG 3: All Call Sounds
         sent: new Audio('/sounds/sent.mp3'),
         calling: new Audio('/sounds/calling.mp3'),
         ringing: new Audio('/sounds/ringing.mp3'),
@@ -72,6 +70,7 @@ const EmployeeNavbar = () => {
 
     useEffect(() => { pathnameRef.current = location.pathname; }, [location.pathname]);
 
+    // Reset badges when visiting the specific route
     useEffect(() => {
         if (location.pathname.includes('/notifications')) setNotifCount(0);
         if (location.pathname.includes('/chat')) setUnreadChatCount(0);
@@ -87,6 +86,47 @@ const EmployeeNavbar = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    // 🚀 NEW: FETCH INITIAL UNREAD NOTIFICATIONS COUNT ON LOAD
+    useEffect(() => {
+        if (!user) return;
+        const fetchUnreadCount = async () => {
+            try {
+                const res = await api.get('/employee/notifications');
+                if (res.data.success) {
+                    const unread = res.data.data.filter(n => !n.isRead).length;
+                    setNotifCount(unread);
+                }
+            } catch (error) {
+                console.error("Failed to fetch initial notifications");
+            }
+        };
+        fetchUnreadCount();
+    }, [user]);
+
+    // 🚀 NEW: REAL-TIME SOCKET LISTENER FOR SYSTEM ALERTS & SOS
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleNewAlert = (data) => {
+            // Ignore Silent Refresh pings
+            if (data && data.type === "Silent_Refresh") return;
+
+            if (!pathnameRef.current.includes('/notifications')) {
+                setNotifCount(prev => prev + 1);
+                playAudio('notification'); // Plays notification-ting.mp3
+                toast(data?.title || "New System Alert", { icon: '🔔' });
+            }
+        };
+
+        socket.on('new_notification', handleNewAlert);
+        socket.on('sos_alert_received', handleNewAlert);
+
+        return () => {
+            socket.off('new_notification', handleNewAlert);
+            socket.off('sos_alert_received', handleNewAlert);
+        };
+    }, []);
+
     useEffect(() => {
         if (!user || !token) return;
 
@@ -100,7 +140,6 @@ const EmployeeNavbar = () => {
         socket.on("connect", joinUserRoom);
 
         const handleIncomingChat = (data) => {
-            // 🚀 NEW: Tell sender it was delivered (Double Grey Tick) globally, even if we are on the Dashboard!
             if (!data.isGroup) {
                 socket.emit("message_delivered", {
                     senderId: data.senderId,
@@ -110,7 +149,7 @@ const EmployeeNavbar = () => {
 
             if (!pathnameRef.current.includes('/chat')) {
                 setUnreadChatCount(prev => prev + 1);
-                playAudio('notification');
+                playAudio('message'); // 🚀 Plays message.mp3 for chats!
                 toast.success(t('toast.new_chat'), { icon: '💬', id: 'new-chat-toast' });
             }
         };

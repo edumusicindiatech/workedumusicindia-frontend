@@ -11,6 +11,7 @@ import android.content.Context;
 import android.app.KeyguardManager; // <-- NEW IMPORT
 import com.getcapacitor.BridgeActivity;
 import org.json.JSONObject;
+import android.app.NotificationManager;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -69,11 +70,17 @@ public class MainActivity extends BridgeActivity {
         checkAndFireCallIntent(intent);
     }
 
-    private void checkAndFireCallIntent(Intent intent) {
+   private void checkAndFireCallIntent(Intent intent) {
         if (intent != null && intent.hasExtra("isIncomingCall")) {
             boolean isIncoming = intent.getBooleanExtra("isIncomingCall", false);
             
             if (isIncoming) {
+                // 🚀 BUG 1 FIX: Cancel the ringing native notification instantly so they don't overlap!
+                NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                if (notificationManager != null) {
+                    notificationManager.cancel(1001);
+                }
+
                 try {
                     JSONObject json = new JSONObject();
                     json.put("from", intent.getStringExtra("callerId"));
@@ -94,6 +101,20 @@ public class MainActivity extends BridgeActivity {
 
                 intent.removeExtra("isIncomingCall");
             }
+        }
+        
+        if (intent != null && intent.hasExtra("notification_route")) {
+            String route = intent.getStringExtra("notification_route");
+            
+            try {
+                // 🚀 BUG 2 FIX: Save to LocalStorage so React can read it if the app is booting from cold!
+                String jsCode = "window.localStorage.setItem('pending_route', '" + route + "'); window.dispatchEvent(new CustomEvent('notification_tap', { detail: '" + route + "' }));";
+                injectWhenReady(jsCode, 20);
+            } catch (Exception e) {
+                android.util.Log.e("VOIP_DEBUG", "Failed to inject route: " + e.getMessage());
+            }
+            
+            intent.removeExtra("notification_route"); 
         }
     }
 
