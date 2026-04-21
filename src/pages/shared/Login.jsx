@@ -66,12 +66,6 @@ const Login = () => {
         if (tempDeviceId) sessionStorage.setItem('tempDeviceId', tempDeviceId);
         if (justLoggedOut) sessionStorage.setItem('justLoggedOut', justLoggedOut);
 
-        setAxiosToken(null);
-
-        // CLAUDE'S FIX: Removed unconditional dispatch(logout())
-        // Routing and 401 Interceptors should handle logging the user out,
-        // not the mounting of the Login component itself.
-
     }, []);
 
     const handleLogin = async (e) => {

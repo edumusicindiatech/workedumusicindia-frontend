@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
 
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Haptics } from '@capacitor/haptics';
@@ -68,11 +68,6 @@ const PageLoader = () => (
 );
 
 const GlobalToaster = () => {
-  const location = useLocation();
-  if (location.pathname === '/employee/reset-password') {
-    return null;
-  }
-
   return (
     <Toaster position="top-right"
       toastOptions={{
@@ -106,7 +101,7 @@ const PermissionGate = ({ children }) => {
 
   return children;
 };
-
+const NativeSettings = registerPlugin('NativeSettingsPlugin');
 function App() {
   const dispatch = useDispatch();
   const { user, isHydrating, token } = useSelector((state) => state.auth);
@@ -138,10 +133,10 @@ function App() {
   });
 
   // --- CAPGO STABILITY FIX (CRITICAL: useLayoutEffect + No Dynamic Import) ---
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (Capacitor.isNativePlatform()) {
       CapacitorUpdater.notifyAppReady()
-        .then(() => console.log("✅ Capgo notified immediately: App is stable, do not rollback!"))
+        .then(() => console.log("✅ Capgo notified: App is stable!"))
         .catch(err => console.error("Capgo Notification Failed:", err));
     }
   }, []);
@@ -217,7 +212,9 @@ function App() {
 
         const platform = Capacitor.getPlatform();
         const current_native_version = appInfo.version;
-        const current_ota_version = otaInfo.bundle?.version || otaInfo.bundle?.id || current_native_version;
+
+        // Ensure we grab the version regardless of how Capgo formats its response
+        const current_ota_version = otaInfo.version || otaInfo.bundle?.version || otaInfo.bundle?.id || current_native_version;
 
         const response = await api.get('/app/check-update', {
           params: { platform, current_native_version, current_ota_version }
@@ -227,7 +224,6 @@ function App() {
 
         if (data.action === 'NONE') return;
 
-        // Handle Major APK Update
         if (data.action === 'APK') {
           if (data.is_mandatory) {
             setMandatoryNativeUpdate(data);
@@ -237,10 +233,13 @@ function App() {
           return;
         }
 
-        // Handle Minor OTA Update
         if (data.action === 'OTA') {
-          if (String(data.release_version) === String(current_ota_version)) {
-            console.log("Already on latest OTA version. Ignoring server request.");
+          // 🚀 FIX 2: THE INFINITE RELOAD PROTECTOR
+          // Check localStorage to see if we ALREADY applied this exact version this session
+          const previouslyAppliedOta = localStorage.getItem('capgo_applied_ota');
+
+          if (String(data.release_version) === String(current_ota_version) || String(data.release_version) === previouslyAppliedOta) {
+            console.log("Already on latest OTA version. Ignoring server request to prevent loop.");
             return;
           }
 
@@ -250,6 +249,8 @@ function App() {
           });
 
           if (data.is_mandatory) {
+            // Lock this version in storage BEFORE restarting so we don't loop
+            localStorage.setItem('capgo_applied_ota', data.release_version);
             await CapacitorUpdater.set({ id: bundle.id });
           } else {
             toast((toastInstance) => (
@@ -258,6 +259,7 @@ function App() {
                 <span className="text-xs">A small update was downloaded. Restart to apply?</span>
                 <button
                   onClick={() => {
+                    localStorage.setItem('capgo_applied_ota', data.release_version);
                     CapacitorUpdater.set({ id: bundle.id });
                     toast.dismiss(toastInstance.id);
                   }}
@@ -380,7 +382,6 @@ function App() {
     if (user && Capacitor.isNativePlatform()) {
       const syncId = async () => {
         try {
-          const { registerPlugin } = await import('@capacitor/core');
           const NativeSettings = registerPlugin('NativeSettingsPlugin');
           await NativeSettings.setNativeUser({ userId: user.id || user._id });
           console.log("💾 [DEBUG] User ID synced to Native Storage.");

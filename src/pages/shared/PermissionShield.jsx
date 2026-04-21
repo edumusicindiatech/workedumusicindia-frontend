@@ -18,24 +18,23 @@ const PermissionShield = ({ onAllCleared }) => {
     const [isChecking, setIsChecking] = useState(true);
 
     useEffect(() => {
-        // 🚀 FIX 1: The Bridge Delay
-        // Give the Capacitor bridge 500ms to reconnect after an OTA injection or hot-reload
+        // 🚀 Give Capgo 1.5 seconds to finish its background zip unpacking
         const bridgeTimer = setTimeout(() => {
             checkAllPermissions();
-        }, 500);
+        }, 1500);
 
         return () => clearTimeout(bridgeTimer);
     }, []);
 
     // 🚀 FIX 2: The Anti-Hang Timeout
     // Forces a promise to reject if it takes longer than exactly 3 seconds
-    const withTimeout = (promise, ms = 3000) => {
+    const withTimeout = (promise, ms = 5000) => {
         return Promise.race([
             promise,
             new Promise((_, reject) => setTimeout(() => reject(new Error("Plugin connection timed out")), ms))
         ]);
     };
-
+    
     const checkAllPermissions = async () => {
         // 🚀 FIX 3: The Web Bypass Trap
         if (!Capacitor.isNativePlatform()) {

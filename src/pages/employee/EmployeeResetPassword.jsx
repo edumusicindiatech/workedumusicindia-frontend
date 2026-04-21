@@ -65,8 +65,6 @@ const EmployeeResetPassword = () => {
             <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
             <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
 
-            <Toaster position="top-center" richColors />
-
             <div className="bg-card w-full max-w-88 sm:max-w-105 rounded-4xl sm:rounded-[2.5rem] shadow-2xl shadow-primary/5 border border-border/60 animate-in zoom-in-95 fade-in duration-500 relative overflow-hidden flex flex-col">
 
                 <div className="absolute top-0 left-0 w-full h-1 sm:h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40" />
