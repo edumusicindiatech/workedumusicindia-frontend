@@ -413,6 +413,7 @@ function App() {
             const { token: fcmToken } = await FirebaseMessaging.getToken();
             console.log("🔥 FCM Token generated:", fcmToken);
             await api.post('/auth/update-fcm-token', { fcmToken, userId: user?.id || user?._id });
+            await FirebaseMessaging.subscribeToTopic({ topic: 'media_updates' });
           } else {
             console.warn("User denied push notification permissions");
           }

@@ -62,6 +62,15 @@ public class CallBackgroundService extends FirebaseMessagingService {
                         boolean isSOS = title.contains("SOS") || title.contains("EMERGENCY");
                         showTrayNotification(title, msgText, "notifications", isSOS); 
                     }
+                } else if ("new_media_upload".equals(type)) {
+                    String title = remoteMessage.getData().get("title");
+                    String msgText = remoteMessage.getData().get("message");
+                    String route = remoteMessage.getData().get("route");
+                    
+                    if (title != null && msgText != null) {
+                        // reuse your existing tray notification logic!
+                        showTrayNotification(title, msgText, route, false);
+                    }
                 }
             }
         } finally {
