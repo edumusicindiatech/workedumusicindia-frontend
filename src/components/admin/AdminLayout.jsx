@@ -8,7 +8,6 @@ const AdminLayout = () => {
 
     return (
         <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground pt-16 relative">
-            <Toaster position="top-right" reverseOrder={false} />
 
             <AdminSidebar />
 

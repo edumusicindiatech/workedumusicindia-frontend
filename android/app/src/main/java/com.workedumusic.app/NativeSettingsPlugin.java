@@ -536,10 +536,13 @@ public class NativeSettingsPlugin extends Plugin {
         serviceIntent.setAction("STOP_SERVICE");
         getContext().startService(serviceIntent);
 
-        // Trigger the completion notification
-        String fileName = call.getString("fileName", "Media");
+        // 👉 Get custom title, message, and status from React
+        String title = call.getString("title", "Upload Status");
+        String message = call.getString("message", "Upload process finished.");
         String route = call.getString("route", "employee/media");
-        triggerCompletionNotification(fileName, route);
+        boolean isError = call.getBoolean("isError", false);
+
+        triggerCompletionNotification(title, message, route, isError);
 
         // Clean up the cancel listener
         if (uploadCancelReceiver != null) {
@@ -552,13 +555,13 @@ public class NativeSettingsPlugin extends Plugin {
         call.resolve();
     }
 
-    private void triggerCompletionNotification(String fileName, String route) {
+    private void triggerCompletionNotification(String title, String message, String route, boolean isError) {
         NotificationManager nm = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
         String channelId = "upload_complete_channel";
         Uri soundUri = Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + getContext().getPackageName() + "/raw/notification_ting");
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(channelId, "Upload Complete", NotificationManager.IMPORTANCE_HIGH);
+            NotificationChannel channel = new NotificationChannel(channelId, "Upload Status", NotificationManager.IMPORTANCE_HIGH);
             android.media.AudioAttributes audioAttributes = new android.media.AudioAttributes.Builder()
                     .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
@@ -573,10 +576,13 @@ public class NativeSettingsPlugin extends Plugin {
 
         PendingIntent pendingIntent = PendingIntent.getActivity(getContext(), (int) System.currentTimeMillis(), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
+        // 👉 Dynamically swap the icon: Checkmark for success, Alert triangle for error/cancel
+        int iconRes = isError ? android.R.drawable.stat_notify_error : android.R.drawable.stat_sys_upload_done;
+
         androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(getContext(), channelId)
-                .setSmallIcon(getContext().getApplicationInfo().icon)
-                .setContentTitle("Upload Complete")
-                .setContentText(fileName + " has been successfully uploaded.")
+                .setSmallIcon(iconRes)
+                .setContentTitle(title)
+                .setContentText(message)
                 .setSound(soundUri)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent);

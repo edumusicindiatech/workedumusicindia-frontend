@@ -261,7 +261,6 @@ const EmployeeLayout = () => {
 
     return (
         <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground pt-16 relative">
-            <Toaster position="top-right" reverseOrder={false} />
             <EmployeeNavbar />
 
             <div className="flex-1 overflow-y-auto custom-scrollbar pb-16 lg:pb-0 transition-all duration-300">

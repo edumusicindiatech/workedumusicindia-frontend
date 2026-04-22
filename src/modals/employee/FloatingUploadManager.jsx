@@ -101,7 +101,7 @@ const FloatingUploadManager = () => {
                 window.dispatchEvent(new CustomEvent(errorEvent, { detail: "Upload failed. Please check network." }));
 
                 // 👉 NATIVE INTEGRATION: Stop service & notify failure
-                try { NativeSettingsPlugin.stopUploadService({ fileName: 'Upload Failed', route: routeTarget }); } catch (err) { }
+                try { NativeSettingsPlugin.stopUploadService({ title: 'Upload Failed', message: 'Please check your internet connection.', route: routeTarget, isError: true }); } catch (err) { }
 
                 dispatch(clearUploadJob());
                 return;
@@ -140,7 +140,7 @@ const FloatingUploadManager = () => {
                 }
 
                 // 👉 NATIVE INTEGRATION: Stop service & play Ting sound on success!
-                try { NativeSettingsPlugin.stopUploadService({ fileName: fileName, route: routeTarget }); } catch (err) { }
+                try { NativeSettingsPlugin.stopUploadService({ title: 'Upload Complete', message: `${fileName} has been successfully uploaded.`, route: routeTarget, isError: false }); } catch (err) { }
 
             } catch (err) {
                 console.error("Database Save Error:", err);
@@ -148,7 +148,7 @@ const FloatingUploadManager = () => {
                 window.dispatchEvent(new CustomEvent(errorEvent, { detail: "Uploaded, but failed to save to database." }));
 
                 // 👉 NATIVE INTEGRATION: Stop service & notify failure
-                try { NativeSettingsPlugin.stopUploadService({ fileName: 'Save Failed', route: routeTarget }); } catch (err) { }
+                try { NativeSettingsPlugin.stopUploadService({ title: 'Save Failed', message: 'Uploaded, but failed to save to database.', route: routeTarget, isError: true }); } catch (err) { }
             }
 
             setTimeout(() => {
@@ -191,11 +191,20 @@ const FloatingUploadManager = () => {
 
         const handleCancel = () => {
             if (uppyRef.current) {
+                uppyRef.current.off('complete');
                 uppyRef.current.cancelAll();
                 uppyRef.current.destroy();
                 uppyRef.current = null;
             }
-            try { NativeSettingsPlugin.stopUploadService({ fileName: 'Upload Canceled', route: getRouteTarget() }); } catch (err) { }
+            try {
+                NativeSettingsPlugin.stopUploadService({
+                    title: 'Upload Canceled',
+                    message: 'The upload was safely aborted.',
+                    route: getRouteTarget(),
+                    isError: true
+                });
+            } catch (err) { }
+
             dispatch(clearUploadJob());
         };
 
