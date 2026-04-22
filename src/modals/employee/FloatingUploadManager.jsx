@@ -4,6 +4,10 @@ import api from '../../api/axios';
 import { clearUploadJob } from '../../store/slices/uploadSlice';
 import Uppy from '@uppy/core';
 import AwsS3 from '@uppy/aws-s3';
+import { registerPlugin } from '@capacitor/core';
+
+// Initialize the native plugin
+const NativeSettingsPlugin = registerPlugin('NativeSettingsPlugin');
 
 const FloatingUploadManager = () => {
     const dispatch = useDispatch();
@@ -51,12 +55,32 @@ const FloatingUploadManager = () => {
             }
         });
 
+        // Helper to get the target route for notifications
+        const getRouteTarget = () => uploadType === 'learning-hub' ? 'admin/learning-hub' : 'employee/media';
+
+        // Helper to get the first file name
+        const getFirstFileName = () => {
+            const currentFiles = uppy.getFiles();
+            return currentFiles.length > 0 ? currentFiles[0].name : 'Media';
+        };
+
         uppy.on('upload-started', () => {
             if ('wakeLock' in navigator) navigator.wakeLock.request('screen').catch(() => { });
+
+            // 👉 NATIVE INTEGRATION: Start Foreground Service
+            try {
+                NativeSettingsPlugin.startUploadService({ fileName: getFirstFileName() });
+            } catch (err) { /* Ignore on web */ }
         });
 
         uppy.on('upload-progress', (file, progressData) => {
             const percent = Math.round((progressData.bytesUploaded / progressData.bytesTotal) * 100);
+
+            // 👉 NATIVE INTEGRATION: Update Notification Progress Bar
+            try {
+                NativeSettingsPlugin.updateUploadProgress({ fileName: file.name, progress: percent });
+            } catch (err) { /* Ignore on web */ }
+
             if (uploadType === 'learning-hub') {
                 window.dispatchEvent(new CustomEvent('learning-upload-progress', { detail: percent }));
             } else {
@@ -69,9 +93,16 @@ const FloatingUploadManager = () => {
         });
 
         uppy.on('complete', async (result) => {
+            const fileName = getFirstFileName();
+            const routeTarget = getRouteTarget();
+
             if (result.failed.length > 0) {
                 const errorEvent = uploadType === 'learning-hub' ? 'learning-upload-error' : 'vault-upload-error';
                 window.dispatchEvent(new CustomEvent(errorEvent, { detail: "Upload failed. Please check network." }));
+
+                // 👉 NATIVE INTEGRATION: Stop service & notify failure
+                try { NativeSettingsPlugin.stopUploadService({ fileName: 'Upload Failed', route: routeTarget }); } catch (err) { }
+
                 dispatch(clearUploadJob());
                 return;
             }
@@ -108,10 +139,16 @@ const FloatingUploadManager = () => {
                     setTimeout(() => window.dispatchEvent(new Event('refreshMediaGallery')), 500);
                 }
 
+                // 👉 NATIVE INTEGRATION: Stop service & play Ting sound on success!
+                try { NativeSettingsPlugin.stopUploadService({ fileName: fileName, route: routeTarget }); } catch (err) { }
+
             } catch (err) {
                 console.error("Database Save Error:", err);
                 const errorEvent = uploadType === 'learning-hub' ? 'learning-upload-error' : 'vault-upload-error';
                 window.dispatchEvent(new CustomEvent(errorEvent, { detail: "Uploaded, but failed to save to database." }));
+
+                // 👉 NATIVE INTEGRATION: Stop service & notify failure
+                try { NativeSettingsPlugin.stopUploadService({ fileName: 'Save Failed', route: routeTarget }); } catch (err) { }
             }
 
             setTimeout(() => {
@@ -158,15 +195,18 @@ const FloatingUploadManager = () => {
                 uppyRef.current.destroy();
                 uppyRef.current = null;
             }
+            try { NativeSettingsPlugin.stopUploadService({ fileName: 'Upload Canceled', route: getRouteTarget() }); } catch (err) { }
             dispatch(clearUploadJob());
         };
 
         window.addEventListener('vault-upload-cancel', handleCancel);
         window.addEventListener('learning-upload-cancel', handleCancel);
+        window.addEventListener('native_upload_cancel', handleCancel);
 
         return () => {
             window.removeEventListener('vault-upload-cancel', handleCancel);
             window.removeEventListener('learning-upload-cancel', handleCancel);
+            window.removeEventListener('native_upload_cancel', handleCancel);
             if (uppyRef.current) {
                 uppyRef.current.destroy();
                 uppyRef.current = null;

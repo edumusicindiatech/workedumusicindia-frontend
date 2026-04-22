@@ -24,7 +24,14 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
-import java.util.List; // 🔧 Added this import for Android 12+ audio routing
+import android.app.PendingIntent;
+import android.net.Uri;
+import android.content.ContentResolver;
+import androidx.core.app.NotificationCompat;
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
+import android.app.NotificationChannel;
+import java.util.List;
 
 @CapacitorPlugin(name = "NativeSettingsPlugin")
 public class NativeSettingsPlugin extends Plugin {
@@ -463,4 +470,118 @@ public class NativeSettingsPlugin extends Plugin {
             audioManager.clearCommunicationDevice();
         }
     }
+
+    // ==========================================
+    // UPLOAD FOREGROUND SERVICE METHODS
+    // ==========================================
+    
+    private BroadcastReceiver uploadCancelReceiver;
+
+    @PluginMethod
+    public void startUploadService(PluginCall call) {
+        String fileName = call.getString("fileName", "Media");
+        Intent serviceIntent = new Intent(getContext(), UploadForegroundService.class);
+        serviceIntent.putExtra("fileName", fileName);
+        serviceIntent.putExtra("progress", 0);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            getContext().startForegroundService(serviceIntent);
+        } else {
+            getContext().startService(serviceIntent);
+        }
+
+        // Register the Cancel Listener
+        if (uploadCancelReceiver == null) {
+            uploadCancelReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    if (bridge != null && bridge.getWebView() != null) {
+                        bridge.getWebView().post(() -> 
+                            bridge.getWebView().evaluateJavascript("window.dispatchEvent(new CustomEvent('native_upload_cancel'));", null)
+                        );
+                    }
+                }
+            };
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                getContext().registerReceiver(uploadCancelReceiver, new IntentFilter("com.workedumusic.app.NATIVE_CANCEL_UPLOAD"), Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                getContext().registerReceiver(uploadCancelReceiver, new IntentFilter("com.workedumusic.app.NATIVE_CANCEL_UPLOAD"));
+            }
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void updateUploadProgress(PluginCall call) {
+        String fileName = call.getString("fileName", "Media");
+        int progress = call.getInt("progress", 0);
+        
+        Intent serviceIntent = new Intent(getContext(), UploadForegroundService.class);
+        serviceIntent.putExtra("fileName", fileName);
+        serviceIntent.putExtra("progress", progress);
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            getContext().startForegroundService(serviceIntent);
+        } else {
+            getContext().startService(serviceIntent);
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void stopUploadService(PluginCall call) {
+        // Stop the foreground service
+        Intent serviceIntent = new Intent(getContext(), UploadForegroundService.class);
+        serviceIntent.setAction("STOP_SERVICE");
+        getContext().startService(serviceIntent);
+
+        // Trigger the completion notification
+        String fileName = call.getString("fileName", "Media");
+        String route = call.getString("route", "employee/media");
+        triggerCompletionNotification(fileName, route);
+
+        // Clean up the cancel listener
+        if (uploadCancelReceiver != null) {
+            try {
+                getContext().unregisterReceiver(uploadCancelReceiver);
+            } catch (Exception e) { /* ignore */ }
+            uploadCancelReceiver = null;
+        }
+        
+        call.resolve();
+    }
+
+    private void triggerCompletionNotification(String fileName, String route) {
+        NotificationManager nm = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        String channelId = "upload_complete_channel";
+        Uri soundUri = Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + getContext().getPackageName() + "/raw/notification_ting");
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(channelId, "Upload Complete", NotificationManager.IMPORTANCE_HIGH);
+            android.media.AudioAttributes audioAttributes = new android.media.AudioAttributes.Builder()
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                    .build();
+            channel.setSound(soundUri, audioAttributes);
+            nm.createNotificationChannel(channel);
+        }
+
+        Intent intent = new Intent(getContext(), MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.putExtra("notification_route", route);
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(getContext(), (int) System.currentTimeMillis(), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(getContext(), channelId)
+                .setSmallIcon(getContext().getApplicationInfo().icon)
+                .setContentTitle("Upload Complete")
+                .setContentText(fileName + " has been successfully uploaded.")
+                .setSound(soundUri)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent);
+
+        nm.notify((int) System.currentTimeMillis(), builder.build());
+    }
+
 }
