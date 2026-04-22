@@ -72,6 +72,7 @@ const PageLoader = () => (
 const GlobalToaster = () => {
   return (
     <Toaster position="top-right"
+      containerStyle={{ zIndex: 9999999999 }} // 🔧 FIX 1: Force it to the absolute top layer
       toastOptions={{
         style: {
           background: 'hsl(var(--card))',
@@ -641,7 +642,12 @@ function App() {
   const showBlankScreen = isHydrating && !token;
 
   if (showBlankScreen) {
-    return <div className="min-h-screen w-full bg-[#f8f9fa] dark:bg-[#12161f]"></div>;
+    return (
+      <>
+        <GlobalToaster />
+        <div className="min-h-screen w-full bg-[#f8f9fa] dark:bg-[#12161f]"></div>
+      </>
+    );
   }
 
 
