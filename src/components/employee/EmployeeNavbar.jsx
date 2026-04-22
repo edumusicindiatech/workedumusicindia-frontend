@@ -223,6 +223,10 @@ const EmployeeNavbar = () => {
                         ))}
                     </nav>
                     <div className="flex items-center justify-end gap-2 shrink-0 sm:border-l border-border sm:pl-4">
+                        {/* 🔧 Desktop Download Button (Always Visible) */}
+                        <button onClick={handleDownloadApp} className="hidden xl:flex p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors" title={t('navbar.download_app') || 'Download App'}>
+                            <Download className="w-5 h-5" />
+                        </button>
                         <button onClick={() => dispatch(toggleTheme())} className="hidden xl:flex p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors"><div className="w-5 h-5">{themeMode === 'dark' ? <Moon /> : <Sun className="text-amber-500" />}</div></button>
                         <button onClick={() => setIsSettingsModalOpen(true)} className="hidden xl:flex p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors"><Settings className="w-5 h-5" /></button>
                         <button onClick={handleLogout} className="hidden xl:flex p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-full transition-colors"><LogOut className="w-5 h-5" /></button>

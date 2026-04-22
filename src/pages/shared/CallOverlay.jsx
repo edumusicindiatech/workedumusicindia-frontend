@@ -338,7 +338,7 @@ const CallOverlay = ({
                 )}
 
                 {/* TOP HEADER */}
-                <div className={`absolute top-4 left-4 sm:top-6 sm:left-6 z-[999999] flex flex-col items-start gap-3 pointer-events-auto transition-all duration-500 ease-in-out ${controlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10 pointer-events-none'}`}>
+                <div className={`absolute top-4 left-4 sm:top-6 sm:left-6 z-999999 flex flex-col items-start gap-3 pointer-events-auto transition-all duration-500 ease-in-out ${controlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10 pointer-events-none'}`}>
                     <div className="flex items-center gap-3">
                         <button
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsMinimized(true); }}

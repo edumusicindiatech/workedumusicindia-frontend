@@ -270,6 +270,10 @@ const AdminSidebar = () => {
                 </div>
 
                 <div className="flex items-center justify-end gap-2 shrink-0 border-l border-border pl-4 ml-2">
+                    {/* 🔧 Desktop Download Button (Always Visible) */}
+                    <button onClick={handleDownloadApp} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors" title={t('sidebar.download_app') || 'Download App'}>
+                        <Download className="w-5 h-5" />
+                    </button>
                     <button onClick={() => dispatch(toggleTheme())} className="p-2 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors" title={t('sidebar.theme')}>{theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-500" />}</button>
                     <button onClick={() => navigate('/admin/profile')} className="p-1 text-muted-foreground hover:text-foreground md:cursor-pointer hover:bg-muted rounded-full transition-colors flex items-center justify-center w-9 h-9 overflow-hidden border border-border/50" title={t('sidebar.profile')}>
                         {user?.profilePicture ? <img src={user.profilePicture} alt="Admin" className="w-full h-full object-cover rounded-full" /> : <UserCircle className="w-5 h-5" />}

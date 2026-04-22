@@ -242,67 +242,160 @@ function App() {
 
         const platform = Capacitor.getPlatform();
         const current_native_version = appInfo.version;
-
-        // Ensure we grab the version regardless of how Capgo formats its response
-        const current_ota_version = otaInfo.version || otaInfo.bundle?.version || otaInfo.bundle?.id || current_native_version;
+        const current_ota_version =
+          otaInfo.version ||
+          otaInfo.bundle?.version ||
+          otaInfo.bundle?.id ||
+          current_native_version;
 
         const response = await api.get('/app/check-update', {
-          params: { platform, current_native_version, current_ota_version }
+          params: { platform, current_native_version, current_ota_version },
         });
 
         const data = response.data;
-
         if (data.action === 'NONE') return;
 
+        // ── APK (full native update) ─────────────────────────────
         if (data.action === 'APK') {
           if (data.is_mandatory) {
             setMandatoryNativeUpdate(data);
           } else {
-            toast.success("A major app update is available! Check settings to download.", { duration: 5000 });
+            toast.success(
+              'A major app update is available! Check settings to download.',
+              { duration: 5000 }
+            );
           }
           return;
         }
 
+        // ── OTA (web/JS bundle update) ───────────────────────────
         if (data.action === 'OTA') {
-          // 🚀 FIX 2: THE INFINITE RELOAD PROTECTOR
-          // Check localStorage to see if we ALREADY applied this exact version this session
           const previouslyAppliedOta = localStorage.getItem('capgo_applied_ota');
 
-          if (String(data.release_version) === String(current_ota_version) || String(data.release_version) === previouslyAppliedOta) {
-            console.log("Already on latest OTA version. Ignoring server request to prevent loop.");
+          // Guard: already on this version
+          if (
+            String(data.release_version) === String(current_ota_version) ||
+            String(data.release_version) === previouslyAppliedOta
+          ) {
+            console.log('Already on latest OTA version. Skipping.');
             return;
           }
 
-          const bundle = await CapacitorUpdater.download({
-            url: data.download_url,
-            version: data.release_version
+          // ── FIX: Silent background download FIRST ──────────────
+          // Show a subtle "downloading…" indicator so the user knows
+          // something is happening, but it doesn't block the UI.
+          const downloadToastId = toast.loading('Downloading update in background…', {
+            position: 'bottom-center',
+            style: { fontSize: '13px' },
           });
 
-          if (data.is_mandatory) {
-            // Lock this version in storage BEFORE restarting so we don't loop
+          let bundle;
+          try {
+            bundle = await CapacitorUpdater.download({
+              url: data.download_url,
+              version: data.release_version,
+            });
+          } catch (downloadErr) {
+            toast.dismiss(downloadToastId);
+            console.error('OTA download failed:', downloadErr);
+            return; // Fail silently — try again next launch
+          }
+
+          // Download done — dismiss the loading indicator
+          toast.dismiss(downloadToastId);
+
+          // ── FIX: applyUpdate separated from download ────────────
+          // Cache/SW wipe happens INSIDE restart, not before,
+          // so a "Later" choice leaves the app in a working state.
+          const applyUpdate = async () => {
+            // 1. Mark version BEFORE reloading so PermissionShield
+            //    doesn't trigger on the fresh WebView mount.
             localStorage.setItem('capgo_applied_ota', data.release_version);
-            await CapacitorUpdater.set({ id: bundle.id });
+            // 2. Flag so PermissionShield skips its check on next mount
+            localStorage.setItem('ota_just_applied', 'true');
+
+            // 3. Unregister SW & wipe cache RIGHT BEFORE set(),
+            //    not before download — this keeps the app usable if
+            //    the user taps "Later".
+            if ('serviceWorker' in navigator) {
+              try {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(regs.map((r) => r.unregister()));
+              } catch (e) {
+                console.error('SW unregister failed', e);
+              }
+            }
+            if ('caches' in window) {
+              try {
+                const keys = await caches.keys();
+                await Promise.all(keys.map((k) => caches.delete(k)));
+              } catch (e) {
+                console.error('Cache wipe failed', e);
+              }
+            }
+
+            // 4. Small delay so the WebView thread clears before swap
+            await new Promise((r) => setTimeout(r, 300));
+
+            // 5. Apply bundle — Capgo reloads the WebView natively
+            try {
+              await CapacitorUpdater.set({ id: bundle.id });
+            } catch (err) {
+              console.error('Capgo set failed, forcing reload', err);
+              window.location.reload(true);
+            }
+          };
+
+          if (data.is_mandatory) {
+            // Mandatory: apply immediately with a brief notice
+            toast('Applying mandatory update…', {
+              icon: '⚡',
+              duration: 2000,
+              position: 'bottom-center',
+            });
+            await new Promise((r) => setTimeout(r, 2000)); // let toast show
+            await applyUpdate();
           } else {
-            toast((toastInstance) => (
-              <div className="flex flex-col gap-2">
-                <span className="text-sm font-bold">New Patch Available</span>
-                <span className="text-xs">A small update was downloaded. Restart to apply?</span>
-                <button
-                  onClick={() => {
-                    localStorage.setItem('capgo_applied_ota', data.release_version);
-                    CapacitorUpdater.set({ id: bundle.id });
-                    toast.dismiss(toastInstance.id);
-                  }}
-                  className="bg-primary text-white text-xs py-2 rounded-lg font-bold"
-                >
-                  Restart Now
-                </button>
-              </div>
-            ), { duration: 15000 });
+            // Optional: show "Update Ready" toast with Restart / Later
+            // ── FIX: toast shown WHILE user is in the app ─────────
+            toast(
+              (toastInstance) => (
+                <div className="flex flex-col gap-3">
+                  <span className="text-sm font-bold text-foreground">
+                    Update Ready 🎉
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    A new version was downloaded. Apply it now?
+                  </span>
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      onClick={async () => {
+                        toast.dismiss(toastInstance.id);
+                        toast.loading('Applying update…', { id: 'updating-toast' });
+                        await applyUpdate();
+                      }}
+                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground text-xs py-2.5 rounded-lg font-bold transition-colors shadow-sm"
+                    >
+                      Restart Now
+                    </button>
+                    <button
+                      onClick={() => toast.dismiss(toastInstance.id)}
+                      className="flex-1 bg-muted hover:bg-muted/80 text-foreground text-xs py-2.5 rounded-lg font-bold transition-colors border border-border"
+                    >
+                      Later
+                    </button>
+                  </div>
+                </div>
+              ),
+              {
+                duration: Infinity,
+                position: 'top-center',
+              }
+            );
           }
         }
       } catch (error) {
-        console.error("Hybrid Update Error:", error);
+        console.error('Hybrid Update Error:', error);
       }
     };
 
