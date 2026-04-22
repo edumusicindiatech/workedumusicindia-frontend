@@ -8,7 +8,7 @@
         "error": "कुछ गलत हो गया"
     },
     "sidebar": {
-        "brand": "WorkEduMusic Admin",
+        "brand": "WorkEduMusic Admin Panel",
         "dashboard": "डैशबोर्ड",
         "roster": "कर्मचारी",
         "attendance": "उपस्थिति",
@@ -30,7 +30,9 @@
         "light_mode": "लाइट मोड",
         "incoming_call": "इनकमिंग {{type}} कॉल...",
         "admin_fallback_name": "एडमिन उपयोगकर्ता",
-        "new_alert_toast": "नया अलर्ट प्राप्त हुआ"
+        "new_alert_toast": "नया अलर्ट प्राप्त हुआ",
+        "download_app": "ऐप डाउनलोड करें",
+        "download_starting": "ऐप डाउनलोड हो रहा है..."
     },
     "navbar": {
         "brand": "WorkEduMusic",
@@ -53,7 +55,9 @@
         "training_vault": "ट्रेनिंग वॉल्ट",
         "incoming_call": "इनकमिंग {{type}} कॉल...",
         "incoming_voice": "इनकमिंग वॉयस कॉल...",
-        "incoming_video": "इनकमिंग वीडियो कॉल..."
+        "incoming_video": "इनकमिंग वीडियो कॉल...",
+        "download_app": "ऐप डाउनलोड करें",
+        "download_starting": "ऐप डाउनलोड हो रहा है..."
     },
     "toast": {
         "call_ended": "कॉल समाप्त",
@@ -108,7 +112,8 @@
         "select_member_req": "कम से कम 1 सदस्य चुनें",
         "creating_group": "समूह बनाया जा रहा है...",
         "group_created": "समूह सफलतापूर्वक बन गया!",
-        "group_create_failed": "समूह बनाने में विफल"
+        "group_create_failed": "समूह बनाने में विफल",
+        "download_starting": "डाउनलोड शुरू हो रहा है..."
     },
     "add_user_modal": {
         "title_employee": "नया कर्मचारी जोड़ें",

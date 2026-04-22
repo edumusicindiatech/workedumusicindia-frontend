@@ -8,7 +8,7 @@
         "error": "Something went wrong"
     },
     "sidebar": {
-        "brand": "WorkEduMusic Admin",
+        "brand": "WorkEduMusic Admin Panel",
         "dashboard": "Dashboard",
         "roster": "Employees",
         "attendance": "Attendance",
@@ -30,7 +30,9 @@
         "light_mode": "Light Mode",
         "incoming_call": "Incoming {{type}} call...",
         "admin_fallback_name": "Admin User",
-        "new_alert_toast": "New alert received"
+        "new_alert_toast": "New alert received",
+        "download_app": "Download App",
+        "download_starting": "Starting download..."
     },
     "navbar": {
         "brand": "WorkEduMusic",
@@ -53,7 +55,9 @@
         "training_vault": "Training Vault",
         "incoming_call": "Incoming {{type}} call...",
         "incoming_video": "Video Call",
-        "incoming_voice": "Voice Call"
+        "incoming_voice": "Voice Call",
+        "download_app": "Download App",
+        "download_starting": "Starting download..."
     },
     "toast": {
         "call_ended": "Call ended",
@@ -108,7 +112,8 @@
         "select_member_req": "Select at least 1 member",
         "creating_group": "Creating group...",
         "group_created": "Group created successfully!",
-        "group_create_failed": "Failed to create group"
+        "group_create_failed": "Failed to create group",
+        "download_starting": "Starting download..."
     },
     "add_user_modal": {
         "title_employee": "Add New Employee",

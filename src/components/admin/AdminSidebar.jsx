@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import {
     LayoutDashboard, Users, Radio, Shield, Megaphone,
     Moon, Sun, Settings, LogOut, TrendingUp, Bell, UserCircle, ClipboardCheck,
-    CalendarDays, Film, Trophy, BookOpen, MessageCircle
+    CalendarDays, Film, Trophy, BookOpen, MessageCircle, Download
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -201,6 +201,22 @@ const AdminSidebar = () => {
         finally { toast.remove(); sessionStorage.setItem('justLoggedOut', 'true'); dispatch(logout()); }
     };
 
+    const handleDownloadApp = () => {
+        setIsMobileMenuOpen(false);
+        const downloadUrl = `${import.meta.env.VITE_BASE_URL || 'http://localhost:5000'}/api/app/download-latest`;
+        toast.success(t('toast.download_starting') || "Downloading latest update...");
+
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            window.open(downloadUrl, '_system');
+        } else {
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    };
+
     const desktopNavClasses = ({ isActive }) => `flex items-center gap-2 px-3 py-2 rounded-lg transition-all font-medium text-sm whitespace-nowrap shrink-0 ${isActive ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`;
     const mobileNavClasses = ({ isActive }) => `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`;
 
@@ -294,6 +310,11 @@ const AdminSidebar = () => {
                         </button>
                         <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/leave-requests'); }}><CalendarDays className="w-4 h-4 text-primary" /> {t('sidebar.leave')}</button>
                         <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/communication'); }}><Megaphone className="w-4 h-4 text-primary" /> {t('sidebar.broadcast')}</button>
+
+                        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={handleDownloadApp}>
+                            <Download className="w-4 h-4 text-primary" /> {t('sidebar.download_app') || 'Download App'}
+                        </button>
+
                         <button onClick={() => { dispatch(toggleTheme()); setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                             <div className="flex items-center gap-3">{theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}<span>{theme === 'dark' ? t('sidebar.light_mode') : t('sidebar.dark_mode')}</span></div>
                         </button>

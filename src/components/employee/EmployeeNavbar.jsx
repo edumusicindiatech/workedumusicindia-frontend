@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import {
     Home, User, CalendarCheck, Bell, BarChartBig,
     Moon, Sun, LogOut, UserCircle, Settings, ListTodo, PlaySquare,
-    Trophy, BookOpen, HelpCircle, MessageCircle
+    Trophy, BookOpen, HelpCircle, MessageCircle, Download
 } from "lucide-react";
 
 import EmployeeSettingsModal from "../../modals/employee/EmployeeSettingsModal";
@@ -168,6 +168,22 @@ const EmployeeNavbar = () => {
         finally { toast.remove(); sessionStorage.setItem('justLoggedOut', 'true'); setAxiosToken(null); dispatch(logout()); }
     };
 
+    const handleDownloadApp = () => {
+        setIsMobileMenuOpen(false);
+        const downloadUrl = `${import.meta.env.VITE_BASE_URL || 'http://localhost:5000'}/api/app/download-latest`;
+        toast.success(t('toast.download_starting') || "Downloading latest update...");
+
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            window.open(downloadUrl, '_system');
+        } else {
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    };
+
     const desktopNavClasses = ({ isActive }) => `flex items-center gap-2 px-3 py-2 rounded-xl transition-all font-medium text-sm whitespace-nowrap shrink-0 ${isActive ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`;
     const mobileNavClasses = ({ isActive }) => `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`;
 
@@ -228,9 +244,16 @@ const EmployeeNavbar = () => {
                                 <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/leaderboard'); }}><Trophy className="w-4 h-4 text-primary" /> {t('navbar.leaderboard')}</button>
                                 <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => { setIsMobileMenuOpen(false); navigate('/employee/help'); }}><HelpCircle className="w-4 h-4 text-primary" /> {t('navbar.help')}</button>
                                 <NavLink to="/employee/profile" onClick={() => setIsMobileMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"><User className="w-4 h-4" /> {t('navbar.profile')}</NavLink>
+                                <button onClick={() => { setIsMobileMenuOpen(false); setIsSettingsModalOpen(true); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"><Settings className="w-4 h-4 text-primary" /> {t('navbar.settings')}</button>
+
                                 <div className="my-1 border-t border-border" />
+
+                                {/* --- NEW DOWNLOAD APP OPTION --- */}
+                                <button onClick={handleDownloadApp} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                                    <Download className="w-4 h-4 text-primary" /> {t('navbar.download_app') || 'Download App'}
+                                </button>
+
                                 <button onClick={() => { dispatch(toggleTheme()); setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"><div className="flex items-center gap-3">{themeMode === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-500" />}<span>{themeMode === 'dark' ? t('navbar.dark_mode') : t('navbar.light_mode')}</span></div></button>
-                                <button onClick={() => { setIsMobileMenuOpen(false); setIsSettingsModalOpen(true); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"><Settings className="w-4 h-4" /> {t('navbar.settings')}</button>
                                 <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors mt-1"><LogOut className="w-4 h-4" /> {t('navbar.logout')}</button>
                             </div>
                         </div>

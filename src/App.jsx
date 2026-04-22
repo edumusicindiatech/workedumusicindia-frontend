@@ -61,6 +61,8 @@ const SharedChat = lazy(() => import("./pages/shared/SharedChat"));
 
 const GlobalCallWrapper = lazy(() => import("./components/calling/GlobalCallWrapper"));
 
+const CURRENT_APP_VERSION = "1.0.0"; // Update this with each release for native update checks
+
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-[#f8f9fa] dark:bg-[#12161f]">
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -509,11 +511,47 @@ function App() {
     };
   }, []); // Safe dependency array
 
+  useEffect(() => {
+    const checkAndClearCache = async () => {
+      const savedVersion = localStorage.getItem('app_version');
+
+      if (savedVersion !== CURRENT_APP_VERSION) {
+        console.log("New version detected! Clearing old caches...");
+
+        if ('caches' in window) {
+          try {
+            const cacheNames = await caches.keys();
+            await Promise.all(
+              cacheNames.map((cacheName) => caches.delete(cacheName))
+            );
+          } catch (err) {
+            console.error("Cache clearing failed", err);
+          }
+        }
+
+        const userToken = localStorage.getItem('token');
+        const userData = localStorage.getItem('user');
+
+        localStorage.clear();
+
+        if (userToken) localStorage.setItem('token', userToken);
+        if (userData) localStorage.setItem('user', userData);
+
+        localStorage.setItem('app_version', CURRENT_APP_VERSION);
+        window.location.reload(true);
+      }
+    };
+
+    checkAndClearCache();
+  }, []);
+
   const showBlankScreen = isHydrating && !token;
 
   if (showBlankScreen) {
     return <div className="min-h-screen w-full bg-[#f8f9fa] dark:bg-[#12161f]"></div>;
   }
+
+
 
   return (
     <>
