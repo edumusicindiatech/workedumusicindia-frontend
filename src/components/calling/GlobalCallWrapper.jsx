@@ -48,7 +48,7 @@ const HQ_VIDEO_CONSTRAINTS = { width: { ideal: 1280 }, height: { ideal: 720 } };
 // Default devices always available on any Android phone
 const DEFAULT_DEVICES = [
     { id: 'earpiece', name: 'Earpiece', type: 'earpiece' },
-    { id: 'speaker',  name: 'Speaker',  type: 'speaker'  },
+    { id: 'speaker', name: 'Speaker', type: 'speaker' },
 ];
 
 const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
@@ -238,6 +238,8 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             playAudio('calling', true);
             await refreshAudioDevices();
 
+            await selectAudioDevice(requestedType === 'video' ? 'speaker' : 'earpiece');
+
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: true,
                 video: requestedType === 'video' ? { facingMode: 'user', ...HQ_VIDEO_CONSTRAINTS } : false
@@ -291,6 +293,8 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             stopAudio('incoming');
             stopAudio('incoming2');
             await refreshAudioDevices();
+
+            await selectAudioDevice(currentCallType === 'video' ? 'speaker' : 'earpiece');
 
             let attempts = 0;
             while (!navigator.mediaDevices?.getUserMedia && attempts < 25) {
@@ -578,11 +582,20 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             if (pc) {
                 try {
                     if (signal.type === 'offer') {
-                        if (signal.sdp && signal.sdp.includes('m=video')) setCurrentCallType('video');
+                        // 🔧 FIX: Check if the incoming offer is trying to add video
+                        const isVideoOffer = signal.sdp && signal.sdp.includes('m=video');
+
+                        if (isVideoOffer && currentCallType !== 'video') {
+                            setCurrentCallType('video');
+                            // Grab our own camera and add it to the stream BEFORE answering
+                            await performVideoUpgradeRef.current(false);
+                        }
+
                         await pc.setRemoteDescription(new RTCSessionDescription(signal));
                         const answer = await pc.createAnswer();
                         await pc.setLocalDescription(answer);
                         socket.emit('renegotiate', { to: currentPeerId, signal: answer });
+
                     } else if (signal.type === 'answer') {
                         await pc.setRemoteDescription(new RTCSessionDescription(signal));
                     }

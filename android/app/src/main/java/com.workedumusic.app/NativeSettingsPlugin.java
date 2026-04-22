@@ -24,6 +24,8 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
+import java.util.List; // 🔧 Added this import for Android 12+ audio routing
+
 @CapacitorPlugin(name = "NativeSettingsPlugin")
 public class NativeSettingsPlugin extends Plugin {
 
@@ -35,8 +37,11 @@ public class NativeSettingsPlugin extends Plugin {
     private BroadcastReceiver audioDeviceReceiver = null;
     private boolean bluetoothScoRequested = false;
 
+    // 🔧 NEW: Proximity Sensor WakeLock
+    private PowerManager.WakeLock proximityWakeLock = null;
+
     // ─────────────────────────────────────────────
-    // EXISTING METHODS (unchanged)
+    // EXISTING METHODS
     // ─────────────────────────────────────────────
 
     @PluginMethod
@@ -87,6 +92,15 @@ public class NativeSettingsPlugin extends Plugin {
     @PluginMethod
     public void setCallState(PluginCall call) {
         isCallActive = call.getBoolean("isActive", false);
+        
+        // 🔧 NEW: Lock audio mode immediately when call connects
+        if (isCallActive) {
+            AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+            if (audioManager != null) {
+                audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+            }
+        }
+        
         call.resolve();
     }
 
@@ -135,29 +149,20 @@ public class NativeSettingsPlugin extends Plugin {
     }
 
     // ─────────────────────────────────────────────
-    // 🔧 NEW: AUDIO DEVICE MANAGEMENT
+    // 🔧 AUDIO DEVICE MANAGEMENT
     // ─────────────────────────────────────────────
 
-    /**
-     * Returns the list of currently available audio output devices.
-     * React uses this to show the audio route picker UI.
-     *
-     * Returns a JSArray of objects: [{ id: string, name: string, type: string }]
-     * type is one of: "earpiece" | "speaker" | "wired_headset" | "bluetooth"
-     */
     @PluginMethod
     public void getAvailableAudioDevices(PluginCall call) {
         AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
         JSArray devices = new JSArray();
 
-        // Earpiece is always available on phones
         JSObject earpiece = new JSObject();
         earpiece.put("id", "earpiece");
         earpiece.put("name", "Earpiece");
         earpiece.put("type", "earpiece");
         devices.put(earpiece);
 
-        // Speaker is always available
         JSObject speaker = new JSObject();
         speaker.put("id", "speaker");
         speaker.put("name", "Speaker");
@@ -165,7 +170,6 @@ public class NativeSettingsPlugin extends Plugin {
         devices.put(speaker);
 
         if (audioManager != null) {
-            // Check for wired headset (3.5mm or USB-C)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 AudioDeviceInfo[] outputDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
                 for (AudioDeviceInfo deviceInfo : outputDevices) {
@@ -179,7 +183,7 @@ public class NativeSettingsPlugin extends Plugin {
                         wired.put("name", "Headphones");
                         wired.put("type", "wired_headset");
                         devices.put(wired);
-                        break; // Only add once
+                        break; 
                     }
 
                     if (type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
@@ -195,7 +199,6 @@ public class NativeSettingsPlugin extends Plugin {
                     }
                 }
             } else {
-                // Fallback for older Android (below API 23)
                 if (audioManager.isWiredHeadsetOn()) {
                     JSObject wired = new JSObject();
                     wired.put("id", "wired_headset");
@@ -218,10 +221,6 @@ public class NativeSettingsPlugin extends Plugin {
         call.resolve(result);
     }
 
-    /**
-     * Routes audio to the specified device.
-     * deviceType: "earpiece" | "speaker" | "wired_headset" | "bluetooth"
-     */
     @PluginMethod
     public void setAudioDevice(PluginCall call) {
         String deviceType = call.getString("deviceType", "earpiece");
@@ -232,60 +231,62 @@ public class NativeSettingsPlugin extends Plugin {
             return;
         }
 
-        // Always set communication mode for VoIP
         audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
 
         switch (deviceType) {
             case "speaker":
-                // Stop any Bluetooth SCO first
                 stopBluetoothSco(audioManager);
                 audioManager.setSpeakerphoneOn(true);
+                clearCommunicationDevice(audioManager);
+                handleProximitySensor(false); 
                 break;
 
             case "earpiece":
                 stopBluetoothSco(audioManager);
                 audioManager.setSpeakerphoneOn(false);
+                routeToEarpieceModern(audioManager); 
+                handleProximitySensor(true); 
                 break;
 
             case "wired_headset":
-                // Wired headset is automatic when plugged in — just disable speaker + BT
                 stopBluetoothSco(audioManager);
                 audioManager.setSpeakerphoneOn(false);
-                // Android routes to wired headset automatically when speaker is off
+                clearCommunicationDevice(audioManager);
+                handleProximitySensor(false); 
                 break;
 
             case "bluetooth":
                 audioManager.setSpeakerphoneOn(false);
+                clearCommunicationDevice(audioManager);
+                handleProximitySensor(false); 
                 startBluetoothSco(audioManager);
                 break;
 
             default:
-                // Fallback to earpiece
                 stopBluetoothSco(audioManager);
                 audioManager.setSpeakerphoneOn(false);
+                routeToEarpieceModern(audioManager);
+                handleProximitySensor(true); 
                 break;
         }
 
         call.resolve();
     }
 
-    /**
-     * Resets audio manager mode to normal — call this on hangup.
-     */
     @PluginMethod
     public void resetAudioMode(PluginCall call) {
         AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
         if (audioManager != null) {
             stopBluetoothSco(audioManager);
             audioManager.setSpeakerphoneOn(false);
+            clearCommunicationDevice(audioManager);
             audioManager.setMode(AudioManager.MODE_NORMAL);
         }
+        
+        handleProximitySensor(false);
         call.resolve();
     }
 
-    /**
-     * Legacy: kept for backward compat with existing GlobalCallWrapper.jsx toggleSpeakerphone calls.
-     */
     @PluginMethod
     public void toggleSpeakerphone(PluginCall call) {
         Boolean isSpeaker = call.getBoolean("isSpeaker", false);
@@ -299,22 +300,48 @@ public class NativeSettingsPlugin extends Plugin {
     }
 
     // ─────────────────────────────────────────────
+    // 🔧 PROXIMITY SENSOR HELPERS
+    // ─────────────────────────────────────────────
+
+    private void handleProximitySensor(boolean enable) {
+        if (getContext() == null) return;
+        
+        PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+        if (pm == null) return;
+
+        if (proximityWakeLock == null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && pm.isWakeLockLevelSupported(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK)) {
+                proximityWakeLock = pm.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK, "WorkEduMusic:ProximityWakeLock");
+            }
+        }
+
+        if (proximityWakeLock != null) {
+            if (enable) {
+                if (!proximityWakeLock.isHeld()) {
+                    proximityWakeLock.acquire();
+                }
+            } else {
+                if (proximityWakeLock.isHeld()) {
+                    proximityWakeLock.release();
+                }
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────
     // 🔧 BLUETOOTH SCO HELPERS
     // ─────────────────────────────────────────────
 
     private void startBluetoothSco(AudioManager audioManager) {
-        if (bluetoothScoRequested) return; // Already started
+        if (bluetoothScoRequested) return;
 
-        // Register receiver to know when SCO is actually connected
         if (bluetoothScoReceiver == null) {
             bluetoothScoReceiver = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     int state = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1);
                     if (state == AudioManager.SCO_AUDIO_STATE_CONNECTED) {
-                        // SCO connected — audio is now routing to Bluetooth
                         android.util.Log.d("VOIP_DEBUG", "Bluetooth SCO connected");
-                        // Notify React
                         try {
                             String jsCode = "window.dispatchEvent(new CustomEvent('audio_device_changed', { detail: 'bluetooth' }));";
                             if (bridge != null && bridge.getWebView() != null) {
@@ -355,15 +382,13 @@ public class NativeSettingsPlugin extends Plugin {
     }
 
     // ─────────────────────────────────────────────
-    // 🔧 REGISTER AUDIO DEVICE CHANGE LISTENER
-    // Call this when a call starts so React gets notified if earphones
-    // are plugged/unplugged mid-call (e.g. user removes headphones)
+    // 🔧 AUDIO DEVICE CHANGE LISTENER
     // ─────────────────────────────────────────────
 
     @PluginMethod
     public void startAudioDeviceListener(PluginCall call) {
         if (audioDeviceReceiver != null) {
-            call.resolve(); // Already listening
+            call.resolve(); 
             return;
         }
 
@@ -371,7 +396,6 @@ public class NativeSettingsPlugin extends Plugin {
             @Override
             public void onReceive(Context context, Intent intent) {
                 String action = intent.getAction();
-                // Wired headset plugged or unplugged
                 if (Intent.ACTION_HEADSET_PLUG.equals(action)) {
                     int state = intent.getIntExtra("state", -1);
                     String eventType = state == 1 ? "wired_headset" : "earpiece";
@@ -384,7 +408,6 @@ public class NativeSettingsPlugin extends Plugin {
                         }
                     } catch (Exception e) { /* ignore */ }
                 }
-                // Bluetooth connected/disconnected
                 if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action) ||
                     BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) {
                     try {
@@ -417,5 +440,27 @@ public class NativeSettingsPlugin extends Plugin {
             audioDeviceReceiver = null;
         }
         call.resolve();
+    }
+
+    // --- HELPERS FOR ANDROID 12+ AUDIO ROUTING ---
+    private void routeToEarpieceModern(AudioManager audioManager) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // 🔧 SAMSUNG FIX: You MUST clear the active device before setting a new one
+            audioManager.clearCommunicationDevice(); 
+            
+            List<AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
+            for (AudioDeviceInfo device : devices) {
+                if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE) {
+                    audioManager.setCommunicationDevice(device);
+                    return;
+                }
+            }
+        }
+    }
+
+    private void clearCommunicationDevice(AudioManager audioManager) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            audioManager.clearCommunicationDevice();
+        }
     }
 }
