@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, ShieldAlert, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import api from "../../api/axios";
 import { useTranslation } from "react-i18next"; // <-- Added import
 
@@ -38,7 +38,6 @@ const AdminResetPassword = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-muted/20 p-4">
-            <Toaster position="top-right" />
 
             <div className="bg-card w-full max-w-md p-8 rounded-3xl shadow-xl border border-border animate-in zoom-in-95">
                 <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-6 border border-indigo-500/20">

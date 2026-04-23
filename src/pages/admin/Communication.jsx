@@ -9,7 +9,6 @@ import {
     Clock, Loader2, Megaphone, Target, 
     MessageSquare, History, Sparkles, Globe, Info 
 } from "lucide-react";
-import { Toaster } from "sonner";
 import toast from "react-hot-toast";
 import api from "../../api/axios";
 import { useTranslation } from "react-i18next";
@@ -131,7 +130,6 @@ const Communication = () => {
 
     return (
         <div className="animate-in fade-in duration-700 pb-20 md:pb-10 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-            <Toaster richColors position="top-right" />
 
             {/* --- HEADER --- */}
             <header className="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">

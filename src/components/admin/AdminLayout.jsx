@@ -1,6 +1,5 @@
 import { Outlet } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
-import { Toaster } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 
 const AdminLayout = () => {

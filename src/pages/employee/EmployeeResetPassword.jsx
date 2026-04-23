@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, ShieldCheck, Loader2, AlertCircle, CheckCircle2, LockKeyhole } from "lucide-react";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import api from "../../api/axios";
 import { useTranslation } from "react-i18next";
 

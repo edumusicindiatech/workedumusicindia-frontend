@@ -3,7 +3,7 @@ import { Outlet, useLocation } from "react-router-dom"; // <-- Added useLocation
 import { useSelector } from "react-redux";
 import EmployeeNavbar from "./EmployeeNavbar";
 import { useTranslation } from "react-i18next";
-import { Toaster, toast } from "react-hot-toast";
+import toast from "react-hot-toast";
 import {
     AlertTriangle, Loader2, Info, Lock, MapPin, RefreshCw, X
 } from "lucide-react";

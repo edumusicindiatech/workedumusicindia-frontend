@@ -4,8 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { setCredentials, logout, setHydrationComplete } from "./store/slices/authSlice";
 import api, { setAxiosToken } from "./api/axios";
 import { useTranslation } from "react-i18next";
-import { Toaster } from "react-hot-toast";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
