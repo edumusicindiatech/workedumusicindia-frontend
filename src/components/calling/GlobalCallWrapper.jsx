@@ -60,16 +60,14 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
     const [isCallAccepted, setIsCallAccepted] = useState(false);
     const [isPipMode, setIsPipMode] = useState(false);
 
-    // 🔧 Audio device state — replaces simple isSpeakerphone bool
+    // 🔧 Audio device state
     const [availableAudioDevices, setAvailableAudioDevices] = useState(DEFAULT_DEVICES);
     const [activeAudioDevice, setActiveAudioDevice] = useState('earpiece');
     const activeAudioDeviceRef = useRef('earpiece');
 
     // Multi-Call State Management
     const [activePeer, setActivePeer] = useState(null);
-    const [heldPeer, setHeldPeer] = useState(null);
     const [waitingCall, setWaitingCall] = useState(null);
-    const [isMeOnHold, setIsMeOnHold] = useState(false);
 
     const [outgoingCallStatus, setOutgoingCallStatus] = useState('calling');
     const [currentCallType, setCurrentCallType] = useState('voice');
@@ -122,7 +120,6 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         }
     }, []);
 
-    // Cycles through available devices in order (for single-button tap)
     const cycleAudioDevice = useCallback(async () => {
         const types = availableAudioDevices.map(d => d.type);
         const currentIndex = types.indexOf(activeAudioDeviceRef.current);
@@ -130,7 +127,6 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         await selectAudioDevice(types[nextIndex]);
     }, [availableAudioDevices, selectAudioDevice]);
 
-    // Legacy compat
     const isSpeakerphone = activeAudioDevice === 'speaker';
 
     const applyNativeSpeaker = useCallback(async (enabled) => {
@@ -156,7 +152,6 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         }
     }, [isCallAccepted]);
 
-    // Auto-switch speaker for video, earpiece for voice (unless headphones/BT active)
     useEffect(() => {
         if (!isCallAccepted) return;
         const current = activeAudioDeviceRef.current;
@@ -166,7 +161,6 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         }
     }, [currentCallType, isCallAccepted, applyNativeSpeaker]);
 
-    // Listen for device plug/unplug mid-call
     useEffect(() => {
         if (!isCallAccepted) return;
 
@@ -363,14 +357,29 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         }
     };
 
+    // ─────────────────────────────────────────────────────────────
+    // NEW LOGIC: ACCEPT AND DROP CURRENT CALL
+    // ─────────────────────────────────────────────────────────────
     const handleAcceptWaitingCall = async () => {
         if (!waitingCall || !activePeer) return;
-        if (localStreamRef.current) localStreamRef.current.getTracks().forEach(track => track.enabled = false);
-        socket.emit('hold_call', { to: activePeer._id || activePeer.id, from: user.id || user._id });
-        setHeldPeer(activePeer);
+
+        // 1. Notify the current caller they are being dropped for another call
+        socket.emit('dropped_for_another_call', { to: activePeer._id || activePeer.id });
+
+        // 2. Kill the current peer connection entirely
+        const currentPeerId = activePeer._id || activePeer.id;
+        if (pcsRef.current[currentPeerId]) {
+            pcsRef.current[currentPeerId].close();
+            delete pcsRef.current[currentPeerId];
+        }
+
+        // 3. Swap state to the new incoming caller
         setActivePeer(waitingCall);
         setWaitingCall(null);
-        stopAudio('incoming2');
+        stopAudio('incoming2'); // Stop the secondary ringtone
+        stopAudio('incoming');
+
+        // 4. Initialize WebRTC with the new caller (User C)
         await answerIncomingCall(waitingCall, waitingCall.signal);
     };
 
@@ -388,7 +397,6 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         stopAudio('incoming2');
         playAudio('hangup');
 
-        // Reset audio to normal mode on hangup
         if (Capacitor.isNativePlatform()) {
             getNativeSettings()?.resetAudioMode().catch(() => { });
         }
@@ -404,17 +412,10 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             }
         }
 
-        if (heldPeer) {
-            setActivePeer(heldPeer);
-            setHeldPeer(null);
-            if (localStreamRef.current) localStreamRef.current.getTracks().forEach(track => track.enabled = true);
-            socket.emit('resume_call', { to: heldPeer._id || heldPeer.id });
-            toast(`Resumed call with ${heldPeer.name}`, { icon: '▶️' });
-        } else {
-            if (localStreamRef.current) localStreamRef.current.getTracks().forEach(track => track.stop());
-            clearCallNotification();
-            clearCall();
-        }
+        // Complete cleanup. No holding, just destroy the call.
+        if (localStreamRef.current) localStreamRef.current.getTracks().forEach(track => track.stop());
+        clearCallNotification();
+        clearCall();
     };
 
     // ─────────────────────────────────────────────────────────────
@@ -523,7 +524,7 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
 
             if (activePeer && (activePeer._id || activePeer.id) !== peerId) {
                 setWaitingCall(newCaller);
-                playAudio('incoming2', true);
+                playAudio('incoming', true); // Play standard incoming sound for popup
                 return;
             }
 
@@ -582,12 +583,10 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             if (pc) {
                 try {
                     if (signal.type === 'offer') {
-                        // 🔧 FIX: Check if the incoming offer is trying to add video
                         const isVideoOffer = signal.sdp && signal.sdp.includes('m=video');
 
                         if (isVideoOffer && currentCallType !== 'video') {
                             setCurrentCallType('video');
-                            // Grab our own camera and add it to the stream BEFORE answering
                             await performVideoUpgradeRef.current(false);
                         }
 
@@ -608,16 +607,16 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             toast.error(t('toast.user_busy') || "Person is on another call");
             setTimeout(() => handleHangup(), 3000);
         };
-        const handleCallOnHold = () => {
-            setIsMeOnHold(true);
-            playAudio('hold', true);
-            toast('Person put your call on hold', { icon: '⏸️' });
+
+        // NEW LOGIC: Dropped for another call
+        const handleDroppedForAnother = () => {
+            playAudio('beep'); // Will play beep.mp3 if configured in __GLOBAL_AUDIO__
+            toast('Person attended another call', { icon: 'ℹ️', duration: 5000 });
+            setTimeout(() => {
+                handleHangup();
+            }, 5000);
         };
-        const handleCallResumed = () => {
-            setIsMeOnHold(false);
-            stopAudio('hold');
-            toast('Call resumed', { icon: '▶️' });
-        };
+
         const handleCallStatus = ({ status }) => {
             if (status === 'ringing') {
                 setOutgoingCallStatus('ringing');
@@ -636,8 +635,7 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
         socket.on("call_ended", handleCallEnded);
         socket.on("renegotiate", handleRenegotiate);
         socket.on("peer_is_busy", handlePeerBusy);
-        socket.on("call_on_hold", handleCallOnHold);
-        socket.on("call_resumed", handleCallResumed);
+        socket.on("dropped_for_another_call", handleDroppedForAnother); // New listener
         socket.on("call_status", handleCallStatus);
         socket.on("call_delivered", handleCallDelivered);
         socket.on("video_upgrade_request", () => {
@@ -660,8 +658,7 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             socket.off("call_ended", handleCallEnded);
             socket.off("renegotiate", handleRenegotiate);
             socket.off("peer_is_busy", handlePeerBusy);
-            socket.off("call_on_hold", handleCallOnHold);
-            socket.off("call_resumed", handleCallResumed);
+            socket.off("dropped_for_another_call", handleDroppedForAnother);
             socket.off("call_status", handleCallStatus);
             socket.off("call_delivered", handleCallDelivered);
             socket.off("video_upgrade_request");
@@ -676,7 +673,7 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
 
     if (!activePeer) return null;
 
-    if (!incomingPayload.isOutgoing && !isCallAccepted && !heldPeer) {
+    if (!incomingPayload.isOutgoing && !isCallAccepted) {
         return (
             <div style={{ zIndex: 9999999, position: 'fixed', inset: 0 }} className="bg-[#0B0D12] flex flex-col items-center justify-between py-24 px-6 animate-in fade-in duration-500">
                 <div className="flex flex-col items-center mt-12">
@@ -747,15 +744,11 @@ const GlobalCallWrapper = ({ incomingPayload, clearCall }) => {
             waitingCall={waitingCall}
             onAcceptWaitingCall={handleAcceptWaitingCall}
             onRejectWaitingCall={handleRejectWaitingCall}
-            isMeOnHold={isMeOnHold}
-            heldPeer={heldPeer}
             isPipMode={isPipMode}
-            // 🔧 New audio device props
             availableAudioDevices={availableAudioDevices}
             activeAudioDevice={activeAudioDevice}
             onSelectAudioDevice={selectAudioDevice}
             onCycleAudioDevice={cycleAudioDevice}
-            // Legacy compat
             isSpeakerphone={isSpeakerphone}
             toggleSpeakerphone={cycleAudioDevice}
         />

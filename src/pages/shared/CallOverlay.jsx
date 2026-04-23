@@ -19,28 +19,22 @@ const DEVICE_META = {
 const getDeviceMeta = (type) => DEVICE_META[type] || DEVICE_META['earpiece'];
 
 // ─────────────────────────────────────────────────────────────
-// Audio Device Picker — bottom sheet style
+// Audio Device Picker
 // ─────────────────────────────────────────────────────────────
 const AudioDevicePicker = ({ devices, activeDevice, onSelect, onClose }) => (
     <div
-        className="absolute inset-0 z-[9999998] flex items-end justify-center pointer-events-auto"
+        className="absolute inset-0 z-9999998 flex items-end justify-center pointer-events-auto"
         onClick={onClose}
     >
-        {/* Backdrop */}
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-
-        {/* Sheet */}
         <div
             className="relative w-full max-w-sm mx-auto bg-[#1f2c33] rounded-t-3xl border-t border-white/10 shadow-2xl p-5 pb-8 animate-in slide-in-from-bottom-8 duration-300"
             onClick={(e) => e.stopPropagation()}
         >
-            {/* Handle bar */}
             <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5" />
-
             <p className="text-white/60 text-xs font-bold uppercase tracking-widest mb-4 text-center">
                 Audio Output
             </p>
-
             <div className="flex flex-col gap-2">
                 {devices.map((device) => {
                     const meta = getDeviceMeta(device.type);
@@ -69,18 +63,10 @@ const AudioDevicePicker = ({ devices, activeDevice, onSelect, onClose }) => (
                                 <p className={`font-semibold text-sm ${isActive ? 'text-white' : 'text-white/70'}`}>
                                     {device.name}
                                 </p>
-                                {device.type === 'earpiece' && (
-                                    <p className="text-white/30 text-xs">Phone speaker</p>
-                                )}
-                                {device.type === 'speaker' && (
-                                    <p className="text-white/30 text-xs">Loud speaker</p>
-                                )}
-                                {device.type === 'wired_headset' && (
-                                    <p className="text-white/30 text-xs">Wired headphones</p>
-                                )}
-                                {device.type === 'bluetooth' && (
-                                    <p className="text-white/30 text-xs">Wireless</p>
-                                )}
+                                {device.type === 'earpiece' && <p className="text-white/30 text-xs">Phone speaker</p>}
+                                {device.type === 'speaker' && <p className="text-white/30 text-xs">Loud speaker</p>}
+                                {device.type === 'wired_headset' && <p className="text-white/30 text-xs">Wired headphones</p>}
+                                {device.type === 'bluetooth' && <p className="text-white/30 text-xs">Wireless</p>}
                             </div>
                             {isActive && (
                                 <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
@@ -105,15 +91,8 @@ const CallOverlay = ({
     isCallAccepted, isOnline, callType, onRequestVideo, onAcceptVideo,
     onRejectVideo, videoUpgradeStatus, onFlipCamera, facingMode,
     remoteCallStatus, outgoingCallStatus, waitingCall, onAcceptWaitingCall, onRejectWaitingCall,
-    isPipMode,
-    // 🔧 New audio device props
-    availableAudioDevices = [],
-    activeAudioDevice = 'earpiece',
-    onSelectAudioDevice,
-    onCycleAudioDevice,
-    // Legacy compat
-    isSpeakerphone,
-    toggleSpeakerphone,
+    isPipMode, availableAudioDevices = [], activeAudioDevice = 'earpiece',
+    onSelectAudioDevice, onCycleAudioDevice, isSpeakerphone, toggleSpeakerphone,
 }) => {
     const { t } = useTranslation();
     const [isMuted, setIsMuted] = useState(false);
@@ -136,11 +115,8 @@ const CallOverlay = ({
     const pipDragRef = useRef(null);
     const isPipDragging = useRef(false);
 
-    // Current audio device display
     const activeDeviceMeta = getDeviceMeta(activeAudioDevice);
     const ActiveDeviceIcon = activeDeviceMeta.icon;
-
-    // Has more than 2 devices = show picker instead of cycle
     const hasMultipleDevices = availableAudioDevices.length > 2;
 
     const handleAudioButtonPress = useCallback((e) => {
@@ -149,13 +125,11 @@ const CallOverlay = ({
         if (hasMultipleDevices) {
             setShowAudioPicker(true);
         } else {
-            // Only 2 options (earpiece + speaker) — simple toggle
             if (onCycleAudioDevice) onCycleAudioDevice();
             else if (toggleSpeakerphone) toggleSpeakerphone();
         }
     }, [hasMultipleDevices, onCycleAudioDevice, toggleSpeakerphone]);
 
-    // ─────────────────────────────────────────────────────────────
     const resetActivityTimer = useCallback(() => {
         setControlsVisible(true);
         if (activityTimerRef.current) clearTimeout(activityTimerRef.current);
@@ -205,9 +179,6 @@ const CallOverlay = ({
     }
     if (remoteCallStatus === 'busy') statusText = t('call.busy');
 
-    // ─────────────────────────────────────────────────────────────
-    // DRAG HANDLERS
-    // ─────────────────────────────────────────────────────────────
     const createDragHandler = (positionState, setPositionState, dragRefElement, dragFlag) => (e) => {
         if (isPipMode) return;
         dragFlag.current = false;
@@ -255,11 +226,11 @@ const CallOverlay = ({
     };
 
     // ─────────────────────────────────────────────────────────────
-    // NATIVE PIP MODE — bare video only, no controls
+    // NATIVE PIP MODE
     // ─────────────────────────────────────────────────────────────
     if (isPipMode) {
         return (
-            <div className="fixed inset-0 z-[1000000] bg-black flex items-center justify-center overflow-hidden">
+            <div className="fixed inset-0 z-1000000 bg-black flex items-center justify-center overflow-hidden">
                 {callType === 'video' ? (
                     <video ref={pipRemoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
                 ) : (
@@ -270,7 +241,7 @@ const CallOverlay = ({
                                 : <User className="text-primary w-8 h-8" />
                             }
                         </div>
-                        <p className="text-white text-xs font-semibold truncate max-w-[80px] text-center">{peer?.name}</p>
+                        <p className="text-white text-xs font-semibold truncate max-w-20 text-center">{peer?.name}</p>
                         <p className="text-emerald-400 text-[10px] mt-1">{formatTime(timer)}</p>
                     </div>
                 )}
@@ -284,12 +255,11 @@ const CallOverlay = ({
     return (
         <>
             <div
-                className={`fixed inset-0 z-[1000000] bg-[#0b141a] flex flex-col animate-in fade-in duration-300 ${isMinimized ? 'hidden' : 'flex'}`}
+                className={`fixed inset-0 z-1000000 bg-[#0b141a] flex flex-col animate-in fade-in duration-300 ${isMinimized ? 'hidden' : 'flex'}`}
                 onMouseMove={resetActivityTimer}
                 onClick={resetActivityTimer}
                 onTouchStart={resetActivityTimer}
             >
-                {/* AUDIO DEVICE PICKER SHEET */}
                 {showAudioPicker && (
                     <AudioDevicePicker
                         devices={availableAudioDevices}
@@ -299,9 +269,8 @@ const CallOverlay = ({
                     />
                 )}
 
-                {/* VIDEO UPGRADE REQUEST MODAL */}
                 {videoUpgradeStatus === 'receiving_request' && (
-                    <div className="absolute inset-0 z-[9999999] bg-black/60 backdrop-blur-sm flex items-center justify-center pointer-events-auto">
+                    <div className="absolute inset-0 z-9999999 bg-black/60 backdrop-blur-sm flex items-center justify-center pointer-events-auto">
                         <div className="bg-[#1f2c33] border border-white/20 shadow-2xl p-6 rounded-3xl flex flex-col items-center animate-in zoom-in-95 max-w-xs w-[90%]">
                             <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mb-4 border border-blue-500/50 animate-pulse">
                                 <Video className="w-8 h-8 text-blue-400" />
@@ -318,13 +287,13 @@ const CallOverlay = ({
 
                 {/* INCOMING WAITING CALL POPUP */}
                 {waitingCall && (
-                    <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[9999999] bg-card border border-border shadow-2xl p-4 rounded-3xl flex items-center gap-4 animate-in slide-in-from-top-10 fade-in duration-300 pointer-events-auto max-w-sm w-[90%]">
+                    <div className="absolute top-20 left-1/2 -translate-x-1/2 z-9999999 bg-card border border-border shadow-2xl p-4 rounded-3xl flex items-center gap-4 animate-in slide-in-from-top-10 fade-in duration-300 pointer-events-auto max-w-sm w-[90%]">
                         <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden shrink-0 border border-primary/30">
                             {waitingCall.profilePicture ? <img src={waitingCall.profilePicture} className="w-full h-full object-cover" /> : <User className="text-primary w-6 h-6" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-foreground font-bold text-[15px] truncate">{waitingCall.callerName}</p>
-                            <p className="text-muted-foreground text-[12px] capitalize font-medium">{t('call.incoming_type', { type: waitingCall.callType })}</p>
+                            <p className="text-foreground font-bold text-[15px] truncate">{waitingCall.name || waitingCall.callerName}</p>
+                            <p className="text-muted-foreground text-[12px] capitalize font-medium">{t('call.incoming_type', { type: waitingCall.callType || 'Call' })}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                             <button onClick={(e) => { e.stopPropagation(); onRejectWaitingCall(); }} className="w-10 h-10 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center text-white shadow-md transition-transform active:scale-95">
@@ -355,22 +324,10 @@ const CallOverlay = ({
 
                 {/* TIMER */}
                 {isCallAccepted && (
-                    <div className="absolute top-5 sm:top-7 right-5 sm:right-7 z-[999999] pointer-events-none">
+                    <div className="absolute top-5 sm:top-7 right-5 sm:right-7 z-999999 pointer-events-none">
                         <div className="bg-black/40 backdrop-blur-md border border-white/10 px-4 py-1.5 rounded-full shadow-sm flex items-center gap-2">
-                            {remoteCallStatus === 'held' && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>}
-                            <span className={`text-white font-semibold text-sm tracking-widest ${remoteCallStatus === 'held' ? 'opacity-70' : ''}`}>{formatTime(timer)}</span>
+                            <span className="text-white font-semibold text-sm tracking-widest">{formatTime(timer)}</span>
                         </div>
-                    </div>
-                )}
-
-                {/* REMOTE ON HOLD */}
-                {remoteCallStatus === 'held' && (
-                    <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center">
-                        <div className="w-24 h-24 rounded-full bg-amber-500/20 border-2 border-amber-500 flex items-center justify-center mb-6 animate-pulse shadow-[0_0_30px_rgba(245,158,11,0.3)]">
-                            <Phone className="text-amber-500 w-10 h-10" />
-                        </div>
-                        <h2 className="text-white text-2xl font-bold mb-2 text-center px-4">{t('call.on_hold_title', { name: peer?.name })}</h2>
-                        <p className="text-white/60 text-sm">{t('call.on_hold_desc')}</p>
                     </div>
                 )}
 
@@ -378,7 +335,7 @@ const CallOverlay = ({
                 {callType === 'video' ? (
                     <div className="absolute inset-0 z-0 bg-black flex items-center justify-center overflow-hidden">
                         {isCallAccepted ? (
-                            <video ref={remoteVideoRef} autoPlay playsInline className={`w-full h-full object-cover transition-opacity duration-500 ${remoteCallStatus === 'held' ? 'opacity-0' : 'opacity-100'}`} />
+                            <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover transition-opacity duration-500 opacity-100" />
                         ) : (
                             <div className="flex flex-col items-center justify-center z-10 absolute inset-0 bg-black/60 backdrop-blur-md pointer-events-none">
                                 <div className="w-32 h-32 rounded-full bg-primary/20 border-2 border-white/10 flex items-center justify-center overflow-hidden shadow-2xl mb-6 animate-pulse">
@@ -389,13 +346,12 @@ const CallOverlay = ({
                             </div>
                         )}
 
-                        {/* DRAGGABLE LOCAL VIDEO */}
                         <div
                             ref={pipDragRef}
                             onMouseDown={handlePipDragStart}
                             onTouchStart={handlePipDragStart}
                             style={{ left: `${pipPosition.x}px`, top: `${pipPosition.y}px` }}
-                            className={`absolute w-28 h-40 md:w-36 md:h-48 rounded-xl border-2 border-white/20 shadow-2xl bg-black overflow-hidden z-40 cursor-move touch-none ${!isCallAccepted ? 'hidden' : ''} ${remoteCallStatus === 'held' ? 'opacity-50 blur-sm' : 'opacity-100'}`}
+                            className={`absolute w-28 h-40 md:w-36 md:h-48 rounded-xl border-2 border-white/20 shadow-2xl bg-black overflow-hidden z-40 cursor-move touch-none ${!isCallAccepted ? 'hidden' : ''} opacity-100`}
                         >
                             {isVideoMuted ? (
                                 <div className="w-full h-full flex items-center justify-center bg-gray-900 pointer-events-none"><VideoOff className="w-8 h-8 text-white/50" /></div>
@@ -414,7 +370,7 @@ const CallOverlay = ({
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center -mt-20 pointer-events-none z-10 relative">
-                        <div className={`w-40 h-40 md:w-56 md:h-56 rounded-full bg-primary/10 border-2 border-white/5 flex items-center justify-center overflow-hidden shadow-2xl mb-6 ${!isCallAccepted || remoteCallStatus === 'held' ? 'animate-pulse' : ''}`}>
+                        <div className={`w-40 h-40 md:w-56 md:h-56 rounded-full bg-primary/10 border-2 border-white/5 flex items-center justify-center overflow-hidden shadow-2xl mb-6 ${!isCallAccepted ? 'animate-pulse' : ''}`}>
                             {peer?.profilePicture ? <img src={peer.profilePicture} className="w-full h-full object-cover" /> : <User className="text-primary w-20 h-20" />}
                         </div>
                         <h2 className="text-white text-3xl font-bold mb-2">{peer?.name || t('call.unknown')}</h2>
@@ -426,10 +382,9 @@ const CallOverlay = ({
                 )}
 
                 {/* BOTTOM CONTROL BAR */}
-                <div className={`absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col items-center justify-end z-50 pointer-events-none transition-all duration-500 ease-in-out ${controlsVisible ? 'opacity-100 translate-y-0 h-48 md:h-56' : 'opacity-0 translate-y-full h-0'}`}>
+                <div className={`absolute bottom-0 left-0 w-full bg-linear-to-t from-black/90 via-black/50 to-transparent flex flex-col items-center justify-end z-50 pointer-events-none transition-all duration-500 ease-in-out ${controlsVisible ? 'opacity-100 translate-y-0 h-48 md:h-56' : 'opacity-0 translate-y-full h-0'}`}>
                     <div className="flex items-end justify-center gap-4 md:gap-6 px-4 pb-8 pointer-events-auto">
 
-                        {/* Video toggle or upgrade */}
                         {callType === 'video' ? (
                             <div className="flex flex-col items-center gap-1">
                                 <button onClick={(e) => { e.stopPropagation(); setIsVideoMuted(!isVideoMuted); resetActivityTimer(); }} className={`p-4 rounded-full transition-all shadow-lg ${isVideoMuted ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'}`}>
@@ -446,7 +401,6 @@ const CallOverlay = ({
                             </div>
                         )}
 
-                        {/* 🔧 AUDIO DEVICE BUTTON — shows current device icon, opens picker if 3+ devices */}
                         <div className="flex flex-col items-center gap-1">
                             <button
                                 onClick={handleAudioButtonPress}
@@ -468,7 +422,6 @@ const CallOverlay = ({
                                         'text-white'
                                     }
                                 />
-                                {/* Dot indicator when non-default device active */}
                                 {(activeAudioDevice === 'wired_headset' || activeAudioDevice === 'bluetooth') && (
                                     <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-400 border border-[#0b141a]" />
                                 )}
@@ -478,12 +431,10 @@ const CallOverlay = ({
                             </span>
                         </div>
 
-                        {/* HANGUP */}
                         <button onClick={(e) => { e.stopPropagation(); onHangup(); }} className="p-5 md:p-6 bg-rose-500 hover:bg-rose-600 rounded-full text-white transition-transform active:scale-90 shadow-xl border border-rose-400 mx-1">
                             <PhoneOff size={28} fill="currentColor" />
                         </button>
 
-                        {/* MUTE */}
                         <div className="flex flex-col items-center gap-1">
                             <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); resetActivityTimer(); }} className={`p-4 rounded-full transition-all shadow-lg ${isMuted ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'}`}>
                                 {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
@@ -494,31 +445,24 @@ const CallOverlay = ({
                 </div>
             </div>
 
-            {/* ─────────────────────────────────────────────────────────────
-                MINIMIZED WIDGET
-            ───────────────────────────────────────────────────────────── */}
+            {/* MINIMIZED WIDGET */}
             {isMinimized && !isPipMode && (
                 <div
                     ref={minDragRef}
                     onMouseDown={handleMinDragStart}
                     onTouchStart={handleMinDragStart}
                     style={{ left: `${minPosition.x}px`, top: `${minPosition.y}px` }}
-                    className="fixed z-[1000000] w-36 bg-[#1f2c33]/95 backdrop-blur-md shadow-2xl rounded-2xl p-2 border border-white/10 cursor-move animate-in zoom-in-95 flex flex-col gap-2 touch-none"
+                    className="fixed z-1000000 w-36 bg-[#1f2c33]/95 backdrop-blur-md shadow-2xl rounded-2xl p-2 border border-white/10 cursor-move animate-in zoom-in-95 flex flex-col gap-2 touch-none"
                 >
-                    <div onClick={handleMaximize} className="w-full aspect-[3/4] bg-black rounded-xl overflow-hidden relative cursor-pointer border border-white/5 flex items-center justify-center">
+                    <div onClick={handleMaximize} className="w-full aspect-3/4 bg-black rounded-xl overflow-hidden relative cursor-pointer border border-white/5 flex items-center justify-center">
                         {callType === 'video' && isCallAccepted && remoteCallStatus === 'active' ? (
                             <video ref={pipRemoteVideoRef} autoPlay playsInline className="w-full h-full object-cover pointer-events-none" />
                         ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center bg-gray-800 pointer-events-none">
                                 {peer?.profilePicture ? (
-                                    <img src={peer.profilePicture} className={`w-full h-full object-cover opacity-80 ${remoteCallStatus === 'held' ? 'blur-sm' : ''}`} />
+                                    <img src={peer.profilePicture} className="w-full h-full object-cover opacity-80" />
                                 ) : (
                                     <User className="text-white/50 w-12 h-12" />
-                                )}
-                                {remoteCallStatus === 'held' && (
-                                    <span className="absolute text-amber-500 font-bold text-xs bg-black/60 px-2 py-1 rounded">
-                                        {t('call.on_hold_badge')}
-                                    </span>
                                 )}
                             </div>
                         )}
