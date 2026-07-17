@@ -143,7 +143,7 @@ const AdminNotifications = () => {
                         <Button variant="ghost" size="sm" onClick={clearAll} className="text-destructive hover:bg-destructive/10 hover:text-destructive gap-1.5 sm:gap-2 flex-1 md:flex-none text-xs sm:text-sm h-8 sm:h-9">
                             <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {t('admin_notifications.btn_clear_all')}
                         </Button>
-                    </div>
+                    </div> 
                 )}
             </div>
 
