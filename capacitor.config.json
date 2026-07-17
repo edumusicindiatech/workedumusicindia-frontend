@@ -1,0 +1,20 @@
+{
+  "appId": "com.workedumusic.app",
+  "appName": "WorkEduMusic India",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    },
+    "CapacitorCookies": {
+      "enabled": true
+    },
+    "CapacitorUpdater": {
+      "autoUpdate": false
+    }
+  }
+}

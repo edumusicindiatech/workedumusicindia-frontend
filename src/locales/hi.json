@@ -1,0 +1,2199 @@
+{
+    "layout": {
+        "admin_title": "एडमिन पैनल",
+        "employee_title": "कर्मचारी पोर्टल"
+    },
+    "common": {
+        "loading": "लोड हो रहा है...",
+        "error": "कुछ गलत हो गया"
+    },
+    "sidebar": {
+        "brand": "WorkEduMusic Admin",
+        "dashboard": "डैशबोर्ड",
+        "roster": "कर्मचारी",
+        "attendance": "उपस्थिति",
+        "learning_hub": "ट्रेनिंग वॉल्ट",
+        "progress": "प्रगति",
+        "leaderboard": "लीडरबोर्ड",
+        "reports": "रिपोर्ट",
+        "media": "मीडिया",
+        "media_gallery": "मीडिया गैलरी",
+        "leave": "छुट्टी के अनुरोध",
+        "alerts": "अलर्ट",
+        "chat_hub": "चैट हब",
+        "broadcast": "प्रसारण",
+        "theme": "थीम बदलें",
+        "profile": "मेरी प्रोफ़ाइल",
+        "settings": "सेटिंग्स",
+        "logout": "लॉग आउट",
+        "dark_mode": "डार्क मोड",
+        "light_mode": "लाइट मोड",
+        "incoming_call": "इनकमिंग {{type}} कॉल...",
+        "admin_fallback_name": "एडमिन उपयोगकर्ता",
+        "new_alert_toast": "नया अलर्ट प्राप्त हुआ",
+        "download_app": "ऐप डाउनलोड करें",
+        "download_starting": "ऐप डाउनलोड हो रहा है...",
+        "loading": "लोड हो रहा है...",
+        "saving": "सहेजा जा रहा है...",
+        "success": "सफलता!",
+        "error": "एक त्रुटि हुई।"
+    },
+    "navbar": {
+        "brand": "WorkEduMusic",
+        "dashboard": "डैशबोर्ड",
+        "assignments": "असाइनमेंट",
+        "tasks": "कार्य",
+        "media": "मीडिया",
+        "learning_hub": "लर्निंग हब",
+        "leaderboard": "लीडरबोर्ड",
+        "report": "दैनिक रिपोर्ट",
+        "help": "सहायता",
+        "notifications": "सूचनाएं",
+        "chat": "चैट",
+        "profile": "प्रोफ़ाइल",
+        "dark_mode": "डार्क मोड",
+        "light_mode": "लाइट मोड",
+        "settings": "सेटिंग्स",
+        "logout": "लॉग आउट",
+        "employee": "कर्मचारी",
+        "training_vault": "ट्रेनिंग वॉल्ट",
+        "incoming_call": "इनकमिंग {{type}} कॉल...",
+        "incoming_voice": "इनकमिंग वॉयस कॉल...",
+        "incoming_video": "इनकमिंग वीडियो कॉल...",
+        "download_app": "ऐप डाउनलोड करें",
+        "download_starting": "ऐप डाउनलोड हो रहा है..."
+    },
+    "toast": {
+        "call_ended": "कॉल समाप्त",
+        "connecting": "कनेक्ट हो रहा है...",
+        "missed_call": "{{name}} से मिस्ड कॉल",
+        "camera_access_failed": "कैमरा एक्सेस विफल। वॉयस कॉल पर स्विच कर रहे हैं।",
+        "mic_denied": "माइक्रोफ़ोन एक्सेस अस्वीकृत।",
+        "camera_switch_failed": "कैमरा स्विच नहीं किया जा सका",
+        "call_connected": "कॉल कनेक्ट हो गई",
+        "user_busy": "उपयोगकर्ता किसी अन्य कॉल पर व्यस्त है।",
+        "call_ended_restoring": "वर्तमान कॉल समाप्त। होल्ड की गई कॉल को बहाल कर रहे हैं...",
+        "ended_held_call": "{{name}} ने होल्ड की गई कॉल समाप्त कर दी।",
+        "resumed_call": "{{name}} के साथ कॉल फिर से शुरू की",
+        "requesting_video": "वीडियो स्विच का अनुरोध कर रहे हैं...",
+        "camera_access_error": "कैमरे तक नहीं पहुंचा जा सका।",
+        "video_rejected": "वीडियो कॉल अनुरोध अस्वीकृत कर दिया गया",
+        "video_accepted": "वीडियो कॉल अनुरोध स्वीकार कर लिया गया",
+        "new_chat": "नया चैट संदेश प्राप्त हुआ",
+        "updating_group_name": "समूह का नाम अपडेट हो रहा है...",
+        "group_name_updated": "समूह का नाम अपडेट हो गया",
+        "failed_update_group_name": "समूह का नाम अपडेट करने में विफल",
+        "uploading_group_icon": "नया समूह आइकन अपलोड हो रहा है...",
+        "group_icon_updated": "समूह आइकन अपडेट हो गया",
+        "failed_upload_group_icon": "समूह आइकन अपलोड करने में विफल",
+        "removing_group_icon": "समूह आइकन हटाया जा रहा है...",
+        "group_icon_removed": "समूह आइकन हटा दिया गया",
+        "failed_remove_group_icon": "समूह आइकन हटाने में विफल",
+        "action_completed": "कार्रवाई सफलतापूर्वक पूरी हुई",
+        "action_failed": "कार्रवाई करने में विफल",
+        "msg_send_fail": "संदेश भेजने में विफल। कनेक्शन की जाँच करें।",
+        "max_items": "एक बार में अधिकतम {{maxCount}} आइटम की अनुमति है।",
+        "max_size": "कुल आकार {{maxSize}}MB से अधिक नहीं हो सकता।",
+        "upload_fail": "अपलोड प्रक्रिया विफल रही।",
+        "downloading": "डाउनलोड हो रहा है...",
+        "download_success": "सफलतापूर्वक डाउनलोड किया गया!",
+        "download_fail": "डाउनलोड विफल रहा।",
+        "msg_deleted": "संदेश हटा दिया गया",
+        "del_everyone": "सभी के लिए हटा दिया गया",
+        "del_me": "आपके लिए हटा दिया गया",
+        "del_fail": "हटाने में विफल",
+        "forwarding": "अग्रेषित किया जा रहा है...",
+        "forward_success": "सफलतापूर्वक अग्रेषित किया गया",
+        "forward_fail": "अग्रेषित करने में विफल",
+        "clear_success": "चैट दृष्टिगत रूप से साफ़ कर दी गई।",
+        "clear_fail": "चैट साफ़ करने में विफल",
+        "copied": "कॉपी किया गया",
+        "new_msg_group": "{{name}} में नया संदेश",
+        "new_msg": "नया संदेश प्राप्त हुआ",
+        "added_to_group": "आपको समूह में जोड़ा गया: {{name}}",
+        "removed_from_group": "अब आप {{name}} के भागीदार नहीं हैं",
+        "load_contacts_failed": "संपर्क सूची लोड नहीं की जा सकी।",
+        "group_name_req": "समूह का नाम आवश्यक है",
+        "select_member_req": "कम से कम 1 सदस्य चुनें",
+        "creating_group": "समूह बनाया जा रहा है...",
+        "group_created": "समूह सफलतापूर्वक बन गया!",
+        "group_create_failed": "समूह बनाने में विफल",
+        "download_starting": "डाउनलोड शुरू हो रहा है..."
+    },
+    "add_user_modal": {
+        "title_employee": "नया कर्मचारी जोड़ें",
+        "title_admin": "नया एडमिन जोड़ें",
+        "error_mandatory": "कृपया सभी अनिवार्य फ़ील्ड भरें (नाम, ईमेल, मोबाइल)।",
+        "error_admin_req": "एडमिन खातों के लिए एडमिन आईडी और पासवर्ड आवश्यक हैं।",
+        "creating_admin": "एडमिन खाता बनाया जा रहा है...",
+        "creating_employee": "कर्मचारी खाता बनाया जा रहा है...",
+        "success_admin": "एडमिन सफलतापूर्वक बनाया गया!",
+        "success_employee": "कर्मचारी सफलतापूर्वक बनाया गया!",
+        "label_name": "पूरा नाम",
+        "placeholder_name": "जैसे: राहुल शर्मा",
+        "label_email": "ईमेल पता",
+        "placeholder_email": "rahul@example.com",
+        "label_mobile": "मोबाइल नंबर",
+        "placeholder_mobile": "94234XXXXX",
+        "label_level": "खाता स्तर",
+        "level_employee": "कर्मचारी",
+        "level_admin": "एडमिन",
+        "label_designation": "पद (Designation)",
+        "optional": "(वैकल्पिक)",
+        "placeholder_designation": "शिक्षक, आदि",
+        "label_location": "स्थान",
+        "placeholder_location": "जैसे: जिला ए",
+        "label_admin_id": "एडमिन आईडी",
+        "placeholder_admin_id": "ADM-001",
+        "label_password": "पासवर्ड",
+        "placeholder_password": "••••••••",
+        "btn_cancel": "रद्द करें",
+        "btn_saving": "सहेजा जा रहा है...",
+        "btn_create_admin": "एडमिन बनाएं",
+        "btn_create_employee": "कर्मचारी बनाएं"
+    },
+    "attendance_modal": {
+        "records_for": "{{month}} के रिकॉर्ड",
+        "select_option_msg": "रिकॉर्ड देखने के लिए एक श्रेणी चुनें",
+        "overview_msg": "उपस्थिति सारांश",
+        "daily_details_title": "शिफ्ट सारांश",
+        "export_excel": "एक्सेल डाउनलोड करें",
+        "tap_to_view": "देखने के लिए टैप करें",
+        "no_records_assigned": "कोई रिकॉर्ड असाइन नहीं किया गया",
+        "summary_metrics": "सारांश मेट्रिक्स",
+        "daily_breakdown": "दैनिक विवरण",
+        "approved_leave": "स्वीकृत अवकाश",
+        "reason_provided": "प्रदान किया गया कारण",
+        "admin_approval_note": "व्यवस्थापक स्वीकृति नोट",
+        "report_tag": "रिपोर्ट",
+        "teachers_note": "लॉग नोट्स",
+        "no_note_provided": "इस शिफ्ट के लिए कोई नोट नहीं दिया गया है।",
+        "status": {
+            "present": "उपस्थित",
+            "late": "देर से",
+            "absent": "अनुपस्थित",
+            "events": "इवेंट्स",
+            "holidays": "छुट्टियां",
+            "event": "इवेंट",
+            "holiday": "छुट्टी"
+        },
+        "excel": {
+            "generating": "एक्सेल जनरेट हो रहा है...",
+            "header_emp_name": "कर्मचारी का नाम",
+            "header_month": "महीना",
+            "header_school": "स्कूल",
+            "header_category": "श्रेणी",
+            "header_date": "दिनांक",
+            "header_status": "स्थिति",
+            "header_in": "चेक-इन",
+            "header_out": "चेक-आउट",
+            "header_note": "नोट",
+            "header_report": "रिपोर्ट",
+            "general_leaves": "सामान्य अवकाश",
+            "on_leave": "अवकाश पर",
+            "no_records": "निर्यात करने के लिए कोई रिकॉर्ड नहीं मिला।",
+            "summary_title": "विवरण",
+            "summary_count": "कुल संख्या",
+            "total_present": "कुल उपस्थित",
+            "total_late": "कुल लेट",
+            "total_absent": "कुल अनुपस्थित",
+            "total_event": "कुल इवेंट",
+            "total_holiday": "कुल छुट्टियां",
+            "total_approved_leaves": "कुल स्वीकृत अवकाश",
+            "success": "एक्सेल सफलतापूर्वक डाउनलोड हो गया!",
+            "error": "एक्सेल जनरेट करते समय त्रुटि आई।"
+        }
+    },
+    "admin_settings_modal": {
+        "title": "ग्लोबल सेटिंग्स",
+        "language_label": "सिस्टम भाषा",
+        "language_help": "यह एडमिन डैशबोर्ड इंटरफेस की भाषा बदलता है।",
+        "admin_notif_section": "एडमिन सूचनाएं",
+        "email_notif_label": "ईमेल सूचनाएं",
+        "admin_notif_help": "दैनिक सारांश और महत्वपूर्ण अलर्ट प्राप्त करें",
+        "admin_notif_locked": "लॉक: केवल सुपर एडमिन ही इसे बदल सकते हैं।",
+        "emp_notif_section": "कर्मचारी सूचनाएं",
+        "emp_notif_help": "कर्मचारियों को ईमेल के माध्यम से अपडेट और कार्य प्राप्त होते हैं",
+        "cancel": "रद्द करें",
+        "save_changes": "बदलाव सहेजें",
+        "saving": "सहेजा जा रहा है...",
+        "success_msg": "प्राथमिकताएं सफलतापूर्वक अपडेट की गईं!",
+        "error_msg": "सेटिंग्स सहेजने में विफल।"
+    },
+    "assign_school_modal": {
+        "title": "नया स्कूल सौंपें",
+        "school_name": "स्कूल का नाम",
+        "school_name_placeholder": "जैसे: लिंकन हाई स्कूल",
+        "school_address": "स्कूल का पता / स्थान",
+        "school_address_placeholder": "123 एजुकेशन बुलेवार्ड",
+        "assignment_category": "असाइनमेंट श्रेणी",
+        "junior_band": "जूनियर बैंड",
+        "senior_band": "सीनियर बैंड",
+        "timeline": "समय सीमा",
+        "daily_shift": "दैनिक शिफ्ट",
+        "to": "से",
+        "working_days": "कार्य दिवस",
+        "geofence_title": "जियोफेंस निर्देशांक (GPS)",
+        "geofence_desc": "GPS चेक-इन के लिए आवश्यक। सीधे मैप्स से निर्देशांक कॉपी करें।",
+        "open_maps": "गूगल मैप्स खोलें",
+        "latitude": "अक्षांश (Latitude)",
+        "longitude": "देशांतर (Longitude)",
+        "cancel": "रद्द करें",
+        "saving": "सहेजा जा रहा है...",
+        "save_assignment": "असाइनमेंट सहेजें",
+        "error_required": "कृपया GPS निर्देशांक सहित सभी आवश्यक फ़ील्ड भरें।",
+        "toast_assigning": "स्कूल सौंपा जा रहा है और सूचनाएं भेजी जा रही हैं...",
+        "toast_success": "स्कूल सफलतापूर्वक सौंप दिया गया!",
+        "toast_error": "स्कूल सौंपने में विफल।",
+        "days": {
+            "Mon": "सोम",
+            "Tue": "मंगल",
+            "Wed": "बुध",
+            "Thu": "गुरु",
+            "Fri": "शुक्र",
+            "Sat": "शनि",
+            "Sun": "रवि"
+        }
+    },
+    "assign_school": {
+        "title": "नया स्कूल सौंपें",
+        "school_name": "स्कूल का नाम",
+        "school_name_placeholder": "जैसे: लिंकन हाई स्कूल",
+        "address": "स्कूल का पता / स्थान",
+        "address_placeholder": "123 एजुकेशन बुलेवार्ड",
+        "category": "असाइनमेंट श्रेणी",
+        "junior_band": "जूनियर बैंड",
+        "senior_band": "सीनियर बैंड",
+        "timeline": "समय सीमा",
+        "daily_shift": "दैनिक शिफ्ट",
+        "to": "से",
+        "working_days": "कार्य दिवस",
+        "geofence_title": "जियोफेंस निर्देशांक (GPS)",
+        "geofence_desc": "जीपीएस चेक-इन के लिए आवश्यक। सीधे मैप्स से निर्देशांक कॉपी करें।",
+        "open_maps": "गूगल मैप्स खोलें",
+        "latitude": "अक्षांश (Latitude)",
+        "longitude": "देशांतर (Longitude)",
+        "cancel": "रद्द करें",
+        "saving": "सहेजा जा रहा है...",
+        "save_btn": "असाइनमेंट सहेजें",
+        "error_validation": "कृपया जीपीएस निर्देशांक सहित सभी आवश्यक फ़ील्ड भरें।",
+        "toast_loading": "स्कूल सौंपा जा रहा है और सूचनाएं भेजी जा रही हैं...",
+        "toast_success": "स्कूल सफलतापूर्वक सौंप दिया गया!",
+        "toast_error": "स्कूल सौंपने में विफल।",
+        "days": {
+            "Mon": "सोम",
+            "Tue": "मंगल",
+            "Wed": "बुध",
+            "Thu": "गुरु",
+            "Fri": "शुक्र",
+            "Sat": "शनि",
+            "Sun": "रवि"
+        }
+    },
+    "assign_task": {
+        "title": "वैकल्पिक कार्य बनाएं",
+        "school_name": "लक्ष्य स्कूल का नाम",
+        "school_name_placeholder": "जैसे: लिंकन हाई स्कूल",
+        "address": "स्कूल का पता / स्थान",
+        "address_placeholder": "जैसे: 123 एजुकेशन बुलेवार्ड, सुल्तानपुर",
+        "objective": "प्राथमिक कार्य / उद्देश्य",
+        "objective_placeholder": "कर्मचारी को यहाँ क्या करना है?",
+        "category": "कार्य श्रेणी",
+        "junior_band": "जूनियर बैंड",
+        "senior_band": "सीनियर बैंड",
+        "timeline": "समय सीमा",
+        "shift": "दैनिक शिफ्ट / समय",
+        "to": "से",
+        "working_days": "कार्य दिवस",
+        "geofence_title": "जियोफेंस निर्देशांक (GPS)",
+        "geofence_desc": "GPS चेक-इन के लिए आवश्यक। मैप्स से निर्देशांक कॉपी करें।",
+        "open_maps": "गूगल मैप्स खोलें",
+        "latitude": "अक्षांश (Latitude)",
+        "longitude": "देशांतर (Longitude)",
+        "cancel": "रद्द करें",
+        "assigning": "सौंपा जा रहा है...",
+        "save_task": "कार्य सहेजें",
+        "error_fields": "कृपया उद्देश्य और स्कूल का नाम भरें।",
+        "toast_loading": "कार्य सौंपा जा रहा है और कर्मचारी को सूचित किया जा रहा है...",
+        "toast_success": "कार्य सफलतापूर्वक सौंपा गया!",
+        "toast_error": "कार्य सौंपने में विफल।",
+        "days": {
+            "Mon": "सोम",
+            "Tue": "मंगल",
+            "Wed": "बुध",
+            "Thu": "गुरु",
+            "Fri": "शुक्र",
+            "Sat": "शनि",
+            "Sun": "रवि"
+        }
+    },
+    "delete_employee": {
+        "title": "स्थायी रूप से हटाएं?",
+        "description": "क्या आप वाकई <1>{{name}}</1> को हटाना चाहते हैं? यह उनके सभी असाइनमेंट और उपस्थिति इतिहास को हटा देगा। इस क्रिया को वापस नहीं लिया जा सकता।",
+        "confirm": "हटाने की पुष्टि करें",
+        "cancel": "कर्मचारी को रखें",
+        "deleting": "हटाया जा रहा है...",
+        "toast_loading": "{{name}} को हटाया जा रहा है...",
+        "toast_error": "कर्मचारी को हटाने में विफल।"
+    },
+    "edit_employee_modal": {
+        "title": "कर्मचारी संपादित करें",
+        "full_name": "पूरा नाम",
+        "email": "ईमेल पता",
+        "phone": "फ़ोन नंबर",
+        "location_zone": "ज़ोन",
+        "zone_placeholder": "ज़ोन दर्ज करें",
+        "role": "अकाउंट की भूमिका",
+        "password_optional": "नया पासवर्ड (वैकल्पिक)",
+        "password_placeholder": "वर्तमान पासवर्ड रखने के लिए खाली छोड़ें",
+        "cancel": "रद्द करें",
+        "saving": "सेव हो रहा है...",
+        "save_changes": "बदलाव सेव करें",
+        "success_msg": "कर्मचारी विवरण सफलतापूर्वक अपडेट किया गया",
+        "error_msg": "कर्मचारी को अपडेट करने में विफल"
+    },
+    "roles": {
+        "employee": "कर्मचारी",
+        "admin": "एडमिन"
+    },
+    "issue_warning": {
+        "title": "चेतावनी जारी करें",
+        "subtitle": "इस कर्मचारी के लिए एक औपचारिक चेतावनी दर्ज करें।",
+        "level_label": "चेतावनी का स्तर",
+        "reason_label": "कारण / विवरण",
+        "reason_placeholder": "इस चेतावनी के लिए विस्तृत संदर्भ प्रदान करें...",
+        "warning_suffix": "चेतावनी",
+        "verbal": "मौखिक",
+        "written": "लिखित",
+        "final": "अंतिम",
+        "cancel": "रद्द करें",
+        "submit": "चेतावनी जारी करें",
+        "issuing": "चेतावनी जारी की जा रही है...",
+        "error_validation": "कृपया चेतावनी के लिए एक कारण प्रदान करें।",
+        "toast_success": "चेतावनी सफलतापूर्वक जारी की गई।",
+        "toast_error": "चेतावनी जारी करने में विफल।"
+    },
+    "manage_assigned_school": {
+        "unknown_school": "अज्ञात स्कूल",
+        "holiday_btn": "छुट्टियाँ",
+        "no_address": "कोई पता नहीं दिया गया",
+        "category": "श्रेणी",
+        "status": "स्थिति",
+        "active": "सक्रिय",
+        "start_date": "आरंभ तिथि",
+        "school_name_label": "विद्यालय का नाम",
+        "address_label": "विद्यालय का पता",
+        "geofence_label": "जियोफेंस निर्देशांक",
+        "longitude_label": "देशांतर",
+        "latitude_label": "अक्षांश",
+        "end_date": "समाप्ति तिथि",
+        "end_date_opt": "समाप्ति तिथि (वैकल्पिक)",
+        "not_set": "निर्धारित नहीं",
+        "ongoing": "जारी",
+        "timings": "समय",
+        "start_time": "आरंभ समय",
+        "end_time": "समाप्ति समय",
+        "days": "दिन",
+        "allowed_days": "अनुमत दिन",
+        "revoke_btn": "रद्द करें",
+        "edit_btn": "संपादित करें",
+        "cancel_edit": "संपादन रद्द करें",
+        "save_changes": "बदलाव सहेजें",
+        "updating_toast": "असाइनमेंट अपडेट किया जा रहा है...",
+        "update_success": "असाइनमेंट सफलतापूर्वक अपडेट किया गया!",
+        "update_error": "अपडेट करने में विफल।",
+        "revoking_toast": "असाइनमेंट वापस लिया जा रहा है...",
+        "revoke_success": "असाइनमेंट वापस ले लिया गया।",
+        "revoke_error": "वापस लेने में विफल।",
+        "delete_title": "असाइनमेंट रद्द करें?",
+        "delete_desc": "क्या आप वाकई इस कर्मचारी को <1>{{name}}</1> से हटाना चाहते हैं? उन्हें तुरंत सूचित कर दिया जाएगा।",
+        "cancel": "रद्द करें",
+        "confirm_revoke": "हाँ, रद्द करें",
+        "junior_band": "जूनियर बैंड",
+        "senior_band": "सीनियर बैंड",
+        "days_short": {
+            "Mon": "सोम",
+            "Tue": "मंगल",
+            "Wed": "बुध",
+            "Thu": "गुरु",
+            "Fri": "शुक्र",
+            "Sat": "शनि",
+            "Sun": "रवि"
+        }
+    },
+    "manage_task": {
+        "unknown_school": "अज्ञात स्कूल",
+        "no_address": "कोई पता नहीं दिया गया",
+        "rejection_reason": "अस्वीकृति का कारण:",
+        "primary_objective": "प्राथमिक उद्देश्य",
+        "primary_objective_label": "प्राथमिक कार्य / उद्देश्य",
+        "category": "श्रेणी",
+        "task_category": "कार्य श्रेणी",
+        "status": "स्थिति",
+        "start_date": "आरंभ तिथि",
+        "end_date": "समाप्ति तिथि",
+        "end_date_opt": "समाप्ति तिथि (वैकल्पिक)",
+        "not_set": "निर्धारित नहीं",
+        "ongoing": "जारी",
+        "timings": "समय",
+        "start_time": "आरंभ समय",
+        "end_time": "समाप्ति समय",
+        "days": "दिन",
+        "allowed_days": "अनुमत दिन",
+        "task_placeholder": "कार्य",
+        "revoke_btn": "कार्य वापस लें",
+        "edit_btn": "विवरण संपादित करें",
+        "cancel_edit": "संपादन रद्द करें",
+        "save_changes": "बदलाव सहेजें",
+        "updating_toast": "कार्य अपडेट किया जा रहा है...",
+        "update_success": "कार्य सफलतापूर्वक अपडेट किया गया!",
+        "update_error": "कार्य अपडेट करने में विफल।",
+        "revoking_toast": "कार्य वापस लिया जा रहा है...",
+        "revoke_success": "कार्य सफलतापूर्वक वापस ले लिया गया!",
+        "revoke_error": "कार्य वापस लेने में विफल।",
+        "delete_title": "कार्य वापस लें?",
+        "delete_desc": "क्या आप वाकई <1>{{name}}</1> से इस कार्य को स्थायी रूप से हटाना चाहते हैं? कर्मचारी को तुरंत सूचित कर दिया जाएगा।",
+        "confirm_revoke": "हाँ, वापस लें",
+        "cancel": "रद्द करें",
+        "junior_band": "जूनियर बैंड",
+        "senior_band": "सीनियर बैंड"
+    },
+    "absent_modal": {
+        "title": "अनुपस्थित चिह्नित करें",
+        "entire_day": "पूरा कार्य दिवस",
+        "reason_label": "अनुपस्थिति का कारण",
+        "optional": "(वैकल्फिक)",
+        "placeholder": "बीमारी की छुट्टी, आपातकाल, स्कूल बंद है...",
+        "cancel": "रद्द करें",
+        "confirm": "अनुपस्थिति की पुष्टि करें",
+        "required": "(आवश्यक)"
+    },
+    "add_event_modal": {
+        "title": "नया इवेंट लॉग करें",
+        "from_date": "प्रारंभ तिथि",
+        "to_date": "समाप्ति तिथि",
+        "optional": "(वैकल्पिक)",
+        "start_time": "प्रारंभ समय",
+        "end_time": "समाप्ति समय",
+        "description_label": "इवेंट विवरण",
+        "description_placeholder": "आगामी इवेंट, लक्ष्यों या आवश्यकताओं का वर्णन करें...",
+        "cancel": "रद्द करें",
+        "save_event": "इवेंट सहेजें"
+    },
+    "attendance_details": {
+        "daily_record_title": "दैनिक रिकॉर्ड विवरण",
+        "viewing_details": "{{date}} के विवरण देख रहे हैं",
+        "select_category_msg": "बैंड श्रेणी चुनें",
+        "select_school_msg": "रिकॉर्ड देखने के लिए स्कूल चुनें",
+        "tap_category": "श्रेणी चुनने के लिए टैप करें",
+        "no_schools": "इस महीने किसी भी स्कूल का दौरा नहीं किया गया।",
+        "junior_band": "जूनियर बैंड",
+        "senior_band": "सीनियर बैंड",
+        "records_count": "रिकॉर्ड्स",
+        "log_history": "लॉग इतिहास",
+        "report_tag": "रिपोर्ट",
+        "no_records": "कोई दैनिक रिकॉर्ड नहीं मिला।",
+        "time_in": "चेक-इन",
+        "time_out": "चेक-आउट",
+        "teachers_note": "शिक्षक का नोट",
+        "no_note_provided": "इस तारीख के लिए कोई अतिरिक्त नोट या कारण नहीं दिया गया है।",
+        "daily_report": "दैनिक रिपोर्ट",
+        "export_error": "इस महीने निर्यात करने के लिए कोई दैनिक रिकॉर्ड नहीं मिला।",
+        "export_success": "एक्सेल रिपोर्ट डाउनलोड हो गई!",
+        "export_btn": "एक्सेल निर्यात करें",
+        "close_btn": "बंद करें",
+        "statuses": {
+            "present": "उपस्थित",
+            "late": "देरी",
+            "absent": "अनुपस्थित",
+            "event": "इवेंट",
+            "holiday": "छुट्टी",
+            "media": "मीडिया"
+        },
+        "excel_headers": {
+            "month": "महीना",
+            "school": "स्कूल का नाम",
+            "category": "श्रेणी",
+            "address": "पता",
+            "date": "तारीख",
+            "in": "चेक-इन",
+            "out": "चेक-आउट",
+            "status": "स्थिति",
+            "note": "शिक्षक नोट"
+        }
+    },
+    "change_password_modal": {
+        "title": "पासवर्ड बदलें",
+        "subtitle": "अपना खाता सुरक्षित करें",
+        "error_mismatch": "नए पासवर्ड मेल नहीं खाते हैं।",
+        "error_length": "पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।",
+        "label_new": "नया पासवर्ड",
+        "label_confirm": "नए पासवर्ड की पुष्टि करें",
+        "hide": "पासवर्ड छिपाएं",
+        "show": "पासवर्ड दिखाएं",
+        "cancel": "रद्द करें",
+        "update": "पासवर्ड अपडेट करें"
+    },
+    "check_in_modal": {
+        "title": "चेक इन",
+        "late_reason_label": "आप देर से क्यों आ रहे हैं?",
+        "required": "(आवश्यक)",
+        "late_reason_placeholder": "ट्रैफिक, वाहन की समस्या, पिछली स्टॉप देरी...",
+        "event_note_label": "इवेंट नोट",
+        "optional": "(वैकल्पिक)",
+        "event_note_placeholder": "क्या आज स्कूल में कोई विशेष कार्यक्रम हो रहा है?",
+        "cancel": "रद्द करें",
+        "confirm": "चेक इन की पुष्टि करें",
+        "error_late_reason": "कृपया देर से आने का कारण बताएं।"
+    },
+    "check_out_modal": {
+        "title": "चेक आउट",
+        "overtime_alert": "आप {{count}} मिनट ओवरटाइम में हैं।",
+        "overtime_reason_label": "कृपया विस्तारित ठहराव के लिए एक वैकल्पिक कारण प्रदान करें।",
+        "overtime_placeholder": "मीटिंग लंबी चली, अतिरिक्त छात्र, देरी से शुरुआत...",
+        "confirm_msg": "क्या आप वाकई इस विज़िट को पूरा करना और चेक आउट करना चाहते हैं?",
+        "cancel": "रद्द करें",
+        "confirm": "चेक आउट की पुष्टि करें"
+    },
+    "employee_settings": {
+        "title": "सेटिंग्स",
+        "language_label": "सिस्टम भाषा",
+        "language_help": "वह भाषा चुनें जिसमें आप डैशबोर्ड देखना चाहते हैं।",
+        "notifications_section": "सूचना प्राथमिकताएं",
+        "email_notifications": "ईमेल सूचनाएं",
+        "notifications_help": "महत्वपूर्ण अपडेट के लिए ईमेल प्राप्त करें।",
+        "cancel": "रद्द करें",
+        "save_changes": "बदलाव सहेजें",
+        "saving_toast": "सहेजा जा रहा है...",
+        "success_toast": "सेटिंग्स सफलतापूर्वक सहेजी गईं!",
+        "error_toast": "सेटिंग्स सहेजने में विफल। कृपया पुनः प्रयास करें।"
+    },
+    "holiday_modal": {
+        "title": "छुट्टी चिह्नित करें",
+        "entire_day": "पूरा कार्य दिवस",
+        "reason_label": "छुट्टी का कारण",
+        "required": "(आवश्यक)",
+        "placeholder": "जैसे, गर्मी की छुट्टी, राष्ट्रीय अवकाश, स्कूल बंद है...",
+        "cancel": "रद्द करें",
+        "confirm": "छुट्टी की पुष्टि करें"
+    },
+    "leave_request": {
+        "title": "Request Leave",
+        "checking_status": "Checking status...",
+        "status_pending": "Leave Request Pending",
+        "status_approved": "Leave Approved!",
+        "status_rejected": "Leave Rejected",
+        "requested_dates": "Requested dates: <1>{{from}}</1> to <1>{{to}}</1>",
+        "admin_note": "Admin Note:",
+        "btn_dismiss": "Dismiss",
+        "btn_revoke": "Revoke Leave",
+        "btn_new_request": "New Request",
+        "label_from": "From Date",
+        "label_to": "To Date",
+        "label_reason": "Reason for Leave",
+        "placeholder_reason": "Please explain why you need time off...",
+        "btn_cancel": "Cancel",
+        "btn_submit": "Submit Request",
+        "toast_submitting": "Submitting leave request...",
+        "toast_submit_success": "Leave request submitted successfully!",
+        "toast_submit_error": "Failed to submit request",
+        "toast_revoking": "Revoking leave request...",
+        "toast_revoke_success": "Leave request revoked.",
+        "toast_revoke_error": "Failed to revoke request"
+    },
+    "media_details": {
+        "title": "अपलोड विवरण",
+        "subtitle": "{{count}} चयनित फ़ाइलों के लिए संदर्भ प्रदान करें।",
+        "school_name": "स्कूल का नाम",
+        "school_placeholder": "जैसे: रयान इंटरनेशनल स्कूल",
+        "location": "स्थान",
+        "location_placeholder": "अयोध्या",
+        "category_label": "अपलोड श्रेणी",
+        "category_regular": "नियमित विज़िट",
+        "category_event": "विशेष कार्यक्रम",
+        "event_date": "कार्यक्रम की तारीख",
+        "event_description": "कार्यक्रम का विवरण",
+        "event_placeholder": "संक्षेप में वर्णन करें कि कार्यक्रम किस बारे में था...",
+        "submit_btn_one": "सबमिट और {{count}} फ़ाइल अपलोड करें",
+        "submit_btn_other": "सबमिट और {{count}} फ़ाइलें अपलोड करें"
+    },
+    "media_upload": {
+        "title_step1": "मीडिया अपलोड करें",
+        "title_step2": "मीडिया विवरण",
+        "limit_error": "सीमा पार हो गई। आप केवल {{count}} फ़ाइलें अपलोड कर सकते हैं।",
+        "browse_files": "फ़ाइलें ब्राउज़ करने के लिए क्लिक करें",
+        "upload_help": "{{count}} और चित्र या वीडियो अपलोड करें",
+        "selected_files": "चयनित फ़ाइलें ({{current}}/{{max}})",
+        "media_type": "मीडिया का प्रकार",
+        "type_regular": "नियमित विज़िट",
+        "type_event": "विशेष कार्यक्रम",
+        "event_date": "कार्यक्रम की तिथि",
+        "event_context": "कार्यक्रम का संदर्भ",
+        "context_placeholder": "संक्षेप में बताएं कि यह मीडिया क्या दिखा रहा है...",
+        "btn_continue": "जारी रखें",
+        "btn_cancel": "रद्द करें",
+        "btn_upload_one": "{{count}} फ़ाइल अपलोड करें",
+        "btn_upload_other": "{{count}} फ़ाइलें अपलोड करें",
+        "title": "साइट मीडिया अपलोड",
+        "subtitle": "साइट विज़िट के फ़ोटो और वीडियो अपलोड करें।",
+        "error_limit": "सीमा समाप्त हो गई। आप एक बार में अधिकतम {{count}} फ़ाइलें ही अपलोड कर सकते हैं।",
+        "error_locked": "अपलोड पोर्टल वर्तमान में लॉक है। एडमिन ने इस समय अपलोड अनुमति नहीं दी है।",
+        "success_msg": "सभी मीडिया फ़ाइलें और विवरण सफलतापूर्वक अपलोड कर दिए गए हैं!",
+        "dropzone_title": "मीडिया फ़ाइलें चुनने के लिए क्लिक करें",
+        "dropzone_locked": "अपलोड पोर्टल लॉक है",
+        "dropzone_limit_info": "आप {{count}} और फ़ाइलें चुन सकते हैं।",
+        "dropzone_locked_info": "कृपया अपने खाते के लिए मीडिया अपलोड सक्षम करने के लिए अपने एडमिन से संपर्क करें।",
+        "selected_title": "चयनित मीडिया ({{current}}/{{max}})",
+        "remove_file": "फ़ाइल हटाएं",
+        "loading_live": "लाइव डेटा लोड हो रहा है..."
+    },
+    "reject_task": {
+        "error_reason": "कृपया अस्वीकृति का कारण प्रदान करें।",
+        "title": "कार्य अस्वीकार करें",
+        "subtitle": "आप इस वैकल्पिक असाइनमेंट को क्यों अस्वीकार कर रहे हैं?",
+        "placeholder": "जैसे, समय का अभाव, पहले से ही किसी अन्य प्राथमिकता वाले कार्य में लगा हुआ हूँ...",
+        "cancel": "रद्द करें",
+        "confirm": "अस्वीकृति की पुष्टि करें"
+    },
+    "school_details": {
+        "toast_saving_event": "इवेंट सहेजा जा रहा है...",
+        "toast_event_success": "इवेंट सफलतापूर्वक सहेजा गया!",
+        "toast_event_error": "इवेंट सहेजने में विफल। ",
+        "toast_uploading_media": "मीडिया अपलोड किया जा रहा है...",
+        "toast_media_success": "मीडिया सफलतापूर्वक अपलोड किया गया!",
+        "toast_media_error": "मीडिया अपलोड करने में विफल। ",
+        "assigned_categories": "सौंपी गई श्रेणियां",
+        "category_subtitle": "30 दिनों का उपस्थिति रिकॉर्ड और पिछले इवेंट देखें",
+        "btn_upload": "अपलोड",
+        "btn_event": "इवेंट",
+        "last_30_days": "पिछले 30 दिन",
+        "btn_media": "मीडिया",
+        "btn_log_event": "इवेंट लॉग करें",
+        "stat_present": "उपस्थित",
+        "stat_late": "देरी",
+        "stat_absent": "अनुपस्थित",
+        "stat_events": "इवेंट्स",
+        "timeline_title": "टाइमलाइन",
+        "timeline_description": "विवरण:",
+        "no_records": "पिछले 30 दिनों के लिए कोई उपस्थिति रिकॉर्ड नहीं मिला।",
+        "stat_leaves": "छुट्टियां",
+        "statuses": {
+            "Present": "उपस्थित",
+            "Late": "देरी",
+            "Absent": "अनुपस्थित",
+            "Event": "इवेंट"
+        }
+    },
+    "admin_dashboard": {
+        "title": "कमांड सेंटर",
+        "subtitle": "आज के फील्ड कार्यों का रियल-टाइम अवलोकन।",
+        "refresh_data": "डेटा रिफ्रेश करें",
+        "stats": {
+            "total_staff": "कुल कर्मचारी",
+            "on_site": "साइट पर",
+            "completed": "पूर्ण",
+            "on_holiday": "अवकाश पर",
+            "no_show": "उपस्थित नहीं",
+            "on_leave": "छुट्टी पर",
+            "pending": "लंबित"
+        },
+        "activity_log": "लाइव गतिविधि लॉग",
+        "unassigned_zone": "अनिर्धारित क्षेत्र",
+        "field_operation": "फील्ड ऑपरेशन",
+        "just_now": "अभी-अभी",
+        "empty_title": "फील्ड डेटा की प्रतीक्षा है",
+        "empty_subtitle": "लाइव वर्कफोर्स चेक-इन और अपडेट यहां स्वचालित रूप से आएंगे।",
+        "status": {
+            "present": "उपस्थित",
+            "absent": "अनुपस्थित",
+            "warning": "चेतावनी",
+            "event": "इवेंट",
+            "late": "देरी",
+            "approved": "मंजूर",
+            "rejected": "खारिज",
+            "leave": "छुट्टी",
+            "update": "अपडेट"
+        }
+    },
+    "assignments_tab": {
+        "title": "सौंपे गए स्कूल",
+        "btn_assign_desktop": "स्कूल सौंपें",
+        "btn_assign_mobile": "सौंपें",
+        "unknown_school": "अज्ञात स्कूल",
+        "no_address": "कोई पता नहीं दिया गया",
+        "status_active": "सक्रिय",
+        "btn_edit": "संपादित करें",
+        "btn_clone": "कॉपी करें",
+        "btn_delete": "हटाएं",
+        "empty_msg": "इस कर्मचारी को अभी तक कोई स्कूल नहीं सौंपा गया है।"
+    },
+    "media_tab": {
+        "title_vault": "मीडिया वॉल्ट",
+        "subtitle_vault": "शिक्षक द्वारा अपलोड किए गए मीडिया को ब्राउज़ करने के लिए एक महीना चुनें।",
+        "title_schools": "{{month}} में स्कूल",
+        "subtitle_schools": "श्रेणियां देखने के लिए एक स्कूल चुनें",
+        "title_categories": "{{school}} की श्रेणियां",
+        "subtitle_categories": "तारीखें देखने के लिए एक श्रेणी चुनें",
+        "title_dates": "{{category}} के अपलोड",
+        "subtitle_dates": "अपलोड देखने के लिए एक तारीख चुनें",
+        "title_media": "{{date}} को मीडिया",
+        "subtitle_media_one": "{{count}} फ़ाइल उपलब्ध",
+        "subtitle_media_other": "{{count}} फ़ाइलें उपलब्ध",
+        "items_count_one": "{{count}} आइटम",
+        "items_count_other": "{{count}} आइटम",
+        "tap_view_schools": "स्कूल देखने के लिए टैप करें",
+        "tap_view_categories": "श्रेणियां देखने के लिए टैप करें",
+        "tap_view_dates": "तारीखें देखने के लिए टैप करें",
+        "empty_collections": "कोई मीडिया संग्रह नहीं मिला।",
+        "empty_schools": "इस महीने के लिए कोई स्कूल नहीं मिला।",
+        "empty_categories": "इस स्कूल के लिए कोई श्रेणी नहीं मिली।",
+        "empty_dates": "इस श्रेणी के लिए कोई तारीख नहीं मिली।",
+        "empty_media": "इस तारीख के लिए कोई मीडिया फ़ाइल अपलोड नहीं की गई है।",
+        "uploads_suffix": "अपलोड",
+        "uploaded_via": "फील्ड ऐप के माध्यम से अपलोड किया गया",
+        "students_present": "{{count}} छात्र उपस्थित",
+        "btn_delete": "हटाएं",
+        "delete_alert": "मीडिया आइटम {{id}} हटाने का अनुरोध किया गया।",
+        "open_link": "नए टैब में लिंक खोलें",
+        "download_file": "फ़ाइल डाउनलोड करें"
+    },
+    "tasks_tab": {
+        "title": "सौंपे गए कार्य",
+        "btn_assign": "नया कार्य सौंपें",
+        "empty_title": "कोई कार्य नहीं सौंपा गया",
+        "empty_desc": "इस कर्मचारी के पास वर्तमान में कोई सक्रिय या लंबित कार्य नहीं है।",
+        "empty_action": "उनका पहला कार्य सौंपें",
+        "unknown_location": "अज्ञात स्थान",
+        "no_address": "कोई पता नहीं दिया गया",
+        "task_placeholder": "कार्य",
+        "added_to_schedule": "शेड्यूल में जोड़ा गया",
+        "btn_edit": "संपादित करें",
+        "btn_delete": "हटाएं",
+        "btn_clone": "कॉपी करें",
+        "rejection_label": "अस्वीकृति का कारण",
+        "status": {
+            "pending": "लंबित",
+            "accepted": "स्वीकार किया गया",
+            "rejected": "अस्वीकृत"
+        }
+    },
+    "warnings_tab": {
+        "title": "चेतावनी इतिहास",
+        "btn_issue": "चेतावनी जारी करें",
+        "btn_issue_short": "जारी करें",
+        "warning_suffix": "चेतावनी",
+        "level_label": "स्तर",
+        "issued_by": "द्वारा जारी",
+        "admin_default": "एडमिन",
+        "empty_title": "कोई रिकॉर्ड नहीं।",
+        "empty_desc": "इस कर्मचारी को कोई चेतावनी जारी नहीं की गई है।"
+    },
+    "admin_leave": {
+        "title": "छुट्टी प्रबंधन",
+        "subtitle_pending": "सक्रिय अनुरोधों की समीक्षा की जा रही है।",
+        "subtitle_archived": "पुराना छुट्टी इतिहास।",
+        "checking_status": "स्थिति की जाँच की जा रही है...",
+        "error_load": "छुट्टी के अनुरोध लोड करने में विफल।",
+        "no_requests_title": "कोई {{status}} अनुरोध नहीं",
+        "no_requests_desc": "सब काम पूरा! इस श्रेणी में कोई अनुरोध नहीं मिला।",
+        "tabs": {
+            "pending": "लंबित",
+            "approved": "मंजूर",
+            "rejected": "खारिज"
+        },
+        "card": {
+            "time_period": "समय अवधि",
+            "to": "से",
+            "reason": "कारण",
+            "admin_note": "एडमिन नोट",
+            "btn_reject": "खारिज करें",
+            "btn_approve": "मंजूर करें",
+            "btn_revoke": "निर्णय वापस लें"
+        },
+        "status": {
+            "pending": "लंबित",
+            "approved": "मंजूर",
+            "rejected": "खारिज"
+        },
+        "modal": {
+            "audit": {
+                "wipe_message_title": "संदेश को स्थायी रूप से मिटाएं?",
+                "wipe_message_desc": "यह सर्वर से संदेश और उसके मीडिया को पूरी तरह से मिटा देगा। इसे वापस नहीं लाया जा सकता।",
+                "clear_audit_chat_title": "पूरा चैट इतिहास मिटाएं?",
+                "clear_audit_chat_desc": "चेतावनी: यह इस बातचीत के सभी संदेशों और मीडिया को डेटाबेस और स्टोरेज से स्थायी रूप से नष्ट कर देगा।",
+                "wipe": "मिटाएं",
+                "wipe_all": "सब कुछ मिटाएं"
+            },
+            "title_revoke": "निर्णय वापस लें",
+            "title_action": "छुट्टी {{type}} करें",
+            "desc_revoke": "क्या आप वाकई {{name}} के लिए निर्णय वापस लेना चाहते हैं? अनुरोध 'लंबित' टैब में वापस आ जाएगा।",
+            "desc_action": "{{name}} की छुट्टी {{type}} करने के लिए विवरण प्रदान करें।",
+            "remarks_label": "टिप्पणी जोड़ें (वैकल्पिक)",
+            "remarks_placeholder": "{{type}} करने का कारण...",
+            "btn_cancel": "रद्द करें",
+            "btn_confirm": "पुष्टि करें"
+        },
+        "toasts": {
+            "revoking": "निर्णय वापस लिया जा रहा है...",
+            "updating": "{{type}} के रूप में चिह्नित किया जा रहा है...",
+            "revoke_success": "निर्णय वापस ले लिया गया!",
+            "action_success": "छुट्टी का अनुरोध {{type}} कर दिया गया!",
+            "update_error": "अनुरोध अपडेट करने में विफल।"
+        }
+    },
+    "admin_notifications": {
+        "title": "सूचनाएं",
+        "subtitle": "अलर्ट, संदेश और WorkEduMusic गतिविधि पर अपडेट रहें।",
+        "btn_mark_read": "सभी को पढ़ा हुआ मानें",
+        "btn_clear_all": "सभी हटाएं",
+        "empty_title": "सब अपडेट है!",
+        "empty_desc": "इस समय आपके पास कोई नई सूचना नहीं है।",
+        "toasts": {
+            "load_error": "सूचनाएं लोड करने में विफल।",
+            "marking_read": "सभी को पढ़ा हुआ माना जा रहा है...",
+            "mark_read_success": "सभी सूचनाओं को पढ़ा हुआ मान लिया गया!",
+            "mark_read_error": "पढ़ा हुआ मानने में विफल।",
+            "clearing": "सूचनाएं हटाई जा रही हैं...",
+            "clear_success": "सूचनाएं सफलतापूर्वक हटा दी गईं!",
+            "clear_error": "सूचनाएं हटाने में विफल।"
+        },
+        "time": {
+            "years": "साल पहले",
+            "months": "महीने पहले",
+            "days": "दिन पहले",
+            "hours": "घंटे पहले",
+            "mins": "मिनट पहले",
+            "now": "अभी-अभी"
+        },
+        "labels": {
+            "warning_reason": "चेतावनी का कारण"
+        }
+    },
+    "admin_reports": {
+        "title": "रिपोर्ट्स केंद्र",
+        "subtitle": "दिन के अंत की रिपोर्ट और आगामी कार्यक्रमों का प्रबंधन करें।",
+        "tabs": {
+            "daily": "दैनिक रिपोर्ट",
+            "events": "इवेंट्स"
+        },
+        "breadcrumbs": {
+            "back_to_schools": "स्कूलों पर वापस जाएं",
+            "back_to_months": "महीनों पर वापस जाएं",
+            "back_to_directory": "निर्देशिका पर वापस जाएं"
+        },
+        "headers": {
+            "directory": "कर्मचारी निर्देशिका",
+            "history": "{{name}} का इतिहास",
+            "archive": "मासिक आर्काइव",
+            "school_events": "{{school}} पर इवेंट्स",
+            "upcoming_schools": "आगामी इवेंट्स वाले स्कूल"
+        },
+        "daily": {
+            "search_placeholder": "कर्मचारी खोजें...",
+            "checking_status": "स्थिति की जाँच की जा रही है...",
+            "no_reports": "अभी तक कोई रिपोर्ट सबमिट नहीं की गई है।",
+            "tap_view_schools": "स्कूल देखने के लिए टैप करें",
+            "summary_label": "सारांश",
+            "general_location": "सामान्य स्थान",
+            "report_type": "दैनिक रिपोर्ट",
+            "students_count": "{{count}} छात्र उपस्थित हैं",
+            "students_short": "{{count}} छात्र",
+            "no_history_found": "पिछले 30 दिनों के लिए कोई उपस्थिति रिकॉर्ड नहीं मिला।"
+        },
+        "events": {
+            "no_events": "कोई आगामी इवेंट निर्धारित नहीं है।",
+            "event_unit_one": "इवेंट",
+            "event_unit_other": "इवेंट्स",
+            "logged_by": "द्वारा लॉग किया गया: {{name}}",
+            "description_label": "विवरण:",
+            "no_dates": "इस श्रेणी के लिए कोई तारीख नहीं मिली।",
+            "no_media_uploaded": "इस तारीख के लिए कोई मीडिया फ़ाइल अपलोड नहीं की गई है।"
+        },
+        "toasts": {
+            "new_report": "नई रिपोर्ट प्राप्त हुई!",
+            "new_event": "{{school}} पर नया इवेंट निर्धारित किया गया!",
+            "init_error": "प्रारंभिक डेटा लोड करने में विफल।",
+            "fetch_error": "रिकॉर्ड प्राप्त करने में विफल।"
+        },
+        "common": {
+            "to": "से",
+            "items_one": "{{count}} आइटम",
+            "items_other": "{{count}} आइटम"
+        }
+    },
+    "admin_reset_password": {
+        "title": "सुरक्षित एडमिन पोर्टल",
+        "subtitle": "एक एडमिन के रूप में, सिस्टम का उपयोग करने से पहले आपको अपने अस्थायी पासवर्ड को सुरक्षित पासवर्ड में बदलना होगा।",
+        "error_default": "पासवर्ड रीसेट करने में विफल।",
+        "success_default": "पासवर्ड सफलतापूर्वक अपडेट किया गया!",
+        "label_new_password": "नया सुरक्षित पासवर्ड",
+        "placeholder_new_password": "एक मजबूत पासवर्ड बनाएं",
+        "requirement_min_chars": "कम से कम 8 अक्षर",
+        "requirement_case": "1 अपरकेस और 1 लोअरकेस",
+        "requirement_symbol": "1 नंबर और 1 सिंबल (!@#$)",
+        "btn_updating": "अपडेट किया जा रहा है...",
+        "btn_submit": "पासवर्ड अपडेट करें और प्रवेश करें"
+    },
+    "attendance_feed": {
+        "title": "उपस्थिति फीड",
+        "filter_all": "सभी",
+        "filter_pending": "लंबित",
+        "filter_running": "सक्रिय",
+        "filter_completed": "पूर्ण",
+        "filter_exceptions": "अपवाद",
+        "no_records_title": "कोई गतिविधि नहीं मिली",
+        "no_records_desc": "आपके वर्तमान फ़िल्टर से मेल खाने वाला कोई उपस्थिति रिकॉर्ड नहीं है।",
+        "live_monitoring": "लाइव मॉनिटरिंग सक्रिय",
+        "assigned_location": "आवंटित स्थान",
+        "modal": {
+            "field_intelligence": "क्षेत्रीय जानकारी",
+            "event_highlights": "कार्यक्रम की मुख्य विशेषताएं",
+            "delay_justification": "देरी का औचित्य",
+            "operations_report": "संचालन रिपोर्ट",
+            "arrival": "आगमन",
+            "departure": "प्रस्थान",
+            "system_override": "सिस्टम ओवरराइड",
+            "btn_cancel_override": "ओवरराइड रद्द करें",
+            "btn_edit_mode": "संपादन मोड सक्षम करें",
+            "action_check_in": "चेक इन",
+            "action_check_out": "चेक आउट",
+            "action_revoke": "वापस लें",
+            "admin_note": "प्रशासनिक नोट (अनिवार्य)",
+            "btn_confirm_override": "ओवरराइड की पुष्टि करें"
+        },
+        "status": {
+            "event": "कार्यक्रम",
+            "running": "सक्रिय",
+            "late": "देरी",
+            "completed": "पूर्ण",
+            "absent": "अनुपस्थित",
+            "holiday": "अवकाश",
+            "on_leave": "छुट्टी पर",
+            "pending": "लंबित"
+        },
+        "toasts": {
+            "load_error": "उपस्थिति फ़ीड लोड करने में विफल",
+            "new_report": "नई दैनिक रिपोर्ट प्राप्त हुई",
+            "new_event": "{{school}} में नया कार्यक्रम दर्ज किया गया",
+            "applying_override": "सिस्टम ओवरराइड लागू किया जा रहा है...",
+            "override_success": "ओवरराइड सफलतापूर्वक लागू किया गया",
+            "override_error": "ओवरराइड लागू करने में विफल"
+        }
+    },
+    "attendance_tab": {
+        "title": "{{name}} की मासिक रिपोर्ट",
+        "subtitle": "देखी गई स्कूलों को देखने के लिए एक महीना चुनें।",
+        "tap_to_view": "देखने के लिए टैप करें",
+        "empty_title": "अभी तक कोई उपस्थिति रिकॉर्ड नहीं",
+        "empty_desc": "{{name}} ने अभी तक कोई शिफ्ट पूरी नहीं की है। जैसे ही वे चेक-इन करेंगे, उनकी रिपोर्ट यहाँ दिखाई देगी। तब तक, यहाँ उनका निर्धारित शेड्यूल है:",
+        "upcoming_assignments": "आगामी असाइनमेंट",
+        "unknown_school": "अज्ञात स्कूल",
+        "totally_empty_msg": "इस कर्मचारी के पास अभी तक कोई उपस्थिति रिकॉर्ड या सक्रिय स्कूल असाइनमेंट नहीं है।",
+        "monthly_reports_title": "{{name}} की मासिक रिपोर्ट",
+        "tap_to_view_schools": "स्कूल देखने के लिए टैप करें"
+    },
+    "communication_hub": {
+        "title": "संचार हब",
+        "subtitle": "अपनी WorkEduMusic टीम को तुरंत घोषणाएं और अलर्ट प्रसारित करें।",
+        "new_broadcast": "नया प्रसारण",
+        "step_target": "1. लक्षित समूह चुनें",
+        "selected": "चुने",
+        "targets": {
+            "all": "सभी कर्मचारी",
+            "zone": "ज़ोन के अनुसार",
+            "specific": "विशिष्ट लोग"
+        },
+        "zone_label": "लक्षित शहर / स्थान",
+        "zone_placeholder": "जैसे: सुल्तानपुर, लखनऊ, दिल्ली (कोमा से अलग)...",
+        "zone_help": "एक से अधिक शहरों को कोमा से अलग किया जा सकता है।",
+        "recipients_label": "प्राप्तकर्ता चुनें",
+        "selected_count": "{{count}} चयनित",
+        "search_placeholder": "नाम से कर्मचारी खोजें...",
+        "no_employees": "कोई कर्मचारी नहीं मिला।",
+        "step_message": "2. संदेश लिखें",
+        "message_placeholder": "अपनी आधिकारिक घोषणा यहाँ टाइप करें...",
+        "btn_broadcasting": "प्रसारित हो रहा है...",
+        "btn_send": "अभी प्रसारण भेजें",
+        "history": "इतिहास",
+        "history_limit": "पिछले 3",
+        "sent_to": "{{count}} को भेजा गया",
+        "no_history": "दिखाने के लिए कोई हालिया प्रसारण नहीं है।",
+        "time": {
+            "just_now": "अभी-अभी",
+            "mins_ago": "{{count}} मिनट पहले",
+            "hrs_ago": "{{count}} घंटे पहले",
+            "days_ago": "{{count}} दिन पहले"
+        },
+        "toasts": {
+            "load_error": "संचार डेटा लोड करने में विफल।",
+            "empty_message": "संदेश खाली नहीं हो सकता।",
+            "empty_city": "कृपया कम से कम एक लक्षित शहर दर्ज करें।",
+            "empty_selection": "कृपया कम से कम एक कर्मचारी चुनें।",
+            "send_success": "प्रसारण {{count}} उपयोगकर्ताओं तक पहुँचाया गया!",
+            "send_error": "प्रसारण भेजने में विफल।"
+        }
+    },
+    "daily_feed": {
+        "title": "लाइव दैनिक फीड",
+        "tabs": {
+            "active": "सक्रिय",
+            "completed": "पूर्ण"
+        },
+        "loading": "लाइव डेटा लोड हो रहा है...",
+        "error_fetch": "लाइव फीड प्राप्त करने में विफल।",
+        "card": {
+            "unknown_school": "अज्ञात स्कूल",
+            "location_tracked": "स्थान ट्रैक किया गया",
+            "status_ended": "शिफ्ट समाप्त",
+            "status_onsite": "वर्तमान में साइट पर",
+            "teacher_label": "शिक्षक:",
+            "unknown_teacher": "अज्ञात",
+            "checked_out_at": "चेक-आउट का समय:",
+            "checked_in_at": "चेक-इन का समय:"
+        }
+    },
+    "employee_profile": {
+        "error_load": "कर्मचारी प्रोफ़ाइल लोड करने में विफल।",
+        "not_found": "कर्मचारी नहीं मिला",
+        "btn_return": "रोस्टर पर वापस जाएं",
+        "btn_back": "रोस्टर पर वापस जाएं",
+        "status_active": "सक्रिय",
+        "status_inactive": "निष्क्रिय",
+        "staff_fallback": "स्टाफ",
+        "unassigned_zone": "अनिर्धारित ज़ोन",
+        "view_image": "बड़ा करने के लिए क्लिक करें",
+        "download_pic": "चित्र डाउनलोड करें",
+        "downloading": "चित्र डाउनलोड हो रहा है...",
+        "download_success": "चित्र सफलतापूर्वक डाउनलोड हो गया!",
+        "download_failed": "प्रोफ़ाइल चित्र डाउनलोड करने में विफल।",
+        "tabs": {
+            "assignments": "असाइनमेंट",
+            "tasks": "कार्य",
+            "media": "मीडिया",
+            "warnings": "चेतावनी",
+            "attendance": "उपस्थिति"
+        }
+    },
+    "employee_roster": {
+        "title": "कर्मचारी रोस्टर",
+        "syncing": "स्टाफ निर्देशिका सिंक की जा रही है...",
+        "active_staff": "{{count}} सक्रिय स्टाफ सदस्य",
+        "btn_add_desktop": "नया कर्मचारी जोड़ें",
+        "btn_add_mobile": "कर्मचारी जोड़ें",
+        "search_placeholder": "नाम से कर्मचारी खोजें...",
+        "table_employee": "कर्मचारी",
+        "table_role": "भूमिका",
+        "table_location": "स्थान",
+        "admin_badge": "एडमिन",
+        "no_email": "कोई ईमेल नहीं दिया गया",
+        "no_role": "स्टाफ",
+        "unassigned_role": "अनिर्धारित",
+        "empty_title": "कोई कर्मचारी नहीं मिला",
+        "empty_search": "हमें \"{{query}}\" से मिलता-जुलता कोई नहीं मिला। फ़िल्टर बदल कर देखें।",
+        "empty_initial": "आपका रोस्टर अभी खाली है। शुरू करने के लिए अपना पहला कर्मचारी जोड़ें!",
+        "error_load": "कर्मचारी रोस्टर लोड करने में विफल। कृपया पुन: प्रयास करें।",
+        "btn_retry": "पुन: प्रयास करें",
+        "toast_load_error": "कर्मचारी रोस्टर लोड करने में विफल।",
+        "toast_success": "कर्मचारी सफलतापूर्वक जोड़ा गया!"
+    },
+    "empty_feed": {
+        "title": "आज का सारा काम पूरा हो गया है!",
+        "description": "सभी स्कूलों के लिए निर्धारित विज़िट समाप्त हो गई हैं। थोड़ा आराम करें, या कल क्या होने वाला है यह देखने के लिए कैलेंडर देखें।",
+        "button_text": "आगामी शेड्यूल देखें"
+    },
+    "progress_report": {
+        "title": "प्रगति रिपोर्ट",
+        "subtitle": "मासिक WorkEduMusic गतिविधि मेट्रिक्स।",
+        "search_placeholder": "शिक्षक खोजें...",
+        "unassigned": "अनिर्धारित",
+        "score_out_of": "{{score}}/100",
+        "general_leaves": "सामान्य छुट्टियां",
+        "approved_leaves": "स्वीकृत छुट्टियां",
+        "records_count_one": "{{count}} रिकॉर्ड",
+        "records_count_other": "{{count}} रिकॉर्ड",
+        "request_count_one": "{{count}} अनुरोध",
+        "request_count_other": "{{count}} अनुरोध",
+        "nav": {
+            "back_overview": "अवलोकन पर वापस जाएं",
+            "back_school": "{{name}} पर वापस जाएं",
+            "back_months": "महीनों पर वापस जाएं",
+            "back_rankings": "रैंकिंग पर वापस जाएं"
+        },
+        "headers": {
+            "rankings": "WorkEduMusic रैंकिंग",
+            "teacher_reports": "{{name}} की रिपोर्ट",
+            "archive": "मासिक आर्काइव"
+        },
+        "metrics": {
+            "title": "सारांश मेट्रिक्स",
+            "present": "उपस्थित",
+            "late": "देरी",
+            "absent": "अनुपस्थित",
+            "events": "इवेंट्स",
+            "holidays": "छुट्टियां",
+            "media": "मीडिया"
+        },
+        "breakdown": {
+            "title": "दैनिक विवरण",
+            "leaves_title": "आधिकारिक अवकाश रिकॉर्ड",
+            "approved_tag": "स्वीकृत अवकाश",
+            "reason_provided": "प्रदान किया गया कारण",
+            "admin_note": "एडमिन स्वीकृति नोट",
+            "no_reason": "कोई कारण नहीं दिया गया।"
+        },
+        "detail": {
+            "in": "आगमन",
+            "out": "प्रस्थान",
+            "exception_note": "विशेष नोट"
+        },
+        "btn": {
+            "export": "एक्सेल निर्यात करें"
+        },
+        "toasts": {
+            "load_error": "प्रगति रैंकिंग लोड करने में विफल।",
+            "fetch_records_error": "शिक्षक रिकॉर्ड प्राप्त करने में विफल।",
+            "export_preparing": "एक्सेल रिपोर्ट तैयार की जा रही है...",
+            "export_success": "एक्सेल रिपोर्ट डाउनलोड हो गई!",
+            "export_gen_error": "रिपोर्ट तैयार करने में विफल।",
+            "export_fail": "फ़ाइल निर्यात नहीं की जा सकी।"
+        },
+        "empty": {
+            "no_reports": "अभी तक कोई रिपोर्ट सबमिट नहीं की गई है।",
+            "no_dates": "इस श्रेणी के लिए कोई तारीख नहीं मिली।"
+        }
+    },
+    "assigned_schools": {
+        "title": "सौंपे गए स्थान",
+        "subtitle": "अपना 30-दिनों का उपस्थिति इतिहास देखने के लिए एक स्कूल चुनें।",
+        "syncing": "स्टाफ निर्देशिका सिंक की जा रही है...",
+        "active_staff": "{{count}} सक्रिय स्टाफ सदस्य",
+        "empty_title": "अभी तक कोई असाइनमेंट नहीं",
+        "empty_desc": "वर्तमान में आपकी प्रोफ़ाइल में स्थायी रूप से कोई स्कूल नहीं सौंपा गया है। बाद में फिर से जांचें!",
+        "card_location": "स्थान",
+        "card_category": "श्रेणी",
+        "absent": "अनुपस्थित",
+        "task_badge": "कार्य",
+        "leave_record": "छुट्टी का रिकॉर्ड",
+        "distance_away": "{{count}} किमी दूर",
+        "time_to": "से",
+        "card_to": "से",
+        "view_history": "उपस्थिति इतिहास देखें",
+        "na": "N/A",
+        "error_toast": "आपके सौंपे गए स्कूलों को लोड करने में विफल। कृपया पुन: प्रयास करें।",
+        "weekdays": {
+            "Mon": "सोम",
+            "Tue": "मंगल",
+            "Wed": "बुध",
+            "Thu": "गुरु",
+            "Fri": "शुक्र",
+            "Sat": "शनि",
+            "Sun": "रवि"
+        }
+    },
+    "daily_report": {
+        "assigned_school": "आवंटित स्कूल",
+        "label_band": "बैंड श्रेणी",
+        "label_students": "उपस्थित छात्रों की संख्या",
+        "placeholder_students": "उदाहरण: 45",
+        "junior_band": "जूनियर बैंड",
+        "senior_band": "सीनियर बैंड",
+        "title": "दिन के अंत की रिपोर्ट",
+        "subtitle": "अपनी फील्ड विज़िट का सारांश दें, चुनौतियों का विवरण दें और कार्यक्रमों को दस्तावेज़ित करें।",
+        "location_active": "स्थान संदर्भ सक्रिय है",
+        "label_category": "रिपोर्ट श्रेणी",
+        "label_event_name": "कार्यक्रम का नाम",
+        "label_event_date": "कार्यक्रम की तारीख",
+        "label_summary": "दैनिक सारांश",
+        "placeholder_event_name": "जैसे: वार्षिक खेल दिवस",
+        "placeholder_summary": "विज़िट किए गए स्कूलों, समग्र प्रगति और आज सामना की गई चुनौतियों का वर्णन करें...",
+        "btn_submit": "रिपोर्ट सबमिट करें",
+        "btn_submitting": "सबमिट किया जा रहा है...",
+        "success_msg": "दैनिक रिपोर्ट सफलतापूर्वक सबमिट हो गई!",
+        "error_msg": "रिपोर्ट सबमिट करने में विफल。",
+        "categories": {
+            "regular": "नियमित रिपोर्ट",
+            "event": "इवेंट रिपोर्ट"
+        }
+    },
+    "employee_dashboard": {
+        "sos": {
+            "sent_title": "SOS भेजा गया",
+            "sent_desc": "मदद भेजी जा रही है।",
+            "emergency_title": "आपातकालीन SOS",
+            "release_cancel": "रद्द करने के लिए उंगली हटाएं",
+            "toast_sent": "आपातकालीन SOS भेजा गया!",
+            "toast_cancelled": "SOS रद्द किया गया।"
+        },
+        "location_help": {
+            "title": "लोकेशन ब्लॉक है",
+            "description": "आपका ब्राउज़र हमें आपकी लोकेशन तक पहुँचने से रोक रहा है। आपको इसे मैन्युअल रूप से चालू करना होगा।",
+            "step1_title": "चरण 1",
+            "step1_desc_pwa": "अपने फ़ोन का मुख्य ब्राउज़र खोलें (जैसे Chrome या Safari)।",
+            "step1_desc_web": "अपने ब्राउज़र के एड्रेस बार में सबसे ऊपर लॉक आइकन 🔒 पर टैप करें।",
+            "step2_title": "चरण 2",
+            "step2_desc_pwa": "इस ऐप के वेबसाइट पते पर जाएं और URL के आगे लॉक आइकन 🔒 पर टैप करें।",
+            "step2_desc_web": "Permissions (अनुमतियां) या Location (लोकेशन) खोजें और इसे Allow (अनुमति दें) में बदलें।",
+            "step3_title": "चरण 3",
+            "step3_desc_pwa": "Permissions (अनुमतियां) या Site Settings (साइट सेटिंग्स) पर टैप करें, Location (लोकेशन) खोजें और इसे Allow (अनुमति दें) में बदलें।",
+            "final_step_title": "अंतिम चरण",
+            "final_step_desc": "यहाँ वापस लौटें। हम बदलाव का स्वतः पता लगा लेंगे, या आप नीचे क्लिक कर सकते हैं।",
+            "reload_btn": "पेज को मैन्युअल रूप से रीलोड करें"
+        },
+        "welcome": "स्वागत है, {{name}} 👋",
+        "status_ooo": "आप आधिकारिक तौर पर छुट्टी पर हैं।",
+        "status_route": "यहाँ आज का आपका रूट है।",
+        "btn_view_leave": "छुट्टी देखें",
+        "btn_request_leave": "छुट्टी का अनुरोध",
+        "btn_day_holiday": "आज अवकाश",
+        "btn_day_absent": "आज अनुपस्थित",
+        "vacation": {
+            "title": "अपनी छुट्टी का आनंद लें!",
+            "desc": "आराम करें और तरोताजा हों, {{name}}! {{from}} से {{to}} तक आपकी छुट्टी मंजूर है।",
+            "ooo_label": "कार्यालय से बाहर",
+            "mode_label": "वेकेशन मोड"
+        },
+        "shift_complete": {
+            "title": "शिफ्ट पूरी हुई!",
+            "desc": "आज बहुत अच्छा काम किया, {{name}}! आपने अपने सभी सौंपे गए स्कूल विज़िट सफलतापूर्वक पूरे कर लिए हैं।",
+            "footer": "आराम करने और तरोताजा होने का समय"
+        },
+        "card": {
+            "active_shift": "सक्रिय शिफ्ट",
+            "schedule_label": "शेड्यूल",
+            "to": "से",
+            "late_by": "{{time}} की देरी",
+            "starts_in": "{{time}} में शुरू",
+            "btn_directions": "रास्ता देखें",
+            "btn_absent": "अनुपस्थित",
+            "btn_holiday": "अवकाश",
+            "btn_check_in": "चेक इन",
+            "btn_check_out": "पूर्ण और चेक आउट"
+        },
+        "toasts": {
+            "gps_denied": "लोकेशन अनुमति ब्लॉक कर दी गई है। मदद के लिए लाल GPS आइकन पर क्लिक करें।",
+            "gps_retry": "लोकेशन फिर से प्राप्त की जा रही है...",
+            "gps_error": "GPS सिग्नल नहीं मिला। कृपया बाहर जाएं या लोकेशन अनुमति जांचें।",
+            "load_error": "आपका शेड्यूल लोड करने में विफल।",
+            "verifying_in": "स्थान की पुष्टि और चेक-इन किया जा रहा है...",
+            "check_in_success": "{{school}} पर चेक-इन हो गया!",
+            "check_in_fail": "चेक-इन विफल रहा।",
+            "verifying_out": "स्थान की पुष्टि और चेक-आउट किया जा रहा है...",
+            "check_out_success": "{{school}} से चेक-आउट हो गया!",
+            "check_out_fail": "चेक-आउट विफल रहा।",
+            "marking_status": "{{status}} के रूप में चिह्नित किया जा रहा है...",
+            "mark_success": "सफलतापूर्वक {{status}} चिह्नित किया गया।",
+            "mark_fail": "{{status}} चिह्नित करने में विफल।"
+        },
+        "units": {
+            "h": "घंटे",
+            "m": "मिनट"
+        }
+    },
+    "sos_alert": {
+        "title": "🚨 अति आवश्यक: SOS ट्रिगर किया गया",
+        "description": "ने आपातकालीन अलर्ट ट्रिगर किया है!",
+        "btn_view_location": "लाइव लोकेशन देखें"
+    },
+    "employee_notifications": {
+        "title": "सूचनाएं",
+        "subtitle": "अलर्ट, असाइनमेंट और शेड्यूल में बदलावों पर अपडेट रहें।",
+        "btn_mark_read": "सभी को पढ़ा हुआ मानें",
+        "btn_clear_all": "सभी हटाएं",
+        "empty_title": "सब अपडेट है!",
+        "empty_desc": "फिलहाल आपके पास कोई नई सूचना नहीं है।",
+        "time": {
+            "years": "साल पहले",
+            "months": "महीने पहले",
+            "days": "दिन पहले",
+            "hours": "घंटे पहले",
+            "mins": "मिनट पहले",
+            "just_now": "अभी-अभी"
+        },
+        "toasts": {
+            "load_error": "सूचनाएं लोड करने में विफल।",
+            "marking_read": "सभी को पढ़ा हुआ माना जा रहा है...",
+            "mark_read_success": "सभी सूचनाओं को पढ़ा हुआ मान लिया गया!",
+            "mark_read_error": "पढ़ा हुआ मानने में विफल।",
+            "clearing": "सूचनाएं हटाई जा रही हैं...",
+            "clear_success": "सूचनाएं सफलतापूर्वक हटा दी गईं!",
+            "clear_error": "सूचनाएं हटाने में विफल।"
+        }
+    },
+    "employee_reset_password": {
+        "title": "अपना खाता सुरक्षित करें",
+        "subtitle": "आपकी सुरक्षा के लिए, अपने डैशबोर्ड का उपयोग करने से पहले कृपया अपना अस्थायी पासवर्ड बदलें।",
+        "error_default": "पासवर्ड रीसेट करने में विफल।",
+        "toast_success": "पासवर्ड सफलतापूर्वक अपडेट किया गया!",
+        "label_new_password": "नया पासवर्ड",
+        "placeholder_new_password": "एक मजबूत पासवर्ड बनाएं",
+        "req_min_chars": "कम से कम 8 अक्षर",
+        "req_case": "1 अपरकेस और 1 लोअरकेस",
+        "req_symbol": "1 नंबर और 1 सिंबल (!@#$)",
+        "btn_updating": "अपडेट किया जा रहा है...",
+        "btn_continue": "पासवर्ड अपडेट करें और जारी रखें"
+    },
+    "my_profile": {
+        "title": "मेरी प्रोफ़ाइल",
+        "subtitle": "अपना खाता प्रबंधित करें और असाइनमेंट देखें",
+        "btn_edit_password": "सुरक्षा सेटिंग्स",
+        "change_pic": "बदलें",
+        "download_pic": "चित्र डाउनलोड करें",
+        "remove_pic": "चित्र हटाएं",
+        "employee_fallback": "कर्मचारी",
+        "unassigned_zone": "असाइन नहीं किया गया ज़ोन",
+        "unknown_school": "अज्ञात स्कूल",
+        "no_schools": "कोई स्कूल असाइन नहीं किया गया",
+        "not_provided": "लिंक नहीं है",
+        "contact_info": "संपर्क जानकारी",
+        "label_id": "कर्मचारी आईडी",
+        "label_email": "ईमेल पता",
+        "label_phone": "मोबाइल नंबर",
+        "assignment_details": "लॉजिस्टिक्स और पहुंच",
+        "label_zone": "ऑपरेटिंग ज़ोन",
+        "label_locations": "असाइन की गई सुविधाएं",
+        "delete_modal": {
+            "title": "चित्र हटाएं?",
+            "desc": "यह आपकी प्रोफ़ाइल फ़ोटो को स्थायी रूप से हटा देगा और आपके नाम के पहले अक्षर पर वापस आ जाएगा।",
+            "confirm": "हां, फ़ोटो हटाएं",
+            "cancel": "रद्द करें"
+        },
+        "toasts": {
+            "updating": "पासवर्ड अपडेट हो रहा है...",
+            "success": "पासवर्ड सफलतापूर्वक अपडेट किया गया!",
+            "error": "अपडेट विफल",
+            "file_too_large": "फ़ाइल 5MB से कम होनी चाहिए",
+            "uploading_avatar": "नई फ़ोटो अपलोड हो रही है...",
+            "avatar_updated": "प्रोफ़ाइल चित्र अपडेट किया गया!",
+            "upload_failed": "फ़ोटो अपलोड करने में विफल",
+            "removing_avatar": "फ़ोटो हटाया जा रहा है...",
+            "avatar_removed": "फ़ोटो सफलतापूर्वक हटा दिया गया",
+            "remove_failed": "फ़ोटो हटाने में विफल",
+            "downloading": "चित्र डाउनलोड हो रहा है...",
+            "download_success": "चित्र सफलतापूर्वक डाउनलोड किया गया!",
+            "download_failed": "प्रोफ़ाइल चित्र डाउनलोड करने में विफल।"
+        }
+    },
+    "tasks": {
+        "title": "कार्य इनबॉक्स",
+        "subtitle": "अपने सौंपे गए कार्यों की समीक्षा करें, स्वीकार करें या अस्वीकार करें।",
+        "pending_label": "लंबित",
+        "empty": {
+            "title": "इनबॉक्स जीरो!",
+            "desc": "फिलहाल आपके पास कोई सौंपे गए कार्य नहीं हैं। आप पूरी तरह से अपडेट हैं।",
+            "badge": "अपने खाली समय का आनंद लें"
+        },
+        "card": {
+            "days": "दिन",
+            "timing": "समय",
+            "instructions": "कार्य निर्देश",
+            "btn_reject": "अस्वीकार करें",
+            "btn_accept": "कार्य स्वीकार करें और शेड्यूल करें",
+            "status_accepted": "कार्य स्वीकार कर लिया गया और रूट में जोड़ दिया गया",
+            "status_rejected": "कार्य अस्वीकार कर दिया गया",
+            "reason_label": "दिया गया कारण:",
+            "btn_delete": "फ़ीड से हटाएं"
+        },
+        "toasts": {
+            "load_error": "कार्य लोड करने में विफल।",
+            "accepting": "कार्य स्वीकार किया जा रहा है...",
+            "rejecting": "कार्य अस्वीकार किया जा रहा है...",
+            "accept_success": "कार्य स्वीकार कर लिया गया और आपके शेड्यूल में जोड़ दिया गया!",
+            "reject_success": "कार्य सफलतापूर्वक अस्वीकार कर दिया गया।",
+            "respond_error": "कार्य का उत्तर देने में विफल।"
+        }
+    },
+    "index": {
+        "redirecting": "लॉगिन पर रीडायरेक्ट किया जा रहा है..."
+    },
+    "login": {
+        "brand_name": "WorkEduMusicIndia",
+        "mobile_brand_name": "WorkEduMusic",
+        "brand_subtitle": "कार्यबल प्रबंधन और अनुपालन प्रणाली",
+        "feature_attendance": "उपस्थिति",
+        "feature_compliance": "अनुपालन",
+        "feature_reports": "रिपोर्ट्स",
+        "welcome_back": "स्वागत है",
+        "credentials_hint": "साइन इन करने के लिए कृपया अपना विवरण दर्ज करें।",
+        "label_employee_id": "कर्मचारी आईडी",
+        "placeholder_employee_id": "जैसे: EMP-2026",
+        "label_password": "पासवर्ड",
+        "placeholder_password": "••••••••",
+        "btn_authenticating": "प्रमाणित किया जा रहा है...",
+        "btn_login": "लॉगिन",
+        "footer_trouble": "लॉगिन करने में समस्या हो रही है?",
+        "footer_contact": "एडमिन से संपर्क करें",
+        "errors": {
+            "default": "साइन इन करने में असमर्थ। कृपया पुनः प्रयास करें।",
+            "no_server": "सर्वर से कनेक्ट नहीं हो पा रहा है। कृपया अपना इंटरनेट कनेक्शन जांचें।",
+            "invalid_creds": "गलत कर्मचारी आईडी या पासवर्ड। कृपया पुनः प्रयास करें।",
+            "auth_error": "प्रमाणीकरण त्रुटि। कृपया पेज को रिफ्रेश करें और पुनः प्रयास करें।",
+            "restricted": "आपका खाता प्रतिबंधित कर दिया गया है। कृपया अपने एडमिन से संपर्क करें।",
+            "device_mismatch": "अनधिकृत डिवाइस। यह खाता किसी अन्य फोन से लिंक है। एक्सेस रीसेट करने के लिए कृपया अपने एडमिन से संपर्क करें।",
+            "not_found": "खाता नहीं मिला। कृपया अपनी कर्मचारी आईडी दोबारा जांचें।",
+            "too_many_attempts": "बहुत सारे विफल प्रयास। कृपया कुछ मिनट प्रतीक्षा करें और पुनः प्रयास करें।",
+            "server_error": "हम तकनीकी समस्याओं का सामना कर रहे हैं। कृपया बाद में पुनः प्रयास करें।"
+        }
+    },
+    "not_found": {
+        "page_not_found": "पेज नहीं मिला",
+        "return_to_login": "लॉगिन पर वापस जाएं"
+    },
+    "delete_modal": {
+        "title": "वीडियो हटाएं?",
+        "description": "यह कार्रवाई पूर्ववत नहीं की जा सकती। यह वीडियो वॉल्ट से स्थायी रूप से हटा दिया जाएगा।",
+        "cancel": "रद्द करें",
+        "deleting": "हटाया जा रहा है...",
+        "confirm": "हाँ, हटाएं"
+    },
+    "review_modal": {
+        "media_not_found": "मीडिया नहीं मिला",
+        "grade_performance": "प्रदर्शन ग्रेड करें",
+        "regular_class": "नियमित कक्षा",
+        "score_label": "स्कोर (1-10)",
+        "admin_feedback": "व्यवस्थापक प्रतिक्रिया",
+        "feedback_placeholder": "रचनात्मक प्रतिक्रिया जोड़ें...",
+        "cancel": "रद्द करें",
+        "saving": "सहेजा जा रहा है...",
+        "submit_grade": "ग्रेड सबमिट करें"
+    },
+    "upload_modal": {
+        "limit_reached_toast": "सीमा पूरी हो गई: केवल {{slots}} और अनुमत हैं।",
+        "select_school_toast": "कृपया एक स्कूल का चयन करें।",
+        "band_category_toast": "बैंड श्रेणी आवश्यक है।",
+        "students_count_toast": "उपस्थित छात्रों की संख्या आवश्यक है।",
+        "add_video_toast": "कृपया कम से कम एक वीडियो जोड़ें।",
+        "size_limit_toast": "फ़ाइलें 500MB सीमा से अधिक हैं। कृपया उन्हें कंप्रेस करें।",
+        "title": "वॉल्ट में अपलोड करें",
+        "subtitle": "अपने स्कूल की सुरक्षित गैलरी में प्रदर्शन वीडियो जोड़ें।",
+        "assigned_school": "आवंटित स्कूल",
+        "loading_schools": "स्कूल लोड हो रहे हैं...",
+        "band_category": "बैंड श्रेणी",
+        "junior_band": "जूनियर बैंड",
+        "senior_band": "सीनियर बैंड",
+        "event_name": "कार्यक्रम का नाम",
+        "optional": "(वैकल्पिक)",
+        "placeholder_event": "उदा. वसंत संगीत कार्यक्रम",
+        "event_date": "कार्यक्रम की तिथि",
+        "students_present": "उपस्थित छात्र",
+        "instructor_note": "प्रशिक्षक का नोट",
+        "placeholder_desc": "आज क्या पढ़ाया गया, इसके बारे में विवरण जोड़ें...",
+        "video_files": "वीडियो फ़ाइलें",
+        "click_to_browse": "वीडियो ब्राउज़ करने के लिए क्लिक करें",
+        "file_limits": "MP4 या MOV • अधिकतम 500MB प्रति फ़ाइल",
+        "cloud_enabled": "डायरेक्ट-टू-क्लाउड सक्षम",
+        "start_upload": "अपलोड शुरू करें"
+    },
+    "employee_media": {
+        "title": "मीडिया गैलरी",
+        "subtitle": "अपलोड ब्राउज़ करें और व्यवस्थापक प्रतिक्रिया देखें।",
+        "upload_media": "मीडिया अपलोड करें",
+        "upload": "अपलोड",
+        "videos": "वीडियो",
+        "avg": "औसत",
+        "unknown_school": "अज्ञात स्कूल",
+        "upload_cancelled": "अपलोड रद्द कर दिया गया।",
+        "fetch_error": "मीडिया गैलरी लोड करने में विफल।",
+        "admin_reviewed": "एक एडमिन ने आपके वीडियो की समीक्षा की है!",
+        "upload_success": "वीडियो सफलतापूर्वक वॉल्ट में सहेज लिया गया!",
+        "upload_error": "अपलोड करते समय त्रुटि हुई।",
+        "cancel_upload": "अपलोड रद्द करें",
+        "finalizing": "डेटाबेस को अंतिम रूप दिया जा रहा है...",
+        "uploading": "वॉल्ट में अपलोड किया जा रहा है...",
+        "junior_band": "जूनियर बैंड",
+        "senior_band": "सीनियर बैंड",
+        "present": "उपस्थित",
+        "admin_score": "व्यवस्थापक स्कोर",
+        "pending_review": "समीक्षा लंबित",
+        "delete": "हटाएं",
+        "no_media_found": "कोई मीडिया नहीं मिला",
+        "no_uploads_year": "वर्ष {{year}} के लिए कोई अपलोड नहीं है।",
+        "deleting_toast": "वीडियो हटाया जा रहा है...",
+        "delete_success": "वीडियो सफलतापूर्वक हटा दिया गया।",
+        "delete_error": "वीडियो हटाने में विफल।",
+        "delete_title": "वीडियो हटाएं?",
+        "delete_desc": "क्या आप वाकई इस वीडियो को स्थायी रूप से हटाना चाहते हैं?",
+        "cancel": "रद्द करें",
+        "yes_delete": "हाँ, हटाएं",
+        "no_video_found": "कोई वीडियो फ़ाइल नहीं मिली।",
+        "starting_download": "डाउनलोड शुरू हो रहा है...",
+        "download_started": "डाउनलोड शुरू हो गया!",
+        "download_failed": "डाउनलोड शुरू करने में विफल।"
+    },
+    "months": {
+        "january": "जनवरी",
+        "february": "फ़रवरी",
+        "march": "मार्च",
+        "april": "अप्रैल",
+        "may": "मई",
+        "june": "जून",
+        "july": "जुलाई",
+        "august": "अगस्त",
+        "september": "सितंबर",
+        "october": "अक्टूबर",
+        "november": "नवंबर",
+        "december": "दिसंबर"
+    },
+    "media_vault": {
+        "admin": {
+            "title": "मीडिया वॉल्ट",
+            "directory": "निर्देशिका",
+            "loading_dir": "वॉल्ट निर्देशिका लोड हो रही है...",
+            "scanning_records": "ऐतिहासिक रिकॉर्ड स्कैन किए जा रहे हैं...",
+            "no_uploads_found": "कोई मीडिया अपलोड नहीं मिला।",
+            "click_to_view": "रिकॉर्ड किए गए बैंड देखने के लिए क्लिक करें",
+            "junior_band": "जूनियर बैंड",
+            "senior_band": "सीनियर बैंड",
+            "open_vault": "वॉल्ट खोलें",
+            "no_uploads": "कोई अपलोड नहीं",
+            "decrypting": "वॉल्ट डिक्रिप्ट किया जा रहा है...",
+            "vault_empty": "वॉल्ट खाली है",
+            "no_media_year": "{{year}} में {{band}} के लिए कोई मीडिया अपलोड नहीं किया गया है।",
+            "total_videos": "कुल वीडियो",
+            "pending": "लंबित",
+            "avg": "औसत",
+            "unavailable": "अनुपलब्ध",
+            "regular_class": "नियमित कक्षा",
+            "students_present": "उपस्थित छात्र",
+            "unscored": "बिना स्कोर के",
+            "instructor_note": "प्रशिक्षक का नोट",
+            "no_description": "प्रशिक्षक द्वारा विवरण नहीं दिया गया।",
+            "your_feedback": "आपकी प्रतिक्रिया",
+            "edit_grade": "ग्रेड संपादित करें",
+            "review": "समीक्षा करें",
+            "error_directory": "निर्देशिका लोड करने में विफल।",
+            "error_history": "ऐतिहासिक कार्य लोड करने में विफल।",
+            "error_media": "मीडिया लोड करने में विफल।",
+            "new_video_toast": "एक नया वीडियो अभी अपलोड किया गया है! वॉल्ट डिक्रिप्ट किया जा रहा है...",
+            "link_copied": "वीडियो लिंक क्लिपबोर्ड पर कॉपी किया गया!",
+            "preparing_download": "सुरक्षित डाउनलोड तैयार किया जा रहा है...",
+            "download_started": "डाउनलोड शुरू हो गया!",
+            "download_failed": "सीधा डाउनलोड विफल। इसके बजाय फ़ाइल खोली जा रही है।",
+            "delete_success": "वीडियो सफलतापूर्वक हटा दिया गया!",
+            "delete_error": "वीडियो हटाने में विफल।",
+            "score_error": "कृपया 0 और 10 के बीच स्कोर असाइन करें।",
+            "grade_success": "ग्रेड सफलतापूर्वक सबमिट किया गया!",
+            "grade_error": "ग्रेड सबमिट करने में विफल।",
+            "copy_link_title": "लिंक कॉपी करें",
+            "download_title": "डाउनलोड",
+            "delete_title": "हटाएं"
+        }
+    },
+    "leaderboard": {
+        "title": "लीडरबोर्ड",
+        "subtitle": "कर्मचारी प्रदर्शन और रैंकिंग ट्रैक करें",
+        "employee_title": "शीर्ष प्रदर्शनकर्ता",
+        "employee_subtitle": "साप्ताहिक टीम लीडरबोर्ड",
+        "detail_history": "प्रदर्शन इतिहास",
+        "back_to_list": "सूची पर वापस जाएं",
+        "top_5_title": "शीर्ष 5 प्रदर्शनकर्ता",
+        "chart_loading": "चार्ट डेटा लोड हो रहा है...",
+        "no_data": "कोई डेटा उपलब्ध नहीं है",
+        "current_rank": "रैंक #{{rank}}",
+        "score_label": "स्कोर: {{score}}",
+        "standings_title": "वर्तमान स्थिति",
+        "search_placeholder": "कर्मचारियों को खोजें...",
+        "no_employees": "आपकी खोज से मेल खाने वाले कोई कर्मचारी नहीं मिले।",
+        "no_active_employees": "कोई सक्रिय कर्मचारी नहीं मिला।",
+        "unassigned": "अनिर्दिष्ट",
+        "pts": "अंक",
+        "out_of_100_pts": "/ 100 अंक",
+        "full_roster": "पूरी सूची",
+        "my_ranking": "मेरी रैंकिंग",
+        "zone_label": "{{zone}} ज़ोन",
+        "hide_progress": "मेरी प्रगति छिपाएं",
+        "view_progress": "मेरी प्रगति देखें",
+        "toasts": {
+            "load_error": "लीडरबोर्ड लोड करने में विफल",
+            "updated": "लीडरबोर्ड अपडेट किया गया!",
+            "graph_error": "ग्राफ़ डेटा लोड करने में विफल"
+        },
+        "graph": {
+            "weekly": "साप्ताहिक",
+            "monthly": "मासिक",
+            "loading": "{{period}} डेटा लोड हो रहा है...",
+            "no_historical_data": "इस अवधि के लिए कोई ऐतिहासिक डेटा नहीं मिला।"
+        }
+    },
+    "admin_profile": {
+        "title": "मेरी प्रोफ़ाइल",
+        "subtitle": "अपनी प्रशासनिक पहचान और सुरक्षा प्रबंधित करें",
+        "btn_edit_password": "सुरक्षा सेटिंग्स",
+        "avatar_change": "बदलें",
+        "verified": "सत्यापित",
+        "roles": {
+            "admin": "एडमिन",
+            "super_admin": "अप्रतिबंधित एडमिन",
+            "staff_admin": "स्टाफ एडमिन"
+        },
+        "sections": {
+            "account_identity": "खाता पहचान",
+            "email_address": "ईमेल पता",
+            "mobile_number": "मोबाइल नंबर",
+            "not_linked": "लिंक नहीं है",
+            "system_permissions": "सिस्टम अनुमतियां",
+            "access_level": "पहुंच स्तर",
+            "account_status": "खाता स्थिति",
+            "active_protected": "सक्रिय और सुरक्षित"
+        },
+        "delete_modal": {
+            "title": "चित्र हटाएं?",
+            "desc": "यह आपकी प्रोफ़ाइल फ़ोटो को स्थायी रूप से हटा देगा और आपके नाम के पहले अक्षर पर वापस आ जाएगा।",
+            "confirm": "हां, फ़ोटो हटाएं",
+            "cancel": "रद्द करें"
+        },
+        "toasts": {
+            "updating": "अपडेट हो रहा है...",
+            "success": "सफलतापूर्वक अपडेट किया गया!",
+            "error": "अपडेट करने में विफल।",
+            "file_too_large": "फ़ाइल का आकार 5MB से कम होना चाहिए।",
+            "uploading_avatar": "चित्र अपलोड हो रहा है...",
+            "avatar_updated": "प्रोफ़ाइल चित्र अपडेट किया गया!",
+            "upload_failed": "चित्र अपलोड करने में विफल।",
+            "removing_avatar": "चित्र हटाया जा रहा है...",
+            "avatar_removed": "प्रोफ़ाइल चित्र हटा दिया गया!",
+            "remove_failed": "चित्र हटाने में विफल।"
+        }
+    },
+    "learning_hub": {
+        "page_title": "ट्रेनिंग वॉल्ट",
+        "page_subtitle": "एडमिनिस्ट्रेटर द्वारा अपलोड किए गए निर्देश वीडियो से सीखें।",
+        "upload_btn": "लेसन अपलोड करें",
+        "empty_state_title": "वॉल्ट खाली है",
+        "empty_state_desc": "अभी कोई ट्रेनिंग वीडियो उपलब्ध नहीं है।",
+        "empty_state_admin_hint": "पहला वीडियो जोड़ने के लिए 'लेसन अपलोड करें' पर क्लिक करें!",
+        "ghost_card": {
+            "cancel_upload": "अपलोड रद्द करें",
+            "uploading": "क्लाउड पर अपलोड हो रहा है...",
+            "finalizing": "पूरा हो रहा है..."
+        },
+        "video_card": {
+            "instructor_label": "प्रशिक्षक",
+            "download_tooltip": "वीडियो डाउनलोड करें",
+            "share_tooltip": "WhatsApp पर शेयर करें",
+            "edit_tooltip": "वीडियो विवरण संपादित करें",
+            "delete_tooltip": "वीडियो हटाएं"
+        },
+        "upload_modal": {
+            "title": "ट्रेनिंग वीडियो अपलोड करें",
+            "subtitle": "सभी कर्मचारियों के साथ एक लेसन साझा करें",
+            "lesson_title": "लेसन का शीर्षक",
+            "title_placeholder": "उदा., उन्नत स्नेयर ड्रम तकनीक",
+            "description": "विवरण",
+            "optional": "(वैकल्पिक)",
+            "desc_placeholder": "संक्षेप में बताएं कि यह वीडियो क्या कवर करता है...",
+            "video_file": "वीडियो फ़ाइल",
+            "click_to_select": "वीडियो चुनने के लिए क्लिक करें",
+            "file_limits": "MP4, MOV, WebM (अधिकतम 500MB)",
+            "start_upload_btn": "बैकग्राउंड अपलोड शुरू करें"
+        },
+        "edit_dialog": {
+            "title": "लेसन का विवरण संपादित करें",
+            "lesson_title": "शीर्षक",
+            "description": "विवरण",
+            "cancel_btn": "रद्द करें",
+            "save_btn": "परिवर्तन सहेजें"
+        },
+        "delete_dialog": {
+            "title": "वीडियो हटाएं",
+            "warning_text": "क्या आप वाकई इस ट्रेनिंग वीडियो को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती है और सभी कर्मचारियों के लिए वीडियो हटा देगी।",
+            "cancel_btn": "रद्द करें",
+            "confirm_btn": "हाँ, हटाएं"
+        },
+        "toasts": {
+            "load_failed": "ट्रेनिंग वीडियो लोड करने में विफल",
+            "upload_cancelled": "अपलोड रद्द कर दिया गया",
+            "upload_failed": "अपलोड विफल रहा। कृपया अपना कनेक्शन जांचें।",
+            "deleting": "वीडियो हटाया जा रहा है...",
+            "delete_success": "वीडियो सफलतापूर्वक हटा दिया गया",
+            "delete_failed": "वीडियो हटाने में विफल",
+            "updating": "लेसन अपडेट किया जा रहा है...",
+            "update_success": "सफलतापूर्वक अपडेट किया गया!",
+            "update_failed": "लेसन अपडेट करने में विफल",
+            "preparing_download": "डाउनलोड तैयार हो रहा है...",
+            "download_started": "डाउनलोड शुरू हो गया!",
+            "download_failed": "वीडियो डाउनलोड करने में विफल।",
+            "file_too_large": "वीडियो 500MB की सीमा से अधिक है।",
+            "title_required": "शीर्षक आवश्यक है",
+            "file_required": "कृपया एक वीडियो फ़ाइल चुनें",
+            "keep_app_open": "कृपया अपलोड पूरा होने तक ऐप खुला रखें!"
+        }
+    },
+    "help_faq": {
+        "title": "सहायता और सामान्य प्रश्न",
+        "subtitle": "अपने दैनिक डैशबोर्ड का उपयोग करने के लिए आपको जो कुछ भी जानने की आवश्यकता है।",
+        "search_placeholder": "सहायता, सुविधाएँ या उत्तर खोजें...",
+        "no_results": "इसके लिए कोई परिणाम नहीं मिला:",
+        "clear_search": "खोज साफ़ करें",
+        "categories": {
+            "all": "सभी",
+            "dashboard": "डैशबोर्ड और दैनिक कार्य",
+            "assignments": "कार्य और उपस्थिति",
+            "tasks": "वैकल्पिक कार्य",
+            "media": "मीडिया और अपलोड",
+            "learning": "लर्निंग हब",
+            "leaderboard": "लीडरबोर्ड और आँकड़े",
+            "reports": "दैनिक रिपोर्ट",
+            "notifications": "अलर्ट और सूचनाएं",
+            "profile": "प्रोफ़ाइल और सेटिंग्स",
+            "system": "सिस्टम और समस्या निवारण",
+            "chat": "चैट और मैसेजिंग"
+        },
+        "faqs": {
+            "1": {
+                "q": "इस ऐप का उपयोग किस लिए किया जाता है?",
+                "a": "यह ऐप आपकी डेली डिजिटल डायरी है। यह आपको बताता है कि आज आपको किन स्कूलों में जाना है, रास्ता दिखाता है, और आपको फ़ोन की लोकेशन का उपयोग करके अपनी अटेंडेंस (Check-In और Check-Out) लगाने की सुविधा देता है।"
+            },
+            "2": {
+                "q": "मैं आज के लिए अपने स्कूल कहाँ देख सकता हूँ?",
+                "a": "ऐप खोलते ही! मुख्य स्क्रीन (Dashboard) पर, आपको हर उस स्कूल का कार्ड दिखाई देगा जहाँ आपको जाना है। हर कार्ड में स्कूल का नाम, पता, आपका समय और बैंड (Junior/Senior) लिखा होता है।"
+            },
+            "3": {
+                "q": "मैं स्कूल का रास्ता (Directions) कैसे देखूँ?",
+                "a": "स्कूल कार्ड पर 'Directions' बटन दबाएं। यह अपने आप आपके फोन पर Google Maps खोल देगा और आपको स्कूल तक का रास्ता दिखाएगा।"
+            },
+            "4": {
+                "q": "पहुँचने के बाद मैं Check-In कैसे करूँ?",
+                "a": "जब आप स्कूल पहुँच जाएं, तो उस स्कूल के कार्ड पर हरे रंग का 'Check-In' बटन दबाएं। \n\n*ध्यान दें:* यदि आप अपने समय के बाद पहुंचते हैं, तो ऐप आपसे Check-In करने से पहले 'Late Reason' (देरी का कारण) लिखने को कहेगा।"
+            },
+            "5": {
+                "q": "काम खत्म होने पर Check-Out कैसे करूँ?",
+                "a": "जब आपकी क्लास खत्म हो जाए, तो ऐप खोलें और नीले रंग का 'Check-Out' बटन दबाएं। \n\n*ध्यान दें:* यदि आप अपनी शिफ्ट से ज्यादा देर तक रुके हैं, तो ऐप आपसे 'Overtime Reason' (जैसे: एनुअल डे की प्रैक्टिस) लिखने को कहेगा।"
+            },
+            "6": {
+                "q": "स्कूल कार्ड पर 'Absent' और 'Holiday' बटन क्या करते हैं?",
+                "a": "ये बटन सिर्फ एक विशेष स्कूल की विजिट रद्द करने के लिए हैं:\n\n• Absent: अगर आप इस स्कूल में नहीं जा सकते (जैसे: ट्रैफिक में फंसे हैं) तो इसे दबाएं। आपको एक छोटा सा कारण लिखना होगा।\n• Holiday: अगर आप स्कूल पहुँचते हैं और पता चलता है कि स्कूल बंद है, तो इसे दबाएं।"
+            },
+            "7": {
+                "q": "स्क्रीन के ऊपर 'Day Absent' और 'Day Holiday' का क्या मतलब है?",
+                "a": "कार्ड्स पर दिए गए बटन के विपरीत, स्क्रीन के बिल्कुल ऊपर दिए गए ये बटन आपके पूरे दिन पर असर डालते हैं:\n\n• Day Absent: इसे दबाएं यदि आप बीमार हैं और आज किसी भी स्कूल में नहीं जा सकते।\n• Day Holiday: इसे दबाएं यदि आज कोई सरकारी छुट्टी घोषित है और आपको काम नहीं करना है।"
+            },
+            "8": {
+                "q": "मैं छुट्टी (Leave) कैसे लूँ, और मुझे कैसे पता चलेगा कि यह पास हो गई है?",
+                "a": "स्क्रीन के ऊपर 'Request Leave' बटन दबाएं। अपनी तारीख चुनें और कारण लिखें।\n\nयह देखने के लिए कि छुट्टी पास हुई या नहीं, बाद में उसी बटन को फिर से दबाएं! स्क्रीन आपको साफ दिखाएगी कि आपकी रिक्वेस्ट Pending है, Approved (पास) हो गई है, या Rejected (रद्द) हो गई है।"
+            },
+            "9": {
+                "q": "तैरता हुआ (Floating) SOS बटन किस लिए है?",
+                "a": "स्क्रीन के नीचे कोने में एक गोल बटन है। यह केवल आपातकाल (Emergency) के लिए है। यदि आप मुसीबत में हैं, तो इस बटन को 5 सेकंड तक दबाकर रखें। आपका फोन बीप करेगा, और आपकी लाइव लोकेशन के साथ एक अलर्ट सीधा एडमिन और आपके 3 सबसे करीबी साथियों को भेज दिया जाएगा!"
+            },
+            "10": {
+                "q": "मैं अपने सभी निर्धारित स्कूल कहाँ देख सकता हूँ?",
+                "a": "नीचे 'Assignments' आइकन पर टैप करें। यहाँ आपको अपने सभी स्कूलों की लिस्ट दिखेगी। हर कार्ड आपके समय, बैंड, और हफ़्ते के उन दिनों (हरे रंग में) को दिखाता है जब आपको वहां जाना होता है।"
+            },
+            "11": {
+                "q": "स्कूल कार्ड पर '2 km' या '500 m' जैसी दूरी क्यों दिखती है?",
+                "a": "ऐप आपके फोन के जीपीएस का इस्तेमाल करके बताता है कि आप अभी स्कूल से कितनी दूर हैं! इससे आपको अपनी यात्रा शुरू करने से पहले समय का अंदाज़ा लगाने में मदद मिलती है।"
+            },
+            "12": {
+                "q": "ऊपर लाल 'Absent' और पीला 'Leave Record' बॉक्स क्या है?",
+                "a": "ये आपके व्यक्तिगत आंकड़े (Stats) हैं! यह आपको तुरंत दिखाता है कि आपके रिकॉर्ड में कुल कितनी अनुपस्थिति (Absences) और छुट्टियां (Leaves) हैं।"
+            },
+            "13": {
+                "q": "मैं अपनी पुरानी अटेंडेंस कैसे चेक कर सकता हूँ?",
+                "a": "किसी भी स्कूल कार्ड पर टैप करके उसे खोलें, और अपनी अटेंडेंस हिस्ट्री देखें। यह आपको हर दिन का विवरण दिखाएगा, जिसमें आपका Check-In और Check-Out समय, और आपका स्टेटस (Present, Late, Absent) शामिल है।"
+            },
+            "14": {
+                "q": "मैं किसी स्कूल में भविष्य के इवेंट (Annual Day) को कैसे जोड़ूं?",
+                "a": "यदि स्कूल में कोई विशेष कार्यक्रम (जैसे एनुअल डे या स्पोर्ट्स मीट) है, तो आप 'Add Event' सुविधा का उपयोग कर सकते हैं! बस स्कूल की डिटेल्स खोलें, 'Add Event' पर टैप करें, तारीख और समय चुनें, और एक छोटा सा विवरण लिखें।"
+            },
+            "15": {
+                "q": "Tasks पेज किस लिए है?",
+                "a": "यह पेज आपको एडमिन द्वारा दिए गए कोई भी विशेष, अस्थायी या वैकल्पिक काम दिखाता है (जैसे वन-टाइम वर्कशॉप)। आप डिटेल्स देखकर तय कर सकते हैं कि इसे स्वीकार (Accept) करना है या नहीं।"
+            },
+            "16": {
+                "q": "मुझे कैसे पता चलेगा कि मेरे लिए कोई नया Task है?",
+                "a": "स्क्रीन के ऊपर एक चमकता हुआ 'Pending' बैज आपको बताएगा कि कितने टास्क आपका इंतज़ार कर रहे हैं। यदि आप ऐप देख रहे हैं और एडमिन आपको कोई नया काम भेजता है, तो ऐप तुरंत अपडेट हो जाएगा!"
+            },
+            "17": {
+                "q": "Task कार्ड पर क्या जानकारी होती है?",
+                "a": "हर टास्क कार्ड आपको ज़रूरी जानकारी देता है: स्कूल का नाम, पता, समय, और नीले रंग का 'Instructions' बॉक्स जिसमें एडमिन के विशेष नोट्स होते हैं कि आपको क्या करना है।"
+            },
+            "18": {
+                "q": "मैं किसी Task को Accept कैसे करूँ?",
+                "a": "यदि आप काम करने के लिए तैयार हैं, तो कार्ड के नीचे हरे रंग का 'Accept' बटन दबाएं। यह काम आधिकारिक तौर पर आपका हो जाएगा। \n\nस्वीकार करने के बाद, यह टास्क अपने आप आपके 'Assignments' पेज पर जुड़ जाएगा ताकि आप वहां से Check-In कर सकें!"
+            },
+            "19": {
+                "q": "यदि मैं व्यस्त हूँ तो क्या मैं Task को मना (Reject) कर सकता हूँ?",
+                "a": "हाँ! यदि आप टास्क नहीं कर सकते, तो लाल रंग का 'Reject' बटन दबाएं। ऐप आपसे एक कारण टाइप करने को कहेगा (जैसे 'मेरे पास इस समय दूसरी क्लास है')। जैसे ही आप सबमिट करेंगे, एडमिन को सूचना मिल जाएगी।"
+            },
+            "20": {
+                "q": "Media पेज किस लिए है?",
+                "a": "मीडिया पेज आपका पर्सनल वीडियो पोर्टफोलियो है। यहाँ आप अपनी बैंड क्लास के वीडियो अपलोड कर सकते हैं, पुराने वीडियो देख सकते हैं, और चेक कर सकते हैं कि एडमिन ने आपके वीडियो को कितने नंबर (Scores) दिए हैं।"
+            },
+            "21": {
+                "q": "मैं महीने-वार वीडियो फोल्डर कैसे देखूँ?",
+                "a": "आपके वीडियो महीने के हिसाब से रखे गए हैं। जब आप किसी महीने को खोलने के लिए टैप करते हैं, तो आपको ऊपर एक समरी दिखेगी जिसमें उस महीने के कुल वीडियो और आपका Average Score (10 में से) दिखाई देगा।"
+            },
+            "22": {
+                "q": "मेरे वीडियो पर दिख रहे नंबर और बैज का क्या मतलब है?",
+                "a": "जब आप किसी वीडियो को खोलते हैं, तो आप देखेंगे:\n\n• स्कूल का नाम और बैंड।\n• कितने छात्र मौजूद थे।\n• आपका स्कोर (जैसे, 8/10)। यदि नंबर नहीं मिले हैं, तो यह 'Unscored' कहेगा।\n• 'Admin Feedback': एडमिन द्वारा दी गई कोई सलाह।"
+            },
+            "23": {
+                "q": "क्या मैं अपने वीडियो शेयर या डाउनलोड कर सकता हूँ?",
+                "a": "हाँ! हर वीडियो कार्ड के नीचे तीन विकल्प हैं:\n\n1. Copy Link: लिंक कॉपी करने के लिए।\n2. Download: वीडियो को अपने फोन में सेव करने के लिए।\n3. Share on WhatsApp: सीधे किसी ग्रुप या पेरेंट को मैसेज भेजने के लिए।"
+            },
+            "24": {
+                "q": "मैं नया वीडियो कैसे अपलोड करूँ?",
+                "a": "Media पेज के ऊपर 'Upload Media' बटन दबाएं। स्कूल, बैंड, तारीख और मौजूद छात्रों की संख्या चुनें। फिर अपलोड शुरू करने के लिए अपने फोन से 5 वीडियो तक चुनें।"
+            },
+            "25": {
+                "q": "क्या वीडियो अपलोड करने की कोई सीमा है?",
+                "a": "हाँ, आप एक बार में अधिकतम 5 वीडियो अपलोड कर सकते हैं, और उनका कुल साइज़ 500 MB से ज़्यादा नहीं होना चाहिए।"
+            },
+            "26": {
+                "q": "क्या वीडियो अपलोड होते समय मुझे ऐप खुला रखना होगा?",
+                "a": "नहीं! 'Start Upload' दबाने के बाद एक 'Ghost Card' दिखाई देता है। आप ऐप के दूसरे पेजों को सुरक्षित रूप से चला सकते हैं, जबकि वीडियो बैकग्राउंड में अपलोड होता रहेगा।"
+            },
+            "27": {
+                "q": "अगर मैंने गलत वीडियो अपलोड कर दिया है तो क्या मैं उसे डिलीट कर सकता हूँ?",
+                "a": "हाँ, लेकिन केवल तभी जब तक उसे एडमिन द्वारा नंबर (ग्रेड) न दिए गए हों। लाल रंग के ट्रैश कैन आइकन को खोजें। एक बार ग्रेड मिलने के बाद, वीडियो हमेशा के लिए लॉक हो जाता है।"
+            },
+            "28": {
+                "q": "Learning Hub क्या है?",
+                "a": "लर्निंग हब (ट्रेनिंग वॉल्ट) आपकी ट्रेनिंग के लिए एक लाइब्रेरी है। यहाँ एडमिन और अन्य शिक्षक आपके सीखने के लिए एजुकेशनल वीडियो और ट्यूटोरियल अपलोड करते हैं।"
+            },
+            "29": {
+                "q": "मैं वीडियो कैसे चलाऊँ?",
+                "a": "आपका इंटरनेट डेटा बचाने के लिए वीडियो तुरंत लोड नहीं होते। पहले आपको एक 'Click to Play' बटन वाली इमेज दिखेगी। उसे दबाने पर उच्च गुणवत्ता (High Quality) वाला वीडियो शुरू होगा।"
+            },
+            "30": {
+                "q": "मैं वीडियो की डिटेल्स कैसे पढ़ूं?",
+                "a": "हर वीडियो के नीचे उसका टाइटल और तारीख होती है। कार्ड का पूरा विवरण और अपलोड करने वाले का नाम (जैसे: एडमिन) देखने के लिए नीचे की ओर तीर (˅) पर टैप करें।"
+            },
+            "31": {
+                "q": "क्या मैं इन ट्रेनिंग वीडियो को अपने फोन में सेव कर सकता हूँ?",
+                "a": "हाँ! वीडियो कार्ड को एक्सपैंड करने पर आपको एक Download बटन दिखेगा। इससे वीडियो आपके डिवाइस में सेव हो जाएगा ताकि आप उसे बिना इंटरनेट के बाद में देख सकें।"
+            },
+            "32": {
+                "q": "मैं किसी और के साथ ट्रेनिंग वीडियो कैसे शेयर करूँ?",
+                "a": "आप इसे सीधे WhatsApp के जरिए शेयर कर सकते हैं! वीडियो कार्ड खोलें और हरे WhatsApp आइकन पर टैप करें।"
+            },
+            "33": {
+                "q": "(Admins के लिए) मैं नया ट्रेनिंग वीडियो कैसे अपलोड करूँ?",
+                "a": "यदि आपके पास एडमिन अधिकार हैं, तो आपको लर्निंग हब के ऊपर एक नीला 'Upload' बटन दिखेगा। यहाँ से आप नया वीडियो डालकर सभी कर्मचारियों के साथ शेयर कर सकते हैं।"
+            },
+            "34": {
+                "q": "Leaderboard क्या है?",
+                "a": "लीडरबोर्ड यह देखने का एक मज़ेदार तरीका है कि आप अन्य शिक्षकों के मुकाबले कैसा प्रदर्शन कर रहे हैं। समय पर आने, अपनी ड्यूटी पूरी करने और अच्छी क्वालिटी के वीडियो अपलोड करने पर आपको हर हफ्ते पॉइंट्स मिलते हैं।"
+            },
+            "35": {
+                "q": "मैं अपने खुद के आँकड़े (Stats) कैसे देखूँ?",
+                "a": "लीडरबोर्ड पेज के सबसे ऊपर, आपको अपना कार्ड दिखेगा। यह आपकी वर्तमान रैंक (जैसे, #4) और 100 में से आपका कुल स्कोर दिखाता है।"
+            },
+            "36": {
+                "q": "अलग-अलग रंगों वाले जोन (Zones) का क्या मतलब है?",
+                "a": "आपके प्रदर्शन को रंगों में बांटा गया है:\n\n• Green Zone: बहुत बढ़िया! आपकी अटेंडेंस और वीडियो स्कोर शानदार हैं।\n• Blue Zone: अच्छा! आपका प्रदर्शन लगातार अच्छा है।\n• Red Zone: सुधार की ज़रूरत है। इसका मतलब है कि आप देर से पहुंच रहे हैं या आपने वीडियो अपलोड नहीं किए हैं।"
+            },
+            "37": {
+                "q": "क्या मैं अपना पिछला प्रदर्शन देख सकता हूँ?",
+                "a": "हाँ! अपने कार्ड पर 'View Progress' बटन दबाएं। एक ग्राफ खुलेगा जो आपकी परफॉरमेंस हिस्ट्री दिखाएगा। आप इसे 'Weekly' और 'Monthly' में बदल सकते हैं।"
+            },
+            "38": {
+                "q": "क्या लीडरबोर्ड तुरंत (Instantly) अपडेट होता है?",
+                "a": "हाँ! लीडरबोर्ड पूरी तरह से लाइव है। जैसे ही एडमिन आपके वीडियो को ग्रेड देता है या आप Check-In करते हैं, आपको एक 'टिंग' की आवाज़ सुनाई देगी और आपके पॉइंट्स और रैंक तुरंत अपडेट हो जाएंगे।"
+            },
+            "39": {
+                "q": "मैं पोडियम (Podium) पर कैसे आ सकता हूँ?",
+                "a": "हफ्ते के टॉप 3 शिक्षक पेज के सबसे ऊपर एनिमेटेड पोडियम पर दिखाई देते हैं। वहां पहुँचने के लिए: हमेशा समय पर Check-In करें, बिना कारण कोई सेशन मिस न करें, और सुनिश्चित करें कि आपके वीडियो स्पष्ट हों!"
+            },
+            "40": {
+                "q": "Daily Report पेज किस लिए है?",
+                "a": "यहाँ आप अपनी क्लास की एक छोटी सी रिपोर्ट लिखते हैं कि आज आपने स्कूल में क्या सिखाया। इससे एडमिन को छात्रों की प्रगति (Progress) की जानकारी मिलती है।"
+            },
+            "41": {
+                "q": "मैं अपनी रेगुलर डेली रिपोर्ट कैसे सबमिट करूँ?",
+                "a": "सबसे पहले, ड्रॉपडाउन से अपना स्कूल चुनें। फिर चुनें कि आपने जूनियर या सीनियर बैंड को पढ़ाया है। सुनिश्चित करें कि केटेगरी 'Regular Report' है, समरी बॉक्स में अपने नोट्स टाइप करें और 'Submit Report' दबाएं!"
+            },
+            "42": {
+                "q": "यदि मैं किसी विशेष इवेंट (Special Event) की रिपोर्ट दे रहा हूँ तो क्या करूँ?",
+                "a": "'Category' बॉक्स पर टैप करें और इसे 'Regular Report' से 'Event Report' में बदलें। तुरंत दो नए बॉक्स आएंगे जिसमें इवेंट का नाम और तारीख पूछी जाएगी। उन्हें भरें और सबमिट करें!"
+            },
+            "43": {
+                "q": "मेरा 'Submit Report' बटन ग्रे (Grey) क्यों है?",
+                "a": "जब तक आप सारी ज़रूरी जानकारी नहीं भरते, यह बटन ग्रे रहेगा और काम नहीं करेगा। जांच लें कि आपने स्कूल, बैंड और समरी बॉक्स भर दिया है।"
+            },
+            "44": {
+                "q": "मुझे Notifications पेज पर किस तरह के अलर्ट दिखेंगे?",
+                "a": "यह पेज आपके ऐप अपडेट का इनबॉक्स है। आपको यहाँ अलर्ट मिलेगा जब आपकी छुट्टी (Leave) पास या रद्द होगी, नया काम मिलेगा, एडमिन आपके वीडियो पर फीडबैक देगा, या आपको कोई सिस्टम वार्निंग मिलेगी।"
+            },
+            "45": {
+                "q": "क्या मुझे इन अलर्ट्स के ईमेल भी मिलते हैं?",
+                "a": "हाँ, बिल्कुल! हर बार जब आपको ऐप में कोई नोटिफिकेशन मिलता है, तो उसकी एक कॉपी तुरंत आपके रजिस्टर्ड ईमेल पर भेज दी जाती है। ताकि आपसे कोई जानकारी मिस न हो।"
+            },
+            "46": {
+                "q": "अलग-अलग रंग और आइकन क्या बताते हैं?",
+                "a": "अलर्ट्स को जल्दी पढ़ने के लिए उन्हें रंगों में बांटा गया है:\n\n• हरा (चेकमार्क): खुशखबरी! नया काम या पास हुई छुट्टी।\n• लाल (वार्निंग साइन): ज़रूरी! इसका मतलब है कि आपको कोई चेतावनी मिली है या आपका कोई काम रद्द हो गया है।\n• नीला (इन्फो आइकन): सामान्य सिस्टम की जानकारी।"
+            },
+            "47": {
+                "q": "मैं अपनी पुरानी नोटिफिकेशन्स को कैसे साफ़ करूँ?",
+                "a": "ऐप अपने आप नए अलर्ट्स को 'Read' (पढ़ा हुआ) कर देता है। यदि आपका इनबॉक्स बहुत भर गया है, तो आप ऊपर 'Clear All' बटन दबाकर पुराने अलर्ट्स डिलीट कर सकते हैं।"
+            },
+            "48": {
+                "q": "मैं Profile पेज पर क्या जानकारी देख सकता हूँ?",
+                "a": "आपका प्रोफाइल पेज आपकी निजी जानकारी दिखाता है जैसे आपकी एम्प्लोयी आईडी, ईमेल और फोन नंबर। यह आपका Zone और उन सभी स्कूलों की लिस्ट भी दिखाता है जहाँ आप पढ़ाते हैं।"
+            },
+            "49": {
+                "q": "मैं अपनी प्रोफाइल पिक्चर कैसे बदलूँ?",
+                "a": "अपने नाम के बगल में बने छोटे कैमरा आइकन पर टैप करें। आप अपने फोन से कोई भी फोटो चुनकर नई प्रोफाइल पिक्चर लगा सकते हैं।"
+            },
+            "50": {
+                "q": "क्या मैं अपनी प्रोफाइल पिक्चर हटा (Remove) सकता हूँ?",
+                "a": "हाँ! यदि आपने पिक्चर लगा रखी है, तो आपको उसके पास एक छोटा लाल रंग का ट्रैश कैन (कचरे का डिब्बा) आइकन दिखेगा। उसे दबाने से फोटो हट जाएगी और सिर्फ आपके नाम के अक्षर दिखेंगे।"
+            },
+            "51": {
+                "q": "मैं अपना पासवर्ड कैसे बदलूँ?",
+                "a": "अपनी प्रोफाइल पर 'Edit Password' बटन दबाएं। एक स्क्रीन खुलेगी जो आपसे नया पासवर्ड मांगेगी (कम से कम 6 अक्षर या नंबर)। सेव करने के लिए 'Update' दबाएं!"
+            },
+            "52": {
+                "q": "मैं ऐप की भाषा (Language) कैसे बदलूँ?",
+                "a": "मेनू में 'Settings' (गियर आइकन) पर टैप करें। आप ऐप की भाषा अंग्रेजी (English) और हिंदी के बीच बदल सकते हैं। अपनी भाषा चुनें और 'Save Changes' दबाएं!"
+            },
+            "53": {
+                "q": "क्या मैं ईमेल नोटिफिकेशन्स बंद कर सकता हूँ?",
+                "a": "आप उन्हें सेटिंग्स में बंद कर सकते हैं, लेकिन हम सलाह देते हैं कि उन्हें चालू (ON) ही रखें। यदि आप उन्हें बंद करते हैं, तो आप ज़रूरी अपडेट्स मिस कर सकते हैं।"
+            },
+            "54": {
+                "q": "क्या ऐप में Dark Mode है?",
+                "a": "हाँ! अगर स्क्रीन बहुत ज़्यादा चमकदार लग रही है, तो आप आसानी से डार्क मोड लगा सकते हैं। बस अपने मेनू में सूर्य/चांद (Sun/Moon) आइकन पर टैप करें।"
+            },
+            "55": {
+                "q": "मेरा SOS बटन लाल क्यों नहीं दिख रहा है?",
+                "a": "यदि आपका SOS बटन लाल नहीं है, तो इसका मतलब है कि आपके फोन का लोकेशन (GPS) इस वेबसाइट के लिए बंद है। अटेंडेंस लगाने और इमरजेंसी में मदद भेजने के लिए ऐप को आपकी लोकेशन की ज़रूरत होती है। इसे चालू करने के लिए नीचे दिए गए स्टेप्स देखें।"
+            },
+            "56": {
+                "q": "Chrome ब्राउज़र में लोकेशन कैसे चालू करें?",
+                "a": "1. Chrome खोलें और workedumusicindia.com पर जाएं।\n2. ऊपर दाएं कोने में तीन बिंदुओं (⋮) पर टैप करें।\n3. 'Settings' पर जाएं, फिर नीचे स्क्रॉल करके 'Site Settings' पर टैप करें।\n4. 'Location' पर टैप करें और सुनिश्चित करें कि यह चालू (ON) है।\n5. पेज को रिफ्रेश करें।"
+            },
+            "57": {
+                "q": "ड्यूटी शुरू होने से 15 मिनट पहले मुझे रिमाइंडर क्यों मिला?",
+                "a": "सिस्टम अपने आप चेक करता है कि आप ड्यूटी के लिए तैयार हैं या नहीं। यदि आपने ड्यूटी शुरू होने से 15 मिनट पहले Check-In नहीं किया है, तो आपको एक रिमाइंडर भेजा जाता है ताकि आप लेट न हों।"
+            },
+            "58": {
+                "q": "2-घंटे का 'Auto-Absent' नियम क्या है?",
+                "a": "रिकॉर्ड को सही रखने के लिए, यदि आप 2 घंटे से ज़्यादा लेट हैं और आपने Check-In नहीं किया है, तो सिस्टम आपको उस ड्यूटी के लिए अपने आप 'Absent' (अनुपस्थित) मार्क कर देगा।"
+            },
+            "59": {
+                "q": "ऐप मुझे Check-Out करने के लिए क्यों कहता है?",
+                "a": "यदि आप Check-Out करना भूल जाते हैं, तो आपकी शिफ्ट खत्म होने के 10 मिनट बाद सिस्टम आपको और एडमिन को एक अलर्ट भेजता है।"
+            },
+            "60": {
+                "q": "डेली रिपोर्ट सबमिट करने की समय सीमा (Deadline) क्या है?",
+                "a": "सभी रिपोर्ट हर रोज़ रात 8:00 बजे तक सबमिट होनी चाहिए। यदि इस समय तक रिपोर्ट नहीं मिलती है, तो सिस्टम आपके प्रोफाइल पर 'Written Warning' जारी कर देगा।"
+            },
+            "61": {
+                "q": "मेरे साप्ताहिक स्कोर (Weekly Score) की गणना कैसे की जाती है?",
+                "a": "हर शनिवार रात 9:00 बजे सिस्टम आपके प्रदर्शन का हिसाब लगाता है:\n• 50% अटेंडेंस (समय पर आना)\n• 50% मीडिया स्कोर (वीडियो की क्वालिटी)\n• पेनल्टी: हर चेतावनी (Warning) के लिए -10 पॉइंट्स काटे जाते हैं।"
+            },
+            "62": {
+                "q": "मैं वॉयस या वीडियो कॉल कैसे शुरू करूँ?",
+                "a": "कॉल शुरू करने के लिए, संपर्क के साथ 1-ऑन-1 चैट खोलें। चैट विंडो के ऊपरी दाएं कोने में वीडियो आइकन पर क्लिक करें और 'वीडियो कॉल' या 'वॉयस कॉल' चुनें। कृपया ध्यान दें कि कॉलिंग सुविधा वर्तमान में केवल व्यक्तिगत चैट के लिए उपलब्ध है।"
+            },
+            "63": {
+                "q": "मैं ग्रुप चैट कैसे बनाऊं और मैनेज करूँ?",
+                "a": "अपनी चैट सूची के ऊपर तीन लंबवत बिंदुओं (⋮) पर क्लिक करें और 'नया समूह' चुनें। एक नाम दर्ज करें और जोड़ने के लिए सदस्य चुनें। यदि आप निर्माता या एडमिन हैं, तो आप ग्रुप के नाम या प्रोफाइल आइकन पर क्लिक करके साइडबार खोल सकते हैं, जहाँ से आप सदस्यों को जोड़/हटा सकते हैं या दूसरों को एडमिन बना सकते हैं।"
+            },
+            "64": {
+                "q": "क्या मेरे संदेश निजी और सुरक्षित हैं?",
+                "a": "हालाँकि सभी संदेश बाहरी खतरों से सुरक्षित रखने के लिए एंड-टू-एंड एन्क्रिप्टेड हैं, लेकिन कृपया ध्यान रखें कि निगरानी और अनुपालन के लिए एडमिनिस्ट्रेटर के पास प्लेटफॉर्म के भीतर संदेश देखने की सुविधा है। इसके अलावा, गोपनीयता बनाए रखने के लिए 7 दिनों के बाद संदेश अपने आप डिलीट हो जाते हैं।"
+            },
+            "65": {
+                "q": "क्या मैं फ़ाइलें, फ़ोटो या वीडियो साझा कर सकता हूँ?",
+                "a": "हाँ! किसी भी सक्रिय चैट में, इनपुट बार में पेपरक्लिप आइकन पर क्लिक करें। आप अपने डिवाइस से फ़ोटो, वीडियो या दस्तावेज़ अपलोड कर सकते हैं, या सीधे फ़ोटो लेने के लिए कैमरे का उपयोग कर सकते हैं।"
+            },
+            "66": {
+                "q": "क्या मैं भेजे गए संदेश को डिलीट या फॉरवर्ड कर सकता हूँ?",
+                "a": "हाँ। संदेश पर राइट-क्लिक करें या लॉन्ग-प्रेस करें, फिर 'चुनें' (Select) पर क्लिक करें। इसके बाद आप संदेश को फॉरवर्ड या डिलीट कर सकते हैं। पिछले 30 मिनट में भेजे गए संदेशों को 'सभी के लिए डिलीट' किया जा सकता है, अन्यथा उन्हें केवल आपके लिए डिलीट किया जा सकता है।"
+            }
+        }
+    },
+    "call": {
+        "ringing": "घंटी बज रही है...",
+        "calling": "कॉल कर रहे हैं...",
+        "busy": "व्यक्ति किसी अन्य कॉल पर व्यस्त है...",
+        "encrypted": "एंड-टू-एंड एन्क्रिप्टेड",
+        "on_hold_title": "{{name}} ने आपकी कॉल होल्ड पर रख दी है।",
+        "on_hold_desc": "कृपया प्रतीक्षा करें जब तक वे दूसरी कॉल समाप्त करते हैं...",
+        "unknown": "अज्ञात",
+        "in_call": "कॉल में",
+        "video_request_desc": "वीडियो कॉल पर स्विच करने का अनुरोध कर रहे हैं।",
+        "decline": "अस्वीकार करें",
+        "accept": "स्वीकार करें",
+        "incoming_type": "{{type}} कॉल आ रही है...",
+        "on_hold_badge": "होल्ड पर",
+        "minimize_title": "कॉल छोटा करें",
+        "flip_camera": "कैमरा पलटें",
+        "request_video": "वीडियो अपग्रेड का अनुरोध करें"
+    },
+    "chat": {
+        "messages": "संदेश",
+        "new_group": "नया समूह",
+        "search_placeholder": "चैट खोजें...",
+        "no_chats": "कोई चैट नहीं मिली।",
+        "members_count": "{{count}} सदस्य",
+        "default_role": "कर्मचारी",
+        "unread_overflow": "9+",
+        "you": "आप ",
+        "wipe_chat": "चैट मिटाएं"
+    },
+    "chat_sidebar": {
+        "group_info": "समूह की जानकारी",
+        "contact_info": "संपर्क जानकारी",
+        "change_photo": "फ़ोटो बदलें",
+        "remove_photo": "फ़ोटो हटाएं",
+        "employee_role": "कर्मचारी",
+        "members_count": "{{count}} सदस्य",
+        "participants": "प्रतिभागी",
+        "add_member": "+ सदस्य जोड़ें",
+        "you": "आप",
+        "role_creator": "निर्माता",
+        "role_admin": "व्यवस्थापक",
+        "action_demote": "व्यवस्थापक पद से हटाएं",
+        "action_promote": "समूह व्यवस्थापक बनाएं",
+        "action_remove": "सदस्य को हटाएं",
+        "leave_group": "समूह छोड़ें"
+    },
+    "chat_window": {
+        "empty": {
+            "title": "कम्युनिकेशन हब",
+            "subtitle": "सीधे संदेश भेजने, मीडिया साझा करने और सहयोग करने के लिए साइडबार से किसी टीम सदस्य या समूह का चयन करें।"
+        },
+        "top_bar": {
+            "selected_count": "{{count}} चयनित",
+            "search": "खोजें...",
+            "group_chat": "समूह चैट",
+            "online": "ऑनलाइन",
+            "offline": "ऑफ़लाइन"
+        },
+        "top_menu": {
+            "video_call": "वीडियो कॉल",
+            "voice_call": "वॉयस कॉल",
+            "media": "मीडिया",
+            "docs": "दस्तावेज़",
+            "links": "लिंक्स",
+            "clear_chat": "चैट साफ़ करें",
+            "manage_contacts": "संपर्क प्रबंधित करें",
+            "show_chats": "चैट दिखाएं"
+        },
+        "privacy": {
+            "desktop": "गोपनीयता के लिए ये संदेश 7 दिनों के बाद स्वचालित रूप से हटा दिए जाएंगे।",
+            "mobile_notice": "संदेश 7 दिनों के बाद स्वतः हट जाएंगे।",
+            "label": "गोपनीयता"
+        },
+        "feed": {
+            "say_hello": "{{name}} को नमस्ते कहें!",
+            "start_secure": "संदेश भेजें, फ़ोटो साझा करें, या एक सुरक्षित {{type}} शुरू करें।",
+            "type_group_chat": "समूह चैट",
+            "type_voice_call": "वॉयस कॉल",
+            "e2e": "संदेश एंड-टू-एंड एन्क्रिप्टेड हैं। इस चैट के बाहर कोई भी उन्हें पढ़ या सुन नहीं सकता है।"
+        },
+        "message": {
+            "deleted": "यह संदेश हटा दिया गया था",
+            "document_file": "दस्तावेज़ फ़ाइल",
+            "you": "आप",
+            "member": "सदस्य"
+        },
+        "input": {
+            "placeholder": "एक संदेश टाइप करें...",
+            "camera": "कैमरा",
+            "photos": "फ़ोटो",
+            "document": "दस्तावेज़"
+        },
+        "context_menu": {
+            "delete_me": "मेरे लिए हटाएं",
+            "delete_everyone": "सभी के लिए हटाएं",
+            "select": "चुनें"
+        },
+        "shared": {
+            "media": "साझा मीडिया",
+            "docs": "साझा दस्तावेज़",
+            "links": "साझा लिंक्स",
+            "no_shared_media": "अभी तक कोई साझा मीडिया नहीं।",
+            "no_shared_docs": "अभी तक कोई साझा दस्तावेज़ नहीं।",
+            "no_shared_links": "अभी तक कोई साझा लिंक नहीं।",
+            "will_appear": "इस चैट में साझा की गई फ़ाइलें यहाँ दिखाई देंगी।",
+            "shared_doc": "साझा दस्तावेज़",
+            "preview": "दस्तावेज़ पूर्वावलोकन"
+        }
+    },
+    "modal": {
+        "forward": {
+            "title": "संदेश अग्रेषित करें (Forward)",
+            "search": "चैट खोजें...",
+            "no_chats": "कोई चैट नहीं मिली",
+            "select_chats": "चैट चुनें"
+        },
+        "whitelist": {
+            "title": "अनुमत संपर्क प्रबंधित करें",
+            "search": "कर्मचारियों को खोजें...",
+            "subtitle": "चुनें कि इस उपयोगकर्ता को किसके साथ चैट करने की अनुमति है।"
+        },
+        "add_member": {
+            "title": "{{name}} में सदस्य जोड़ें",
+            "search": "संपर्क खोजें...",
+            "add": "जोड़ें"
+        },
+        "delete": {
+            "title": "{{count}} संदेश हटाएं?",
+            "delete_everyone": "सभी के लिए हटाएं",
+            "delete_me": "मेरे लिए हटाएं"
+        },
+        "clear_chat": {
+            "title": "क्या यह चैट साफ़ करें?",
+            "desc": "संदेश आपके दृश्य से हटा दिए जाएंगे। इसे पूर्ववत नहीं किया जा सकता।",
+            "clear": "चैट साफ़ करें"
+        },
+        "common": {
+            "cancel": "रद्द करें",
+            "save": "सहेजें"
+        },
+        "audit": {
+            "wipe_message_title": "संदेश को स्थायी रूप से मिटाएं?",
+            "wipe_message_desc": "यह सर्वर से संदेश और उसके मीडिया को पूरी तरह से मिटा देगा। इसे वापस नहीं लाया जा सकता।",
+            "wipe": "मिटाएं",
+            "clear_audit_chat_title": "संपूर्ण चैट इतिहास मिटाएं?",
+            "clear_audit_chat_desc": "चेतावनी: यह इस बातचीत के सभी संदेशों और मीडिया को डेटाबेस और स्टोरेज से हमेशा के लिए नष्ट कर देगा।",
+            "wipe_all": "सब कुछ मिटाएं"
+        }
+    },
+    "shared_chat": {
+        "modal": {
+            "title": "नया समूह बनाएं",
+            "name_placeholder": "समूह का नाम",
+            "search_placeholder": "संपर्क खोजें...",
+            "select_members": "सदस्य चुनें",
+            "selected_count": "{{count}} चयनित",
+            "cancel": "रद्द करें",
+            "create": "बनाएं",
+            "wipe_chat": "चैट मिटाएं"
+        }
+    },
+    "school_holiday_modal": {
+        "title": "छुट्टी प्रबंधन",
+        "edit_heading": "अनुसूची संशोधित करें",
+        "add_heading": "नई बंदी निर्धारित करें",
+        "label_title": "छुट्टी का शीर्षक / कारण",
+        "placeholder_title": "जैसे: गर्मी की छुट्टी 2026",
+        "label_start": "से शुरू",
+        "label_end": "को समाप्त",
+        "btn_cancel": "रद्द करें",
+        "btn_update": "इतिहास अपडेट करें",
+        "btn_add": "छुट्टी चिह्नित करें",
+        "history_title": "ऐतिहासिक रिकॉर्ड",
+        "syncing": "रिकॉर्ड सिंक हो रहे हैं...",
+        "history_empty": "इस बैंड के लिए अभी तक कोई छुट्टी निर्धारित नहीं की गई है।",
+        "btn_edit_sm": "संपादित करें",
+        "btn_delete_sm": "हटाएं",
+        "delete_confirm_title": "हटाने की पुष्टि करें",
+        "delete_confirm_desc": "क्या आप वाकई इस छुट्टी के रिकॉर्ड को स्थायी रूप से हटाना चाहते हैं?",
+        "btn_confirm_delete": "हाँ, हटाएँ",
+        "toast_fetch_error": "इतिहास लोड करने में विफल",
+        "toast_saving": "सहेज रहा है...",
+        "toast_update_success": "छुट्टी सफलतापूर्वक अपडेट की गई",
+        "toast_add_success": "छुट्टी सफलतापूर्वक निर्धारित की गई",
+        "toast_save_error": "रिकॉर्ड सहेजने में विफल",
+        "toast_deleting": "हटा रहा है...",
+        "toast_delete_success": "रिकॉर्ड सफलतापूर्वक हटा दिया गया",
+        "toast_delete_error": "हटाने में विफल",
+        "error_past_date": "पिछली छुट्टियों को निर्धारित नहीं किया जा सकता है।",
+        "error_invalid_range": "मान्य तिथि सीमा होनी चाहिए।"
+    }
+}

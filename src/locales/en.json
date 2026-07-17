@@ -1,0 +1,2197 @@
+{
+    "layout": {
+        "admin_title": "Admin Panel",
+        "employee_title": "Employee Portal"
+    },
+    "common": {
+        "loading": "Loading...",
+        "error": "Something went wrong"
+    },
+    "sidebar": {
+        "brand": "WorkEduMusic Admin",
+        "dashboard": "Dashboard",
+        "roster": "Employees",
+        "attendance": "Attendance",
+        "learning_hub": "Training Vault",
+        "progress": "Progress",
+        "leaderboard": "Leaderboard",
+        "reports": "Reports",
+        "media": "Media",
+        "media_gallery": "Media Gallery",
+        "leave": "Leave Requests",
+        "alerts": "Alerts",
+        "chat_hub": "Chat Hub",
+        "broadcast": "Broadcast",
+        "theme": "Toggle Theme",
+        "profile": "My Profile",
+        "settings": "Settings",
+        "logout": "Logout",
+        "dark_mode": "Dark Mode",
+        "light_mode": "Light Mode",
+        "incoming_call": "Incoming {{type}} call...",
+        "admin_fallback_name": "Admin User",
+        "new_alert_toast": "New alert received",
+        "download_app": "Download App",
+        "download_starting": "Starting download..."
+    },
+    "navbar": {
+        "brand": "WorkEduMusic",
+        "dashboard": "Dashboard",
+        "assignments": "Assignments",
+        "tasks": "Tasks",
+        "media": "Media",
+        "learning_hub": "Learning Hub",
+        "leaderboard": "Leaderboard",
+        "report": "Daily Report",
+        "help": "Help & FAQs",
+        "notifications": "Notifications",
+        "chat": "Chat",
+        "profile": "Profile",
+        "dark_mode": "Dark Mode",
+        "light_mode": "Light Mode",
+        "settings": "Settings",
+        "logout": "Logout",
+        "employee": "Employee",
+        "training_vault": "Training Vault",
+        "incoming_call": "Incoming {{type}} call...",
+        "incoming_video": "Video Call",
+        "incoming_voice": "Voice Call",
+        "download_app": "Download App",
+        "download_starting": "Starting download..."
+    },
+    "toast": {
+        "call_ended": "Call ended",
+        "connecting": "Connecting...",
+        "missed_call": "Missed call from {{name}}",
+        "camera_access_failed": "Camera access failed. Switching to voice call.",
+        "mic_denied": "Microphone access denied.",
+        "camera_switch_failed": "Could not switch camera",
+        "requesting_video": "Requesting video switch...",
+        "camera_access_error": "Could not access camera.",
+        "new_chat": "New chat message received",
+        "call_connected": "Call connected",
+        "user_busy": "User is busy on another call.",
+        "call_ended_restoring": "Current call ended. Restoring held call...",
+        "ended_held_call": "{{name}} ended the held call.",
+        "resumed_call": "Resumed call with {{name}}",
+        "video_rejected": "Video call request rejected",
+        "video_accepted": "Video call request accepted",
+        "updating_group_name": "Updating group name...",
+        "group_name_updated": "Group name updated",
+        "failed_update_group_name": "Failed to update group name",
+        "uploading_group_icon": "Uploading new group icon...",
+        "group_icon_updated": "Group icon updated",
+        "failed_upload_group_icon": "Failed to upload group icon",
+        "removing_group_icon": "Removing group icon...",
+        "group_icon_removed": "Group icon removed",
+        "failed_remove_group_icon": "Failed to remove group icon",
+        "action_completed": "Action completed successfully",
+        "action_failed": "Failed to perform action",
+        "msg_send_fail": "Message failed to send. Check connection.",
+        "max_items": "Maximum of {{maxCount}} items allowed at once.",
+        "max_size": "Total size cannot exceed {{maxSize}}MB.",
+        "upload_fail": "Upload process failed.",
+        "downloading": "Downloading...",
+        "download_success": "Downloaded successfully!",
+        "download_fail": "Download failed.",
+        "msg_deleted": "Message deleted",
+        "del_everyone": "Deleted for everyone",
+        "del_me": "Deleted for you",
+        "del_fail": "Delete failed",
+        "forwarding": "Forwarding...",
+        "forward_success": "Forwarded successfully",
+        "forward_fail": "Failed to forward",
+        "clear_success": "Chat cleared visually.",
+        "clear_fail": "Failed to clear chat",
+        "copied": "Copied",
+        "new_msg_group": "New message in {{name}}",
+        "new_msg": "New message received",
+        "added_to_group": "You were added to group: {{name}}",
+        "removed_from_group": "You are no longer a participant of {{name}}",
+        "load_contacts_failed": "Could not load contact list.",
+        "group_name_req": "Group name is required",
+        "select_member_req": "Select at least 1 member",
+        "creating_group": "Creating group...",
+        "group_created": "Group created successfully!",
+        "group_create_failed": "Failed to create group",
+        "download_starting": "Starting download...",
+        "loading": "Loading...",
+        "saving": "Saving...",
+        "success": "Success!",
+        "error": "An error occurred."
+    },
+    "add_user_modal": {
+        "title_employee": "Add New Employee",
+        "title_admin": "Add New Admin",
+        "error_mandatory": "Please fill out all mandatory fields (Name, Email, Mobile).",
+        "error_admin_req": "Admin ID and Password are required for Admin accounts.",
+        "creating_admin": "Creating Admin account...",
+        "creating_employee": "Creating Employee account...",
+        "success_admin": "Admin created successfully!",
+        "success_employee": "Employee created successfully!",
+        "label_name": "Full Name",
+        "placeholder_name": "e.g. Rahul Sharma",
+        "label_email": "Email Address",
+        "placeholder_email": "rahul@example.com",
+        "label_mobile": "Mobile No.",
+        "placeholder_mobile": "94234XXXXX",
+        "label_level": "Account Level",
+        "level_employee": "Employee",
+        "level_admin": "Admin",
+        "label_designation": "Designation",
+        "optional": "(Opt)",
+        "placeholder_designation": "Teacher, etc.",
+        "label_location": "Location",
+        "placeholder_location": "e.g., District A",
+        "label_admin_id": "Admin ID",
+        "placeholder_admin_id": "ADM-001",
+        "label_password": "Password",
+        "placeholder_password": "••••••••",
+        "btn_cancel": "Cancel",
+        "btn_saving": "Saving...",
+        "btn_create_admin": "Create Admin",
+        "btn_create_employee": "Create Employee"
+    },
+    "attendance_modal": {
+        "records_for": "Records for {{month}}",
+        "select_option_msg": "Select a category to view records",
+        "overview_msg": "Attendance Summary",
+        "daily_details_title": "Shift Summary",
+        "export_excel": "Export Excel",
+        "tap_to_view": "Tap to view",
+        "no_records_assigned": "No records assigned",
+        "summary_metrics": "Summary Metrics",
+        "daily_breakdown": "Daily Breakdown",
+        "approved_leave": "Approved Leave",
+        "reason_provided": "Reason Provided",
+        "admin_approval_note": "Admin Approval Note",
+        "report_tag": "Report",
+        "teachers_note": "Log Notes",
+        "no_note_provided": "No notes provided for this shift.",
+        "status": {
+            "present": "Present",
+            "late": "Late",
+            "absent": "Absent",
+            "events": "Events",
+            "holidays": "Holidays",
+            "event": "Event",
+            "holiday": "Holiday"
+        },
+        "excel": {
+            "generating": "Generating Excel...",
+            "header_emp_name": "Employee Name",
+            "header_month": "Month",
+            "header_school": "School",
+            "header_category": "Category",
+            "header_date": "Date",
+            "header_status": "Status",
+            "header_in": "Check-In",
+            "header_out": "Check-Out",
+            "header_note": "Note",
+            "header_report": "Report",
+            "general_leaves": "General Leaves",
+            "on_leave": "On Leave",
+            "no_records": "No records found to export.",
+            "summary_title": "Summary",
+            "summary_count": "Count",
+            "total_present": "Total Present",
+            "total_late": "Total Late",
+            "total_absent": "Total Absent",
+            "total_event": "Total Event",
+            "total_holiday": "Total Holidays",
+            "total_approved_leaves": "Total Approved Leaves",
+            "success": "Excel exported successfully!",
+            "error": "Error generating Excel."
+        }
+    },
+    "admin_settings_modal": {
+        "title": "Global Settings",
+        "language_label": "System Language",
+        "language_help": "This changes the language of the admin dashboard interface.",
+        "admin_notif_section": "Admin Notifications",
+        "email_notif_label": "Email Notifications",
+        "admin_notif_help": "Receive daily summaries and critical alerts",
+        "admin_notif_locked": "Locked: Only SuperAdmins can toggle this.",
+        "emp_notif_section": "Employee Notifications",
+        "emp_notif_help": "Employees receive updates and assignments via email",
+        "cancel": "Cancel",
+        "save_changes": "Save Changes",
+        "saving": "Saving...",
+        "success_msg": "Preferences updated successfully!",
+        "error_msg": "Failed to save settings."
+    },
+    "assign_school_modal": {
+        "title": "Assign New School",
+        "school_name": "School Name",
+        "school_name_placeholder": "e.g. Lincoln High School",
+        "school_address": "School Address / Location",
+        "school_address_placeholder": "123 Education Blvd",
+        "assignment_category": "Assignment Category",
+        "junior_band": "Junior Band",
+        "senior_band": "Senior Band",
+        "timeline": "Timeline",
+        "daily_shift": "Daily Shift",
+        "to": "to",
+        "working_days": "Working Days",
+        "geofence_title": "Geofence Coordinates",
+        "geofence_desc": "Required for GPS check-ins. Copy the coordinates directly from Maps.",
+        "open_maps": "Open Google Maps",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "cancel": "Cancel",
+        "saving": "Saving...",
+        "save_assignment": "Save Assignment",
+        "error_required": "Please fill in all required fields, including GPS coordinates.",
+        "toast_assigning": "Assigning school and sending notifications...",
+        "toast_success": "School successfully assigned!",
+        "toast_error": "Failed to assign school.",
+        "days": {
+            "Mon": "Mon",
+            "Tue": "Tue",
+            "Wed": "Wed",
+            "Thu": "Thu",
+            "Fri": "Fri",
+            "Sat": "Sat",
+            "Sun": "Sun"
+        }
+    },
+    "assign_school": {
+        "title": "Assign New School",
+        "school_name": "School Name",
+        "school_name_placeholder": "e.g. Lincoln High School",
+        "address": "School Address / Location",
+        "address_placeholder": "123 Education Blvd",
+        "category": "Assignment Category",
+        "junior_band": "Junior Band",
+        "senior_band": "Senior Band",
+        "timeline": "Timeline",
+        "daily_shift": "Daily Shift",
+        "to": "to",
+        "working_days": "Working Days",
+        "geofence_title": "Geofence Coordinates",
+        "geofence_desc": "Required for GPS check-ins. Copy the coordinates directly from Maps.",
+        "open_maps": "Open Google Maps",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "cancel": "Cancel",
+        "saving": "Saving...",
+        "save_btn": "Save Assignment",
+        "error_validation": "Please fill in all required fields, including GPS coordinates.",
+        "toast_loading": "Assigning school and sending notifications...",
+        "toast_success": "School successfully assigned!",
+        "toast_error": "Failed to assign school.",
+        "days": {
+            "Mon": "Mon",
+            "Tue": "Tue",
+            "Wed": "Wed",
+            "Thu": "Thu",
+            "Fri": "Fri",
+            "Sat": "Sat",
+            "Sun": "Sun"
+        }
+    },
+    "assign_task": {
+        "title": "Create Optional Task",
+        "school_name": "Target School Name",
+        "school_name_placeholder": "e.g. Lincoln High School",
+        "address": "School Address / Location",
+        "address_placeholder": "e.g. 123 Education Blvd, Sultanpur",
+        "objective": "Primary Task / Objective",
+        "objective_placeholder": "What is the employee supposed to do here?",
+        "category": "Task Category",
+        "junior_band": "Junior Band",
+        "senior_band": "Senior Band",
+        "timeline": "Timeline",
+        "shift": "Daily Shift / Timing",
+        "to": "to",
+        "working_days": "Working Days",
+        "geofence_title": "Geofence Coordinates",
+        "geofence_desc": "Required for GPS check-ins. Copy coordinates from Maps.",
+        "open_maps": "Open Google Maps",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "cancel": "Cancel",
+        "assigning": "Assigning...",
+        "save_task": "Save Task",
+        "error_fields": "Please fill in the objective and school name.",
+        "toast_loading": "Assigning task and notifying employee...",
+        "toast_success": "Task assigned successfully!",
+        "toast_error": "Failed to assign task.",
+        "days": {
+            "Mon": "Mon",
+            "Tue": "Tue",
+            "Wed": "Wed",
+            "Thu": "Thu",
+            "Fri": "Fri",
+            "Sat": "Sat",
+            "Sun": "Sun"
+        }
+    },
+    "delete_employee": {
+        "title": "Permanently Delete?",
+        "description": "Are you sure you want to delete <1>{{name}}</1>? This will remove all their assignments and attendance history. This action cannot be undone.",
+        "confirm": "Confirm Delete",
+        "cancel": "Keep Employee",
+        "deleting": "Deleting...",
+        "toast_loading": "Deleting {{name}}...",
+        "toast_error": "Failed to delete employee."
+    },
+    "edit_employee_modal": {
+        "title": "Edit Employee",
+        "full_name": "Full Name",
+        "email": "Email Address",
+        "phone": "Phone Number",
+        "location_zone": "Zone",
+        "zone_placeholder": "Enter Zone",
+        "role": "Account Role",
+        "password_optional": "New Password (Optional)",
+        "password_placeholder": "Leave blank to keep current",
+        "cancel": "Cancel",
+        "saving": "Saving...",
+        "save_changes": "Save Changes",
+        "success_msg": "Employee updated successfully",
+        "error_msg": "Failed to update employee"
+    },
+    "roles": {
+        "employee": "Employee",
+        "admin": "Admin"
+    },
+    "issue_warning": {
+        "title": "Issue Warning",
+        "subtitle": "Record a formal warning for this employee.",
+        "level_label": "Warning Level",
+        "reason_label": "Reason / Description",
+        "reason_placeholder": "Provide detailed context for this warning...",
+        "warning_suffix": "Warning",
+        "verbal": "Verbal",
+        "written": "Written",
+        "final": "Final",
+        "cancel": "Cancel",
+        "submit": "Issue Warning",
+        "issuing": "Issuing warning...",
+        "error_validation": "Please provide a reason for the warning.",
+        "toast_success": "Warning issued successfully.",
+        "toast_error": "Failed to issue warning."
+    },
+    "manage_assigned_school": {
+        "unknown_school": "Unknown School",
+        "holiday_btn": "Holidays",
+        "no_address": "No address provided",
+        "category": "Category",
+        "status": "Status",
+        "active": "Active",
+        "start_date": "Start Date",
+        "end_date": "End Date",
+        "end_date_opt": "End Date (Opt)",
+        "not_set": "Not set",
+        "ongoing": "Ongoing",
+        "timings": "Timings",
+        "start_time": "Start Time",
+        "end_time": "End Time",
+        "days": "Days",
+        "allowed_days": "Allowed Days",
+        "revoke_btn": "Revoke",
+        "edit_btn": "Edit",
+        "cancel_edit": "Cancel Edit",
+        "save_changes": "Save Changes",
+        "updating_toast": "Updating assignment...",
+        "update_success": "Assignment updated successfully!",
+        "update_error": "Failed to update.",
+        "revoking_toast": "Revoking assignment...",
+        "revoke_success": "Assignment revoked.",
+        "revoke_error": "Failed to revoke.",
+        "delete_title": "Revoke Assignment?",
+        "delete_desc": "Are you sure you want to remove this employee from <1>{{name}}</1>? This will notify them immediately.",
+        "cancel": "Cancel",
+        "confirm_revoke": "Yes, Revoke",
+        "junior_band": "Junior Band",
+        "senior_band": "Senior Band",
+        "days_short": {
+            "Mon": "Mon",
+            "Tue": "Tue",
+            "Wed": "Wed",
+            "Thu": "Thu",
+            "Fri": "Fri",
+            "Sat": "Sat",
+            "Sun": "Sun"
+        }
+    },
+    "manage_task": {
+        "unknown_school": "Unknown School",
+        "no_address": "No address provided",
+        "rejection_reason": "Reason for Rejection:",
+        "primary_objective": "Primary Objective",
+        "primary_objective_label": "Primary Task / Objective",
+        "category": "Category",
+        "task_category": "Task Category",
+        "status": "Status",
+        "start_date": "Start Date",
+        "end_date": "End Date",
+        "end_date_opt": "End Date (Opt)",
+        "not_set": "Not set",
+        "ongoing": "Ongoing",
+        "timings": "Timings",
+        "start_time": "Start Time",
+        "end_time": "End Time",
+        "days": "Days",
+        "allowed_days": "Allowed Days",
+        "task_placeholder": "Task",
+        "revoke_btn": "Revoke Task",
+        "edit_btn": "Edit Details",
+        "cancel_edit": "Cancel Edit",
+        "save_changes": "Save Changes",
+        "updating_toast": "Updating task...",
+        "update_success": "Task updated successfully!",
+        "update_error": "Failed to update task.",
+        "revoking_toast": "Revoking task...",
+        "revoke_success": "Task revoked successfully!",
+        "revoke_error": "Failed to revoke task.",
+        "delete_title": "Revoke Task?",
+        "delete_desc": "Are you sure you want to permanently remove this task from <1>{{name}}</1>? The employee will be notified immediately.",
+        "confirm_revoke": "Yes, Revoke",
+        "cancel": "Cancel",
+        "junior_band": "Junior Band",
+        "senior_band": "Senior Band"
+    },
+    "absent_modal": {
+        "title": "Mark Absent",
+        "entire_day": "Entire Work Day",
+        "reason_label": "Reason for Absence",
+        "optional": "(Optional)",
+        "placeholder": "Sick leave, emergency, school is closed...",
+        "cancel": "Cancel",
+        "confirm": "Confirm Absence",
+        "required": "(Required)"
+    },
+    "add_event_modal": {
+        "title": "Log New Event",
+        "from_date": "From Date",
+        "to_date": "To Date",
+        "optional": "(Optional)",
+        "start_time": "Start Time",
+        "end_time": "End Time",
+        "description_label": "Event Description",
+        "description_placeholder": "Describe the upcoming event, goals, or requirements...",
+        "cancel": "Cancel",
+        "save_event": "Save Event"
+    },
+    "attendance_details": {
+        "daily_record_title": "Daily Record Details",
+        "viewing_details": "Viewing details for {{date}}",
+        "select_category_msg": "Select a band category",
+        "select_school_msg": "Select a school to view records",
+        "tap_category": "Tap to select a category",
+        "no_schools": "No schools visited this month.",
+        "junior_band": "Junior Band",
+        "senior_band": "Senior Band",
+        "records_count": "Records",
+        "log_history": "Log History",
+        "report_tag": "Report",
+        "no_records": "No daily records found.",
+        "time_in": "Time In",
+        "time_out": "Time Out",
+        "teachers_note": "Teacher's Note",
+        "no_note_provided": "No additional notes or reasons provided for this date.",
+        "daily_report": "Daily Report",
+        "export_error": "No daily records found to export for this month.",
+        "export_success": "Excel report downloaded!",
+        "export_btn": "Export Excel",
+        "close_btn": "Close",
+        "statuses": {
+            "present": "Present",
+            "late": "Late",
+            "absent": "Absent",
+            "event": "Event",
+            "holiday": "Holiday",
+            "media": "Media"
+        },
+        "excel_headers": {
+            "month": "Month",
+            "school": "School Name",
+            "category": "Category",
+            "address": "Address",
+            "date": "Date",
+            "in": "Time In",
+            "out": "Time Out",
+            "status": "Status",
+            "note": "Teacher Note"
+        }
+    },
+    "change_password_modal": {
+        "title": "Change Password",
+        "subtitle": "Secure your account",
+        "error_mismatch": "New passwords do not match.",
+        "error_length": "Password must be at least 6 characters long.",
+        "label_new": "New Password",
+        "label_confirm": "Confirm New Password",
+        "hide": "Hide Passwords",
+        "show": "Show Passwords",
+        "cancel": "Cancel",
+        "update": "Update Password"
+    },
+    "check_in_modal": {
+        "title": "Check In",
+        "late_reason_label": "Why are you arriving late?",
+        "required": "(Required)",
+        "late_reason_placeholder": "Traffic, vehicle issue, previous stop delay...",
+        "event_note_label": "Event Note",
+        "optional": "(Optional)",
+        "event_note_placeholder": "Any special events happening at the school today?",
+        "cancel": "Cancel",
+        "confirm": "Confirm Check In",
+        "error_late_reason": "Please provide a reason for being late."
+    },
+    "check_out_modal": {
+        "title": "Check Out",
+        "overtime_alert": "You are {{count}} minutes into overtime.",
+        "overtime_reason_label": "Please provide an optional reason for the extended stay.",
+        "overtime_placeholder": "Meeting ran long, extra students, delayed start...",
+        "confirm_msg": "Are you sure you want to complete this visit and check out?",
+        "cancel": "Cancel",
+        "confirm": "Confirm Check Out"
+    },
+    "employee_settings": {
+        "title": "Settings",
+        "language_label": "System Language",
+        "language_help": "Choose the language you prefer for the dashboard.",
+        "notifications_section": "Notification Preferences",
+        "email_notifications": "Email Notifications",
+        "notifications_help": "Receive important alerts directly to your inbox.",
+        "cancel": "Cancel",
+        "save_changes": "Save Changes",
+        "saving_toast": "Saving preferences...",
+        "success_toast": "Settings updated successfully!",
+        "error_toast": "Failed to save settings. Please try again.",
+        "loading": "Loading...",
+        "saving": "Saving...",
+        "success": "Success!",
+        "error": "An error occurred."
+    },
+    "holiday_modal": {
+        "title": "Mark as Holiday",
+        "entire_day": "Entire Work Day",
+        "reason_label": "Reason for Holiday",
+        "required": "(Required)",
+        "placeholder": "e.g., Summer Break, National Holiday, School Closed...",
+        "cancel": "Cancel",
+        "confirm": "Confirm Holiday"
+    },
+    "leave_request": {
+        "title": "Request Leave",
+        "checking_status": "Checking status...",
+        "status_pending": "Leave Request Pending",
+        "status_approved": "Leave Approved!",
+        "status_rejected": "Leave Rejected",
+        "requested_dates": "Requested dates: <1>{{from}}</1> to <1>{{to}}</1>",
+        "admin_note": "Admin Note:",
+        "btn_dismiss": "Dismiss",
+        "btn_revoke": "Revoke Leave",
+        "btn_new_request": "New Request",
+        "label_from": "From Date",
+        "label_to": "To Date",
+        "label_reason": "Reason for Leave",
+        "placeholder_reason": "Please explain why you need time off...",
+        "btn_cancel": "Cancel",
+        "btn_submit": "Submit Request",
+        "toast_submitting": "Submitting leave request...",
+        "toast_submit_success": "Leave request submitted successfully!",
+        "toast_submit_error": "Failed to submit request",
+        "toast_revoking": "Revoking leave request...",
+        "toast_revoke_success": "Leave request revoked.",
+        "toast_revoke_error": "Failed to revoke request"
+    },
+    "media_details": {
+        "title": "Upload Details",
+        "subtitle": "Provide context for the {{count}} selected file(s).",
+        "school_name": "School Name",
+        "school_placeholder": "e.g., Ryan International School",
+        "location": "Location",
+        "location_placeholder": "Ayodhya",
+        "category_label": "Upload Category",
+        "category_regular": "Regular Visit",
+        "category_event": "Special Event",
+        "event_date": "Date of Event",
+        "event_description": "Description of Event",
+        "event_placeholder": "Briefly describe what the event was about...",
+        "submit_btn_one": "Submit & Upload {{count}} File",
+        "submit_btn_other": "Submit & Upload {{count}} Files"
+    },
+    "media_upload": {
+        "title_step1": "Upload Media",
+        "title_step2": "Media Details",
+        "limit_error": "Limit exceeded. You can only upload up to {{count}} files.",
+        "browse_files": "Click to browse files",
+        "upload_help": "Upload up to {{count}} more images or videos",
+        "selected_files": "Selected Files ({{current}}/{{max}})",
+        "media_type": "Media Type",
+        "type_regular": "Regular Visit",
+        "type_event": "Special Event",
+        "event_date": "Date of Event",
+        "event_context": "Event Context",
+        "context_placeholder": "Briefly describe what this media is showing...",
+        "btn_continue": "Continue",
+        "btn_cancel": "Cancel",
+        "btn_upload_one": "Upload {{count}} File",
+        "btn_upload_other": "Upload {{count}} Files",
+        "title": "Site Media Upload",
+        "subtitle": "Upload site visit photos and videos.",
+        "error_limit": "Limit exceeded. You can only upload a maximum of {{count}} files at a time.",
+        "error_locked": "Upload portal is currently locked. The Admin has not granted upload permissions at this time.",
+        "success_msg": "All media files and details uploaded successfully!",
+        "dropzone_title": "Click to select media files",
+        "dropzone_locked": "Upload Portal Locked",
+        "dropzone_limit_info": "You can select {{count}} more file(s).",
+        "dropzone_locked_info": "Please contact your admin to enable media uploads for your account.",
+        "selected_title": "Selected Media ({{current}}/{{max}})",
+        "remove_file": "Remove File",
+        "loading_live": "Loading live data..."
+    },
+    "reject_task": {
+        "error_reason": "Please provide a reason for rejection.",
+        "title": "Reject Task",
+        "subtitle": "Why are you declining this optional assignment?",
+        "placeholder": "e.g., Schedule conflict, already assigned to another priority task...",
+        "cancel": "Cancel",
+        "confirm": "Confirm Rejection"
+    },
+    "school_details": {
+        "toast_saving_event": "Saving event...",
+        "toast_event_success": "Event saved successfully!",
+        "toast_event_error": "Failed to save event. ",
+        "toast_uploading_media": "Uploading media...",
+        "toast_media_success": "Media uploaded successfully!",
+        "toast_media_error": "Failed to upload media. ",
+        "assigned_categories": "Assigned Categories",
+        "category_subtitle": "View 30-day attendance record & past events",
+        "btn_upload": "Upload",
+        "btn_event": "Event",
+        "last_30_days": "Last 30 Days",
+        "btn_media": "Media",
+        "btn_log_event": "Log Event",
+        "stat_present": "Present",
+        "stat_late": "Late",
+        "stat_absent": "Absent",
+        "stat_events": "Events",
+        "timeline_title": "Timeline",
+        "timeline_description": "Description:",
+        "no_records": "No attendance records found for the last 30 days.",
+        "stat_leaves": "Leaves",
+        "statuses": {
+            "Present": "Present",
+            "Late": "Late",
+            "Absent": "Absent",
+            "Event": "Event"
+        }
+    },
+    "admin_dashboard": {
+        "title": "Command Center",
+        "subtitle": "Real-time overview of today's field operations.",
+        "refresh_data": "Refresh Data",
+        "stats": {
+            "total_staff": "Total Staff",
+            "on_site": "On Site",
+            "no_show": "No Show",
+            "completed": "Completed",
+            "on_holiday": "On Holiday",
+            "on_leave": "On Leave",
+            "pending": "Pending"
+        },
+        "activity_log": "Live Activity Log",
+        "unassigned_zone": "Unassigned Zone",
+        "field_operation": "Field Operation",
+        "just_now": "Just now",
+        "empty_title": "Awaiting Field Data",
+        "empty_subtitle": "Live workforce check-ins and updates will stream here automatically.",
+        "status": {
+            "present": "Present",
+            "absent": "Absent",
+            "warning": "Warning",
+            "event": "Event",
+            "late": "Late",
+            "approved": "Approved",
+            "rejected": "Rejected",
+            "leave": "Leave",
+            "update": "Update"
+        }
+    },
+    "assignments_tab": {
+        "title": "Assigned Schools",
+        "btn_assign_desktop": "Assign School",
+        "btn_assign_mobile": "Assign",
+        "unknown_school": "Unknown School",
+        "no_address": "No address provided",
+        "status_active": "Active",
+        "btn_edit": "Edit",
+        "btn_delete": "Delete",
+        "btn_clone": "Clone",
+        "empty_msg": "No schools assigned to this employee yet."
+    },
+    "attendance_tab": {
+        "title": "{{name}}'s Monthly Report",
+        "subtitle": "Select a month to view the attended schools.",
+        "tap_to_view": "Tap to view",
+        "empty_title": "No Attendance Records Yet",
+        "empty_desc": "{{name}} hasn't completed any shifts yet. Once they check in, their reports will appear here. Until then, here is their scheduled assignment:",
+        "upcoming_assignments": "Upcoming Assignments",
+        "unknown_school": "Unknown School",
+        "totally_empty_msg": "This employee has no attendance records or active school assignments yet.",
+        "monthly_reports_title": "{{name}}'s Monthly Reports",
+        "tap_to_view_schools": "Tap to view schools"
+    },
+    "media_tab": {
+        "title_vault": "Media Vault",
+        "subtitle_vault": "Select a month to browse teacher uploads.",
+        "title_schools": "Schools in {{month}}",
+        "subtitle_schools": "Select a school to view categories",
+        "title_categories": "{{school}} Categories",
+        "subtitle_categories": "Select a category to view dates",
+        "title_dates": "{{category}} Uploads",
+        "subtitle_dates": "Select a date to view uploads",
+        "title_media": "Media on {{date}}",
+        "subtitle_media_one": "{{count}} file available",
+        "subtitle_media_other": "{{count}} files available",
+        "items_count_one": "{{count}} item",
+        "items_count_other": "{{count}} items",
+        "tap_view_schools": "Tap to view schools",
+        "tap_view_categories": "Tap to view categories",
+        "tap_view_dates": "Tap to view dates",
+        "empty_collections": "No media collections found.",
+        "empty_schools": "No schools found for this month.",
+        "empty_categories": "No categories found for this school.",
+        "empty_dates": "No dates found for this category.",
+        "empty_media": "No media files uploaded for this date.",
+        "uploads_suffix": "uploads",
+        "uploaded_via": "Uploaded via Field App",
+        "students_present": "{{count}} Students Present",
+        "btn_delete": "Delete",
+        "delete_alert": "Media item {{id}} delete requested.",
+        "open_link": "Open Link in New Tab",
+        "download_file": "Download File"
+    },
+    "tasks_tab": {
+        "title": "Assigned Tasks",
+        "btn_assign": "Assign New Task",
+        "empty_title": "No Tasks Assigned",
+        "empty_desc": "This employee currently has no active or pending tasks.",
+        "empty_action": "Assign their first task",
+        "unknown_location": "Unknown Location",
+        "no_address": "No address provided",
+        "task_placeholder": "Task",
+        "added_to_schedule": "Added to Schedule",
+        "btn_edit": "Edit",
+        "btn_delete": "Delete",
+        "btn_clone": "Clone",
+        "rejection_label": "Reason for Rejection",
+        "status": {
+            "pending": "Pending",
+            "accepted": "Accepted",
+            "rejected": "Rejected"
+        }
+    },
+    "warnings_tab": {
+        "title": "Warning History",
+        "btn_issue": "Issue Warning",
+        "btn_issue_short": "Issue",
+        "warning_suffix": "Warning",
+        "level_label": "Level",
+        "issued_by": "Issued by",
+        "admin_default": "Admin",
+        "empty_title": "Clean record.",
+        "empty_desc": "No warnings have been issued to this employee."
+    },
+    "admin_leave": {
+        "title": "Leave Management",
+        "subtitle_pending": "Reviewing unique active requests.",
+        "subtitle_archived": "Archived leave history.",
+        "checking_status": "Checking status...",
+        "error_load": "Failed to load leave requests.",
+        "no_requests_title": "No {{status}} requests",
+        "no_requests_desc": "All caught up! No unique requests found in this category.",
+        "tabs": {
+            "pending": "Pending",
+            "approved": "Approved",
+            "rejected": "Rejected"
+        },
+        "card": {
+            "time_period": "Time Period",
+            "to": "to",
+            "reason": "Reason",
+            "admin_note": "Admin Note",
+            "btn_reject": "Reject",
+            "btn_approve": "Approve",
+            "btn_revoke": "Revoke Decision"
+        },
+        "status": {
+            "pending": "Pending",
+            "approved": "Approved",
+            "rejected": "Rejected"
+        },
+        "modal": {
+            "audit": {
+                "wipe_message_title": "Permanently Wipe Message?",
+                "wipe_message_desc": "This will completely erase the message and its media from the server. This cannot be undone.",
+                "clear_audit_chat_title": "Wipe Entire Chat History?",
+                "clear_audit_chat_desc": "WARNING: This destroys all messages and media in this conversation from the database and storage permanently.",
+                "wipe": "Wipe",
+                "wipe_all": "Wipe Everything"
+            },
+            "title_revoke": "Revoke Decision",
+            "title_action": "{{type}} Leave",
+            "desc_revoke": "Are you sure you want to revoke the decision for {{name}}? The request will return to the Pending tab.",
+            "desc_action": "Provide details for the {{type}} of {{name}}'s leave.",
+            "remarks_label": "Add Remarks (Optional)",
+            "remarks_placeholder": "Reason for {{type}}...",
+            "btn_cancel": "Cancel",
+            "btn_confirm": "Confirm"
+        },
+        "toasts": {
+            "revoking": "Revoking decision...",
+            "updating": "Marking as {{type}}...",
+            "revoke_success": "Decision revoked!",
+            "action_success": "Leave request {{type}}!",
+            "update_error": "Failed to update request."
+        }
+    },
+    "admin_notifications": {
+        "title": "Notifications",
+        "subtitle": "Stay updated on alerts, messages, and WorkEduMusic activity.",
+        "btn_mark_read": "Mark all read",
+        "btn_clear_all": "Clear All",
+        "empty_title": "All caught up!",
+        "empty_desc": "You don't have any new notifications at the moment.",
+        "toasts": {
+            "load_error": "Failed to load notifications.",
+            "marking_read": "Marking all as read...",
+            "mark_read_success": "All notifications marked as read!",
+            "mark_read_error": "Failed to mark as read.",
+            "clearing": "Clearing notifications...",
+            "clear_success": "Notifications cleared successfully!",
+            "clear_error": "Failed to clear notifications."
+        },
+        "time": {
+            "years": "years ago",
+            "months": "months ago",
+            "days": "days ago",
+            "hours": "hours ago",
+            "mins": "minutes ago",
+            "now": "Just now"
+        },
+        "labels": {
+            "warning_reason": "Reason for Warning"
+        }
+    },
+    "admin_reports": {
+        "title": "Reports Central",
+        "subtitle": "Manage end-of-day reports and upcoming events.",
+        "tabs": {
+            "daily": "Daily Reports",
+            "events": "Events"
+        },
+        "breadcrumbs": {
+            "back_to_schools": "Back to Schools",
+            "back_to_months": "Back to Months",
+            "back_to_directory": "Back to Directory"
+        },
+        "headers": {
+            "directory": "Employee Directory",
+            "history": "{{name}}'s History",
+            "archive": "Monthly Archive",
+            "school_events": "Events at {{school}}",
+            "upcoming_schools": "Schools with Upcoming Events"
+        },
+        "daily": {
+            "search_placeholder": "Search employee...",
+            "checking_status": "Checking status...",
+            "no_reports": "No reports submitted yet.",
+            "tap_view_schools": "Tap to view schools",
+            "summary_label": "Summary",
+            "general_location": "General Location",
+            "report_type": "Daily Report",
+            "students_count": "{{count}} Students Present",
+            "students_short": "{{count}} Students",
+            "no_history_found": "No attendance records found for the last 30 days."
+        },
+        "events": {
+            "no_events": "No upcoming events scheduled.",
+            "event_unit_one": "Event",
+            "event_unit_other": "Events",
+            "logged_by": "Logged by: {{name}}",
+            "description_label": "Description:",
+            "no_dates": "No dates found for this category.",
+            "no_media_uploaded": "No media files uploaded for this date."
+        },
+        "toasts": {
+            "new_report": "New report received!",
+            "new_event": "New event scheduled at {{school}}!",
+            "init_error": "Failed to load initial data.",
+            "fetch_error": "Failed to fetch records."
+        },
+        "common": {
+            "to": "to",
+            "items_one": "{{count}} item",
+            "items_other": "{{count}} items"
+        }
+    },
+    "admin_reset_password": {
+        "title": "Secure Admin Portal",
+        "subtitle": "As an Administrator, you must change your temporary password to a secure one before accessing the system.",
+        "error_default": "Failed to reset password.",
+        "success_default": "Password updated successfully!",
+        "label_new_password": "New Secure Password",
+        "placeholder_new_password": "Create a strong password",
+        "requirement_min_chars": "Min 8 characters",
+        "requirement_case": "1 Uppercase & 1 Lowercase",
+        "requirement_symbol": "1 Number & 1 Symbol (!@#$)",
+        "btn_updating": "Updating...",
+        "btn_submit": "Update Password & Enter"
+    },
+    "attendance_feed": {
+        "title": "Attendance Feed",
+        "live_monitoring": "Live Monitoring Active",
+        "assigned_location": "Assigned Location",
+        "filter_all": "All",
+        "filter_pending": "Pending",
+        "filter_running": "Running",
+        "filter_completed": "Completed",
+        "filter_exceptions": "Exceptions",
+        "no_records_title": "No Activity Found",
+        "no_records_desc": "There are no attendance records matching your current filter.",
+        "status": {
+            "event": "Event",
+            "running": "Active",
+            "late": "Late",
+            "completed": "Completed",
+            "absent": "Absent",
+            "holiday": "Holiday",
+            "on_leave": "On Leave",
+            "pending": "Pending"
+        },
+        "modal": {
+            "field_intelligence": "Field Intelligence",
+            "event_highlights": "Event Highlights",
+            "delay_justification": "Delay Justification",
+            "operations_report": "Operations Report",
+            "arrival": "Arrival",
+            "departure": "Departure",
+            "system_override": "System Override",
+            "btn_cancel_override": "Cancel Override",
+            "btn_edit_mode": "Enable Edit Mode",
+            "action_check_in": "Check In",
+            "action_check_out": "Check Out",
+            "action_revoke": "Revoke",
+            "admin_note": "Administrative Note (Required)",
+            "btn_confirm_override": "Confirm Override"
+        },
+        "toasts": {
+            "load_error": "Failed to load attendance feed",
+            "new_report": "New daily report received",
+            "new_event": "New event logged at {{school}}",
+            "applying_override": "Applying system override...",
+            "override_success": "Override applied successfully",
+            "override_error": "Failed to apply override"
+        }
+    },
+    "communication_hub": {
+        "title": "Communication Hub",
+        "subtitle": "Instantly broadcast announcements and alerts to your WorkEduMusic Team.",
+        "new_broadcast": "New Broadcast",
+        "step_target": "1. Select Target Group",
+        "selected": "Selected",
+        "targets": {
+            "all": "All Employees",
+            "zone": "By Zone",
+            "specific": "Specific People"
+        },
+        "zone_label": "Target City / Location",
+        "zone_placeholder": "e.g. Sultanpur, Lucknow, Delhi (comma separated)...",
+        "zone_help": "Multiple cities can be separated by commas.",
+        "recipients_label": "Select Recipients",
+        "selected_count": "{{count}} Selected",
+        "search_placeholder": "Search employees by name...",
+        "no_employees": "No employees found.",
+        "step_message": "2. Compose Message",
+        "message_placeholder": "Type your official announcement here...",
+        "btn_broadcasting": "Broadcasting...",
+        "btn_send": "Send Broadcast Now",
+        "history": "History",
+        "history_limit": "Last 3",
+        "sent_to": "Sent to {{count}}",
+        "no_history": "No recent broadcasts to show.",
+        "time": {
+            "just_now": "Just now",
+            "mins_ago": "{{count}} mins ago",
+            "hrs_ago": "{{count}} hrs ago",
+            "days_ago": "{{count}} days ago"
+        },
+        "toasts": {
+            "load_error": "Failed to load communication data.",
+            "empty_message": "Message context cannot be empty.",
+            "empty_city": "Please enter at least one target city.",
+            "empty_selection": "Please select at least one employee.",
+            "send_success": "Broadcast delivered to {{count}} users!",
+            "send_error": "Failed to send broadcast."
+        }
+    },
+    "daily_feed": {
+        "title": "Live Daily Feed",
+        "tabs": {
+            "active": "Active",
+            "completed": "Completed"
+        },
+        "loading": "Loading live data...",
+        "error_fetch": "Failed to fetch live feed.",
+        "card": {
+            "unknown_school": "Unknown School",
+            "location_tracked": "Location tracked",
+            "status_ended": "Shift Ended",
+            "status_onsite": "Currently On-Site",
+            "teacher_label": "Teacher:",
+            "unknown_teacher": "Unknown",
+            "checked_out_at": "Checked out at:",
+            "checked_in_at": "Checked in at:"
+        }
+    },
+    "employee_profile": {
+        "error_load": "Failed to load employee profile.",
+        "not_found": "Employee not found",
+        "btn_return": "Return to Roster",
+        "btn_back": "Back to Roster",
+        "status_active": "Active",
+        "status_inactive": "Inactive",
+        "staff_fallback": "Staff",
+        "download_success": "Image downloaded successfully!",
+        "download_failed": "Failed to download profile picture.",
+        "view_image": "Click to enlarge",
+        "download_pic": "Download Picture",
+        "downloading": "Downloading image...",
+        "unassigned_zone": "Unassigned Zone",
+        "tabs": {
+            "assignments": "Assignments",
+            "tasks": "Tasks",
+            "media": "Media",
+            "warnings": "Warnings",
+            "attendance": "Attendance"
+        }
+    },
+    "employee_roster": {
+        "title": "Employee Roster",
+        "syncing": "Syncing staff directory...",
+        "active_staff": "{{count}} active staff members",
+        "btn_add_desktop": "Add New Employee",
+        "btn_add_mobile": "Add Employee",
+        "search_placeholder": "Search employees by name...",
+        "table_employee": "Employee",
+        "table_role": "Role",
+        "table_location": "Location",
+        "admin_badge": "ADMIN",
+        "no_email": "No email provided",
+        "no_role": "Staff",
+        "unassigned_role": "Unassigned",
+        "empty_title": "No employees found",
+        "empty_search": "We couldn't find anyone matching \"{{query}}\". Try adjusting your filters.",
+        "empty_initial": "Your roster is currently empty. Add your first employee to get started!",
+        "error_load": "Failed to load employee roster. Please try again.",
+        "btn_retry": "Retry Connection",
+        "toast_load_error": "Failed to load employee roster.",
+        "toast_success": "Employee added successfully!"
+    },
+    "empty_feed": {
+        "title": "All caught up for today!",
+        "description": "The scheduled visits for all schools have concluded. Take a breather, or check the calendar to see what is coming up tomorrow.",
+        "button_text": "View Upcoming Schedule"
+    },
+    "progress_report": {
+        "title": "Progress Reports",
+        "subtitle": "Monthly WorkEduMusic activity metrics.",
+        "search_placeholder": "Search teacher...",
+        "unassigned": "Unassigned",
+        "score_out_of": "{{score}}/100",
+        "general_leaves": "General Leaves",
+        "approved_leaves": "Approved Leaves",
+        "records_count_one": "{{count}} record",
+        "records_count_other": "{{count}} records",
+        "request_count_one": "{{count}} Request",
+        "request_count_other": "{{count}} Requests",
+        "nav": {
+            "back_overview": "Back to Overview",
+            "back_school": "Back to {{name}}",
+            "back_months": "Back to Months",
+            "back_rankings": "Back to Rankings"
+        },
+        "headers": {
+            "rankings": "WorkEduMusic Rankings",
+            "teacher_reports": "{{name}}'s Reports",
+            "archive": "Monthly Archive"
+        },
+        "metrics": {
+            "title": "Summary Metrics",
+            "present": "Present",
+            "late": "Late",
+            "absent": "Absent",
+            "events": "Events",
+            "holidays": "Holidays",
+            "media": "Media"
+        },
+        "breakdown": {
+            "title": "Daily Breakdown",
+            "leaves_title": "Official Leave Records",
+            "approved_tag": "Approved Leave",
+            "reason_provided": "Reason Provided",
+            "admin_note": "Admin Approval Note",
+            "no_reason": "No reason provided."
+        },
+        "detail": {
+            "in": "In",
+            "out": "Out",
+            "exception_note": "Exception Note"
+        },
+        "btn": {
+            "export": "Export Excel"
+        },
+        "toasts": {
+            "load_error": "Failed to load progress rankings.",
+            "fetch_records_error": "Failed to fetch teacher records.",
+            "export_preparing": "Preparing Excel report...",
+            "export_success": "Excel report downloaded!",
+            "export_gen_error": "Failed to generate report.",
+            "export_fail": "Could not export file."
+        },
+        "empty": {
+            "no_reports": "No reports submitted yet.",
+            "no_dates": "No dates found for this category."
+        }
+    },
+    "assigned_schools": {
+        "title": "Assigned Locations",
+        "subtitle": "Select a school to view your 30-day attendance history.",
+        "syncing": "Syncing staff directory...",
+        "active_staff": "{{count}} active staff members",
+        "empty_title": "No Assignments Yet",
+        "task_badge": "Task",
+        "empty_desc": "You currently do not have any schools permanently assigned to your profile. Check back later!",
+        "card_location": "Location",
+        "card_category": "Category",
+        "absent": "Absent",
+        "leave_record": "Leave Record",
+        "distance_away": "{{count}} km away",
+        "time_to": "to",
+        "card_to": "to",
+        "view_history": "View Attendance History",
+        "na": "N/A",
+        "error_toast": "Failed to load your assigned schools. Please try again.",
+        "weekdays": {
+            "Mon": "M",
+            "Tue": "T",
+            "Wed": "W",
+            "Thu": "T",
+            "Fri": "F",
+            "Sat": "S",
+            "Sun": "S"
+        }
+    },
+    "daily_report": {
+        "assigned_school": "Assigned School",
+        "label_band": "Band Category",
+        "label_students": "No. of Students Present",
+        "placeholder_students": "e.g. 45",
+        "junior_band": "Junior Band",
+        "senior_band": "Senior Band",
+        "title": "End of Day Report",
+        "subtitle": "Summarize your field visits, outline challenges, and document events.",
+        "location_active": "Location context active",
+        "label_category": "Report Category",
+        "label_event_name": "Event Name",
+        "label_event_date": "Event Date",
+        "label_summary": "Daily Summary",
+        "placeholder_event_name": "e.g., Annual Sports Day",
+        "placeholder_summary": "Describe the schools visited, overall progress, and any challenges faced today...",
+        "btn_submit": "Submit Report",
+        "btn_submitting": "Submitting...",
+        "success_msg": "Daily report submitted successfully!",
+        "error_msg": "Failed to submit report.",
+        "categories": {
+            "regular": "Regular Report",
+            "event": "Event Report"
+        }
+    },
+    "employee_dashboard": {
+        "sos": {
+            "sent_title": "SOS SENT",
+            "sent_desc": "Help is being dispatched.",
+            "emergency_title": "Emergency SOS",
+            "release_cancel": "Release finger to cancel",
+            "toast_sent": "EMERGENCY SOS SENT!",
+            "toast_cancelled": "SOS Cancelled."
+        },
+        "location_help": {
+            "title": "Location Blocked",
+            "description": "Your browser is preventing us from accessing your location. You need to enable it manually.",
+            "step1_title": "Step 1",
+            "step1_desc_pwa": "Open your phone's main browser (like Chrome or Safari).",
+            "step1_desc_web": "Tap the Lock icon 🔒 in your browser's address bar at the top.",
+            "step2_title": "Step 2",
+            "step2_desc_pwa": "Go to this app's website address and tap the Lock icon 🔒 next to the URL.",
+            "step2_desc_web": "Find Permissions or Location and change it to Allow.",
+            "step3_title": "Step 3",
+            "step3_desc_pwa": "Tap Permissions or Site Settings, find Location, and change it to Allow.",
+            "final_step_title": "Final Step",
+            "final_step_desc": "Return here. We will auto-detect the change, or you can click below.",
+            "reload_btn": "Reload Page manually"
+        },
+        "welcome": "Welcome, {{name}} 👋",
+        "status_ooo": "You are officially Out of Office.",
+        "status_route": "Here is your route for today.",
+        "btn_view_leave": "View Leave",
+        "btn_request_leave": "Request Leave",
+        "btn_day_holiday": "Day Holiday",
+        "btn_day_absent": "Day Absent",
+        "vacation": {
+            "title": "Enjoy Your Leave!",
+            "desc": "Relax and recharge, {{name}}! Your leave from {{from}} to {{to}} is approved.",
+            "ooo_label": "Out of Office",
+            "mode_label": "Vacation Mode"
+        },
+        "shift_complete": {
+            "title": "Shift Complete!",
+            "desc": "Great job today, {{name}}! You have successfully conquered all your assigned school visits.",
+            "footer": "Time to relax and recharge"
+        },
+        "card": {
+            "active_shift": "Active Shift",
+            "schedule_label": "Schedule",
+            "to": "to",
+            "late_by": "Late by {{time}}",
+            "starts_in": "Starts in {{time}}",
+            "btn_directions": "Get Directions",
+            "btn_absent": "Absent",
+            "btn_holiday": "Holiday",
+            "btn_check_in": "Check In",
+            "btn_check_out": "Complete & Check Out"
+        },
+        "toasts": {
+            "gps_denied": "Location permission blocked. Click the red GPS icon for help.",
+            "gps_retry": "Retrying location capture...",
+            "gps_error": "Failed to get GPS signal. Please step outside or check location permissions.",
+            "load_error": "Failed to load your schedule.",
+            "verifying_in": "Verifying location and checking in...",
+            "check_in_success": "Checked in at {{school}}!",
+            "check_in_fail": "Check-in failed.",
+            "verifying_out": "Verifying location and checking out...",
+            "check_out_success": "Checked out of {{school}}!",
+            "check_out_fail": "Check-out failed.",
+            "marking_status": "Marking as {{status}}...",
+            "mark_success": "Successfully marked as {{status}}.",
+            "mark_fail": "Failed to mark {{status}}."
+        },
+        "units": {
+            "h": "h",
+            "m": "m"
+        }
+    },
+    "sos_alert": {
+        "title": "🚨 URGENT: SOS TRIGGERED",
+        "description": "has triggered an emergency alert!",
+        "btn_view_location": "View Live Location"
+    },
+    "employee_notifications": {
+        "title": "Notifications",
+        "subtitle": "Stay updated on alerts, assignments, and schedule changes.",
+        "btn_mark_read": "Mark all read",
+        "btn_clear_all": "Clear All",
+        "empty_title": "All caught up!",
+        "empty_desc": "You don't have any new notifications at the moment.",
+        "time": {
+            "years": "yrs ago",
+            "months": "mos ago",
+            "days": "days ago",
+            "hours": "hrs ago",
+            "mins": "mins ago",
+            "just_now": "Just now"
+        },
+        "toasts": {
+            "load_error": "Failed to load notifications.",
+            "marking_read": "Marking all as read...",
+            "mark_read_success": "All notifications marked as read!",
+            "mark_read_error": "Failed to mark as read.",
+            "clearing": "Clearing notifications...",
+            "clear_success": "Notifications cleared successfully!",
+            "clear_error": "Failed to clear notifications."
+        }
+    },
+    "employee_reset_password": {
+        "title": "Secure Your Account",
+        "subtitle": "For your security, please change your temporary password before accessing your dashboard.",
+        "error_default": "Failed to reset password.",
+        "toast_success": "Password updated successfully!",
+        "label_new_password": "New Password",
+        "placeholder_new_password": "Create a strong password",
+        "req_min_chars": "Min 8 characters",
+        "req_case": "1 Uppercase & 1 Lowercase",
+        "req_symbol": "1 Number & 1 Symbol (!@#$)",
+        "btn_updating": "Updating...",
+        "btn_continue": "Update Password & Continue"
+    },
+    "my_profile": {
+        "title": "My Profile",
+        "subtitle": "Manage your account and view assignments",
+        "btn_edit_password": "Security Settings",
+        "change_pic": "Change",
+        "download_pic": "Download Picture",
+        "remove_pic": "Remove Picture",
+        "employee_fallback": "Employee",
+        "unassigned_zone": "Unassigned Zone",
+        "unknown_school": "Unknown School",
+        "no_schools": "No schools assigned",
+        "not_provided": "Not Linked",
+        "contact_info": "Contact Intelligence",
+        "label_id": "Employee ID",
+        "label_email": "Email Address",
+        "label_phone": "Mobile Number",
+        "assignment_details": "Logistics & Access",
+        "label_zone": "Operating Zone",
+        "label_locations": "Assigned Facilities",
+        "delete_modal": {
+            "title": "Remove Picture?",
+            "desc": "This will permanently delete your profile photo and revert to your initials.",
+            "confirm": "Yes, Remove Photo",
+            "cancel": "Cancel"
+        },
+        "toasts": {
+            "updating": "Updating password...",
+            "success": "Password updated successfully!",
+            "error": "Update failed",
+            "file_too_large": "File must be under 5MB",
+            "uploading_avatar": "Uploading new photo...",
+            "avatar_updated": "Profile picture updated!",
+            "upload_failed": "Failed to upload photo",
+            "removing_avatar": "Removing photo...",
+            "avatar_removed": "Photo removed successfully",
+            "remove_failed": "Failed to remove photo",
+            "downloading": "Downloading image...",
+            "download_success": "Image downloaded successfully!",
+            "download_failed": "Failed to download profile picture."
+        }
+    },
+    "tasks": {
+        "title": "Task Inbox",
+        "subtitle": "Review, accept, or reject your assigned tasks.",
+        "pending_label": "Pending",
+        "empty": {
+            "title": "Inbox Zero!",
+            "desc": "You have no assigned tasks at the moment. You're all caught up.",
+            "badge": "Enjoy your free time"
+        },
+        "card": {
+            "days": "Days",
+            "timing": "Timing",
+            "instructions": "Task Instructions",
+            "btn_reject": "Reject",
+            "btn_accept": "Accept & Schedule Task",
+            "status_accepted": "Task Accepted & Added to Route",
+            "status_rejected": "Task Rejected",
+            "reason_label": "Reason Provided:",
+            "btn_delete": "Remove from feed"
+        },
+        "toasts": {
+            "load_error": "Failed to load tasks.",
+            "accepting": "Accepting task...",
+            "rejecting": "Rejecting task...",
+            "accept_success": "Task accepted and added to your schedule!",
+            "reject_success": "Task rejected successfully.",
+            "respond_error": "Failed to respond to task."
+        }
+    },
+    "index": {
+        "redirecting": "Redirecting to login..."
+    },
+    "login": {
+        "brand_name": "WorkEduMusicIndia",
+        "mobile_brand_name": "WorkEduMusic",
+        "brand_subtitle": "Workforce Management & Compliance System",
+        "feature_attendance": "Attendance",
+        "feature_compliance": "Compliance",
+        "feature_reports": "Reports",
+        "welcome_back": "Welcome back",
+        "credentials_hint": "Please enter your credentials to sign in.",
+        "label_employee_id": "Employee ID",
+        "placeholder_employee_id": "e.g., EMP-2026",
+        "label_password": "Password",
+        "placeholder_password": "••••••••",
+        "btn_authenticating": "Authenticating...",
+        "btn_login": "Login",
+        "footer_trouble": "Having trouble logging in?",
+        "footer_contact": "Contact Administrator",
+        "errors": {
+            "default": "Unable to sign in. Please try again.",
+            "no_server": "Cannot connect to the server. Please check your internet connection.",
+            "invalid_creds": "Incorrect Employee ID or password. Please try again.",
+            "auth_error": "Authentication error. Please refresh the page and try again.",
+            "restricted": "Your account has been restricted. Please contact your administrator.",
+            "device_mismatch": "Unauthorized device. This account is locked to another phone. Please contact your administrator to reset access.",
+            "not_found": "Account not found. Please double-check your Employee ID.",
+            "too_many_attempts": "Too many failed attempts. Please wait a few minutes and try again.",
+            "server_error": "We're experiencing technical difficulties on our end. Please try again later."
+        }
+    },
+    "not_found": {
+        "page_not_found": "Page not found",
+        "return_to_login": "Return to login"
+    },
+    "delete_modal": {
+        "title": "Delete Video?",
+        "description": "This action cannot be undone. This video will be permanently removed from the vault.",
+        "cancel": "Cancel",
+        "deleting": "Deleting...",
+        "confirm": "Yes, Delete"
+    },
+    "review_modal": {
+        "media_not_found": "Media Not Found",
+        "grade_performance": "Grade Performance",
+        "regular_class": "Regular Class",
+        "score_label": "Score (1-10)",
+        "admin_feedback": "Administrator Feedback",
+        "feedback_placeholder": "Add constructive feedback...",
+        "cancel": "Cancel",
+        "saving": "Saving...",
+        "submit_grade": "Submit Grade"
+    },
+    "upload_modal": {
+        "limit_reached_toast": "Limit reached: Only {{slots}} more allowed.",
+        "select_school_toast": "Please select a school.",
+        "band_category_toast": "Band category is required.",
+        "students_count_toast": "Students present count is required.",
+        "add_video_toast": "Please add at least one video.",
+        "size_limit_toast": "Files exceed 500MB limit. Please compress them.",
+        "title": "Upload to Vault",
+        "subtitle": "Add performance videos to your school's secure gallery.",
+        "assigned_school": "Assigned School",
+        "loading_schools": "Loading schools...",
+        "band_category": "Band Category",
+        "junior_band": "Junior Band",
+        "senior_band": "Senior Band",
+        "event_name": "Event Name",
+        "optional": "(Optional)",
+        "placeholder_event": "e.g. Spring Concert",
+        "event_date": "Event Date",
+        "students_present": "Students Present",
+        "instructor_note": "Instructor Note",
+        "placeholder_desc": "Add details about what was taught today...",
+        "video_files": "Video Files",
+        "click_to_browse": "Click to browse videos",
+        "file_limits": "MP4 or MOV • Max 2 GB per file",
+        "cloud_enabled": "Direct-to-Cloud Enabled",
+        "start_upload": "Start Upload"
+    },
+    "employee_media": {
+        "title": "Media Gallery",
+        "subtitle": "Browse uploads and view administrator feedback.",
+        "upload_media": "Upload Media",
+        "upload": "Upload",
+        "videos": "videos",
+        "avg": "AVG",
+        "unknown_school": "Unknown School",
+        "upload_cancelled": "Upload cancelled.",
+        "fetch_error": "Failed to load media gallery.",
+        "admin_reviewed": "An Admin has reviewed your video!",
+        "upload_success": "Video successfully saved to Vault!",
+        "upload_error": "An upload error occurred.",
+        "cancel_upload": "Cancel Upload",
+        "finalizing": "Finalizing database...",
+        "uploading": "Uploading to Vault...",
+        "junior_band": "Junior Band",
+        "senior_band": "Senior Band",
+        "present": "Present",
+        "admin_score": "Admin Score",
+        "pending_review": "Pending Review",
+        "delete": "Delete",
+        "no_media_found": "No media found",
+        "no_uploads_year": "There are no uploads for the year {{year}}.",
+        "deleting_toast": "Deleting video...",
+        "delete_success": "Video deleted successfully.",
+        "delete_error": "Failed to delete video.",
+        "delete_title": "Delete Video?",
+        "delete_desc": "Are you sure you want to permanently delete this video? It will be removed from the vault.",
+        "cancel": "Cancel",
+        "yes_delete": "Yes, Delete",
+        "no_video_found": "No video file found.",
+        "starting_download": "Starting download...",
+        "download_started": "Download started!",
+        "download_failed": "Failed to start download."
+    },
+    "months": {
+        "january": "January",
+        "february": "February",
+        "march": "March",
+        "april": "April",
+        "may": "May",
+        "june": "June",
+        "july": "July",
+        "august": "August",
+        "september": "September",
+        "october": "October",
+        "november": "November",
+        "december": "December"
+    },
+    "media_vault": {
+        "admin": {
+            "title": "Media Vault",
+            "directory": "Directory",
+            "loading_dir": "Loading vault directory...",
+            "scanning_records": "Scanning historical records...",
+            "no_uploads_found": "No media uploads found.",
+            "click_to_view": "Click to view recorded bands",
+            "junior_band": "Junior Band",
+            "senior_band": "Senior Band",
+            "open_vault": "Open Vault",
+            "no_uploads": "No Uploads",
+            "decrypting": "Decrypting vault...",
+            "vault_empty": "Vault is Empty",
+            "no_media_year": "No media has been uploaded for {{band}} in {{year}}.",
+            "total_videos": "Total Videos",
+            "pending": "Pending",
+            "avg": "AVG",
+            "unavailable": "Unavailable",
+            "regular_class": "Regular Class",
+            "students_present": "Students Present",
+            "unscored": "Unscored",
+            "instructor_note": "Instructor Note",
+            "no_description": "Description not given by instructor.",
+            "your_feedback": "Your Feedback",
+            "edit_grade": "Edit Grade",
+            "review": "Review",
+            "error_directory": "Failed to load directory.",
+            "error_history": "Failed to load historical assignments.",
+            "error_media": "Failed to load media.",
+            "new_video_toast": "A new video was just uploaded! Decrypting vault...",
+            "link_copied": "Video link copied to clipboard!",
+            "preparing_download": "Preparing secure download...",
+            "download_started": "Download started!",
+            "download_failed": "Direct download failed. Opening file instead.",
+            "delete_success": "Video deleted successfully!",
+            "delete_error": "Failed to delete video.",
+            "score_error": "Please assign a score between 0 and 10.",
+            "grade_success": "Grade submitted successfully!",
+            "grade_error": "Failed to submit grade.",
+            "copy_link_title": "Copy Link",
+            "download_title": "Download",
+            "delete_title": "Delete"
+        }
+    },
+    "leaderboard": {
+        "title": "Leaderboard",
+        "subtitle": "Track employee performance and rankings",
+        "employee_title": "Top Performers",
+        "employee_subtitle": "Weekly Team Leaderboard",
+        "detail_history": "Performance History",
+        "back_to_list": "Back to List",
+        "top_5_title": "Top 5 Performers",
+        "chart_loading": "Loading chart data...",
+        "no_data": "No data available",
+        "current_rank": "Rank #{{rank}}",
+        "score_label": "Score: {{score}}",
+        "standings_title": "Current Standings",
+        "search_placeholder": "Search employees...",
+        "no_employees": "No employees found matching your search.",
+        "no_active_employees": "No active employees found.",
+        "unassigned": "Unassigned",
+        "pts": "PTS",
+        "out_of_100_pts": "/ 100 PTS",
+        "full_roster": "Full Roster",
+        "my_ranking": "My Ranking",
+        "zone_label": "{{zone}} Zone",
+        "hide_progress": "Hide My Progress",
+        "view_progress": "View My Progress",
+        "toasts": {
+            "load_error": "Failed to load leaderboard",
+            "updated": "Leaderboard updated!",
+            "graph_error": "Failed to load graph data"
+        },
+        "graph": {
+            "weekly": "Weekly",
+            "monthly": "Monthly",
+            "loading": "Loading {{period}} data...",
+            "no_historical_data": "No historical data found for this period."
+        }
+    },
+    "admin_profile": {
+        "title": "My Profile",
+        "subtitle": "Manage your administrative identity and security",
+        "btn_edit_password": "Security Settings",
+        "avatar_change": "Change",
+        "verified": "Verified",
+        "roles": {
+            "admin": "Admin",
+            "super_admin": "Unrestricted Admin",
+            "staff_admin": "Staff Admin"
+        },
+        "sections": {
+            "account_identity": "Account Identity",
+            "email_address": "Email Address",
+            "mobile_number": "Mobile Number",
+            "not_linked": "Not Linked",
+            "system_permissions": "System Permissions",
+            "access_level": "Access Level",
+            "account_status": "Account Status",
+            "active_protected": "Active & Protected"
+        },
+        "delete_modal": {
+            "title": "Remove Picture?",
+            "desc": "This will permanently delete your profile photo and revert to your initials.",
+            "confirm": "Yes, Remove Photo",
+            "cancel": "Cancel"
+        },
+        "toasts": {
+            "updating": "Updating...",
+            "success": "Updated successfully!",
+            "error": "Failed to update.",
+            "file_too_large": "File size must be less than 5MB.",
+            "uploading_avatar": "Uploading picture...",
+            "avatar_updated": "Profile picture updated!",
+            "upload_failed": "Failed to upload picture.",
+            "removing_avatar": "Removing picture...",
+            "avatar_removed": "Profile picture removed!",
+            "remove_failed": "Failed to remove picture."
+        }
+    },
+    "learning_hub": {
+        "page_title": "Training Vault",
+        "page_subtitle": "Learn from global instruction videos uploaded by administrators.",
+        "upload_btn": "Upload Lesson",
+        "empty_state_title": "Vault is Empty",
+        "empty_state_desc": "There are no training videos available at the moment.",
+        "empty_state_admin_hint": "Click 'Upload Lesson' to add the first one!",
+        "ghost_card": {
+            "cancel_upload": "Cancel Upload",
+            "uploading": "Uploading to Cloud...",
+            "finalizing": "Finalizing..."
+        },
+        "video_card": {
+            "instructor_label": "Instructor",
+            "download_tooltip": "Download Video",
+            "share_tooltip": "Share on WhatsApp",
+            "edit_tooltip": "Edit Video Details",
+            "delete_tooltip": "Delete Video"
+        },
+        "upload_modal": {
+            "title": "Upload Training Video",
+            "subtitle": "Share a lesson with all employees",
+            "lesson_title": "Lesson Title",
+            "title_placeholder": "e.g., Advanced Snare Drum Techniques",
+            "description": "Description",
+            "optional": "(Optional)",
+            "desc_placeholder": "Briefly explain what this video covers...",
+            "video_file": "Video File",
+            "click_to_select": "Click to select video",
+            "file_limits": "MP4, MOV, WebM (Max 2 GB)",
+            "start_upload_btn": "Start Background Upload"
+        },
+        "edit_dialog": {
+            "title": "Edit Lesson Details",
+            "lesson_title": "Title",
+            "description": "Description",
+            "cancel_btn": "Cancel",
+            "save_btn": "Save Changes"
+        },
+        "delete_dialog": {
+            "title": "Delete Video",
+            "warning_text": "Are you sure you want to delete this training video? This action cannot be undone and will remove the video for all employees.",
+            "cancel_btn": "Cancel",
+            "confirm_btn": "Yes, Delete"
+        },
+        "toasts": {
+            "load_failed": "Failed to load training videos",
+            "upload_cancelled": "Upload cancelled",
+            "upload_failed": "Upload failed. Please check your connection.",
+            "deleting": "Deleting video...",
+            "delete_success": "Video deleted successfully",
+            "delete_failed": "Failed to delete video",
+            "updating": "Updating lesson...",
+            "update_success": "Updated successfully!",
+            "update_failed": "Failed to update lesson",
+            "preparing_download": "Preparing download...",
+            "download_started": "Download started!",
+            "download_failed": "Failed to download video.",
+            "file_too_large": "Video exceeds the 500MB limit.",
+            "title_required": "Title is required",
+            "file_required": "Please select a video file",
+            "keep_app_open": "Please keep the app open until the upload finishes!"
+        }
+    },
+    "help_faq": {
+        "title": "Help & FAQs",
+        "subtitle": "Everything you need to know to use your daily dashboard.",
+        "search_placeholder": "Search for help, features, or answers...",
+        "no_results": "No results found for",
+        "clear_search": "Clear search",
+        "categories": {
+            "all": "All",
+            "dashboard": "Dashboard & Daily Ops",
+            "assignments": "Assignments & Attendance",
+            "tasks": "Optional Tasks",
+            "media": "Media & Uploads",
+            "learning": "Learning Hub",
+            "leaderboard": "Leaderboard & Stats",
+            "reports": "Daily Reports",
+            "notifications": "Alerts & Notifications",
+            "profile": "Profile & Settings",
+            "system": "System & Troubleshooting",
+            "chat": "Chat & Messaging"
+        },
+        "faqs": {
+            "1": {
+                "q": "What is this app used for?",
+                "a": "Think of this app as your daily digital diary. It tells you which schools you need to visit today, gives you directions, and lets you log your daily attendance (Check-In and Check-Out) using your phone's location."
+            },
+            "2": {
+                "q": "Where can I see my assigned schools for today?",
+                "a": "Right when you open the app! On the main screen (your Dashboard), you will see 'cards' for each school you need to visit. Each card shows the school's name, the address, your scheduled time, and whether you are teaching the Junior or Senior Band."
+            },
+            "3": {
+                "q": "How do I get directions to the school?",
+                "a": "Just look at the school card and tap the 'Directions' button. This will automatically open Google Maps on your phone and guide you exactly to the school's location."
+            },
+            "4": {
+                "q": "How do I Check-In when I arrive?",
+                "a": "Once you reach the school, tap the green 'Check-In' button on that school's card. \n\n*Important Note:* If you arrive past your scheduled time, the app will ask you to type a 'Late Reason' before it lets you check in. You can also add an optional note if there is a special event happening at the school."
+            },
+            "5": {
+                "q": "How do I Check-Out when I am done?",
+                "a": "When you finish your class and are ready to leave, open the app and tap the blue 'Check-Out' button. \n\n*Important Note:* If you stayed longer than your scheduled shift, the app will gently ask you to type an 'Overtime Reason' (for example: 'extra practice for annual day') before you check out."
+            },
+            "6": {
+                "q": "What do the 'Absent' and 'Holiday' buttons do on a school card?",
+                "a": "These buttons are used to cancel just ONE specific school visit:\n\n• Absent: Tap this if you cannot make it to this specific school (e.g., stuck in heavy traffic). You will need to type a quick reason.\n• Holiday: Tap this if you arrive and find out the school is unexpectedly closed. You will need to type a quick reason."
+            },
+            "7": {
+                "q": "What do 'Day Absent' and 'Day Holiday' mean at the top of the screen?",
+                "a": "Unlike the buttons on the cards, these buttons at the very top of your screen affect your ENTIRE DAY:\n\n• Day Absent: Tap this if you are sick or have a personal emergency and cannot visit any schools for the rest of the day.\n• Day Holiday: Tap this if today is a declared public holiday and you are not required to work at all."
+            },
+            "8": {
+                "q": "How do I apply for Leave (Vacation), and how do I know if it's approved?",
+                "a": "Tap the 'Request Leave' button at the top of your screen. Pick your start date, end date, and type a reason.\n\nTo check if your manager approved it, just tap that same button later! The screen will clearly show you if your request is Pending (still waiting), Approved (green checkmark), or Rejected (red cross). You can also click 'Revoke' to cancel your request if your plans change."
+            },
+            "9": {
+                "q": "What is the floating SOS button for?",
+                "a": "You will see a round button floating at the bottom corner of your screen. This is for Emergencies Only. If you are in trouble, press and hold this button for 5 seconds. Your phone will beep and vibrate, and an emergency alert with your exact live location will be sent directly to the admins and to your 3 nearest co-workers. This ensures help can reach you as quickly as possible!"
+            },
+            "10": {
+                "q": "Where can I see all the schools I am assigned to teach at?",
+                "a": "Tap the 'Assignments' icon at the bottom of your screen. Here, you will see a list of all your schools. Each card shows your class timings, which Band you are teaching (Junior or Senior), and highlights the specific days of the week you are supposed to go there (marked in green)."
+            },
+            "11": {
+                "q": "Why does the school card show a distance like '2 km' or '500 m'?",
+                "a": "The app uses your phone’s GPS to show exactly how far you currently are from the school! This helps you easily gauge your travel time before you start your journey."
+            },
+            "12": {
+                "q": "What do the red 'Absent' and yellow 'Leave Record' boxes at the top mean?",
+                "a": "These are your quick personal stats! They give you a quick glance at how many total Absences and Leaves you currently have on your record so you can keep track of your own attendance."
+            },
+            "13": {
+                "q": "How can I check my past attendance to see if I was marked Present or Late?",
+                "a": "Tap on any school card to open it, and look for your attendance history. You can filter by month and band category. It will show you a daily breakdown including your exact Check-In time, Check-Out time, your status (Present, Late, Absent, Holiday), and any notes you left for the admins."
+            },
+            "14": {
+                "q": "How do I register a future event in a school?",
+                "a": "If a school is hosting a special program (like an Annual Day or Sports Meet), you can log this into the system using the 'Add Event' feature! Just open the school's details, tap 'Add Event,' pick the date and times, and type a quick description. This lets the admins know your schedule has temporarily changed for that day."
+            },
+            "15": {
+                "q": "What is the Tasks page for?",
+                "a": "This page shows you any special, temporary, or optional tasks assigned to you by the admins (like a one-time workshop or a substitute class). You can review the details and decide whether to accept or decline them."
+            },
+            "16": {
+                "q": "How do I know if I have a new task waiting for me?",
+                "a": "If you have tasks that need your attention, you will see a blinking 'Pending' badge at the top of your screen telling you exactly how many tasks are waiting. The app also updates instantly if an admin sends you a new task while you are looking at the screen!"
+            },
+            "17": {
+                "q": "What information is shown on a task card?",
+                "a": "Each task card gives you everything you need to know: the school name, the exact location, which days you need to do it, the specific timing, and a blue 'Instructions' box with special notes from the admin explaining exactly what needs to be done."
+            },
+            "18": {
+                "q": "How do I Accept a task?",
+                "a": "If you are ready to take on the task, simply tap the green 'Accept' button at the bottom of the card. The card will turn green to confirm you have officially taken the job. \n\nOnce accepted, this task will automatically be added to your regular 'Assignments' page so you can get directions and Check-In just like your normal schools!"
+            },
+            "19": {
+                "q": "Can I say no to a task if I am busy?",
+                "a": "Yes! If you cannot do the task, tap the red 'Reject' button. The app will pop up a screen asking you to quickly type a reason (like 'I have another class at this time' or 'Too far to travel'). Once you submit your reason, the admins will be notified."
+            },
+            "20": {
+                "q": "What is the Media page for?",
+                "a": "The Media page is your personal video portfolio. Here you can upload videos of your band classes, view past performances, check the grades (scores) given to your videos by the admins, and see any feedback they left for you."
+            },
+            "21": {
+                "q": "How do I read the monthly video folders?",
+                "a": "Your videos are organized by month. When you tap to open a month, you will see a summary at the top showing how many total videos you uploaded that month and your Average Score (out of 10) for those videos."
+            },
+            "22": {
+                "q": "What do the numbers and badges on my videos mean?",
+                "a": "When you tap a specific video to open it, you will see:\n\n• The School Name and Band.\n• Number of students present.\n• Your Score (e.g., 8/10). If not graded yet, it will say 'Unscored'.\n• 'Your Note': What you wrote during upload.\n• 'Admin Feedback': Advice from the admin."
+            },
+            "23": {
+                "q": "Can I share or download my videos?",
+                "a": "Yes! Every video has three options:\n\n1. Copy Link: To paste the link anywhere.\n2. Download: Save the video to your phone.\n3. Share on WhatsApp: Send a link and message directly to a group or parent."
+            },
+            "24": {
+                "q": "How do I upload a new video?",
+                "a": "Tap the 'Upload Media' button at the top of the Media page. Select the school, band, date, and students present. Then, select up to 5 videos from your phone to start the process."
+            },
+            "25": {
+                "q": "Are there any limits on uploading videos?",
+                "a": "Yes, you can upload a maximum of 5 videos at a time, and their combined file size cannot exceed 500 MB. The app will warn you if your files are too large."
+            },
+            "26": {
+                "q": "Do I have to keep the app open while my video uploads?",
+                "a": "No! Once you hit 'Start Upload,' a 'Ghost Card' appears. You can safely browse other parts of the app while the video finishes uploading in the background."
+            },
+            "27": {
+                "q": "Can I delete a video if I uploaded the wrong one?",
+                "a": "Yes, but only if it has not been graded yet. Look for the red trash can icon. Once an admin gives it a score or feedback, it is permanently locked and cannot be deleted."
+            },
+            "28": {
+                "q": "What is the Learning Hub?",
+                "a": "The Learning Hub (also called the Training Vault) is your library for training materials. Admins and other verified teachers upload educational videos, tutorials, and reference materials here for you to watch and learn from."
+            },
+            "29": {
+                "q": "How do I play a video?",
+                "a": "To save your mobile data, videos don't load immediately. First, you will see a thumbnail image with a 'Click to Play' button. When you tap that button, the high-quality video will securely load and start playing."
+            },
+            "30": {
+                "q": "How do I read the details about a video?",
+                "a": "Underneath every video, you will see its Title and Date. Tap the little down arrow (˅) to expand the card. This will reveal the full description of the video, as well as the name and role (e.g., Admin, SuperAdmin) of the person who uploaded it."
+            },
+            "31": {
+                "q": "Can I save these training videos to my phone?",
+                "a": "Yes! Once you expand the video card, you will see a Download button. Tapping this will securely download the video file straight to your device so you can watch it offline later."
+            },
+            "32": {
+                "q": "How do I share a training video with someone else?",
+                "a": "You can share it directly via WhatsApp! Expand the video card and tap the green WhatsApp icon. The app will automatically draft a message with the video title and a link, ready for you to send to a colleague."
+            },
+            "33": {
+                "q": "(For Admins) How do I upload a new training video?",
+                "a": "If you have Admin privileges, you will see a blue 'Upload' button at the top of the Learning Hub. Clicking this opens a form where you can set a title, add a description, and select the video file to share with all employees."
+            },
+            "34": {
+                "q": "What is the Leaderboard?",
+                "a": "The Leaderboard is a friendly way to see how you are performing compared to other teachers. You earn points every week for being on time, completing your assigned sessions, and uploading high-quality training videos."
+            },
+            "35": {
+                "q": "How do I read my personal stats?",
+                "a": "At the top of the Leaderboard page, you will see a card highlighted just for you. It shows your current Rank (e.g., #4), your Total Score out of 100 points, and a little arrow showing if your score has gone up or down recently."
+            },
+            "36": {
+                "q": "What do the different color zones mean?",
+                "a": "Your performance is color-coded into 'Zones' so you can see how you're doing at a glance:\n\n• Green Zone: Excellent! You are a top performer with great attendance and high video scores.\n• Blue Zone: Good! You are consistent and performing well.\n• Red Zone: Needs Improvement. This usually means you might be arriving late or haven't uploaded videos recently."
+            },
+            "37": {
+                "q": "Can I see my past performance?",
+                "a": "Yes! On your personal stats card, tap the 'View Progress' button. A graph will slide open showing your performance history. You can toggle between 'Weekly' and 'Monthly' views to see how your scores have improved over time."
+            },
+            "38": {
+                "q": "Does the leaderboard update instantly?",
+                "a": "Yes! The leaderboard is completely live. If an admin grades one of your videos or if you successfully check-in to a school, you will hear a 'ting' sound and a notification will pop up as your points and rank update in real-time."
+            },
+            "39": {
+                "q": "How do I get on the Podium?",
+                "a": "The top 3 teachers of the week are featured on the animated podium at the very top of the page. To get there: always Check-In on time, never miss a session without a valid reason, and ensure your band videos show clear student progress so admins score them highly!"
+            },
+            "40": {
+                "q": "What is the Daily Report page for?",
+                "a": "This is where you write a quick summary of what you taught or did at a school on a specific day. This keeps the admins updated on your students' progress."
+            },
+            "41": {
+                "q": "How do I submit a regular daily report?",
+                "a": "First, choose the school you visited from the dropdown. Next, tap to select whether you taught the Junior or Senior Band. Make sure the category says 'Regular Report', type your notes in the Summary box, and tap the 'Submit Report' button!"
+            },
+            "42": {
+                "q": "What if I am reporting on a special event instead of a normal class?",
+                "a": "Tap on the 'Category' box and change it from 'Regular Report' to 'Event Report'. Two new boxes will instantly appear asking for the Event Name and the Event Date. Fill those in, write your summary, and hit Submit!"
+            },
+            "43": {
+                "q": "Why is the 'Submit Report' button greyed out?",
+                "a": "The button stays greyed out and unclickable until you have filled in all the required information. Double-check that you have selected a School, picked a Band category, and written something in the Summary box."
+            },
+            "44": {
+                "q": "What kind of alerts will I see on the Notifications page?",
+                "a": "This page is your personal inbox for app updates. You will get an alert here whenever your Leave Request is approved or rejected, when a new task is assigned to you, if an admin leaves feedback on your video, or if you receive a system warning."
+            },
+            "45": {
+                "q": "Do I also get emails for these alerts?",
+                "a": "Yes, absolutely! Every single time you get a notification in the app, a copy is instantly sent to your registered email address. Whether you Check-In, Check-Out, report Absent, request a Leave, or get a reply from an Admin—you will always have an email receipt for your records."
+            },
+            "46": {
+                "q": "What do the different colors and icons mean?",
+                "a": "To help you read your alerts quickly, they are color-coded:\n\n• Green (Checkmark): Good news! A new assignment, an approved leave, or a successful update.\n• Red (Warning Sign): Important! This means you received a warning, or an item/task was deleted or rejected.\n• Blue (Info Icon): General system information or updates."
+            },
+            "47": {
+                "q": "How do I clear my old notifications?",
+                "a": "The app automatically marks your new alerts as 'Read' the moment you open the Notifications page. If your inbox is getting too cluttered, you can simply tap the 'Clear All' button at the top to delete all your old alerts and start fresh."
+            },
+            "48": {
+                "q": "What information can I see on my Profile page?",
+                "a": "Your Profile page shows your personal details like your Employee ID, email, and phone number. It also shows your assigned Zone and a quick list of all the schools you teach at."
+            },
+            "49": {
+                "q": "How do I add or change my profile picture?",
+                "a": "Tap the little camera icon next to your name. You can then choose a photo from your phone to upload as your new profile picture."
+            },
+            "50": {
+                "q": "Can I remove my profile picture?",
+                "a": "Yes! If you have a picture uploaded, you will see a small red trash can icon next to it. Tap that to remove your photo and go back to showing just your initials."
+            },
+            "51": {
+                "q": "How do I change my password?",
+                "a": "Tap the 'Edit Password' button on your profile. A screen will pop up asking you to type a new password (it must be at least 6 letters or numbers) and confirm it. Tap 'Update' to save it!"
+            },
+            "52": {
+                "q": "How do I change the app's language?",
+                "a": "Tap the 'Settings' gear icon in your menu. You can switch the app language between English and Hindi. Select your preferred language and tap 'Save Changes'!"
+            },
+            "53": {
+                "q": "Can I turn off email notifications?",
+                "a": "You can turn them off in Settings, but we highly recommend keeping them turned ON. If you turn them off, you might miss important updates (like approved leaves, new tasks, or admin warnings) when the app is closed."
+            },
+            "54": {
+                "q": "Does the app have a Dark Mode?",
+                "a": "Yes! If the screen is too bright, you can easily switch to Dark Mode. Just open your main menu (or bottom bar) and tap the Sun/Moon icon to switch between Light and Dark themes instantly."
+            },
+            "55": {
+                "q": "Why is my SOS button gray or showing an error icon?",
+                "a": "If your SOS button is not red, it means your phone's location (GPS) is turned off for this website. The app needs your location to mark attendance and send help during emergencies. Please follow the steps below to turn it on."
+            },
+            "56": {
+                "q": "How do I turn on Location Services in Chrome?",
+                "a": "1. Open Chrome and go to workedumusicindia.com.\n2. Tap the three dots (⋮) in the top right corner.\n3. Tap 'Settings', then scroll down to 'Site Settings'.\n4. Tap 'Location' and make sure it is turned ON.\n5. Refresh the page."
+            },
+            "57": {
+                "q": "Why did I get a reminder 15 minutes before my shift?",
+                "a": "The system automatically checks if you are ready to start. If you haven't checked in 15 minutes before your scheduled start time, we send a friendly reminder to your app and email so you aren't late."
+            },
+            "58": {
+                "q": "What is the 2-hour Auto-Absent rule?",
+                "a": "To keep records accurate, if you are more than 2 hours late and haven't checked in, the system will automatically mark you as 'Absent' for that shift. You will receive a warning 15 minutes before this happens."
+            },
+            "59": {
+                "q": "Why does the app remind me to Check-Out?",
+                "a": "If you forget to Check-Out, the system sends an alert to you and the Admin 10 minutes after your shift ends. This ensures your working hours are logged correctly."
+            },
+            "60": {
+                "q": "When is the deadline to submit my Daily Report?",
+                "a": "All reports must be submitted by 8:00 PM IST every day. If a report is missing by this time, the system will automatically issue a 'Written Warning' to your profile and alert the Admin."
+            },
+            "61": {
+                "q": "How is my Weekly Score calculated?",
+                "a": "Every Saturday at 9:00 PM, the system calculates your performance:\n• 50% Attendance (Punctuality)\n• 50% Media Score (Video Quality)\n• Penalty: -10 points for every Warning received."
+            },
+            "62": {
+                "q": "How do I start a voice or video call?",
+                "a": "To start a call, open a 1-on-1 chat with the desired contact. Click the video icon in the top-right corner of the chat window and select either 'Video call' or 'Voice call'. Please note that calling features are currently available for individual chats only."
+            },
+            "63": {
+                "q": "How do I create and manage a group chat?",
+                "a": "Click the three vertical dots (⋮) at the top of your chat list and select 'New group'. Enter a name and select members to add. If you are the creator or an admin, you can manage the group by clicking on the group name or profile icon to open the Sidebar, where you can add/remove members or promote users to admin."
+            },
+            "64": {
+                "q": "Are my messages private and secure?",
+                "a": "While all messages are end-to-end encrypted to protect them from external threats, please be aware that administrators have access to view messages within the platform for oversight and compliance. Furthermore, to maintain data hygiene, all messages are automatically deleted from the server after 7 days."
+            },
+            "65": {
+                "q": "Can I share files, photos, or videos?",
+                "a": "Yes! In any active chat, click the paperclip icon in the message input bar. You can choose to upload photos, videos, or documents directly from your device, or use your camera to take a photo on the go."
+            },
+            "66": {
+                "q": "Can I delete or forward a message after sending it?",
+                "a": "Yes. Right-click or long-press on a message to open the context menu and select 'Select'. You can then choose to 'Forward' the message to another chat or 'Delete' it. Messages sent within the last 30 minutes can be deleted for everyone, otherwise, they can be deleted for you only."
+            }
+        }
+    },
+    "call": {
+        "ringing": "Ringing...",
+        "calling": "Calling...",
+        "busy": "Person is on another call...",
+        "encrypted": "End-to-end encrypted",
+        "on_hold_title": "{{name}} put your call on hold.",
+        "on_hold_desc": "Please wait while they finish another call...",
+        "unknown": "Unknown",
+        "in_call": "In call",
+        "video_request_desc": "is requesting to switch to a video call.",
+        "decline": "Decline",
+        "accept": "Accept",
+        "incoming_type": "{{type}} call incoming...",
+        "on_hold_badge": "ON HOLD",
+        "minimize_title": "Minimize Call",
+        "flip_camera": "Flip Camera",
+        "request_video": "Request Video Upgrade"
+    },
+    "chat": {
+        "messages": "Messages",
+        "new_group": "New group",
+        "search_placeholder": "Search chats...",
+        "no_chats": "No chats found.",
+        "members_count": "{{count}} members",
+        "default_role": "Employee",
+        "unread_overflow": "9+",
+        "you": "You ",
+        "wipe_chat": "Wipe Chat"
+    },
+    "chat_sidebar": {
+        "group_info": "Group Info",
+        "contact_info": "Contact Info",
+        "change_photo": "Change Photo",
+        "remove_photo": "Remove Photo",
+        "employee_role": "Employee",
+        "members_count": "{{count}} Members",
+        "participants": "Participants",
+        "add_member": "+ Add Member",
+        "you": "You",
+        "role_creator": "Creator",
+        "role_admin": "Admin",
+        "action_demote": "Dismiss as admin",
+        "action_promote": "Make group admin",
+        "action_remove": "Remove member",
+        "leave_group": "Leave Group"
+    },
+    "chat_window": {
+        "empty": {
+            "title": "Communication Hub",
+            "subtitle": "Select a team member or group from the sidebar to send direct messages, share media, and collaborate."
+        },
+        "top_bar": {
+            "selected_count": "{{count}} selected",
+            "search": "Search...",
+            "group_chat": "Group Chat",
+            "online": "Online",
+            "offline": "Offline"
+        },
+        "top_menu": {
+            "video_call": "Video call",
+            "voice_call": "Voice call",
+            "media": "Media",
+            "docs": "Docs",
+            "links": "Links",
+            "clear_chat": "Clear chat",
+            "manage_contacts": "Allowed Contacts",
+            "show_chats": "Show Chats"
+        },
+        "privacy": {
+            "desktop": "These messages will be automatically deleted after 7 days for privacy.",
+            "mobile_notice": "Messages auto-delete after 7 days.",
+            "label": "Privacy"
+        },
+        "feed": {
+            "say_hello": "Say Hello to {{name}}!",
+            "start_secure": "Send messages, share photos, or start a secure {{type}}.",
+            "type_group_chat": "group chat",
+            "type_voice_call": "voice call",
+            "e2e": "Messages are end-to-end encrypted. No one outside of this chat can read or listen to them."
+        },
+        "message": {
+            "deleted": "This message was deleted",
+            "document_file": "Document File",
+            "you": "You",
+            "member": "Member"
+        },
+        "input": {
+            "placeholder": "Type a message...",
+            "camera": "Camera",
+            "photos": "Photos",
+            "document": "Document"
+        },
+        "context_menu": {
+            "delete_me": "Delete for me",
+            "delete_everyone": "Delete for everyone",
+            "select": "Select"
+        },
+        "shared": {
+            "media": "Shared Media",
+            "docs": "Shared Documents",
+            "links": "Shared Links",
+            "no_shared_media": "No shared media yet.",
+            "no_shared_docs": "No shared documents yet.",
+            "no_shared_links": "No shared links yet.",
+            "will_appear": "Files shared in this chat will appear here.",
+            "shared_doc": "Shared Document",
+            "preview": "Document Preview"
+        }
+    },
+    "modal": {
+        "forward": {
+            "title": "Forward message",
+            "search": "Search chats...",
+            "no_chats": "No chats found",
+            "select_chats": "Select chats"
+        },
+        "add_member": {
+            "title": "Add Members to {{name}}",
+            "search": "Search contacts...",
+            "add": "Add"
+        },
+        "delete": {
+            "title": "Delete {{count}} Message(s)?",
+            "delete_everyone": "Delete for everyone",
+            "delete_me": "Delete for me"
+        },
+        "clear_chat": {
+            "title": "Clear this chat?",
+            "desc": "Messages will be removed from your view. This cannot be undone.",
+            "clear": "Clear chat"
+        },
+        "common": {
+            "cancel": "Cancel",
+            "save": "Save"
+        },
+        "whitelist": {
+            "title": "Manage Allowed Contacts",
+            "search": "Search employees...",
+            "subtitle": "Select who this user is allowed to chat with."
+        },
+        "audit": {
+            "wipe_message_title": "Permanently Wipe Message?",
+            "wipe_message_desc": "This will completely erase the message and its media from the server. This cannot be undone.",
+            "wipe": "Wipe",
+            "clear_audit_chat_title": "Wipe Entire Chat History?",
+            "clear_audit_chat_desc": "WARNING: This destroys all messages and media in this conversation from the database and storage permanently.",
+            "wipe_all": "Wipe Everything"
+        }
+    },
+    "shared_chat": {
+        "modal": {
+            "title": "Create New Group",
+            "name_placeholder": "Group Name",
+            "search_placeholder": "Search contacts...",
+            "select_members": "Select Members",
+            "selected_count": "{{count}} selected",
+            "cancel": "Cancel",
+            "create": "Create"
+        }
+    },
+    "school_holiday_modal": {
+        "title": "Holiday Management",
+        "edit_heading": "Modify Schedule",
+        "add_heading": "Schedule New Closure",
+        "label_title": "Holiday Title / Reason",
+        "placeholder_title": "e.g. Summer Vacation 2026",
+        "label_start": "Starts From",
+        "label_end": "Ends At",
+        "btn_cancel": "Cancel",
+        "btn_update": "Update History",
+        "btn_add": "Mark Holiday",
+        "history_title": "Historical Records",
+        "syncing": "Syncing Records...",
+        "history_empty": "No holidays have been scheduled yet for this band.",
+        "btn_edit_sm": "Edit",
+        "btn_delete_sm": "Delete",
+        "delete_confirm_title": "Confirm Deletion",
+        "delete_confirm_desc": "Are you sure you want to permanently delete this holiday record?",
+        "btn_confirm_delete": "Yes, Delete",
+        "toast_fetch_error": "Failed to load history",
+        "toast_saving": "Saving...",
+        "toast_update_success": "Holiday updated successfully",
+        "toast_add_success": "Holiday scheduled successfully",
+        "toast_save_error": "Failed to save record",
+        "toast_deleting": "Deleting...",
+        "toast_delete_success": "Record deleted successfully",
+        "toast_delete_error": "Delete failed",
+        "error_past_date": "Past holidays cannot be scheduled.",
+        "error_invalid_range": "Valid Date Range should be there."
+    }
+}
