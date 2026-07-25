@@ -257,7 +257,19 @@ function App() {
         });
 
         const data = response.data;
-        if (data.action === 'NONE') return;
+
+        // ── 🆕 NONE: fully up to date, OR admin shipped a fresh APK
+        // and intentionally has no OTA payload live. Either way, sync
+        // our locally-remembered "official" version and bail out.
+        if (data.action === 'NONE') {
+          if (data.display_version) {
+            localStorage.setItem('known_release_version', data.display_version);
+          }
+          // Clear stale OTA bookkeeping so Settings doesn't show an
+          // outdated bundle claim once a new APK has been installed.
+          localStorage.removeItem('capgo_applied_ota');
+          return;
+        }
 
         // ── APK (full native update) ─────────────────────────────
         if (data.action === 'APK') {
@@ -315,6 +327,9 @@ function App() {
             // 1. Mark version BEFORE reloading so PermissionShield
             //    doesn't trigger on the fresh WebView mount.
             localStorage.setItem('capgo_applied_ota', data.release_version);
+            // 🆕 Keep the "known official version" in sync with the
+            // OTA bundle we're actually about to apply.
+            localStorage.setItem('known_release_version', data.release_version);
             // 2. Flag so PermissionShield skips its check on next mount
             localStorage.setItem('ota_just_applied', 'true');
 
@@ -518,7 +533,7 @@ function App() {
             console.log("💾 [DEBUG] User ID synced to Native Storage.");
           } else {
             // User logged out (user is null), wipe ID from Android SharedPreferences
-            await NativeSettings.setNativeUser({ userId: '' }); 
+            await NativeSettings.setNativeUser({ userId: '' });
             console.log("🧹 [DEBUG] Native User ID cleared.");
           }
         } catch (e) { console.error("Sync Failed", e); }
@@ -617,7 +632,16 @@ function App() {
     };
   }, []); // Safe dependency array
 
+  // 🆕 FIX: This PWA cache-buster must NEVER run on native. It was
+  // colliding with Capgo's own update/reload lifecycle — its
+  // `localStorage.clear()` + forced reload could interrupt Capgo's
+  // `notifyAppReady()` handshake and wipe `capgo_applied_ota` /
+  // `known_release_version`, causing OTA state to look stuck.
+  // This whole mechanism (Cache Storage API, service workers) is a
+  // web/PWA concept and has no meaning inside the native WebView.
   useEffect(() => {
+    if (isNative) return; // 🆕 guard — web/PWA only
+
     const checkAndClearCache = async () => {
       const savedVersion = localStorage.getItem('app_version');
 
@@ -649,7 +673,7 @@ function App() {
     };
 
     checkAndClearCache();
-  }, []);
+  }, [isNative]); // 🆕 added isNative to deps since the guard reads it
 
   const showBlankScreen = isHydrating && !token;
 

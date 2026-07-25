@@ -55,15 +55,31 @@ const EmployeeSettingsModal = ({ isOpen, onClose }) => {
                 setOtaVersion("Web");
                 return;
             }
+
+            let currentNative = "Unknown";
             try {
                 const appInfo = await CapApp.getInfo();
-                setNativeVersion(appInfo.version);
-                const otaInfo = await CapacitorUpdater.current();
-                setOtaVersion(otaInfo.bundle?.version || otaInfo.bundle?.id || appInfo.version);
+                currentNative = appInfo.version;
+                setNativeVersion(currentNative);
             } catch (error) {
-                console.error("Failed to fetch app versions", error);
                 setNativeVersion("Unknown");
-                setOtaVersion("Unknown");
+            }
+
+            try {
+                const otaInfo = await CapacitorUpdater.current();
+                const isBuiltin = otaInfo?.bundle?.id === 'builtin';
+
+                if (!isBuiltin) {
+                    // A real OTA bundle was actually applied — trust it
+                    setOtaVersion(otaInfo?.bundle?.version || otaInfo?.bundle?.id || currentNative);
+                } else {
+                    // No OTA applied — show what the server last confirmed as "official"
+                    const known = localStorage.getItem('known_release_version');
+                    setOtaVersion(known || currentNative);
+                }
+            } catch (error) {
+                const known = localStorage.getItem('known_release_version');
+                setOtaVersion(known || currentNative);
             }
         };
 

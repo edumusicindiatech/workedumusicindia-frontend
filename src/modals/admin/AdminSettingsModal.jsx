@@ -61,34 +61,29 @@ const AdminSettingsModal = ({ isOpen, onClose, currentPreferences, onSaveSuccess
             }
 
             let currentNative = "Unknown";
-
-            // 1. Safely fetch Native Version
             try {
                 const appInfo = await CapApp.getInfo();
                 currentNative = appInfo.version;
                 setNativeVersion(currentNative);
             } catch (error) {
-                console.error("Failed to fetch native app version", error);
                 setNativeVersion("Unknown");
             }
 
-            // 2. Safely fetch OTA Version
-            // Note: CapacitorUpdater.current() throws an error if no OTA has been applied yet!
             try {
                 const otaInfo = await CapacitorUpdater.current();
+                const isBuiltin = otaInfo?.bundle?.id === 'builtin';
 
-                // Match the logic you successfully used in App.jsx
-                const currentOta =
-                    otaInfo?.version ||
-                    otaInfo?.bundle?.version ||
-                    otaInfo?.bundle?.id ||
-                    currentNative;
-
-                setOtaVersion(currentOta);
+                if (!isBuiltin) {
+                    // A real OTA bundle was actually applied — trust it
+                    setOtaVersion(otaInfo?.bundle?.version || otaInfo?.bundle?.id || currentNative);
+                } else {
+                    // No OTA applied — show what the server last confirmed as "official"
+                    const known = localStorage.getItem('known_release_version');
+                    setOtaVersion(known || currentNative);
+                }
             } catch (error) {
-                // If it fails, it just means they are running the fresh native app install
-                console.log("No OTA bundle applied yet. Defaulting to Native version.");
-                setOtaVersion(currentNative);
+                const known = localStorage.getItem('known_release_version');
+                setOtaVersion(known || currentNative);
             }
         };
 
