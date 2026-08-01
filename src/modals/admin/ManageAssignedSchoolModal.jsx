@@ -364,7 +364,7 @@ const ManageAssignedSchoolModal = ({ isOpen, onClose, assignment, employeeId, on
 
             {/* DELETE CONFIRMATION SUB-MODAL */}
             {deleteModal.isOpen && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-200" onClick={() => setDeleteModal({ isOpen: false })}>
+                <div className="fixed inset-0 z-110 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-200" onClick={() => setDeleteModal({ isOpen: false })}>
                     <div className="bg-card w-full max-w-sm rounded-4xl shadow-2xl border border-border/50 p-8 text-center flex flex-col items-center animate-in zoom-in-95 duration-300 relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
                         <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-destructive/40 via-destructive to-destructive/40" />
 

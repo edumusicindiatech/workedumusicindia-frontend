@@ -565,7 +565,7 @@ const AdminAttendanceDetailsModal = ({ isOpen, onClose, monthData, employeeName 
 
             {/* PREVIEW MODAL - Sits on top of the parent modal */}
             {showPreviewModal && (
-                <div className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-200" onClick={(e) => e.stopPropagation()}>
+                <div className="fixed inset-0 z-120 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-200" onClick={(e) => e.stopPropagation()}>
                     <div className="bg-card w-full max-w-6xl h-[85vh] rounded-3xl shadow-2xl border border-border flex flex-col overflow-hidden animate-in zoom-in-95">
                         <div className="p-5 border-b border-border bg-muted/30 flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-3">
