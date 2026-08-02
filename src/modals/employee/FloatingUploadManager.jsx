@@ -54,6 +54,9 @@ const FloatingUploadManager = () => {
                 await api.post('/employee/media/multipart/abort', { uploadId: uploadData.uploadId, key: uploadData.key });
             }
         });
+        uppy.on('upload-error', (file, error) => {
+            console.error('🔥 Uppy upload error:', file.name, error);
+        });
 
         // Helper to get the target route for notifications
         const getRouteTarget = () => uploadType === 'learning-hub' ? 'admin/learning-hub' : 'employee/media';

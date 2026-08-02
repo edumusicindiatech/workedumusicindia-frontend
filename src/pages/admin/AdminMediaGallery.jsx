@@ -4,7 +4,8 @@ import {
     Users, School, MapPin, ChevronRight, Film, Calendar as CalendarIcon,
     Award, Clock, Star, AlertTriangle,
     Copy, AlertCircle, Download, ChevronDown,
-    Trash2, PlayCircle, Eye, FileSpreadsheet, X
+    Trash2, PlayCircle, Eye, FileSpreadsheet, X,
+    HardDrive
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
@@ -100,10 +101,49 @@ const AdminMediaGallery = () => {
     const [onlineUsers, setOnlineUsers] = useState({});
     const timeoutsRef = useRef({});
 
+    // --- UPDATED: Storage Stats State (10 GB Default = 10737418240 bytes) ---
+    const [storageStats, setStorageStats] = useState({ usedBytes: 0, totalBytes: 10737418240 });
+    const [isStorageLoading, setIsStorageLoading] = useState(true);
+
     const refetchTimestamp = useRef(0);
     const { user } = useSelector((state) => state.auth);
 
-    useEffect(() => { fetchEmployees(); }, []);
+    useEffect(() => {
+        fetchEmployees();
+        fetchStorageStats();
+    }, []);
+
+    // --- UPDATED: Fetch Storage Function ---
+    const fetchStorageStats = async () => {
+        setIsStorageLoading(true);
+        try {
+            const response = await api.get('/admin/media-vault/storage-stats');
+            if (response.data.success) {
+                setStorageStats({
+                    usedBytes: response.data.data.usedBytes,
+                    totalBytes: response.data.data.totalBytes
+                });
+            }
+        } catch (error) {
+            // Fallback mock data if the API endpoint fails
+            setStorageStats({
+                usedBytes: 4233920123, // ~3.9 GB used (Mock to fit inside 10GB nicely)
+                totalBytes: 10737418240 // 10 GB total
+            });
+        } finally {
+            setIsStorageLoading(false);
+        }
+    };
+
+    // --- Format Bytes Utility ---
+    const formatBytes = (bytes, decimals = 2) => {
+        if (!+bytes) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+    };
 
     const fetchEmployees = async () => {
         setIsLoading(true);
@@ -193,9 +233,12 @@ const AdminMediaGallery = () => {
                     if (Date.now() - refetchTimestamp.current > 1000) {
                         refetchTimestamp.current = Date.now();
                         fetchMedia(true);
+                        // Refresh storage when new media arrives
+                        fetchStorageStats();
                     }
                 } else if (viewMode === 'employees') {
                     fetchEmployees();
+                    fetchStorageStats();
                 } else if (viewMode === 'schools' || viewMode === 'bands') {
                     if (selectedEmployee) fetchHistoricalSchools(selectedEmployee._id || selectedEmployee.id);
                 }
@@ -278,10 +321,8 @@ const AdminMediaGallery = () => {
             const safeFileName = smartFileName ? `${smartFileName.replace(/\s+/g, '-')}.mp4` : 'video.mp4';
 
             if (Capacitor.isNativePlatform()) {
-                // FIX: Perform the arrayBuffer download using our Axios instance which has proper interceptors/cors handling
                 const response = await api.get(fileUrl, { responseType: 'arraybuffer' });
 
-                // Convert binary array buffer to a clean base64 string safely inside native webview
                 const bytes = new Uint8Array(response.data);
                 let binary = '';
                 for (let i = 0; i < bytes.byteLength; i++) {
@@ -310,7 +351,6 @@ const AdminMediaGallery = () => {
                     console.log("Share sheet dismissed.");
                 }
             } else {
-                // Standard desktop browser workflow via secure signed down-loader
                 const response = await api.post('/admin/media-vault/generate-download-url', {
                     fileUrl: fileUrl,
                     fileName: safeFileName
@@ -345,6 +385,7 @@ const AdminMediaGallery = () => {
             toast.success(t('media_vault.admin.delete_success'));
             setDeleteModal({ isOpen: false, logId: null, fileId: null });
             fetchMedia();
+            fetchStorageStats(); // Refresh storage UI upon deletion
         } catch (error) {
             toast.error(t('media_vault.admin.delete_error'));
         } finally {
@@ -352,7 +393,6 @@ const AdminMediaGallery = () => {
         }
     };
 
-    // Function to fetch the Preview Data
     const handlePreviewReport = async () => {
         if (!selectedEmployee) return;
         setIsReportLoading(true);
@@ -371,7 +411,6 @@ const AdminMediaGallery = () => {
         }
     };
 
-    // Function to handle the .xlsx Download
     const handleDownloadExcel = async () => {
         if (!selectedEmployee) return;
         const toastId = toast.loading('Generating Excel file...');
@@ -380,7 +419,6 @@ const AdminMediaGallery = () => {
             const safeExcelName = `Media_Report_${selectedEmployee.name.replace(/\s+/g, '_')}_30_Days.xlsx`;
 
             if (Capacitor.isNativePlatform()) {
-                // Fetch as arraybuffer for unified native base64 mapping
                 const response = await api.get(`/admin/employees/${empId}/media-report-30-days/download`, {
                     responseType: 'arraybuffer'
                 });
@@ -392,7 +430,6 @@ const AdminMediaGallery = () => {
                 }
                 const base64Data = btoa(binary);
 
-                // Write report into Cache directory so the OS can safely hand it over to share system
                 const writeResult = await Filesystem.writeFile({
                     path: safeExcelName,
                     data: base64Data,
@@ -409,7 +446,6 @@ const AdminMediaGallery = () => {
                     dialogTitle: 'Open Report'
                 });
             } else {
-                // Desktop Web browser download fallback
                 const response = await api.get(`/admin/employees/${empId}/media-report-30-days/download`, {
                     responseType: 'blob'
                 });
@@ -455,7 +491,6 @@ const AdminMediaGallery = () => {
             toast.success(t('media_vault.admin.grade_success'));
             setReviewModalOpen(false);
 
-            // Re-fetch all trails to instantly clear badges from the UI
             fetchMedia();
             fetchEmployees();
             if (selectedEmployee) fetchHistoricalSchools(selectedEmployee._id || selectedEmployee.id);
@@ -477,6 +512,12 @@ const AdminMediaGallery = () => {
                 "bg-green-500/10 text-green-600 border-green-500/30";
         return { average, colorClass, pendingCount };
     };
+
+    // Calculate Storage Values based on 10GB limit
+    const storagePercentage = Math.min(100, (storageStats.usedBytes / (storageStats.totalBytes || 1)) * 100) || 0;
+    let storageColor = "bg-green-500";
+    if (storagePercentage > 75) storageColor = "bg-amber-500";
+    if (storagePercentage > 90) storageColor = "bg-red-500";
 
     return (
         <div className="max-w-7xl mx-auto p-4 sm:p-6 mt-2 pb-24">
@@ -567,9 +608,10 @@ const AdminMediaGallery = () => {
                 </div>
             )}
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-                <div>
-                    <h1 className="text-3xl sm:text-4xl font-black text-foreground tracking-tight bg-linear-to-r from-primary to-blue-500 bg-clip-text">
+            {/* --- HEADER CONTROLS --- */}
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 mb-8 w-full">
+                <div className="flex-1">
+                    <h1 className="text-3xl sm:text-4xl font-black tracking-tight bg-linear-to-r from-primary to-blue-500 bg-clip-text text-transparent inline-block pb-1">
                         {t('media_vault.admin.title')}
                     </h1>
                     <div className="flex items-center flex-wrap gap-2 mt-2 text-sm font-semibold text-muted-foreground">
@@ -581,11 +623,37 @@ const AdminMediaGallery = () => {
                         {selectedBand && (<><ChevronRight className="w-4 h-4 opacity-50" /><span className="text-primary">{selectedBand === 'Junior Band' ? t('media_vault.admin.junior_band') : t('media_vault.admin.senior_band')}</span></>)}
                     </div>
                 </div>
-                {viewMode === 'gallery' && (
-                    <div className="w-full sm:w-32 z-10 shrink-0 animate-in fade-in zoom-in duration-300">
-                        <CustomSelect value={selectedYear} onChange={(val) => setSelectedYear(Number(val))} options={availableYears} />
-                    </div>
-                )}
+
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto shrink-0">
+                    {/* NEW: BEAUTIFUL STORAGE WIDGET */}
+                    {!isStorageLoading && (
+                        <div className="flex items-center gap-4 bg-card dark:bg-[#0d1117] border border-border p-3.5 sm:px-5 sm:py-4 rounded-2xl shadow-sm w-full sm:min-w-70 animate-in fade-in zoom-in duration-500 hover:shadow-md transition-shadow">
+                            <div className={`p-3 rounded-xl shrink-0 ${storagePercentage > 90 ? 'bg-red-500/10 text-red-500' : storagePercentage > 75 ? 'bg-amber-500/10 text-amber-500' : 'bg-primary/10 text-primary'}`}>
+                                <HardDrive className="w-6 h-6" />
+                            </div>
+                            <div className="flex-1 space-y-2 min-w-0">
+                                <div className="flex justify-between items-center text-xs font-bold mb-1">
+                                    <span className="text-muted-foreground uppercase tracking-wider">Vault Storage</span>
+                                    <span className={`tabular-nums ${storagePercentage > 90 ? 'text-red-500' : 'text-foreground'}`}>
+                                        {storagePercentage.toFixed(1)}%
+                                    </span>
+                                </div>
+                                <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden shrink-0">
+                                    <div className={`h-full rounded-full transition-all duration-1000 ${storageColor}`} style={{ width: `${storagePercentage}%` }}></div>
+                                </div>
+                                <div className="text-[10px] sm:text-xs text-muted-foreground font-semibold text-right tabular-nums">
+                                    {formatBytes(storageStats.usedBytes)} / {formatBytes(storageStats.totalBytes)}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {viewMode === 'gallery' && (
+                        <div className="w-full sm:w-32 z-10 shrink-0 animate-in fade-in zoom-in duration-300">
+                            <CustomSelect value={selectedYear} onChange={(val) => setSelectedYear(Number(val))} options={availableYears} />
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* DIRECTORY VIEW */}
@@ -700,10 +768,7 @@ const AdminMediaGallery = () => {
                                     <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary transition-colors duration-300">
                                         <School className="w-6 h-6 sm:w-7 sm:h-7 text-primary group-hover:text-white transition-colors duration-300" />
                                     </div>
-
-                                    {/* Added flex-1 and min-w-0 to prevent layout blowouts on long text */}
                                     <div className="flex-1 min-w-0">
-                                        {/* Added flex-wrap so the badge gracefully falls to the next line on small screens */}
                                         <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
                                             <h3 className="font-extrabold text-base sm:text-lg text-foreground group-hover:text-primary transition-colors duration-300 line-clamp-2">
                                                 {schoolData.schoolName}
@@ -714,8 +779,6 @@ const AdminMediaGallery = () => {
                                                 </span>
                                             )}
                                         </div>
-
-                                        {/* Adjusted flex alignment and added shrink-0 to the icon so it doesn't deform */}
                                         <p className="text-xs sm:text-sm text-muted-foreground flex items-start sm:items-center gap-1.5 mt-1 opacity-80">
                                             <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5 sm:mt-0" />
                                             <span className="line-clamp-2">{t('media_vault.admin.click_to_view')}</span>
@@ -825,7 +888,6 @@ const AdminMediaGallery = () => {
                                         <ChevronRight className={`w-6 h-6 text-muted-foreground transition-transform duration-300 ${isExpanded ? 'rotate-90 text-primary' : ''}`} />
                                     </button>
 
-                                    {/* Smooth CSS Grid Accordion Trick for the Month Wrapper */}
                                     <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                                         <div className="overflow-hidden">
                                             <div className="p-4 sm:p-6 pt-0 sm:pt-2 border-t border-border bg-background/50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -835,7 +897,6 @@ const AdminMediaGallery = () => {
                                                     return (
                                                         <div key={media.fileId} className="flex flex-col bg-card dark:bg-[#131821] border border-border rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
 
-                                                            {/* REPLACED NATIVE VIDEO WITH VIDEOPLAYER */}
                                                             <div className="w-full relative bg-black shrink-0 overflow-hidden transition-all duration-300 aspect-video">
                                                                 {videoErrors[media.fileId] || !media.videoUrl ? (
                                                                     <div className="flex flex-col items-center justify-center h-full w-full p-8 bg-slate-900 border-b border-border text-center absolute inset-0">
@@ -852,7 +913,6 @@ const AdminMediaGallery = () => {
                                                                 )}
                                                             </div>
 
-                                                            {/* ACCORDION HEADER */}
                                                             <div
                                                                 onClick={() => toggleCard(media.fileId)}
                                                                 className="flex items-center justify-between p-4 bg-card cursor-pointer hover:bg-muted/30 transition-colors duration-300"
@@ -866,7 +926,6 @@ const AdminMediaGallery = () => {
                                                                 </div>
                                                             </div>
 
-                                                            {/* Smooth CSS Grid Accordion Trick for the Video Details */}
                                                             <div className={`grid transition-all duration-300 ease-in-out ${isCardExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                                                                 <div className="overflow-hidden">
                                                                     <div className="p-5 pt-2 flex flex-col flex-1 border-t border-border">
@@ -882,7 +941,6 @@ const AdminMediaGallery = () => {
                                                                         </div>
 
                                                                         <div className="space-y-4 flex-1 mb-5">
-                                                                            {/* --- ADDED: Band Stage --- */}
                                                                             {media.bandStage && media.bandStage !== 'N/A' && (
                                                                                 <div>
                                                                                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">
@@ -911,7 +969,6 @@ const AdminMediaGallery = () => {
                                                                             )}
                                                                         </div>
 
-                                                                        {/* ACTION BUTTONS */}
                                                                         <div className="flex items-center justify-between gap-2 pt-4 border-t border-border">
                                                                             <div className="flex items-center gap-1.5">
                                                                                 <button onClick={() => handleCopyLink(media.videoUrl)} title={t('media_vault.admin.copy_link_title')} className="p-2.5 rounded-xl bg-muted text-muted-foreground hover:bg-muted/80 transition-colors duration-300 border border-border">

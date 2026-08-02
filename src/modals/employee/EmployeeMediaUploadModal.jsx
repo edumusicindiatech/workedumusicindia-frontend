@@ -22,31 +22,56 @@ const generateHDThumbnail = (file) => {
     return new Promise((resolve) => {
         const video = document.createElement("video");
         const url = URL.createObjectURL(file);
+        let settled = false;
 
-        video.src = url;
+        const finish = (result) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            video.onloadeddata = null;
+            video.onseeked = null;
+            video.onerror = null;
+            URL.revokeObjectURL(url);
+            resolve(result);
+        };
+
+        // Safety net: never let a stuck/unsupported video hang the upload flow
+        const timer = setTimeout(() => finish(null), 4000);
+
         video.muted = true;
         video.playsInline = true;
+        video.preload = "metadata";
+        video.src = url;
 
         video.onloadeddata = () => {
-            video.currentTime = Math.min(1, video.duration || 0.1);
+            try {
+                video.currentTime = Math.min(1, video.duration || 0.1);
+            } catch (err) {
+                console.warn("Thumbnail seek failed:", err);
+                finish(null);
+            }
         };
 
         video.onseeked = () => {
-            const canvas = document.createElement("canvas");
-            // 640x360 keeps the payload tiny while looking perfectly crisp on cards
-            canvas.width = 640;
-            canvas.height = 360;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            try {
+                const canvas = document.createElement("canvas");
+                // 640x360 keeps the payload tiny while looking perfectly crisp on cards
+                canvas.width = 640;
+                canvas.height = 360;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Compress to JPEG at 70% quality (Results in ~30kb payload)
-            resolve(canvas.toDataURL("image/jpeg", 0.7));
-            URL.revokeObjectURL(url);
+                // Compress to JPEG at 70% quality (Results in ~30kb payload)
+                finish(canvas.toDataURL("image/jpeg", 0.7));
+            } catch (err) {
+                console.warn("Thumbnail capture failed:", err);
+                finish(null);
+            }
         };
 
         video.onerror = () => {
-            URL.revokeObjectURL(url);
-            resolve(null);
+            console.warn("Video failed to load for thumbnail generation:", file.name);
+            finish(null);
         };
     });
 };

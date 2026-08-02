@@ -99,7 +99,7 @@ const DailyReport = () => {
         if (!selectedSchoolId) return false;
         if (!band) return false;
         if (!studentsPresent) return false;
-        if (!bandStage.trim()) return false; // NEW VALIDATION
+        if (!bandStage.trim()) return false;
         if (!summary.trim()) return false;
         if (category === "Event Report") {
             if (!eventName.trim() || !eventDate) return false;
@@ -113,7 +113,7 @@ const DailyReport = () => {
         const payload = {
             schoolId: selectedSchoolId,
             band,
-            bandStage: bandStage.trim(), // NEW PAYLOAD FIELD
+            bandStage: bandStage.trim(),
             date: getTodayDateString(),
             category,
             studentsPresent: Number(studentsPresent),
@@ -133,7 +133,7 @@ const DailyReport = () => {
             // Reset Form
             setSelectedSchoolId("");
             setBand("");
-            setBandStage(""); // RESET STATE
+            setBandStage("");
             setSummary("");
             setEventName("");
             setCategory("Regular Report");
@@ -144,31 +144,32 @@ const DailyReport = () => {
         } catch (error) {
             console.error("Failed to submit report", error);
             const errMsg = error.response?.data?.message || t('daily_report.error_msg', 'Error submitting report');
-            toast.error(errMsg); // Errors are already using the toast library correctly
+            toast.error(errMsg);
         } finally {
             setIsSubmitting(false);
         }
     };
 
     if (loading) {
-        return <div className="p-4 sm:p-8 h-96 bg-muted/20 animate-pulse rounded-3xl sm:rounded-[2.5rem] max-w-4xl mx-auto mt-4" />;
+        return <div className="p-4 sm:p-8 h-96 bg-muted/20 animate-pulse rounded-3xl sm:rounded-[2.5rem] w-full max-w-4xl mx-auto mt-4" />;
     }
 
     return (
-        <div className="animate-in fade-in duration-700 pb-24 md:pb-12 max-w-3xl mx-auto p-4 sm:p-6 lg:p-8 mt-2 md:mt-4">
+        <div className="animate-in fade-in duration-700 pb-24 md:pb-12 w-full max-w-[100vw] sm:max-w-3xl mx-auto px-3 sm:px-6 lg:px-8 mt-2 md:mt-4 overflow-hidden sm:overflow-visible box-border">
 
             {/* Header */}
-            <div className="mb-6 sm:mb-8 md:mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3 sm:gap-4 md:gap-5">
+            <div className="mb-6 sm:mb-8 md:mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full min-w-0">
+                <div className="flex items-center gap-3 sm:gap-4 md:gap-5 min-w-0 w-full">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner shrink-0">
                         <FileText className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-primary" />
                     </div>
-                    <div className="space-y-0.5 sm:space-y-1">
-                        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-foreground tracking-tight uppercase">
+                    <div className="space-y-0.5 sm:space-y-1 min-w-0 flex-1">
+                        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-foreground tracking-tight uppercase truncate">
                             {t('daily_report.title', 'Daily Report')}
                         </h1>
-                        <p className="text-[10px] sm:text-xs md:text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5 sm:gap-2">
-                            <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary shrink-0" /> <span className="truncate">{todayFormatted}</span>
+                        <p className="text-[10px] sm:text-xs md:text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 min-w-0">
+                            <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary shrink-0" />
+                            <span className="truncate">{todayFormatted}</span>
                         </p>
                     </div>
                 </div>
@@ -176,28 +177,30 @@ const DailyReport = () => {
 
             {/* Success Notification */}
             {successMsg && (
-                <div className="mb-5 sm:mb-6 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 p-3 sm:p-4 rounded-xl sm:rounded-2xl flex items-center gap-2.5 sm:gap-3 animate-in fade-in slide-in-from-top-4 shadow-sm">
+                <div className="mb-5 sm:mb-6 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 p-3 sm:p-4 rounded-xl sm:rounded-2xl flex items-center gap-2.5 sm:gap-3 animate-in fade-in slide-in-from-top-4 shadow-sm w-full">
                     <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 shrink-0" />
                     <p className="font-extrabold text-[10px] sm:text-xs md:text-sm uppercase tracking-wider leading-snug">{successMsg}</p>
                 </div>
             )}
 
-            {/* Main Form Card */}
-            <div className="bg-card rounded-4xl sm:rounded-3xl md:rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-border/60 relative overflow-hidden flex flex-col">
-                <div className="absolute top-0 left-0 w-full h-1 sm:h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20" />
+            {/* Main Form Card (Removed overflow-hidden to prevent vertical cutoff, added max-w-full to prevent horizontal leak) */}
+            <div className="bg-card rounded-4xl sm:rounded-3xl md:rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-border/60 relative flex flex-col w-full max-w-full min-w-0">
+                {/* Top decorative gradient line */}
+                <div className="absolute top-0 left-0 w-full h-1 sm:h-1.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 z-20 rounded-t-4xl sm:rounded-t-3xl md:rounded-t-[2.5rem]" />
 
-                <div className="p-4 sm:p-6 md:p-8 lg:p-10 space-y-5 sm:space-y-6 md:space-y-8">
+                <div className="p-4 sm:p-6 md:p-8 lg:p-10 space-y-5 sm:space-y-6 md:space-y-8 w-full max-w-full min-w-0">
 
                     {/* Assigned School Selection */}
-                    <div className="space-y-2 sm:space-y-2.5 md:space-y-3 relative z-30">
+                    <div className="space-y-2 sm:space-y-2.5 md:space-y-3 relative z-30 w-full min-w-0">
                         <Label className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
                             {t('daily_report.assigned_school', 'Assigned Location')} <span className="text-destructive">*</span>
                         </Label>
-                        <div className="relative">
+                        <div className="relative w-full max-w-full min-w-0">
                             <div className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
                                 <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-4.5 md:h-4.5 text-primary/70" />
                             </div>
-                            <div className="w-full [&>div]:h-10 sm:[&>div]:h-12 md:[&>div]:h-14 [&>div]:rounded-xl sm:[&>div]:rounded-2xl [&>div]:bg-muted/20 [&>div]:border-border/60 [&>div]:pl-9 sm:[&>div]:pl-10 md:[&>div]:pl-11 [&>div]:text-xs sm:[&>div]:text-sm">
+                            {/* Target deep nested CustomSelect logic using descending classes to force word wrap and limit width */}
+                            <div className="w-full max-w-full min-w-0 [&>div]:w-full [&>div]:max-w-full [&>div]:h-10 sm:[&>div]:h-12 md:[&>div]:h-14 [&>div]:rounded-xl sm:[&>div]:rounded-2xl [&>div]:bg-muted/20 [&>div]:border-border/60 [&>div]:pl-9 sm:[&>div]:pl-10 md:[&>div]:pl-11 [&>div]:text-xs sm:[&>div]:text-sm [&_ul]:w-full! [&_ul]:max-w-full! [&_ul]:overflow-x-hidden [&_li]:whitespace-normal! [&_li]:wrap-break-word! [&_li]:h-auto! [&_li]:py-2.5!">
                                 <CustomSelect
                                     value={currentSelectedName}
                                     onChange={handleSchoolSelect}
@@ -210,12 +213,11 @@ const DailyReport = () => {
                     </div>
 
                     {/* Band Category Selection */}
-                    <div className="space-y-2 sm:space-y-2.5 md:space-y-3 z-20">
+                    <div className="space-y-2 sm:space-y-2.5 md:space-y-3 z-20 w-full min-w-0">
                         <Label className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
                             {t('daily_report.label_band', 'Category')} <span className="text-destructive">*</span>
                         </Label>
-                        {/* Flex-col on mobile so buttons stack neatly, row on sm screens */}
-                        <div className="flex flex-col sm:flex-row bg-muted/20 border border-border/60 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl gap-1 sm:gap-0">
+                        <div className="flex flex-col sm:flex-row bg-muted/20 border border-border/60 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl gap-1 sm:gap-0 w-full">
                             {['Junior Band', 'Senior Band'].map((b) => {
                                 const isActive = band === b;
                                 return (
@@ -239,7 +241,7 @@ const DailyReport = () => {
                     </div>
 
                     {/* Category Selection Dropdown */}
-                    <div className={`space-y-2 sm:space-y-2.5 md:space-y-3 relative ${isDropdownOpen ? "z-50" : "z-10"}`} ref={dropdownRef}>
+                    <div className={`space-y-2 sm:space-y-2.5 md:space-y-3 relative w-full min-w-0 ${isDropdownOpen ? "z-50" : "z-10"}`} ref={dropdownRef}>
                         <Label className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
                             {t('daily_report.label_category', 'Report Type')} <span className="text-destructive">*</span>
                         </Label>
@@ -247,9 +249,9 @@ const DailyReport = () => {
                         <button
                             type="button"
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                            className="w-full h-10 sm:h-12 md:h-14 rounded-xl sm:rounded-2xl border border-border/60 bg-muted/20 px-3.5 sm:px-4 md:px-5 text-xs sm:text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all hover:bg-muted/30"
+                            className="w-full max-w-full h-10 sm:h-12 md:h-14 rounded-xl sm:rounded-2xl border border-border/60 bg-muted/20 px-3.5 sm:px-4 md:px-5 text-xs sm:text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all hover:bg-muted/30"
                         >
-                            <span className="text-foreground font-bold flex items-center gap-2 sm:gap-2.5">
+                            <span className="text-foreground font-bold flex items-center gap-2 sm:gap-2.5 min-w-0">
                                 <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary/70 shrink-0" />
                                 <span className="truncate">
                                     {category === "Regular Report" ? (t('daily_report.categories.regular', 'Regular Report')) : (t('daily_report.categories.event', 'Event Report'))}
@@ -259,8 +261,8 @@ const DailyReport = () => {
                         </button>
 
                         {isDropdownOpen && (
-                            <div className="absolute top-full left-0 w-full mt-1.5 sm:mt-2 bg-card border border-border/60 rounded-xl sm:rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50 max-h-60 overflow-y-auto">
-                                <div className="p-1.5 sm:p-2 flex flex-col gap-1">
+                            <div className="absolute top-full left-0 w-full max-w-full mt-1.5 sm:mt-2 bg-card border border-border/60 rounded-xl sm:rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50 max-h-60 overflow-y-auto">
+                                <div className="p-1.5 sm:p-2 flex flex-col gap-1 w-full">
                                     {[
                                         { label: t('daily_report.categories.regular', 'Regular Report'), value: "Regular Report", icon: FileText },
                                         { label: t('daily_report.categories.event', 'Event Report'), value: "Event Report", icon: PartyPopper }
@@ -277,7 +279,7 @@ const DailyReport = () => {
                                                 : "text-muted-foreground hover:bg-muted/50 hover:text-foreground font-medium"
                                                 }`}
                                         >
-                                            <span className="flex items-center gap-2 sm:gap-2.5">
+                                            <span className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                                                 <option.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${category === option.value ? 'text-primary' : 'text-muted-foreground'}`} />
                                                 <span className="truncate">{option.label}</span>
                                             </span>
@@ -290,27 +292,22 @@ const DailyReport = () => {
                     </div>
 
                     {/* Students Present Input */}
-                    <div className="space-y-2 sm:space-y-2.5 md:space-y-3 relative z-0 animate-in fade-in slide-in-from-top-2">
+                    <div className="space-y-2 sm:space-y-2.5 md:space-y-3 relative z-0 animate-in fade-in slide-in-from-top-2 w-full min-w-0">
                         <Label className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
                             {t('daily_report.label_students', 'No. of Students Present')} <span className="text-destructive">*</span>
                         </Label>
-                        <div className="relative group">
-                            {/* Left Icon */}
+                        <div className="relative group w-full max-w-full">
                             <div className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
                                 <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-4.5 md:h-4.5 text-primary/70" />
                             </div>
-
-                            {/* Input Field */}
                             <Input
                                 type="number"
                                 min="0"
                                 placeholder={t('daily_report.placeholder_students', 'e.g. 45')}
                                 value={studentsPresent}
                                 onChange={(e) => setStudentsPresent(e.target.value)}
-                                className="w-full h-10 sm:h-12 md:h-14 rounded-xl sm:rounded-2xl bg-muted/20 border border-border/60 pl-9 sm:pl-10 md:pl-11 pr-10 sm:pr-12 text-xs sm:text-sm font-bold focus-visible:ring-primary/30 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                className="w-full max-w-full h-10 sm:h-12 md:h-14 rounded-xl sm:rounded-2xl bg-muted/20 border border-border/60 pl-9 sm:pl-10 md:pl-11 pr-10 sm:pr-12 text-xs sm:text-sm font-bold focus-visible:ring-primary/30 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
-
-                            {/* Custom Increment/Decrement Buttons */}
                             <div className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 opacity-70 group-hover:opacity-100 transition-opacity">
                                 <button
                                     type="button"
@@ -329,12 +326,13 @@ const DailyReport = () => {
                             </div>
                         </div>
                     </div>
+
                     {/* Band Stage Input */}
-                    <div className="space-y-2 sm:space-y-2.5 md:space-y-3 relative z-0 animate-in fade-in slide-in-from-top-2">
+                    <div className="space-y-2 sm:space-y-2.5 md:space-y-3 relative z-0 animate-in fade-in slide-in-from-top-2 w-full min-w-0">
                         <Label className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
                             {t('daily_report.label_band_stage', 'Band Stage')} <span className="text-destructive">*</span>
                         </Label>
-                        <div className="relative group">
+                        <div className="relative group w-full max-w-full">
                             <div className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
                                 <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-4.5 md:h-4.5 text-primary/70" />
                             </div>
@@ -343,15 +341,15 @@ const DailyReport = () => {
                                 placeholder={t('daily_report.placeholder_band_stage', 'e.g. Beginner, Level 2, Performing')}
                                 value={bandStage}
                                 onChange={(e) => setBandStage(e.target.value)}
-                                className="w-full h-10 sm:h-12 md:h-14 rounded-xl sm:rounded-2xl bg-muted/20 border border-border/60 pl-9 sm:pl-10 md:pl-11 pr-4 text-xs sm:text-sm font-bold focus-visible:ring-primary/30 transition-all"
+                                className="w-full max-w-full h-10 sm:h-12 md:h-14 rounded-xl sm:rounded-2xl bg-muted/20 border border-border/60 pl-9 sm:pl-10 md:pl-11 pr-4 text-xs sm:text-sm font-bold focus-visible:ring-primary/30 transition-all"
                             />
                         </div>
                     </div>
 
                     {/* Conditional Event Inputs */}
                     {category === "Event Report" && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-5 animate-in fade-in slide-in-from-top-4 z-0 p-3 sm:p-4 md:p-5 bg-muted/10 border border-border/40 rounded-2xl sm:rounded-3xl md:rounded-4xl">
-                            <div className="space-y-2 sm:space-y-2.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-5 animate-in fade-in slide-in-from-top-4 z-0 p-3 sm:p-4 md:p-5 bg-muted/10 border border-border/40 rounded-2xl sm:rounded-3xl md:rounded-4xl w-full">
+                            <div className="space-y-2 sm:space-y-2.5 w-full min-w-0">
                                 <Label className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest text-foreground ml-1">
                                     {t('daily_report.label_event_name', 'Event Name')} <span className="text-destructive">*</span>
                                 </Label>
@@ -360,38 +358,38 @@ const DailyReport = () => {
                                     placeholder={t('daily_report.placeholder_event_name', 'e.g. Annual Sports Day')}
                                     value={eventName}
                                     onChange={(e) => setEventName(e.target.value)}
-                                    className="h-10 sm:h-12 rounded-xl bg-card border-border/60 text-xs sm:text-sm focus-visible:ring-primary/30 font-medium"
+                                    className="w-full max-w-full h-10 sm:h-12 rounded-xl bg-card border-border/60 text-xs sm:text-sm focus-visible:ring-primary/30 font-medium"
                                 />
                             </div>
-                            <div className="space-y-2 sm:space-y-2.5">
+                            <div className="space-y-2 sm:space-y-2.5 w-full min-w-0">
                                 <Label className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest text-foreground ml-1">
                                     {t('daily_report.label_event_date', 'Event Date')} <span className="text-destructive">*</span>
                                 </Label>
-                                <div className="relative">
+                                <div className="relative w-full">
                                     <CalendarDays className="absolute left-3 sm:left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground pointer-events-none" />
                                     <Input
                                         type="date"
                                         value={eventDate}
                                         onChange={(e) => setEventDate(e.target.value)}
-                                        className="h-10 sm:h-12 pl-9 sm:pl-10 text-xs sm:text-sm rounded-xl bg-card border-border/60 focus-visible:ring-primary/30 font-medium scheme-light dark:scheme-dark"
+                                        className="w-full max-w-full h-10 sm:h-12 pl-9 sm:pl-10 text-xs sm:text-sm rounded-xl bg-card border-border/60 focus-visible:ring-primary/30 font-medium scheme-light dark:scheme-dark"
                                     />
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Start Time</Label>
-                                    <Input type="time" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} />
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4 col-span-1 sm:col-span-2 w-full">
+                                <div className="space-y-2 w-full min-w-0">
+                                    <Label className="text-[9px] sm:text-[10px] font-black uppercase text-foreground ml-1">Start Time</Label>
+                                    <Input className="w-full max-w-full h-10 sm:h-12 rounded-xl bg-card" type="time" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>End Time</Label>
-                                    <Input type="time" value={timeTo} onChange={(e) => setTimeTo(e.target.value)} />
+                                <div className="space-y-2 w-full min-w-0">
+                                    <Label className="text-[9px] sm:text-[10px] font-black uppercase text-foreground ml-1">End Time</Label>
+                                    <Input className="w-full max-w-full h-10 sm:h-12 rounded-xl bg-card" type="time" value={timeTo} onChange={(e) => setTimeTo(e.target.value)} />
                                 </div>
                             </div>
                         </div>
                     )}
 
                     {/* Summary Area */}
-                    <div className="space-y-2 sm:space-y-2.5 md:space-y-3 z-0">
+                    <div className="space-y-2 sm:space-y-2.5 md:space-y-3 z-0 w-full min-w-0">
                         <Label className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-foreground ml-1">
                             {t('daily_report.label_summary', 'Daily Summary')} <span className="text-destructive">*</span>
                         </Label>
@@ -399,18 +397,18 @@ const DailyReport = () => {
                             value={summary}
                             onChange={(e) => setSummary(e.target.value)}
                             placeholder={t('daily_report.placeholder_summary', 'Write a detailed summary of your activities today...')}
-                            className="w-full min-h-32 sm:min-h-40 md:min-h-50 rounded-2xl sm:rounded-3xl border border-border/60 bg-muted/20 p-3.5 sm:p-4 md:p-5 text-xs sm:text-sm md:text-base font-medium resize-none focus-visible:ring-primary/30 focus:bg-background transition-all leading-relaxed shadow-inner"
+                            className="w-full max-w-full min-h-32 sm:min-h-40 md:min-h-50 rounded-2xl sm:rounded-3xl border border-border/60 bg-muted/20 p-3.5 sm:p-4 md:p-5 text-xs sm:text-sm md:text-base font-medium resize-none focus-visible:ring-primary/30 focus:bg-background transition-all leading-relaxed shadow-inner"
                         />
                     </div>
                 </div>
 
                 {/* Footer / Submit Button */}
-                <div className="p-4 sm:p-6 md:p-8 bg-muted/10 border-t border-border/50 shrink-0">
+                <div className="p-4 sm:p-6 md:p-8 bg-muted/10 border-t border-border/50 shrink-0 w-full mt-auto">
                     <Button
                         type="button"
                         onClick={handleSubmit}
                         disabled={!isFormValid() || isSubmitting}
-                        className="w-full h-10 sm:h-12 md:h-14 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[11px] sm:text-xs md:text-sm shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-[0.98] transition-all gap-2 sm:gap-3"
+                        className="w-full max-w-full h-10 sm:h-12 md:h-14 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[11px] sm:text-xs md:text-sm shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-[0.98] transition-all gap-2 sm:gap-3"
                     >
                         {isSubmitting ? (
                             <><Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin shrink-0" /> <span className="truncate">{t('daily_report.btn_submitting', 'Submitting...')}</span></>
